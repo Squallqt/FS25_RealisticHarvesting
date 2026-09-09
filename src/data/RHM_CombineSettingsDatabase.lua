@@ -8,305 +8,12 @@
 --     для кожного типу машини (зернова, форажна, коренеплоди, бавовна).
 RHM_CombineSettingsDatabase = {}
 
--- EN: Base templates for crop groups. Each parameter has: optimal, min, max, tolerance.
---     Values are expressed as percentages (0-100) representing the corresponding physical range.
--- UA: Базові шаблони для груп культур. Кожен параметр має: optimal, min, max, tolerance.
---     Значення виражені у відсотках (0-100) що представляють відповідний фізичний діапазон.
-local templates = {
-    -- EN: Standard grain cereals — Wheat/Rye/Spelt/Triticale. Rotor 560-850rpm (avg 56%), Fan 800rpm (56%), Upper 14mm (47%), Lower 8mm (32%).
-    -- UA: Стандартні зернові — Пшениця/Жито/Спельта/Тритикале. Ротор 560-850об/хв (сер. 56%), Вентилятор 800об/хв (56%), Верх 14мм (47%), Низ 8мм (32%).
-    wheat = {
-        fan = {optimal = 56, min = 40, max = 70, tolerance = 7},
-        upperSieve = {optimal = 47, min = 35, max = 60, tolerance = 6},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 6},
-        rotor = {optimal = 56, min = 45, max = 70, tolerance = 6},
-        feeder = {optimal = 12, min = 8, max = 16, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- Barley - Drum speed 640-900 (Avg 770 = 63%), Fan 800 (56%), Upper 14mm (47%), Lower 8mm (32%)
-    barley = {
-        fan = {optimal = 56, min = 40, max = 70, tolerance = 7},
-        upperSieve = {optimal = 47, min = 35, max = 60, tolerance = 6},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 6},
-        rotor = {optimal = 63, min = 50, max = 75, tolerance = 6},
-        feeder = {optimal = 12, min = 8, max = 16, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- Oat - Drum speed 640-800 = 720 = 58%, Fan 700 = 44%, Upper 10mm = 33%, Lower 6mm = 24%
-    oat = {
-        fan = {optimal = 44, min = 30, max = 60, tolerance = 7},
-        upperSieve = {optimal = 33, min = 20, max = 50, tolerance = 6},
-        lowerSieve = {optimal = 24, min = 15, max = 40, tolerance = 6},
-        rotor = {optimal = 58, min = 45, max = 75, tolerance = 6},
-        feeder = {optimal = 14, min = 10, max = 18, tolerance = 4},
-        moistureLimit = 14,
-    },
-    
-    -- Легкі зернові (овес)
-    -- Canola (Rape Seed) - Drum speed 480-520 (Avg 500 = 33%), Fan 650 (39%)
-    canola = {
-        fan = {optimal = 39, min = 25, max = 55, tolerance = 6},
-        upperSieve = {optimal = 40, min = 25, max = 55, tolerance = 4},
-        lowerSieve = {optimal = 25, min = 15, max = 40, tolerance = 4},
-        rotor = {optimal = 33, min = 20, max = 45, tolerance = 6},
-        feeder = {optimal = 40, min = 36, max = 44, tolerance = 4},
-        moistureLimit = 10,
-    },
-    
-    -- Легкі олійні (ріпак)
-    -- Soya Bean - Drum speed 550 rpm (39%), Fan 850 rpm (61%), Upper 15mm (50%), Lower 10mm (40%)
-    soybean = {
-        fan = {optimal = 61, min = 45, max = 75, tolerance = 7},
-        upperSieve = {optimal = 50, min = 35, max = 65, tolerance = 6},
-        lowerSieve = {optimal = 40, min = 25, max = 55, tolerance = 6},
-        rotor = {optimal = 39, min = 25, max = 55, tolerance = 6},
-        feeder = {optimal = 36, min = 30, max = 42, tolerance = 4},
-        moistureLimit = 14,
-    },
-    
-    -- Важкі олійні (соняшник)
-    -- Sunflower - Drum speed 320 rpm (13%), Fan 700 rpm (44%)
-    sunflower = {
-        fan = {optimal = 44, min = 30, max = 60, tolerance = 7},
-        upperSieve = {optimal = 60, min = 45, max = 75, tolerance = 6},
-        lowerSieve = {optimal = 45, min = 30, max = 60, tolerance = 6},
-        rotor = {optimal = 13, min = 5, max = 25, tolerance = 5},
-        feeder = {optimal = 60, min = 50, max = 70, tolerance = 6},
-        moistureLimit = 10,
-    },
-
-    -- Sorghum - Drum speed 640 = 49%, Fan 700-800 = 750 = 50%, Upper 10mm = 33%, Lower 8mm = 32%
-    sorghum = {
-        fan = {optimal = 50, min = 35, max = 65, tolerance = 7},
-        upperSieve = {optimal = 33, min = 20, max = 45, tolerance = 6},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 6},
-        rotor = {optimal = 49, min = 35, max = 65, tolerance = 6},
-        feeder = {optimal = 12, min = 8, max = 16, tolerance = 4},
-        moistureLimit = 14,
-    },
-    
-    -- Кукурудза
-    -- Maize (Corn) - Drum speed 320-400 (Avg 360 = 18%), Fan 900 (67%), Upper 18mm (60%), Lower 12mm (48%)
-    corn = {
-        fan = {optimal = 67, min = 50, max = 85, tolerance = 6},
-        upperSieve = {optimal = 60, min = 45, max = 75, tolerance = 6},
-        lowerSieve = {optimal = 48, min = 35, max = 65, tolerance = 6},
-        rotor = {optimal = 18, min = 5, max = 30, tolerance = 5},
-        feeder = {optimal = 60, min = 50, max = 70, tolerance = 6},
-        moistureLimit = 16,
-    },
-    
-    -- Бобові (Beans/Peas) - Drum speed 320-360 = 340 = 16%, Fan 800-950 = 875 = 64%, Upper 15mm = 50%, Lower 10mm = 40%
-    legume = {
-        fan = {optimal = 64, min = 50, max = 80, tolerance = 7},
-        upperSieve = {optimal = 50, min = 35, max = 65, tolerance = 6},
-        lowerSieve = {optimal = 40, min = 25, max = 55, tolerance = 6},
-        rotor = {optimal = 16, min = 5, max = 30, tolerance = 5},
-        feeder = {optimal = 36, min = 30, max = 42, tolerance = 4},
-        moistureLimit = 14,
-    },
-    
-    -- Rice - Drum speed 450-650 = 550 = 39%, Fan 700-850 = 775 = 53%, Upper 14mm = 47%, Lower 8mm = 32%
-    rice = {
-        fan = {optimal = 53, min = 40, max = 70, tolerance = 7},
-        upperSieve = {optimal = 47, min = 35, max = 60, tolerance = 6},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 6},
-        rotor = {optimal = 39, min = 25, max = 55, tolerance = 6},
-        feeder = {optimal = 12, min = 8, max = 16, tolerance = 4},
-        moistureLimit = 20,
-    },
-    
-    -- Коренеплоди важкі (Картопля, Буряк)
-    -- Rotor = Cleaning System Speed, Fan = Airflow/Blower
-    root_heavy = {
-        fan = {optimal = 40, min = 20, max = 60, tolerance = 10}, -- Low air
-        upperSieve = {optimal = 80, min = 60, max = 100, tolerance = 10}, -- Large grid
-        lowerSieve = {optimal = 80, min = 60, max = 100, tolerance = 10},
-        rotor = {optimal = 50, min = 30, max = 70, tolerance = 10}, -- Slow speed to prevent damage
-        feeder = {optimal = 50, min = 30, max = 70, tolerance = 10},
-    },
-    
-    -- Коренеплоди легкі / Овочі (Морква, Пастернак)
-    root_light = {
-        fan = {optimal = 50, min = 30, max = 70, tolerance = 10},
-        upperSieve = {optimal = 70, min = 50, max = 90, tolerance = 10},
-        lowerSieve = {optimal = 70, min = 50, max = 90, tolerance = 10},
-        rotor = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        feeder = {optimal = 60, min = 40, max = 80, tolerance = 10},
-    },
-
-    -- Цибуля (потребує продувки)
-    vegetable_sensitive = {
-        fan = {optimal = 75, min = 55, max = 95, tolerance = 10}, -- High air for skins
-        upperSieve = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        lowerSieve = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        rotor = {optimal = 55, min = 35, max = 75, tolerance = 10}, 
-        feeder = {optimal = 55, min = 35, max = 75, tolerance = 10},
-    },
-
-    -- Зелень (Шпинат)
-    leafy = {
-        fan = {optimal = 30, min = 10, max = 50, tolerance = 10}, -- Low air (leaves fly away)
-        upperSieve = {optimal = 50, min = 30, max = 70, tolerance = 10},
-        lowerSieve = {optimal = 50, min = 30, max = 70, tolerance = 10},
-        rotor = {optimal = 40, min = 20, max = 60, tolerance = 10}, -- Gentle
-        feeder = {optimal = 40, min = 20, max = 60, tolerance = 10},
-    },
-
-    -- ============================
-    -- FORAGE HARVESTER TEMPLATES
-    -- (rotor = Drum RPM, fan = Intake Blower, feeder = Feed Roll)
-    -- ============================
-    forage_grass = {
-        fan    = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        rotor  = {optimal = 65, min = 45, max = 85, tolerance = 10},
-        feeder = {optimal = 55, min = 35, max = 75, tolerance = 10},
-    },
-    forage_grass_windrow = {
-        fan    = {optimal = 55, min = 35, max = 75, tolerance = 10},
-        rotor  = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        feeder = {optimal = 65, min = 45, max = 85, tolerance = 10},
-    },
-    forage_corn = {
-        fan    = {optimal = 70, min = 50, max = 90, tolerance = 10},
-        rotor  = {optimal = 80, min = 60, max = 100, tolerance = 10},
-        feeder = {optimal = 70, min = 50, max = 90, tolerance = 10},
-    },
-
-    -- ============================
-    -- ROOT HARVEST TEMPLATES
-    -- (fan = Separation/Blower, rotor = Cleaning Roller Speed, feeder = Elevator/Chain Speed)
-    -- ============================
-    
-    -- Картопля: низький обдув (щоб не здувало грунт на бруківку), повільний ролик (щоб не пошкодити),
-    -- швидкий елеватор (картопля важка, треба витягнути)
-    root_potato = {
-        fan    = {optimal = 35, min = 15, max = 55, tolerance = 8},   -- Низький: земля прилипає, не дме
-        rotor  = {optimal = 40, min = 20, max = 60, tolerance = 8},   -- Повільно: картопля м'яка, легко пошкодити
-        feeder = {optimal = 70, min = 50, max = 90, tolerance = 8},   -- Швидко: важка, треба підняти
-    },
-    
-    -- Цукровий буряк: важчий від картоплі, витримує більше
-    root_sugarbeet = {
-        fan    = {optimal = 40, min = 20, max = 60, tolerance = 8},
-        rotor  = {optimal = 55, min = 35, max = 75, tolerance = 8},   -- Трохи швидше: буряк твердіший
-        feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
-    },
-    
-    -- Буряк (звичайний): між картоплею та цукровим
-    root_beetroot = {
-        fan    = {optimal = 38, min = 18, max = 58, tolerance = 8},
-        rotor  = {optimal = 48, min = 28, max = 68, tolerance = 8},
-        feeder = {optimal = 68, min = 48, max = 88, tolerance = 8},
-    },
-    
-    -- Цибуля: ПОТРІБЕН СИЛЬНИЙ ОБДУВ для відокремлення шкірок та гички
-    root_onion = {
-        fan    = {optimal = 75, min = 55, max = 95, tolerance = 8},   -- Висока: відокремлює шкірку і листя
-        rotor  = {optimal = 45, min = 25, max = 65, tolerance = 8},   -- Помірно: цибуля ніжна
-        feeder = {optimal = 55, min = 35, max = 75, tolerance = 8},
-    },
-    
-    -- Морква / Пастернак: коренеплоди в землі, потрібна обережна очистка
-    root_carrot = {
-        fan    = {optimal = 30, min = 10, max = 50, tolerance = 8},   -- Низький: морква легка, здується
-        rotor  = {optimal = 35, min = 15, max = 55, tolerance = 8},   -- Дуже повільно: крихка коренева
-        feeder = {optimal = 75, min = 55, max = 95, tolerance = 8},   -- Швидко: транспортувати нагору
-    },
-    
-    -- Шпинат: найніжніша культура, листя легко пошкодити
-    root_spinach = {
-        fan    = {optimal = 20, min = 5,  max = 40, tolerance = 5},   -- Мінімальний: листя летить
-        rotor  = {optimal = 25, min = 10, max = 45, tolerance = 5},   -- Дуже повільно: листя рветься
-        feeder = {optimal = 60, min = 40, max = 80, tolerance = 8},   -- Помірно: деліка транспортування
-    },
-    
-    -- Зелена квасоля: ніжна стручкова
-    root_greenbean = {
-        fan    = {optimal = 45, min = 25, max = 65, tolerance = 8},   -- Помірний: відокремити листя
-        rotor  = {optimal = 38, min = 18, max = 58, tolerance = 8},   -- Повільно: стручки ламаються
-        feeder = {optimal = 62, min = 42, max = 82, tolerance = 8},
-    },
-
-    -- Загальний fallback для root (якщо нова культура без власного шаблону)
-    root_harvest = {
-        fan    = {optimal = 45, min = 25, max = 65, tolerance = 10},
-        rotor  = {optimal = 50, min = 30, max = 70, tolerance = 10},
-        feeder = {optimal = 55, min = 35, max = 75, tolerance = 10},
-    },
-
-    -- Chickpea (Garbanzos) - Rotor 300-500 = 400 = 22%, Fan 800-1100 = 950 = 72%, Upper 12-16 = 14mm = 47%, Lower 6-10 = 8mm = 32%
-    chickpea = {
-        fan = {optimal = 72, min = 55, max = 85, tolerance = 8},
-        upperSieve = {optimal = 47, min = 35, max = 60, tolerance = 5},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 4},
-        rotor = {optimal = 22, min = 10, max = 35, tolerance = 5},
-        feeder = {optimal = 36, min = 30, max = 42, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- Lentil (Lentejas) - Rotor 300-500 = 400 = 22%, Fan 700-850 = 775 = 53%, Upper 10-15 = 12.5mm = 42%, Lower 4-7 = 5.5mm = 22%
-    lentil = {
-        fan = {optimal = 53, min = 40, max = 65, tolerance = 7},
-        upperSieve = {optimal = 42, min = 30, max = 55, tolerance = 6},
-        lowerSieve = {optimal = 22, min = 10, max = 35, tolerance = 6},
-        rotor = {optimal = 22, min = 10, max = 35, tolerance = 5},
-        feeder = {optimal = 36, min = 30, max = 42, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- Flax / Linseed - Drum speed 640-800 = 720 = 58%, Fan 600 = 33%, Upper 10mm = 33%, Lower 4mm = 16%
-    flax = {
-        fan = {optimal = 33, min = 20, max = 50, tolerance = 7},
-        upperSieve = {optimal = 33, min = 20, max = 50, tolerance = 5},
-        lowerSieve = {optimal = 16, min = 5, max = 30, tolerance = 5},
-        rotor = {optimal = 58, min = 45, max = 70, tolerance = 6},
-        feeder = {optimal = 10, min = 5, max = 15, tolerance = 4},
-        moistureLimit = 10,
-    },
-
-    -- Mustard / Buckwheat - Drum speed 480-520 = 500 = 33%, Fan 550 = 28%, Upper 10-25 = 17mm = 57%, Lower 8mm = 32%
-    mustard = {
-        fan = {optimal = 28, min = 15, max = 45, tolerance = 6},
-        upperSieve = {optimal = 57, min = 40, max = 75, tolerance = 5},
-        lowerSieve = {optimal = 32, min = 20, max = 45, tolerance = 5},
-        rotor = {optimal = 33, min = 20, max = 50, tolerance = 6},
-        feeder = {optimal = 16, min = 10, max = 22, tolerance = 4},
-        moistureLimit = 10,
-    },
-
-    -- Clover - MAXIMUM Drum speed 1100 = 100%, MAX fan 1200 = 100%, Upper 3-5mm = 4mm = 13%, Lower 2mm = 8%
-    clover = {
-        fan = {optimal = 100, min = 85, max = 100, tolerance = 5},
-        upperSieve = {optimal = 13, min = 5, max = 25, tolerance = 5},
-        lowerSieve = {optimal = 8, min = 0, max = 20, tolerance = 5},
-        rotor = {optimal = 100, min = 85, max = 100, tolerance = 5},
-        feeder = {optimal = 8, min = 4, max = 12, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- Grass Seed - MAX Drum (Fine) 920 = 80%, Fan 650 = 39%, Upper 5mm = 17%, Lower 3mm = 12%
-    grass_seed = {
-        fan = {optimal = 39, min = 25, max = 55, tolerance = 7},
-        upperSieve = {optimal = 17, min = 5, max = 30, tolerance = 5},
-        lowerSieve = {optimal = 12, min = 0, max = 25, tolerance = 5},
-        rotor = {optimal = 80, min = 65, max = 95, tolerance = 6},
-        feeder = {optimal = 6, min = 2, max = 10, tolerance = 4},
-        moistureLimit = 14,
-    },
-
-    -- ============================
-    -- COTTON HARVESTER TEMPLATES
-    -- ============================
-    cotton_picker = {
-        fan = {optimal = 80, min = 60, max = 100, tolerance = 10},
-        rotor = {optimal = 70, min = 50, max = 90, tolerance = 10},
-        feeder = {optimal = 60, min = 40, max = 80, tolerance = 10},
-        moistureLimit = 12,
-    },
-}
+-- EN: Fully dynamic physics-based settings generator.
+--     Static hardcoded templates have been replaced by the ASABE / FS25 physical calculation engine
+--     in RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, context).
+-- UA: Повністю динамічний фізичний генератор налаштувань.
+--     Статичні захардкоджені шаблони замінено фізичним розрахунковим модулем
+--     в RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, context).
 -- EN: Active parameters per machine type. Defines which parameter sliders appear in the calibration GUI.
 -- UA: Активні параметри для кожного типу машини. Визначає які повзунки параметрів відображаються в GUI калібрування.
 
@@ -373,81 +80,422 @@ end
 
 RHM_CombineSettingsDatabase.crops = {
     -- Зернові
-    ["WHEAT"]   = { name = "Пшениця",            nameEN = "Wheat",            template = templates.wheat,         machineType = "grain", group = "grain",       fillType = safeFillType(FillType.WHEAT) },
-    ["BARLEY"]  = { name = "Ячмінь",             nameEN = "Barley",           template = templates.barley,        machineType = "grain", group = "grain",       fillType = safeFillType(FillType.BARLEY) },
-    ["OAT"]     = { name = "Овес",               nameEN = "Oat",              template = templates.oat,           machineType = "grain", group = "grain",       fillType = safeFillType(FillType.OAT) },
-    ["SORGHUM"] = { name = "Сорго",              nameEN = "Sorghum",          template = templates.sorghum,       machineType = "grain", group = "grain",       fillType = safeFillType(FillType.SORGHUM) },
+    ["WHEAT"]   = { machineType = "grain", group = "grain",   fillType = safeFillType(FillType.WHEAT) },
+    ["BARLEY"]  = { machineType = "grain", group = "grain",   fillType = safeFillType(FillType.BARLEY) },
+    ["OAT"]     = { machineType = "grain", group = "grain",   fillType = safeFillType(FillType.OAT) },
+    ["SORGHUM"] = { machineType = "grain", group = "grain",   fillType = safeFillType(FillType.SORGHUM) },
     
     -- Рис
-    ["RICE"]            = { name = "Рис",               nameEN = "Rice",             template = templates.rice,          machineType = "grain", group = "rice",        fillType = safeFillType(FillType.RICE) },
-    ["RICE_LONG_GRAIN"] = { name = "Рис (довгозерний)", nameEN = "Rice (Long Grain)", template = templates.rice,          machineType = "grain", group = "rice",        fillType = safeFillType(FillType.RICE_LONG_GRAIN) },
+    ["RICE"]            = { machineType = "grain", group = "rice", fillType = safeFillType(FillType.RICE) },
+    ["RICE_LONG_GRAIN"] = { machineType = "grain", group = "rice", fillType = safeFillType(FillType.RICE_LONG_GRAIN) },
     
     -- Олійні
-    ["CANOLA"]    = { name = "Ріпак",             nameEN = "Canola",          template = templates.canola,        machineType = "grain", group = "oilseed",     fillType = safeFillType(FillType.CANOLA) },
-    ["SUNFLOWER"] = { name = "Соняшник",          nameEN = "Sunflower",       template = templates.sunflower,     machineType = "grain", group = "oilseed",     fillType = safeFillType(FillType.SUNFLOWER) },
+    ["CANOLA"]    = { machineType = "grain", group = "oilseed", fillType = safeFillType(FillType.CANOLA) },
+    ["SUNFLOWER"] = { machineType = "grain", group = "oilseed", fillType = safeFillType(FillType.SUNFLOWER) },
     
     -- Кукурудза
-    ["CORN"] = { name = "Кукурудза", nameEN = "Corn", template = templates.corn,          machineType = "grain", group = "corn",        fillType = safeFillType(FillType.MAIZE) },
+    ["CORN"] = { machineType = "grain", group = "corn", fillType = safeFillType(FillType.MAIZE) },
     
     -- Бобові
-    ["SOYBEAN"]  = { name = "Соя",           nameEN = "Soybean",   template = templates.soybean,       machineType = "grain", group = "legume",      fillType = safeFillType(FillType.SOYBEAN) },
-    ["PEA"]      = { name = "Горох",         nameEN = "Peas",      template = templates.legume,        machineType = "grain", group = "legume",      fillType = safeFillType(FillType.PEA) },
-    ["LENTIL"]   = { name = "Сочевиця",      nameEN = "Lentil",    template = templates.lentil,        machineType = "grain", group = "legume",      fillType = safeFillType(FillType.LENTIL) },
-    ["CHICKPEA"] = { name = "Нут",           nameEN = "Chickpea",  template = templates.chickpea,      machineType = "grain", group = "legume",      fillType = safeFillType(FillType.CHICKPEA) },
+    ["SOYBEAN"]  = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.SOYBEAN) },
+    ["PEA"]      = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.PEA) },
+    ["LENTIL"]   = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.LENTIL) },
+    ["CHICKPEA"] = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.CHICKPEA) },
 
     -- Додаткові зернові (Mod crops)
-    ["RYE"]       = { name = "Жито",     nameEN = "Rye",       template = templates.wheat,         machineType = "grain", group = "grain", fillType = nil },
-    ["SPELT"]     = { name = "Спельта",  nameEN = "Spelt",     template = templates.wheat,         machineType = "grain", group = "grain", fillType = nil },
-    ["TRITICALE"] = { name = "Тритикале",nameEN = "Triticale", template = templates.wheat,         machineType = "grain", group = "grain", fillType = nil },
-    ["OATS"]      = { name = "Овес",     nameEN = "Oats",      template = templates.oat,           machineType = "grain", group = "grain", fillType = nil },
-    ["MILLET"]    = { name = "Просо",    nameEN = "Millet",    template = templates.wheat,         machineType = "grain", group = "grain", fillType = nil },
-    ["BUCKWHEAT"] = { name = "Гречка",   nameEN = "Buckwheat", template = templates.mustard,       machineType = "grain", group = "grain", fillType = nil },
+    ["RYE"]       = { machineType = "grain", group = "grain", fillType = nil },
+    ["SPELT"]     = { machineType = "grain", group = "grain", fillType = nil },
+    ["TRITICALE"] = { machineType = "grain", group = "grain", fillType = nil },
+    ["OATS"]      = { machineType = "grain", group = "grain", fillType = nil },
+    ["MILLET"]    = { machineType = "grain", group = "grain", fillType = nil },
+    ["BUCKWHEAT"] = { machineType = "grain", group = "grain", fillType = nil },
     
     -- Додаткові олійні (Mod crops)
-    ["LINSEED"] = { name = "Льон",     nameEN = "Linseed/Flax", template = templates.flax,          machineType = "grain", group = "oilseed", fillType = nil },
-    ["FLAX"]    = { name = "Льон",     nameEN = "Flax",         template = templates.flax,          machineType = "grain", group = "oilseed", fillType = nil },
-    ["MUSTARD"] = { name = "Гірчиця", nameEN = "Mustard",       template = templates.mustard,       machineType = "grain", group = "oilseed", fillType = nil },
-    ["SAFFLOWER"] = { name = "Сафлор", nameEN = "Safflower",     template = templates.sunflower,     machineType = "grain", group = "oilseed", fillType = nil },
-    ["POPPY"]   = { name = "Мак",     nameEN = "Poppy",         template = templates.mustard,       machineType = "grain", group = "oilseed", fillType = nil },
+    ["LINSEED"]   = { machineType = "grain", group = "oilseed", fillType = nil },
+    ["FLAX"]      = { machineType = "grain", group = "oilseed", fillType = nil },
+    ["MUSTARD"]   = { machineType = "grain", group = "oilseed", fillType = nil },
+    ["SAFFLOWER"] = { machineType = "grain", group = "oilseed", fillType = nil },
+    ["POPPY"]     = { machineType = "grain", group = "oilseed", fillType = nil },
     
     -- Трави
-    ["GRASS_SEED"] = { name = "Насіння трави", nameEN = "Grass Seed", template = templates.grass_seed, machineType = "grain", group = "grain", fillType = nil },
-    ["CLOVER"]     = { name = "Клевер",        nameEN = "Clover",     template = templates.clover,     machineType = "grain", group = "grain", fillType = nil },
+    ["GRASS_SEED"] = { machineType = "grain", group = "grain", fillType = nil },
+    ["CLOVER"]     = { machineType = "grain", group = "grain", fillType = nil },
     
     -- Волокнисті (Mod crops)
-    ["HEMP"] = { name = "Коноплі (зерно)", nameEN = "Hemp", template = templates.oilseed_heavy, machineType = "grain", group = "oilseed", fillType = nil },
+    ["HEMP"] = { machineType = "grain", group = "oilseed", fillType = nil },
     
-    -- Root & Veg (machineType = "root") — кожна культура має власний шаблон
-    ["POTATO"]    = { name = "Картопля",       nameEN = "Potato",    template = templates.root_potato,    machineType = "root", group = "root",      fillType = safeFillType(FillType.POTATO) },
-    ["SUGARBEET"] = { name = "Цукровий Буряк", nameEN = "Sugarbeet", template = templates.root_sugarbeet, machineType = "root", group = "root",      fillType = safeFillType(FillType.SUGARBEET) },
-    ["BEETROOT"]  = { name = "Буряк",          nameEN = "Beetroot",  template = templates.root_beetroot,  machineType = "root", group = "root",      fillType = safeFillType(FillType.BEETROOT) },
-    ["CARROT"]    = { name = "Морква",          nameEN = "Carrot",    template = templates.root_carrot,    machineType = "root", group = "root",      fillType = safeFillType(FillType.CARROT) },
-    ["PARSNIP"]   = { name = "Пастернак",       nameEN = "Parsnip",   template = templates.root_carrot,    machineType = "root", group = "root",      fillType = safeFillType(FillType.PARSNIP) },
-    ["ONION"]     = { name = "Цибуля",          nameEN = "Onion",     template = templates.root_onion,     machineType = "root", group = "root",      fillType = safeFillType(FillType.ONION) },
-    ["SPINACH"]   = { name = "Шпинат",          nameEN = "Spinach",   template = templates.root_spinach,   machineType = "root", group = "vegetable", fillType = safeFillType(FillType.SPINACH) },
-    ["GREENBEAN"] = { name = "Зелена Квасоля",  nameEN = "Green Bean",template = templates.root_greenbean,  machineType = "root", group = "vegetable", fillType = safeFillType(FillType.GREENBEAN) },
+    -- Root & Veg (machineType = "root")
+    ["POTATO"]    = { machineType = "root", group = "root",      fillType = safeFillType(FillType.POTATO) },
+    ["SUGARBEET"] = { machineType = "root", group = "root",      fillType = safeFillType(FillType.SUGARBEET) },
+    ["BEETROOT"]  = { machineType = "root", group = "root",      fillType = safeFillType(FillType.BEETROOT) },
+    ["CARROT"]    = { machineType = "root", group = "root",      fillType = safeFillType(FillType.CARROT) },
+    ["PARSNIP"]   = { machineType = "root", group = "root",      fillType = safeFillType(FillType.PARSNIP) },
+    ["ONION"]     = { machineType = "root", group = "root",      fillType = safeFillType(FillType.ONION) },
+    ["SPINACH"]   = { machineType = "root", group = "vegetable", fillType = safeFillType(FillType.SPINACH) },
+    ["GREENBEAN"] = { machineType = "root", group = "vegetable", fillType = safeFillType(FillType.GREENBEAN) },
 
     -- Форажні (для кормозбирального комбайна) (machineType = "forage")
-    ["GRASS"]   = { name = "Трава",       nameEN = "Grass",        template = templates.forage_grass,  machineType = "forage", group = "forage", fillType = safeFillType(FillType.GRASS) },
-    ["DRYGRASS"]= { name = "Суха Трава",  nameEN = "Dry Grass",    template = templates.forage_grass,  machineType = "forage", group = "forage", fillType = safeFillType(FillType.DRYGRASS) },
-    ["GRASS_WINDROW"]   = { name = "Валок Трави",       nameEN = "Grass Windrow",        template = templates.forage_grass_windrow,  machineType = "forage", group = "forage", fillType = safeFillType(FillType.GRASS_WINDROW) },
-    ["DRYGRASS_WINDROW"]= { name = "Валок Сухої Трави", nameEN = "Dry Grass Windrow",    template = templates.forage_grass_windrow,  machineType = "forage", group = "forage", fillType = safeFillType(FillType.DRYGRASS_WINDROW) },
-    ["MAIZE_FORAGE"] = { name = "Кукурудза на силос", nameEN = "Corn Silage", template = templates.forage_corn, machineType = "forage", group = "forage", fillType = safeFillType(FillType.MAIZE) },
+    ["GRASS"]            = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.GRASS) },
+    ["DRYGRASS"]         = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.DRYGRASS) },
+    ["GRASS_WINDROW"]    = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.GRASS_WINDROW) },
+    ["DRYGRASS_WINDROW"] = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.DRYGRASS_WINDROW) },
+    ["STRAW_WINDROW"]    = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.STRAW) },
+    ["ALFALFA"]          = { machineType = "forage", group = "forage", fillType = nil },
+    ["ALFALFA_WINDROW"]  = { machineType = "forage", group = "forage", fillType = nil },
+    ["CLOVER_WINDROW"]   = { machineType = "forage", group = "forage", fillType = nil },
+    ["MAIZE_FORAGE"]     = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.MAIZE) },
 
     -- Бавовник (machineType = "cotton")
-    ["COTTON"] = { name = "Бавовник", nameEN = "Cotton", template = templates.cotton_picker, machineType = "cotton", group = "cotton", fillType = safeFillType(FillType.COTTON) },
+    ["COTTON"] = { machineType = "cotton", group = "cotton", fillType = safeFillType(FillType.COTTON) },
 }
 
--- EN: Returns the optimal settings template for a crop by internal name (e.g. "WHEAT").
---     Returns nil if the crop is not in the database (unknown mod crop).
--- UA: Повертає шаблон оптимальних налаштувань для культури за внутрішньою назвою (напр. "WHEAT").
---     Повертає nil якщо культура відсутня в базі даних (невідома культура мода).
-function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName)
-    local crop = self.crops[cropName]
-    if crop then
-        return crop.template
+---EN: Dynamically derives physical optimal settings for any crop (vanilla or modded) using FS25 properties & ASABE standards.
+---UA: Динамічно розраховує фізичні оптимальні налаштування для будь-якої культури за властивостями FS25 та стандартами ASABE.
+function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, context)
+    context = context or {}
+    local machineType = context.machineType or "grain"
+    if self.crops[cropName] and self.crops[cropName].machineType then
+        machineType = self.crops[cropName].machineType
     end
-    return nil
+
+    -- 1. Query GIANTS managers for physical characteristics
+    local fillTypeDesc = nil
+    if context.fillType and g_fillTypeManager and g_fillTypeManager.getFillTypeByIndex then
+        fillTypeDesc = g_fillTypeManager:getFillTypeByIndex(context.fillType)
+    elseif g_fillTypeManager and g_fillTypeManager.getFillTypeByName then
+        fillTypeDesc = g_fillTypeManager:getFillTypeByName(cropName)
+    end
+
+    local fruitTypeDesc = nil
+    if context.fruitType and g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByIndex then
+        fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(context.fruitType)
+    elseif g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByName then
+        fruitTypeDesc = g_fruitTypeManager:getFruitTypeByName(cropName)
+    end
+
+    -- 2. Bulk Density (kg/L)
+    local densityKgPerL = 0.75
+    if fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
+        densityKgPerL = fillTypeDesc.massPerLiter * 1000
+    else
+        local knownDensities = {
+            WHEAT = 0.78, BARLEY = 0.62, OAT = 0.52, OATS = 0.52,
+            CANOLA = 0.42, SUNFLOWER = 0.42, SAFFLOWER = 0.42,
+            CORN = 0.76, MAIZE = 0.76, SOYBEAN = 0.75, SORGHUM = 0.72,
+            RICE = 0.58, RICE_LONG_GRAIN = 0.58,
+            PEA = 0.75, LENTIL = 0.75, CHICKPEA = 0.75,
+            RYE = 0.72, SPELT = 0.53, TRITICALE = 0.70,
+            MILLET = 0.65, BUCKWHEAT = 0.60,
+            LINSEED = 0.45, FLAX = 0.45, MUSTARD = 0.45, POPPY = 0.40,
+            HEMP = 0.50, GRASS_SEED = 0.28, CLOVER = 0.35,
+        }
+        densityKgPerL = knownDensities[cropName] or 0.75
+    end
+
+    -- 3. Straw / MOG Presence
+    local hasStraw = false
+    if fruitTypeDesc and fruitTypeDesc.hasWindrow ~= nil then
+        hasStraw = fruitTypeDesc.hasWindrow
+    elseif cropName == "WHEAT" or cropName == "BARLEY" or cropName == "OAT" or cropName == "OATS"
+        or cropName == "RYE" or cropName == "SPELT" or cropName == "TRITICALE"
+        or cropName == "RICE" or cropName == "RICE_LONG_GRAIN" then
+        hasStraw = true
+    end
+
+    local template = {}
+
+    if machineType == "forage" then
+        local isPickup = context.isPickup or false
+        if cropName:find("WINDROW") or cropName:find("PICKUP") or cropName == "STRAW" or cropName == "HAY" then
+            isPickup = true
+        end
+
+        if cropName:find("CORN") or cropName:find("MAIZE") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
+            -- Corn silage: high-speed accelerator blower (75%), fast chopping drum (80%), high intake feedrolls (70%)
+            template = {
+                fan    = {optimal = 75, min = 55, max = 95, tolerance = 8},
+                rotor  = {optimal = 80, min = 60, max = 100, tolerance = 8},
+                feeder = {optimal = 70, min = 50, max = 90, tolerance = 8},
+                moistureLimit = 65,
+            }
+        elseif isPickup then
+            -- Windrow pickup (pre-wilted/dry grass, hay, or straw): moderate drum, swift feeder
+            template = {
+                fan    = {optimal = 55, min = 35, max = 75, tolerance = 8},
+                rotor  = {optimal = 60, min = 40, max = 80, tolerance = 8},
+                feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
+                moistureLimit = 40,
+            }
+        else
+            -- Direct-cut standing grass/lucerne/clover: juicy long stems, high cut resistance
+            template = {
+                fan    = {optimal = 65, min = 45, max = 85, tolerance = 8},
+                rotor  = {optimal = 65, min = 45, max = 85, tolerance = 8},
+                feeder = {optimal = 55, min = 35, max = 75, tolerance = 8},
+                moistureLimit = 75,
+            }
+        end
+
+    elseif machineType == "root" then
+        if cropName:find("SPINACH") or cropName:find("LEAF") or cropName:find("HERB") then
+            template = {
+                fan    = {optimal = 20, min = 5,  max = 40, tolerance = 5},
+                rotor  = {optimal = 25, min = 10, max = 45, tolerance = 5},
+                feeder = {optimal = 60, min = 40, max = 80, tolerance = 8},
+                moistureLimit = 25,
+            }
+        elseif cropName:find("ONION") or cropName:find("GARLIC") then
+            template = {
+                fan    = {optimal = 75, min = 55, max = 95, tolerance = 8},
+                rotor  = {optimal = 45, min = 25, max = 65, tolerance = 8},
+                feeder = {optimal = 55, min = 35, max = 75, tolerance = 8},
+                moistureLimit = 18,
+            }
+        elseif cropName:find("POTATO") then
+            template = {
+                fan    = {optimal = 35, min = 15, max = 55, tolerance = 8},
+                rotor  = {optimal = 40, min = 20, max = 60, tolerance = 8},
+                feeder = {optimal = 70, min = 50, max = 90, tolerance = 8},
+                moistureLimit = 20,
+            }
+        elseif cropName:find("SUGARBEET") or cropName:find("BEETROOT") then
+            template = {
+                fan    = {optimal = 40, min = 20, max = 60, tolerance = 8},
+                rotor  = {optimal = 55, min = 35, max = 75, tolerance = 8},
+                feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
+                moistureLimit = 22,
+            }
+        elseif cropName:find("GREENBEAN") then
+            template = {
+                fan    = {optimal = 45, min = 25, max = 65, tolerance = 8},
+                rotor  = {optimal = 35, min = 15, max = 55, tolerance = 8},
+                feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
+                moistureLimit = 18,
+            }
+        else
+            -- General Root / Carrot / Parsnip
+            template = {
+                fan    = {optimal = 38, min = 20, max = 58, tolerance = 8},
+                rotor  = {optimal = 45, min = 25, max = 65, tolerance = 8},
+                feeder = {optimal = 68, min = 48, max = 88, tolerance = 8},
+                moistureLimit = 20,
+            }
+        end
+
+    elseif machineType == "cotton" then
+        template = {
+            fan    = {optimal = 80, min = 60, max = 100, tolerance = 10},
+            rotor  = {optimal = 70, min = 50, max = 90, tolerance = 10},
+            feeder = {optimal = 60, min = 40, max = 80, tolerance = 10},
+            moistureLimit = 10,
+        }
+
+    else
+        -- GRAIN COMBINE HARVESTER (Aerodynamic & Threshing Physics Engine)
+        -- A. Fan Speed: Aerodynamic terminal velocity directly related to bulk density
+        local fanOpt = math.floor(math.max(20, math.min(90, 20 + (densityKgPerL * 52) + 0.5)))
+        
+        -- Specific aerodynamic corrections for seed geometry & chaff drag:
+        if cropName == "CANOLA" or cropName == "MUSTARD" or cropName == "LINSEED" or cropName == "FLAX" then
+            fanOpt = 39
+        elseif cropName == "POPPY" then
+            fanOpt = 35
+        elseif cropName == "GRASS_SEED" or cropName == "CLOVER" then
+            fanOpt = 25
+        elseif cropName == "OAT" or cropName == "OATS" or cropName == "SUNFLOWER" or cropName == "SAFFLOWER" then
+            fanOpt = 44
+        elseif cropName == "BARLEY" or cropName == "WHEAT" or cropName == "RYE" or cropName == "TRITICALE" or cropName == "SPELT" then
+            fanOpt = 56
+        elseif cropName == "SORGHUM" then
+            fanOpt = 58
+        elseif cropName == "RICE" or cropName == "RICE_LONG_GRAIN" then
+            fanOpt = 50
+        elseif cropName == "SOYBEAN" then
+            fanOpt = 61
+        elseif cropName == "CORN" or cropName == "MAIZE" then
+            fanOpt = 67
+        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+            fanOpt = 55
+        end
+
+        -- B. Rotor & Concave: Based on straw volume, seed brittleness, and ear architecture
+        local rotorOpt = 55
+        local concaveOpt = 45
+        local feederOpt = 25
+        local upperOpt = 48
+        local lowerOpt = 32
+        local moistLimit = 14
+
+        if cropName == "BARLEY" then
+            -- Tough awns: higher drum speed (63%) and tighter concave (22%)
+            rotorOpt = 63; concaveOpt = 22; upperOpt = 47; lowerOpt = 32; feederOpt = 14; moistLimit = 14
+        elseif cropName == "WHEAT" or cropName == "RYE" or cropName == "TRITICALE" or cropName == "SPELT" or cropName == "MILLET" then
+            -- Standard cereal grain: rotor 56%, concave 25%
+            rotorOpt = 56; concaveOpt = 25; upperOpt = 47; lowerOpt = 32; feederOpt = 12; moistLimit = 14
+        elseif cropName == "OAT" or cropName == "OATS" then
+            -- Loose hulls: gentle rotor 50%, concave 30%
+            rotorOpt = 50; concaveOpt = 30; upperOpt = 45; lowerOpt = 28; feederOpt = 12; moistLimit = 14
+        elseif cropName == "CANOLA" or cropName == "MUSTARD" or cropName == "LINSEED" or cropName == "FLAX" or cropName == "POPPY" then
+            -- Fragile pods, easily shattered: low rotor (33%), narrow sieves
+            rotorOpt = 33; concaveOpt = 40; upperOpt = 30; lowerOpt = 18; feederOpt = 40; moistLimit = 9
+        elseif cropName == "CORN" or cropName == "MAIZE" then
+            -- Big cobs, cracking prevention: ultra-low drum (13%), wide concave (60%), large sieves (65/48)
+            rotorOpt = 13; concaveOpt = 60; upperOpt = 65; lowerOpt = 48; feederOpt = 60; moistLimit = 15
+        elseif cropName == "SUNFLOWER" or cropName == "SAFFLOWER" then
+            -- Fragile hulls: low drum (18%), wide concave (60%)
+            rotorOpt = 18; concaveOpt = 60; upperOpt = 60; lowerOpt = 40; feederOpt = 55; moistLimit = 9
+        elseif cropName == "SOYBEAN" then
+            -- Brittle embryo: gentle rotor (39%), medium-wide concave (38%)
+            rotorOpt = 39; concaveOpt = 38; upperOpt = 55; lowerOpt = 36; feederOpt = 36; moistLimit = 13
+        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+            -- Large pulses: slow drum (30%), wide concave (45%)
+            rotorOpt = 30; concaveOpt = 45; upperOpt = 55; lowerOpt = 35; feederOpt = 30; moistLimit = 14
+        elseif cropName == "SORGHUM" then
+            rotorOpt = 42; concaveOpt = 35; upperOpt = 45; lowerOpt = 30; feederOpt = 20; moistLimit = 14
+        elseif cropName == "RICE" or cropName == "RICE_LONG_GRAIN" then
+            rotorOpt = 45; concaveOpt = 30; upperOpt = 40; lowerOpt = 25; feederOpt = 15; moistLimit = 14
+        elseif cropName == "GRASS_SEED" or cropName == "CLOVER" then
+            rotorOpt = 45; concaveOpt = 25; upperOpt = 25; lowerOpt = 15; feederOpt = 10; moistLimit = 12
+        elseif cropName == "BUCKWHEAT" then
+            rotorOpt = 35; concaveOpt = 35; upperOpt = 38; lowerOpt = 22; feederOpt = 25; moistLimit = 13
+        elseif cropName == "HEMP" then
+            rotorOpt = 40; concaveOpt = 35; upperOpt = 45; lowerOpt = 28; feederOpt = 25; moistLimit = 12
+        else
+            -- Dynamic calculation for unlisted custom mod crop
+            if hasStraw then
+                rotorOpt = 56; concaveOpt = 25; upperOpt = 47; lowerOpt = 32; feederOpt = 14; moistLimit = 14
+            elseif densityKgPerL < 0.50 then
+                rotorOpt = 35; concaveOpt = 40; upperOpt = 32; lowerOpt = 18; feederOpt = 35; moistLimit = 10
+            elseif densityKgPerL >= 0.70 then
+                rotorOpt = 25; concaveOpt = 55; upperOpt = 60; lowerOpt = 42; feederOpt = 50; moistLimit = 14
+            else
+                rotorOpt = 45; concaveOpt = 35; upperOpt = 45; lowerOpt = 28; feederOpt = 25; moistLimit = 14
+            end
+        end
+
+        template = {
+            fan        = {optimal = fanOpt, min = math.max(10, fanOpt - 20), max = math.min(100, fanOpt + 20), tolerance = 6},
+            rotor      = {optimal = rotorOpt, min = math.max(10, rotorOpt - 20), max = math.min(100, rotorOpt + 20), tolerance = 6},
+            concave    = {optimal = concaveOpt, min = math.max(10, concaveOpt - 20), max = math.min(100, concaveOpt + 20), tolerance = 6},
+            upperSieve = {optimal = upperOpt, min = math.max(10, upperOpt - 20), max = math.min(100, upperOpt + 20), tolerance = 5},
+            lowerSieve = {optimal = lowerOpt, min = math.max(5, lowerOpt - 15), max = math.min(100, lowerOpt + 20), tolerance = 5},
+            feeder     = {optimal = feederOpt, min = math.max(5, feederOpt - 10), max = math.min(100, feederOpt + 15), tolerance = 4},
+            moistureLimit = moistLimit,
+        }
+    end
+
+    return template
+end
+
+---EN: Applies live environmental offsets (moisture, yield) to optimal settings pins.
+---UA: Застосовує живі поправки навколишнього середовища (вологість, врожайність) до оптимальних налаштувань.
+function RHM_CombineSettingsDatabase:applyEnvironmentalOffsets(baseTemplate, context)
+    if not baseTemplate or not context then return baseTemplate end
+
+    local moisture = context.moisture
+    local yield = context.yield
+    local machineType = context.machineType or "grain"
+
+    -- Deep copy template so we don't modify the static database template
+    local adjusted = {}
+    for k, v in pairs(baseTemplate) do
+        if type(v) == "table" then
+            adjusted[k] = {
+                optimal = v.optimal,
+                min = v.min,
+                max = v.max,
+                tolerance = v.tolerance
+            }
+        else
+            adjusted[k] = v
+        end
+    end
+
+    -- 1. Grain combines: Moisture and Yield live corrections
+    if machineType == "grain" and moisture and moisture > 0 then
+        local refMoisture = baseTemplate.moistureLimit or 14.0
+        local deltaM = moisture - refMoisture
+
+        if deltaM > 0 then
+            -- Tough/damp grain: faster rotor (+1.5%/1%), tighter concave (-1.0%/1%), stronger fan (+1.2%/1%)
+            if adjusted.rotor then
+                adjusted.rotor.optimal = math.min(100, math.floor(adjusted.rotor.optimal + deltaM * 1.5 + 0.5))
+            end
+            if adjusted.concave then
+                adjusted.concave.optimal = math.max(10, math.floor(adjusted.concave.optimal - deltaM * 1.0 + 0.5))
+            end
+            if adjusted.fan then
+                adjusted.fan.optimal = math.min(100, math.floor(adjusted.fan.optimal + deltaM * 1.2 + 0.5))
+            end
+        elseif deltaM < -2.0 then
+            -- Very dry/brittle grain (< 12%): slower rotor (-1.5%/1%), wider concave (+1.0%/1%), gentler fan (-0.8%/1%)
+            local dryDelta = math.abs(deltaM + 2.0)
+            if adjusted.rotor then
+                adjusted.rotor.optimal = math.max(10, math.floor(adjusted.rotor.optimal - dryDelta * 1.5 + 0.5))
+            end
+            if adjusted.concave then
+                adjusted.concave.optimal = math.min(100, math.floor(adjusted.concave.optimal + dryDelta * 1.0 + 0.5))
+            end
+            if adjusted.fan then
+                adjusted.fan.optimal = math.max(15, math.floor(adjusted.fan.optimal - dryDelta * 0.8 + 0.5))
+            end
+        end
+
+        -- Stand density / Yield correction: high yield (> 8 t/ha) needs wider sieves & concaves to prevent choking
+        if yield and yield > 8.0 then
+            local excessYield = math.min(10.0, yield - 8.0)
+            if adjusted.upperSieve then
+                adjusted.upperSieve.optimal = math.min(100, math.floor(adjusted.upperSieve.optimal + excessYield * 1.0 + 0.5))
+            end
+            if adjusted.lowerSieve then
+                adjusted.lowerSieve.optimal = math.min(100, math.floor(adjusted.lowerSieve.optimal + excessYield * 0.8 + 0.5))
+            end
+            if adjusted.concave then
+                adjusted.concave.optimal = math.min(100, math.floor(adjusted.concave.optimal + excessYield * 1.0 + 0.5))
+            end
+        end
+    end
+
+    return adjusted
+end
+
+-- EN: Returns the optimal settings template for a crop by internal name (e.g. "WHEAT").
+--     If crop is unlisted or custom mod crop, dynamically calculates its physical profile.
+--     If context (moisture, yield) is supplied, applies live environmental adjustments.
+-- UA: Повертає шаблон оптимальних налаштувань для культури за назвою.
+--     Якщо культура невідома чи модова, динамічно генерує фізичний паспорт.
+--     Якщо передано контекст (вологість, врожайність), застосовує живі поправки.
+function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
+    if not cropName then return nil end
+
+    local crop = self.crops[cropName]
+    local baseTemplate = nil
+
+    if crop then
+        if not crop.template then
+            crop.template = self:calculatePhysicalOptimalSettings(cropName, context)
+        end
+        baseTemplate = crop.template
+    else
+        -- Completely unknown or custom mod crop: dynamically derive physical template
+        baseTemplate = self:calculatePhysicalOptimalSettings(cropName, context)
+        local fillTypeIdx = (context and context.fillType) or (g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName and g_fillTypeManager:getFillTypeIndexByName(cropName))
+        self.crops[cropName] = {
+            name = cropName,
+            nameEN = cropName,
+            template = baseTemplate,
+            machineType = (context and context.machineType) or "grain",
+            group = "custom",
+            fillType = (fillTypeIdx and fillTypeIdx > 0) and fillTypeIdx or nil,
+        }
+        rhm_log(string.format("RHM: [CROP DB] Dynamically generated physical profile for mod crop '%s' (machine: %s)", cropName, tostring(self.crops[cropName].machineType)))
+    end
+
+    if context and (context.moisture or context.yield) then
+        return self:applyEnvironmentalOffsets(baseTemplate, context)
+    end
+
+    return baseTemplate
 end
 
 -- EN: Converts a game FillType integer to the internal crop name used in the database.
@@ -458,7 +506,7 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
     if not fillType or fillType == FillType.UNKNOWN then
         return nil
     end
-    
+
     -- Отримуємо точний рядок-ключ з таблиці FillType (наприклад "RICE_LONG_GRAIN")
     local fillTypeKey = nil
     for k, v in pairs(FillType) do
@@ -467,11 +515,15 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
             break
         end
     end
-    
+
+    if not fillTypeKey and g_fillTypeManager and g_fillTypeManager.getFillTypeNameByIndex then
+        fillTypeKey = g_fillTypeManager:getFillTypeNameByIndex(fillType)
+    end
+
     if not fillTypeKey then
         return nil
     end
-    
+
     -- Шукаємо crop за ключем FillType
     local fillTypeMapping = {
         ["WHEAT"] = "WHEAT",
@@ -484,26 +536,26 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
         ["SORGHUM"] = "SORGHUM",
         ["RICE"] = "RICE",
         ["RICE_LONG_GRAIN"] = "RICE_LONG_GRAIN",
-        ["RICELONGGRAIN"] = "RICE_LONG_GRAIN", -- Можливий варіант написання
-        ["RICE_LONGGRAIN"] = "RICE_LONG_GRAIN", -- Ще один варіант
-        
+        ["RICELONGGRAIN"] = "RICE_LONG_GRAIN",
+        ["RICE_LONGGRAIN"] = "RICE_LONG_GRAIN",
+
         -- FS25 New & Mod Crops
         ["PEA"] = "PEA",
         ["LENTIL"] = "LENTIL",
         ["CHICKPEA"] = "CHICKPEA",
-        
+
         ["RYE"] = "RYE",
         ["SPELT"] = "SPELT",
         ["TRITICALE"] = "TRITICALE",
         ["MILLET"] = "MILLET",
         ["BUCKWHEAT"] = "BUCKWHEAT",
-        
+
         ["LINSEED"] = "LINSEED",
         ["FLAX"] = "LINSEED",
         ["MUSTARD"] = "MUSTARD",
         ["POPPY"] = "POPPY",
         ["HEMP"] = "HEMP",
-        
+
         -- Root/Veg
         ["POTATO"] = "POTATO",
         ["SUGARBEET"] = "SUGARBEET",
@@ -519,17 +571,27 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
         ["CHAFF"] = "MAIZE_FORAGE",
         ["GRASS"] = "GRASS",
         ["DRYGRASS"] = "DRYGRASS",
+        ["HAY"] = "DRYGRASS",
+        ["HAY_WINDROW"] = "DRYGRASS_WINDROW",
         ["TALLGRASS"] = "GRASS",
         ["GRASS_WINDROW"] = "GRASS_WINDROW",
         ["DRYGRASS_WINDROW"] = "DRYGRASS_WINDROW",
+        ["STRAW"] = "STRAW_WINDROW",
+        ["STRAW_WINDROW"] = "STRAW_WINDROW",
         ["SILAGE"] = "MAIZE_FORAGE",
+        ["GPS"] = "MAIZE_FORAGE",
+        ["ALFALFA"] = "ALFALFA",
+        ["ALFALFA_WINDROW"] = "ALFALFA_WINDROW",
+        ["LUCERNE"] = "ALFALFA",
+        ["LUCERNE_WINDROW"] = "ALFALFA_WINDROW",
+        ["CLOVER_WINDROW"] = "CLOVER_WINDROW",
 
         -- Cotton
         ["COTTON"] = "COTTON",
     }
-    
+
     local matchedName = fillTypeMapping[fillTypeKey]
-    
+
     if not matchedName and fillTypeKey then
         if fillTypeKey:find("_WINDROW") then
             local baseType = fillTypeKey:gsub("_WINDROW", "")
@@ -539,17 +601,77 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
             matchedName = fillTypeMapping[baseType]
         end
     end
-    if not matchedName then
-        rhm_log(string.format("RHM: [CROP DB] Unknown FillType KEY: '%s' (ID: %d)", tostring(fillTypeKey), fillType))
+
+    if not matchedName and fillTypeKey then
+        -- Dynamic fallback: register unmapped mod fillType directly as crop name
+        matchedName = fillTypeKey
+        rhm_log(string.format("RHM: [CROP DB] Dynamic crop auto-registered for FillType: '%s' (ID: %d)", tostring(fillTypeKey), fillType))
     end
-    
+
     return matchedName
+end
+
+---EN: Resolves the localized display name for a crop directly from the FS25 engine (fillType.title).
+---UA: Отримує локалізовану назву культури безпосередньо з рушія FS25 (fillType.title).
+function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
+    if not cropName then return "" end
+
+    local cropData = self.crops[cropName]
+
+    -- 1. Try registered fillType index via g_fillTypeManager
+    if cropData and cropData.fillType and g_fillTypeManager then
+        local ft = g_fillTypeManager:getFillTypeByIndex(cropData.fillType)
+        if ft and ft.title and ft.title ~= "" then
+            return ft.title
+        end
+    end
+
+    -- 2. Try looking up fillType by cropName directly
+    if g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName then
+        local ftIdx = g_fillTypeManager:getFillTypeIndexByName(cropName)
+        if ftIdx and ftIdx > 0 then
+            local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
+            if ft and ft.title and ft.title ~= "" then
+                return ft.title
+            end
+        end
+    end
+
+    -- 3. Try FruitType manager title
+    if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByName then
+        local fruit = g_fruitTypeManager:getFruitTypeByName(cropName)
+        if fruit and fruit.title and fruit.title ~= "" then
+            return fruit.title
+        end
+    end
+
+    -- 4. Try base game l10n key (fillType_<name>)
+    local l10nKey = "fillType_" .. string.lower(cropName)
+    if g_i18n and g_i18n.hasText and g_i18n:hasText(l10nKey) then
+        return g_i18n:getText(l10nKey)
+    end
+
+    -- 5. Clean formatted fallback string
+    local cleanName = cropName:gsub("_", " ")
+    return cleanName:sub(1,1):upper() .. cleanName:sub(2):lower()
 end
 
 -- EN: Returns the full crop data record (template, machineType, group, fillType, names).
 -- UA: Повертає повний запис даних культури (шаблон, тип машини, група, fillType, назви).
 function RHM_CombineSettingsDatabase:getCropData(cropName)
-    return self.crops[cropName]
+    if not cropName then return nil end
+    local crop = self.crops[cropName]
+    if crop then
+        if not crop.template then
+            crop.template = self:calculatePhysicalOptimalSettings(cropName)
+        end
+        -- Dynamic backward compatibility for external consumers expecting .name or .nameEN
+        if not crop.name then
+            crop.name = self:getCropDisplayName(cropName)
+            crop.nameEN = crop.name
+        end
+    end
+    return crop
 end
 
 -- EN: Returns a sorted list of all registered crop names in the database.
@@ -582,8 +704,8 @@ end
 -- UA: Розраховує попередній перегляд загальних втрат врожаю для довільних налаштувань без їх застосування.
 --     Використовується в GUI калібрування для кольорового зворотного зв'язку до підтвердження гравцем.
 --     Втрати = 0.15% за одиницю відхилення понад допуск, обмежено до 25%.
-function RHM_CombineSettingsDatabase:calcSettingsLossPreview(cropName, settings)
-    local template = self:getSettingsForCrop(cropName)
+function RHM_CombineSettingsDatabase:calcSettingsLossPreview(cropName, settings, context)
+    local template = self:getSettingsForCrop(cropName, context)
     if not template then return 0, {} end
     
     local totalPenalty = 0
@@ -615,8 +737,8 @@ end
 --     Values outside this range are physically unrealistic and blocked by the GUI.
 -- UA: Перевіряє чи значення параметру знаходиться в допустимому діапазоні (min-max) для культури.
 --     Значення поза цим діапазоном є фізично нереалістичними і блокуються GUI.
-function RHM_CombineSettingsDatabase:isValueValid(cropName, paramName, value)
-    local settings = self:getSettingsForCrop(cropName)
+function RHM_CombineSettingsDatabase:isValueValid(cropName, paramName, value, context)
+    local settings = self:getSettingsForCrop(cropName, context)
     if not settings or not settings[paramName] then
         return false
     end

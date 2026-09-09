@@ -206,6 +206,11 @@ function RHMDraggableHUD:draw()
     if not self.settings.showHUD then return end
     if not self.vehicle then return end
 
+    if not self.backgroundOverlay then
+        self:load()
+    end
+    if not self.backgroundOverlay then return end
+
     self:updateSize()
 
     self.backgroundOverlay:setPosition(self.x, self.y)
@@ -332,6 +337,9 @@ function RHMDraggableHUD:drawContent()
         else
             prodStr = string.format("%.1f t/h", prodVal)
         end
+        if self.data.hectaresPerHour and self.data.hectaresPerHour > 0.05 then
+            prodStr = prodStr .. string.format(" (%.2f ha/h)", self.data.hectaresPerHour)
+        end
         self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "productivity", prodStr, 0)
         textY = textY - lineHeight
     end
@@ -367,7 +375,7 @@ function RHMDraggableHUD:drawContent()
         machineType = self.vehicle.spec_rhm_Combine.machineType
         packageLevel = self.vehicle.spec_rhm_Combine.packageLevel or 1
     end
-    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" and packageLevel >= 2 then
+    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" then
         local lossVal = self.data.cropLoss or 0
         local lossStr
         if lossVal > 0.1 then
@@ -444,7 +452,7 @@ function RHMDraggableHUD:updateSize()
     
     -- EN: Crop Loss row is not shown for forage harvesters / Low packages.
     -- UA: Рядок втрат не відображається для силосних та базових пакетів.
-    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" and packageLevel >= 2 then rowCount = rowCount + 1 end
+    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" then rowCount = rowCount + 1 end
     if self.settings.showSpeed then rowCount = rowCount + 1 end
 
     local lineHeight  = 0.028 * self.uiScale
@@ -495,6 +503,21 @@ end
 
 function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
     if not self.settings.showHUD then return false end
+
+    if self.dragging then
+        if isUp and button == Input.MOUSE_BUTTON_LEFT then
+            self.dragging = false
+            rhm_log(string.format("RHM [UI]: RHM: Drag stopped at (%.3f, %.3f)", self.x, self.y))
+            if self.settings and self.settings.save then
+                self.settings:save()
+            end
+            return true
+        else
+            self:moveTo(posX - self.dragOffsetX, posY - self.dragOffsetY)
+            return true
+        end
+    end
+
     if button ~= Input.MOUSE_BUTTON_LEFT then return false end
 
     if self.menuButtonArea and isDown then
@@ -516,15 +539,6 @@ function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
             self.dragging = true
             self.lastDragTimeStamp = g_time
             rhm_log("RHM [UI]: RHM: Drag started")
-            return true
-        end
-    elseif isUp then
-        if self.dragging then
-            self.dragging = false
-            rhm_log(string.format("RHM [UI]: RHM: Drag stopped at (%.3f, %.3f)", self.x, self.y))
-            if self.settings and self.settings.save then
-                self.settings:save()
-            end
             return true
         end
     end

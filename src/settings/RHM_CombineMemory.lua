@@ -60,13 +60,25 @@ end
 -- UA: Застосовує автоматичні або стандартні налаштування для заданої культури.
 --     AUTO режим додає невелике випадкове відхилення від оптимальних значень (тільки на сервері).
 --     Режим RESET (forceOptimal=false) встановлює всі параметри на нейтральні 50%.
-function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal)
+function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
     if not cropName then
         rhm_log("RHM [RHM_CombineMemory]: RHM: [!] autoConfigureForCrop called with nil cropName, skipping")
         return false
     end
 
-    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName)
+    if not context and self.combine and self.combine.spec_rhm_Combine then
+        local rhmSpec = self.combine.spec_rhm_Combine
+        context = {
+            machineType = self.machineType,
+            moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
+            yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
+            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
+            fillType = rhmSpec.lastFillType,
+            fruitType = rhmSpec.lastFruitType,
+        }
+    end
+
+    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
 
     if not optimalSettings then
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [!] No settings found for crop: %s", cropName))
@@ -194,8 +206,20 @@ end
 -- UA: Оцінює всі поточні налаштування відносно оптимальних значень бази даних для культури.
 --     Повертає окремо штрафи за ефективність (швидкість) і втрати врожаю, плюс таблицю попереджень.
 --     Подача/Ротор впливають на ефективність (пропускну здатність), Вентилятор/Решета — на втрати (якість очищення).
-function RHM_CombineMemory:checkSettingsForCrop(cropName)
-    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName)
+function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
+    if not context and self.combine and self.combine.spec_rhm_Combine then
+        local rhmSpec = self.combine.spec_rhm_Combine
+        context = {
+            machineType = self.machineType,
+            moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
+            yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
+            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
+            fillType = rhmSpec.lastFillType,
+            fruitType = rhmSpec.lastFruitType,
+        }
+    end
+
+    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
 
     if not optimalSettings then
         return 0, 0, {}
@@ -409,6 +433,20 @@ function RHM_CombineMemory:switchCrop(newCropName)
             self:autoConfigureForCrop(newCropName, false)
         end
     end
+
+    -- EN: Synchronize with server if in multiplayer
+    -- UA: Синхронізуємо з сервером у мультиплеєрі
+    if g_client and self.combine then
+        local event = RHM_CombineSettingsEvent.new(self.combine, "CROP", 0, false, nil, newCropName)
+        if not g_server then
+            g_client:getServerConnection():sendEvent(event)
+        else
+            local spec = self.combine.spec_rhm_Combine
+            if spec and spec.settingsDirtyFlag then
+                self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
+            end
+        end
+    end
 end
 
 -- ============================================================================
@@ -474,6 +512,56 @@ end
 -- UA: Псевдонім для saveCurrentProfile для зворотної сумісності з кодом GUI.
 function RHM_CombineMemory:saveProfile(cropName)
     return self:saveCurrentProfile(cropName)
+end
+
+---EN: Smoothly auto-trims active settings towards live optimal targets when AUTO mode is active (Level 4 Opti-Harvest AI).
+---UA: Плавно підлаштовує активні налаштування до живих оптимальних цілей в режимі AUTO (4 рівень Opti-Harvest AI).
+function RHM_CombineMemory:updateAutoTrim(dt)
+    if self.mode ~= "AUTO" or not self.autoSwitchEnabled or not self.currentCrop then
+        return
+    end
+
+    local rhmSpec = self.combine and self.combine.spec_rhm_Combine
+    if not rhmSpec or (rhmSpec.packageLevel or 1) < 4 then
+        return
+    end
+
+    self.autoTrimTimer = (self.autoTrimTimer or 0) + dt
+    if self.autoTrimTimer < 2000 then
+        return
+    end
+    self.autoTrimTimer = 0
+
+    local context = {
+        machineType = self.machineType,
+        moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
+        yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
+        isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
+        fillType = rhmSpec.lastFillType,
+        fruitType = rhmSpec.lastFruitType,
+    }
+
+    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(self.currentCrop, context)
+    if not optimalSettings then return end
+
+    local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
+    local changed = false
+
+    for _, pName in ipairs(activeParams) do
+        if optimalSettings[pName] and optimalSettings[pName].optimal then
+            local target = optimalSettings[pName].optimal
+            local cur = self.currentSettings[pName] or 50
+            if math.abs(cur - target) >= 1 then
+                local step = (target > cur) and 1 or -1
+                self.currentSettings[pName] = cur + step
+                changed = true
+            end
+        end
+    end
+
+    if changed and self.combine and rhmSpec.settingsDirtyFlag then
+        self.combine:raiseDirtyFlags(rhmSpec.settingsDirtyFlag)
+    end
 end
 
 rhm_log("RHM [RHM_CombineMemory]: [OK] RHM_CombineMemory class loaded")

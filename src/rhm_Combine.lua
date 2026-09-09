@@ -267,56 +267,63 @@ function rhm_Combine:onLoad(savegame)
     local machineType = "grain"  -- safe default
     local sc = self.spec_combine
 
-    if sc then
-        -- EN: Detection Priorities:
-        -- 1. Explicit harvester specializations (ForageHarvester / CottonPicker / RootHarvester)
-        -- 2. Physical features (Straw effects = Grain combine)
-        -- 3. Capability signals (Rain work + Pipe + No Cutter = Forage)
-        
-        local isForageHarvester = SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations)
-        -- EN: FS25 API: iterate fill units to check if any supports COTTON (getFillUnitIndexByFillType does not exist in FS25).
-        -- UA: API FS25: ітеруємо fill units щоб перевірити чи будь-яка підтримує COTTON (getFillUnitIndexByFillType не існує в FS25).
-        local isCottonHarvester = false
-        if FillType.COTTON then
-            local fillUnits = self:getFillUnits()
-            if fillUnits then
-                for _, fillUnit in ipairs(fillUnits) do
-                    if fillUnit.supportedFillTypes and fillUnit.supportedFillTypes[FillType.COTTON] then
-                        isCottonHarvester = true
-                        break
+    -- EN: 1. Check Store Item Category (Primary authority for machine classification)
+    -- UA: 1. Перевіряємо категорію магазину (головний авторитет для класифікації техніки)
+    local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
+    local category = storeItem and storeItem.categoryName or ""
+
+    if category == "beetVehicles" or category == "beetHarvesting" 
+       or category == "potatoVehicles" or category == "potatoHarvesting"
+       or category == "vegetableVehicles" or category == "sugarCaneVehicles" then
+        machineType = "root"
+    elseif category == "forageHarvesters" then
+        machineType = "forage"
+    elseif category == "cottonVehicles" then
+        machineType = "cotton"
+    else
+        -- EN: 2. Check Supported FillTypes on Hopper / FillUnits
+        -- UA: 2. Перевіряємо підтримувані типи в бункері
+        local isRoot = false
+        local isCotton = false
+        local fillUnits = self:getFillUnits()
+        if fillUnits then
+            for _, fillUnit in ipairs(fillUnits) do
+                if fillUnit.supportedFillTypes then
+                    for ftIndex, _ in pairs(fillUnit.supportedFillTypes) do
+                        local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
+                        if ft and ft.name then
+                            local name = string.upper(ft.name)
+                            if name == "POTATO" or name == "SUGARBEET" or name == "BEETROOT"
+                               or name == "CARROT" or name == "PARSNIP" or name == "ONION"
+                               or name == "SPINACH" or name == "GREENBEAN" or name == "SUGARCANE" then
+                                isRoot = true
+                                break
+                            elseif name == "COTTON" then
+                                isCotton = true
+                            end
+                        end
                     end
                 end
+                if isRoot or isCotton then break end
             end
         end
-        local hasStrawEffects = sc.strawEffects and #sc.strawEffects > 0
-        local canThreshInRain = sc.allowThreshingDuringRain
 
-        if self.spec_fruitPreparer then
-            -- Cleaning / dirt removal → Root harvester
+        if isRoot or self.spec_fruitPreparer ~= nil then
             machineType = "root"
-        elseif isForageHarvester then
-            machineType = "forage"
-        elseif isCottonHarvester then
+        elseif isCotton then
             machineType = "cotton"
-        elseif hasStrawEffects then
-            -- Grain combine always has straw effects, regardless of rain capability
-            machineType = "grain"
-        elseif canThreshInRain then
-            local hasPipe   = self.spec_pipe   ~= nil
-            local hasCutter = self.spec_cutter ~= nil
-
-            if hasPipe and not hasCutter then
-                -- Forage harvester fallback (if spec check failed)
+        elseif SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations) then
+            machineType = "forage"
+        elseif sc then
+            local hasStrawEffects = sc.strawEffects and #sc.strawEffects > 0
+            if hasStrawEffects then
+                machineType = "grain"
+            elseif sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil and not isRoot then
+                -- Only fallback to forage if not already verified as root/vegetable
                 machineType = "forage"
-            elseif hasCutter and not hasPipe then
-                -- Direct-cut vegetable harvester
-                machineType = "root"
             else
-                machineType = "root"
+                machineType = "grain"
             end
-        else
-            -- Unknown: treat as grain
-            machineType = "grain"
         end
     end
 
@@ -333,7 +340,17 @@ function rhm_Combine:onLoad(savegame)
     --     so that setting adjustments affect the live load and loss calculations.
     -- UA: Створюємо систему пам'яті для поточних налаштувань. Підключаємо до RHM_LoadCalculator
     --     щоб регулювання налаштувань впливало на поточні розрахунки навантаження і втрат.
+    if not RHM_CombineMemory then
+        Logging.error("RHM: RHM_CombineMemory class is missing! Check script loading order.")
+        return
+    end
+    
     spec.combineMemory = RHM_CombineMemory.new(self, machineType)
+    if not spec.combineMemory then
+        Logging.error("RHM: Failed to create RHM_CombineMemory for combine: %s", self:getFullName())
+        return
+    end
+    
     spec.loadCalculator.combineMemory = spec.combineMemory
     rhm_log("RHM [Combine]: RHM: [OK] Combine RHMSettings System initialized")
 
@@ -346,6 +363,7 @@ function rhm_Combine:onLoad(savegame)
         cropLoss = 0,
         tonPerHour = 0,
         litersPerHour = 0,
+        hectaresPerHour = 0,
         yield = 0,
         recommendedSpeed = 0,  -- EN: Updated by server tick, synced to clients / UA: Оновлюється сервером, синхронізується на клієнти
         overloadLevel = 0,     -- EN: 0=normal, 1=HIGH (120%+), 2=CRITICAL (150%+) — synced for warning display / UA: 0=норма, 1=ВИСОКЕ (120%+), 2=КРИТИЧНЕ (150%+)
@@ -867,18 +885,29 @@ end
 function rhm_Combine:getCanBeTurnedOn(superFunc)
     local spec_combine = self.spec_combine
     
+    -- EN: Check Independent Launch setting from manager.
+    -- UA: Перевіряємо налаштування Незалежного Запуску.
+    local isIndependentLaunchEnabled = true
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isIndependentLaunchEnabled = g_realisticHarvestManager.settings.enableIndependentLaunch
+    end
+
+    -- EN: If Independent Launch is enabled, combine thresher can turn on freely without waiting for cutter.
+    -- UA: Якщо Незалежний Запуск увімкнений, комбайн може вільно запускати молотарку без блокування від жатки (Manual Attach).
+    if isIndependentLaunchEnabled then
+        return superFunc(self)
+    end
+
     -- EN: No cutters attached — use vanilla logic.
     -- UA: Немає прикріплених жаток — використовуємо ванільну логіку.
     if spec_combine.numAttachedCutters <= 0 then
         return superFunc(self)
     end
     
-    -- EN: Check each attached cutter — if any is not ready (e.g. folded), block thresher start.
-    -- UA: Перевіряємо кожну прикріплену жатку — якщо хоча б одна не готова (напр. складена), блокуємо запуск.
+    -- EN: If Independent Launch is disabled (classic combined mode), check each attached cutter.
+    -- UA: Якщо Незалежний Запуск вимкнений, перевіряємо готовність прикріплених жаток.
     for cutter, _ in pairs(spec_combine.attachedCutters) do
         if cutter ~= self and cutter.getCanBeTurnedOn ~= nil then
-            -- EN: Use pcall to prevent infinite loops if cutter's getCanBeTurnedOn invokes the combine
-            -- UA: Використовуємо pcall щоб уникнути нескінченних циклів
             local success, canTurnOn = pcall(cutter.getCanBeTurnedOn, cutter)
             if success and not canTurnOn then
                 return false
@@ -1015,6 +1044,11 @@ function rhm_Combine:updateWarnings(dt)
         return
     end
 
+    local now = g_time
+    if self._rhmLastWarningTime and (now - self._rhmLastWarningTime) < 3000 then
+        return
+    end
+
     local isCombineOn = self:getIsTurnedOn()
     local spec_combine = self.spec_combine
     
@@ -1026,12 +1060,15 @@ function rhm_Combine:updateWarnings(dt)
             
             -- CASE 1: Cutter ON but Thresher OFF (Critical)
             if isCutterOn and not isCombineOn then
+                self._rhmLastWarningTime = now
                 g_currentMission:showBlinkingWarning(g_i18n:getText("rhm_warning_turn_on_combine"), 2000)
                 break -- Priority warning
             end
             
-            -- CASE 2: Thresher ON but Cutter OFF and Lowered (Likely forgot to turn on)
-            if isCombineOn and not isCutterOn and isLowered then
+            -- CASE 2: Thresher ON but Cutter OFF and Lowered while moving (Likely forgot to turn on)
+            local speed = (self.lastSpeedReal or 0) * 3600
+            if isCombineOn and not isCutterOn and isLowered and speed > 1.0 then
+                self._rhmLastWarningTime = now
                 g_currentMission:showBlinkingWarning(g_i18n:getText("rhm_warning_turn_on_cutter"), 2000)
                 break
             end
@@ -1247,9 +1284,16 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.cropLoss = totalCropLossThisTick
         spec.data.tonPerHour = spec.loadCalculator:getTonPerHour()
         spec.data.litersPerHour = spec.loadCalculator:getLitersPerHour() -- NEW: Volume flow
+        spec.data.hectaresPerHour = spec.loadCalculator:getHectaresPerHour() -- NEW: Area rate (ha/h)
         spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
         -- NEW: Yield Monitor Data
         spec.data.yield = spec.loadCalculator.currentYield or 0
+    end
+
+    -- EN: Auto-trim active settings in background when Opti-Harvest AI (Level 4) is active in AUTO mode.
+    -- UA: Фонове автопідлаштування налаштувань коли активний Opti-Harvest AI (4 рівень) в режимі AUTO.
+    if spec.combineMemory and spec.combineMemory.updateAutoTrim and cutterIsTurnedOn then
+        spec.combineMemory:updateAutoTrim(dt)
     end
     
     -- === SPEED LIMIT ENFORCEMENT (Server Side) ===
@@ -1366,6 +1410,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 elseif math.abs((data.cropLoss or 0) - (last.cropLoss or 0)) > 0.5 then hasSignificantChange = true
                 elseif math.abs((data.recommendedSpeed or 0) - (last.recommendedSpeed or 0)) > 0.2 then hasSignificantChange = true
                 elseif math.abs((data.yield or 0) - (last.yield or 0)) > 0.1 then hasSignificantChange = true
+                elseif math.abs((data.hectaresPerHour or 0) - (last.hectaresPerHour or 0)) > 0.05 then hasSignificantChange = true
                 elseif data.overloadLevel ~= last.overloadLevel then hasSignificantChange = true
                 elseif math.abs((data.moisture or 0) - (last.moisture or 0)) > 0.5 then hasSignificantChange = true
                 end
@@ -1378,6 +1423,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 spec.lastSyncedData.cropLoss = data.cropLoss
                 spec.lastSyncedData.recommendedSpeed = data.recommendedSpeed
                 spec.lastSyncedData.yield = data.yield
+                spec.lastSyncedData.hectaresPerHour = data.hectaresPerHour
                 spec.lastSyncedData.overloadLevel = data.overloadLevel
                 spec.lastSyncedData.moisture = data.moisture
                 
@@ -1429,6 +1475,7 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     safeSet(cur .. "#lowerSieve", settings.lowerSieve or 50)
     safeSet(cur .. "#rotor",      settings.rotor or 50)
     safeSet(cur .. "#feeder",     settings.feeder or 50)
+    safeSet(cur .. "#targetEngineLoad", settings.targetEngineLoad or 95)
     
     rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s", self:getName() or "?"))
 end
@@ -1444,11 +1491,12 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
     spec.combineMemory.autoSwitchEnabled = xmlFile:getValue(cur .. "#autoSwitch", true)
     local savedCrop = xmlFile:getValue(cur .. "#currentCrop")
     spec.combineMemory.currentCrop = (savedCrop ~= "" and savedCrop) or nil
-    spec.combineMemory.currentSettings.fan        = xmlFile:getValue(cur .. "#fan", 50)
-    spec.combineMemory.currentSettings.upperSieve = xmlFile:getValue(cur .. "#upperSieve", 50)
-    spec.combineMemory.currentSettings.lowerSieve = xmlFile:getValue(cur .. "#lowerSieve", 50)
-    spec.combineMemory.currentSettings.rotor      = xmlFile:getValue(cur .. "#rotor", 50)
-    spec.combineMemory.currentSettings.feeder     = xmlFile:getValue(cur .. "#feeder", 50)
+    spec.combineMemory.currentSettings.fan              = xmlFile:getValue(cur .. "#fan", 50)
+    spec.combineMemory.currentSettings.upperSieve       = xmlFile:getValue(cur .. "#upperSieve", 50)
+    spec.combineMemory.currentSettings.lowerSieve       = xmlFile:getValue(cur .. "#lowerSieve", 50)
+    spec.combineMemory.currentSettings.rotor            = xmlFile:getValue(cur .. "#rotor", 50)
+    spec.combineMemory.currentSettings.feeder           = xmlFile:getValue(cur .. "#feeder", 50)
+    spec.combineMemory.currentSettings.targetEngineLoad = xmlFile:getValue(cur .. "#targetEngineLoad", 95)
     
     rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Loaded combine state for %s", self:getName() or "?"))
 end
@@ -1466,6 +1514,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteFloat32(streamId, 0)
         streamWriteFloat32(streamId, 0)
         streamWriteFloat32(streamId, 0)
+        streamWriteFloat32(streamId, 0) -- hectaresPerHour
         streamWriteFloat32(streamId, 0)
         streamWriteFloat32(streamId, 0) -- yield
         streamWriteUInt8(streamId, 0)   -- overloadLevel
@@ -1476,6 +1525,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 50)  -- upperSieve
         streamWriteUInt8(streamId, 50)  -- lowerSieve
         streamWriteUInt8(streamId, 50)  -- feeder
+        streamWriteUInt8(streamId, 95)  -- targetEngineLoad
         streamWriteString(streamId, "AUTO")  -- mode
         streamWriteString(streamId, "")      -- currentCrop (empty = nil)
         return
@@ -1486,12 +1536,13 @@ function rhm_Combine:onWriteStream(streamId, connection)
     streamWriteFloat32(streamId, spec.data.cropLoss or 0)
     streamWriteFloat32(streamId, spec.data.tonPerHour or 0)
     streamWriteFloat32(streamId, spec.data.litersPerHour or 0)
+    streamWriteFloat32(streamId, spec.data.hectaresPerHour or 0)
     streamWriteFloat32(streamId, spec.data.recommendedSpeed or 0)
     streamWriteFloat32(streamId, spec.data.yield or 0)
     streamWriteUInt8(streamId, spec.data.overloadLevel or 0)
     streamWriteFloat32(streamId, spec.data.moisture or 0)
     
-    -- RHM_CombineMemory settings (FIX 4: sync on initial connect)
+    -- RHM_CombineMemory settings (sync on initial connect)
     local mem = spec.combineMemory
     if mem then
         streamWriteUInt8(streamId, mem.currentSettings.fan or 50)
@@ -1499,6 +1550,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, mem.currentSettings.upperSieve or 50)
         streamWriteUInt8(streamId, mem.currentSettings.lowerSieve or 50)
         streamWriteUInt8(streamId, mem.currentSettings.feeder or 50)
+        streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 95)
         streamWriteString(streamId, mem.mode or "AUTO")
         streamWriteString(streamId, mem.currentCrop or "")
     else
@@ -1507,6 +1559,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 50)
         streamWriteUInt8(streamId, 50)
         streamWriteUInt8(streamId, 50)
+        streamWriteUInt8(streamId, 95)
         streamWriteString(streamId, "AUTO")
         streamWriteString(streamId, "")
     end
@@ -1521,6 +1574,7 @@ function rhm_Combine:onReadStream(streamId, connection)
         streamReadFloat32(streamId)
         streamReadFloat32(streamId)
         streamReadFloat32(streamId)
+        streamReadFloat32(streamId) -- hectaresPerHour
         streamReadFloat32(streamId)
         streamReadFloat32(streamId) -- yield
         streamReadUInt8(streamId)   -- overloadLevel
@@ -1531,6 +1585,7 @@ function rhm_Combine:onReadStream(streamId, connection)
         streamReadUInt8(streamId)
         streamReadUInt8(streamId)
         streamReadUInt8(streamId)
+        streamReadUInt8(streamId)   -- targetEngineLoad
         streamReadString(streamId)
         streamReadString(streamId)
         return
@@ -1545,6 +1600,7 @@ function rhm_Combine:onReadStream(streamId, connection)
     spec.data.cropLoss = streamReadFloat32(streamId)
     spec.data.tonPerHour = streamReadFloat32(streamId)
     spec.data.litersPerHour = streamReadFloat32(streamId)
+    spec.data.hectaresPerHour = streamReadFloat32(streamId)
     spec.data.recommendedSpeed = streamReadFloat32(streamId)
     spec.data.yield = streamReadFloat32(streamId)
     spec.data.overloadLevel = streamReadUInt8(streamId)
@@ -1556,6 +1612,7 @@ function rhm_Combine:onReadStream(streamId, connection)
     local upperSieve = streamReadUInt8(streamId)
     local lowerSieve = streamReadUInt8(streamId)
     local feeder = streamReadUInt8(streamId)
+    local targetEngineLoad = streamReadUInt8(streamId)
     local mode = streamReadString(streamId)
     local currentCrop = streamReadString(streamId)
     
@@ -1566,6 +1623,7 @@ function rhm_Combine:onReadStream(streamId, connection)
         spec.combineMemory.currentSettings.upperSieve = upperSieve
         spec.combineMemory.currentSettings.lowerSieve = lowerSieve
         spec.combineMemory.currentSettings.feeder = feeder
+        spec.combineMemory.currentSettings.targetEngineLoad = targetEngineLoad or 95
         spec.combineMemory.mode = mode or "AUTO"
         spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
     end
@@ -1593,6 +1651,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             spec.data.cropLoss = streamReadFloat32(streamId)
             spec.data.tonPerHour = streamReadFloat32(streamId)
             spec.data.litersPerHour = streamReadFloat32(streamId)
+            spec.data.hectaresPerHour = streamReadFloat32(streamId)
             spec.data.recommendedSpeed = streamReadFloat32(streamId)
             spec.data.yield = streamReadFloat32(streamId)
             spec.data.overloadLevel = streamReadUInt8(streamId)
@@ -1606,6 +1665,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             local upperSieve = streamReadUInt8(streamId)
             local lowerSieve = streamReadUInt8(streamId)
             local feeder = streamReadUInt8(streamId)
+            local targetEngineLoad = streamReadUInt8(streamId)
             local mode = streamReadString(streamId)
             local currentCrop = streamReadString(streamId)
             
@@ -1615,6 +1675,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
                 spec.combineMemory.currentSettings.upperSieve = upperSieve
                 spec.combineMemory.currentSettings.lowerSieve = lowerSieve
                 spec.combineMemory.currentSettings.feeder = feeder
+                spec.combineMemory.currentSettings.targetEngineLoad = targetEngineLoad or 95
                 spec.combineMemory.mode = mode or "AUTO"
                 spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
             end
@@ -1645,6 +1706,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
             streamWriteFloat32(streamId, data.cropLoss or 0)
             streamWriteFloat32(streamId, data.tonPerHour or 0)
             streamWriteFloat32(streamId, data.litersPerHour or 0)
+            streamWriteFloat32(streamId, data.hectaresPerHour or 0)
             streamWriteFloat32(streamId, data.recommendedSpeed or 0)
             streamWriteFloat32(streamId, data.yield or 0)
             streamWriteUInt8(streamId, data.overloadLevel or 0)
@@ -1660,6 +1722,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, mem.currentSettings.upperSieve or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.lowerSieve or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.feeder or 50)
+                streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 95)
                 streamWriteString(streamId, mem.mode or "AUTO")
                 streamWriteString(streamId, mem.currentCrop or "")
             else
@@ -1668,6 +1731,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
+                streamWriteUInt8(streamId, 95)
                 streamWriteString(streamId, "AUTO")
                 streamWriteString(streamId, "")
             end
@@ -1709,6 +1773,29 @@ end
 function rhm_Combine:actionOpenMenu(actionName, inputValue, callbackState, isAnalog)
     if g_realisticHarvestManager then
         g_realisticHarvestManager:toggleMenu(self)
+    end
+end
+
+-- EN: Clean up cursor and camera states when leaving the vehicle.
+-- UA: Очищаємо стани курсора та камери при виході з транспортного засобу.
+function rhm_Combine:onLeaveVehicle(wasEntered)
+    if self.isClient then
+        if g_realisticHarvestManager then
+            if g_realisticHarvestManager.isCursorVisible then
+                g_realisticHarvestManager.isCursorVisible = false
+                g_inputBinding:setShowMouseCursor(false)
+            end
+            if g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                g_realisticHarvestManager.calibrationGUI:close()
+            end
+        end
+        if self.spec_enterable and self.spec_enterable.cameras then
+            for _, camera in pairs(self.spec_enterable.cameras) do
+                camera.isRotatable = true
+                camera.allowTranslation = true
+                camera.allowZoom = true
+            end
+        end
     end
 end
 

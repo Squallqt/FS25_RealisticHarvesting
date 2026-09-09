@@ -21,7 +21,8 @@ RHMSettingsManager.SERVER_SETTINGS = {
     "difficultyLoss",
     "enableSpeedLimit",
     "enableCropLoss",
-    "enableIndependentLaunch"
+    "enableIndependentLaunch",
+    "enableMoisture"
 }
 
 -- EN: List of client-side setting keys (personal, per-player, HUD-related).
@@ -34,6 +35,7 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "showCropLoss",
     "showSpeed",
     "showLoadWarnings",
+    "showMoisture",
     "hudOffsetX",
     "hudOffsetY",
     "hudPosX",
@@ -53,6 +55,8 @@ RHMSettingsManager.defaultConfig = {
     enableSpeedLimit = true,
     enableCropLoss = false,
     enableIndependentLaunch = true,
+    enableMoisture = true,
+    showMoisture = true,
     hudOffsetX = 0,
     hudOffsetY = 350,
     unitSystem = 1

@@ -17,14 +17,16 @@ function RHM_CombineSettingsEvent.emptyNew()
 end
 
 -- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
+-- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
 -- UA: Створює нову подію, що цілить на конкретний транспорт і несе дані зміни налаштувань.
-function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings)
+function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings, cropName)
     local self = RHM_CombineSettingsEvent.emptyNew()
     self.vehicle = vehicle
     self.parameter = parameter or ""
     self.value = value or 0
     self.isFullProfile = isFullProfile == true
     self.fullSettings = fullSettings
+    self.cropName = cropName or ""
     return self
 end
 
@@ -35,8 +37,8 @@ function RHM_CombineSettingsEvent:readStream(streamId, connection)
     self.isFullProfile = streamReadBool(streamId)
 
     if self.isFullProfile then
-        -- EN: Full profile mode: read all 5 parameter values.
-        -- UA: Режим повного профілю: зчитуємо всі 5 значень параметрів.
+        -- EN: Full profile mode: read all 6 parameter values.
+        -- UA: Режим повного профілю: зчитуємо всі 6 значень параметрів.
         self.fullSettings = {}
         self.fullSettings.fan = streamReadUInt8(streamId)
         self.fullSettings.rotor = streamReadUInt8(streamId)
@@ -49,6 +51,9 @@ function RHM_CombineSettingsEvent:readStream(streamId, connection)
         -- UA: Режим одного параметру: зчитуємо назву параметру і його значення.
         self.parameter = streamReadString(streamId)
         self.value = streamReadInt16(streamId)
+        if self.parameter == "CROP" then
+            self.cropName = streamReadString(streamId)
+        end
     end
     self:run(connection)
 end
@@ -60,19 +65,23 @@ function RHM_CombineSettingsEvent:writeStream(streamId, connection)
     streamWriteBool(streamId, self.isFullProfile)
 
     if self.isFullProfile then
-        -- EN: Write all 5 parameter values for a full profile transfer.
-        -- UA: Записуємо всі 5 значень параметрів для передачі повного профілю.
-        streamWriteUInt8(streamId, self.fullSettings.fan or 50)
-        streamWriteUInt8(streamId, self.fullSettings.rotor or 50)
-        streamWriteUInt8(streamId, self.fullSettings.upperSieve or 50)
-        streamWriteUInt8(streamId, self.fullSettings.lowerSieve or 50)
-        streamWriteUInt8(streamId, self.fullSettings.feeder or 50)
-        streamWriteUInt8(streamId, self.fullSettings.targetEngineLoad or 95)
+        -- EN: Write all 6 parameter values for a full profile transfer (safely guarded against nil).
+        -- UA: Записуємо всі 6 значень параметрів для передачі повного профілю (безпечно проти nil).
+        local s = self.fullSettings or {}
+        streamWriteUInt8(streamId, s.fan or 50)
+        streamWriteUInt8(streamId, s.rotor or 50)
+        streamWriteUInt8(streamId, s.upperSieve or 50)
+        streamWriteUInt8(streamId, s.lowerSieve or 50)
+        streamWriteUInt8(streamId, s.feeder or 50)
+        streamWriteUInt8(streamId, s.targetEngineLoad or 95)
     else
         -- EN: Write single parameter name and value.
         -- UA: Записуємо назву та значення одного параметру.
         streamWriteString(streamId, self.parameter)
         streamWriteInt16(streamId, self.value)
+        if self.parameter == "CROP" then
+            streamWriteString(streamId, self.cropName or "")
+        end
     end
 end
 
@@ -81,92 +90,65 @@ end
 -- UA: Застосовує дані події до RHM_CombineMemory цільового комбайна на сервері.
 --     Після застосування сервер транслює зміну всім іншим клієнтам.
 function RHM_CombineSettingsEvent:run(connection)
-    if self.vehicle and self.vehicle:getIsSynchronized() and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.combineMemory then
-        local mem = self.vehicle.spec_rhm_Combine.combineMemory
+    -- EN: Safety checks for vehicle and components
+    -- UA: Перевірки безпеки для транспорту та компонентів
+    if not self.vehicle or not self.vehicle:getIsSynchronized() then
+        return
+    end
+    
+    if not self.vehicle.spec_rhm_Combine or not self.vehicle.spec_rhm_Combine.combineMemory then
+        return
+    end
+    
+    local mem = self.vehicle.spec_rhm_Combine.combineMemory
 
-        if g_server ~= nil then
-            if self.isFullProfile then
-                -- EN: Apply a complete user preset profile to the combine memory.
-                -- UA: Застосовуємо повний профіль користувача до пам'яті комбайна.
-                mem.currentSettings.fan = self.fullSettings.fan
-                mem.currentSettings.rotor = self.fullSettings.rotor
-                mem.currentSettings.upperSieve = self.fullSettings.upperSieve
-                mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve
-                mem.currentSettings.feeder = self.fullSettings.feeder
-                mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad
+    if g_server ~= nil then
+        if self.isFullProfile then
+            -- EN: Apply a complete user preset profile to the combine memory.
+            -- UA: Застосовуємо повний профіль користувача до пам'яті комбайна.
+            if self.fullSettings then
+                mem.currentSettings.fan = self.fullSettings.fan or mem.currentSettings.fan
+                mem.currentSettings.rotor = self.fullSettings.rotor or mem.currentSettings.rotor
+                mem.currentSettings.upperSieve = self.fullSettings.upperSieve or mem.currentSettings.upperSieve
+                mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve or mem.currentSettings.lowerSieve
+                mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
+                mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
+            end
+            mem.autoSwitchEnabled = false
+            mem.mode = "MANUAL"
+            rhm_log("RHM [Network]: RHM: [Sync] Received full user profile settings via network")
+        else
+            if self.parameter == "CROP" then
+                if self.cropName and self.cropName ~= "" then
+                    mem:switchCrop(self.cropName)
+                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied crop switch to %s", self.cropName))
+                end
+            elseif self.parameter == "AUTO_SET" then
+                -- EN: Client requested AUTO mode — configure optimal settings for current crop.
+                -- UA: Клієнт запросив AUTO режим — налаштовуємо оптимальні значення для поточної культури.
+                mem.autoSwitchEnabled = true
+                mem.mode = "AUTO"
+                if mem.currentCrop then
+                    mem:autoConfigureForCrop(mem.currentCrop, true)
+                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
+                end
+            elseif self.parameter == "RESET_SET" then
+                -- EN: Client requested RESET — revert all settings to neutral 50%.
+                -- UA: Клієнт запросив RESET — скидаємо всі налаштування до нейтральних 50%.
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
-                rhm_log("RHM [Network]: RHM: [Sync] Received full user profile settings via network")
-            else
-                if self.parameter == "AUTO_SET" then
-                    -- EN: Client requested AUTO mode — configure optimal settings for current crop.
-                    -- UA: Клієнт запросив AUTO режим — налаштовуємо оптимальні значення для поточної культури.
-                    mem.autoSwitchEnabled = true
-                    mem.mode = "AUTO"
-                    if mem.currentCrop then
-                        mem:autoConfigureForCrop(mem.currentCrop, true)
-                        rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
-                    end
-                elseif self.parameter == "RESET_SET" then
-                    -- EN: Client requested RESET — revert all settings to neutral 50%.
-                    -- UA: Клієнт запросив RESET — скидаємо всі налаштування до нейтральних 50%.
-                    mem.autoSwitchEnabled = false
-                    mem.mode = "MANUAL"
-                    if mem.currentCrop then
-                        mem:autoConfigureForCrop(mem.currentCrop, false)
-                        rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied RESET to 50%% for %s", mem.currentCrop))
-                    end
-                elseif self.parameter == "AUTO_MODE" then
-                    -- EN: Toggle the auto-switch behavior flag (1 = enabled, 0 = disabled).
-                    -- UA: Перемикаємо прапорець автоматичного перемикання (1 = увімкнено, 0 = вимкнено).
-                    mem.autoSwitchEnabled = (self.value == 1)
-                    mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
-                else
-                    -- EN: Apply a single parameter change (e.g. "fan" = 65).
-                    -- UA: Застосовуємо зміну одного параметру (наприклад "fan" = 65).
-                    if mem.currentSettings[self.parameter] ~= nil then
-                        local maxVal = self.parameter == "targetEngineLoad" and 110 or 100
-                        mem.currentSettings[self.parameter] = math.max(0, math.min(maxVal, self.value))
-                        if self.parameter ~= "targetEngineLoad" then
-                            mem.autoSwitchEnabled = false
-                            mem.mode = "MANUAL"
-                        end
-                        rhm_log(string.format("RHM [Network]: RHM: [Sync] Received parameter update: %s = %d", self.parameter, self.value))
-                    end
+                if mem.currentCrop then
+                    mem:autoConfigureForCrop(mem.currentCrop, false)
+                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied RESET to 50%% for %s", mem.currentCrop))
                 end
-            end
-
-            -- EN: Server always broadcasts the full state so clients sync perfectly without duplicate calculations.
-            local fullSettings = {
-                fan = mem.currentSettings.fan,
-                rotor = mem.currentSettings.rotor,
-                upperSieve = mem.currentSettings.upperSieve,
-                lowerSieve = mem.currentSettings.lowerSieve,
-                feeder = mem.currentSettings.feeder,
-                targetEngineLoad = mem.currentSettings.targetEngineLoad
-            }
-            g_server:broadcastEvent(RHM_CombineSettingsEvent.new(self.vehicle, "", 0, true, fullSettings), nil, connection, self.vehicle)
-            local spec = self.vehicle.spec_rhm_Combine
-            if spec and spec.settingsDirtyFlag then
-                self.vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
-            else
-                self.vehicle:raiseDirtyFlags(spec.dirtyFlag)
-            end
-
-        else
-            -- EN: Client execution branch - just apply the values without executing complex logic
-            -- UA: Гілка клієнта - просто застосовує значення без обчислень
-            if self.isFullProfile then
-                mem.currentSettings.fan = self.fullSettings.fan
-                mem.currentSettings.rotor = self.fullSettings.rotor
-                mem.currentSettings.upperSieve = self.fullSettings.upperSieve
-                mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve
-                mem.currentSettings.feeder = self.fullSettings.feeder
-                mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad
             elseif self.parameter == "AUTO_MODE" then
+                -- EN: Toggle the auto-switch behavior flag (1 = enabled, 0 = disabled).
+                -- UA: Перемикаємо прапорець автоматичного перемикання (1 = увімкнено, 0 = вимкнено).
                 mem.autoSwitchEnabled = (self.value == 1)
                 mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
-            elseif self.parameter ~= "AUTO_SET" and self.parameter ~= "RESET_SET" then
+            else
+                -- EN: Apply a single parameter change (e.g. "fan" = 65).
+                -- UA: Застосовуємо зміну одного параметру (наприклад "fan" = 65).
                 if mem.currentSettings[self.parameter] ~= nil then
                     local maxVal = self.parameter == "targetEngineLoad" and 110 or 100
                     mem.currentSettings[self.parameter] = math.max(0, math.min(maxVal, self.value))
@@ -174,6 +156,56 @@ function RHM_CombineSettingsEvent:run(connection)
                         mem.autoSwitchEnabled = false
                         mem.mode = "MANUAL"
                     end
+                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Received parameter update: %s = %d", self.parameter, self.value))
+                end
+            end
+        end
+
+        -- EN: Server always broadcasts the full state so clients sync perfectly without duplicate calculations.
+        local fullSettings = {
+            fan = mem.currentSettings.fan,
+            rotor = mem.currentSettings.rotor,
+            upperSieve = mem.currentSettings.upperSieve,
+            lowerSieve = mem.currentSettings.lowerSieve,
+            feeder = mem.currentSettings.feeder,
+            targetEngineLoad = mem.currentSettings.targetEngineLoad
+        }
+        g_server:broadcastEvent(RHM_CombineSettingsEvent.new(self.vehicle, "", 0, true, fullSettings), nil, connection, self.vehicle)
+        local spec = self.vehicle.spec_rhm_Combine
+        if spec and spec.settingsDirtyFlag then
+            self.vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
+        else
+            self.vehicle:raiseDirtyFlags(spec.dirtyFlag)
+        end
+
+    else
+        -- EN: Client execution branch - apply the values and update mode state
+        -- UA: Гілка клієнта - застосовує значення та оновлює стан режиму
+        if self.isFullProfile then
+            if self.fullSettings then
+                mem.currentSettings.fan = self.fullSettings.fan or mem.currentSettings.fan
+                mem.currentSettings.rotor = self.fullSettings.rotor or mem.currentSettings.rotor
+                mem.currentSettings.upperSieve = self.fullSettings.upperSieve or mem.currentSettings.upperSieve
+                mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve or mem.currentSettings.lowerSieve
+                mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
+                mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
+            end
+            mem.autoSwitchEnabled = false
+            mem.mode = "MANUAL"
+        elseif self.parameter == "CROP" then
+            if self.cropName and self.cropName ~= "" then
+                mem.currentCrop = self.cropName
+            end
+        elseif self.parameter == "AUTO_MODE" then
+            mem.autoSwitchEnabled = (self.value == 1)
+            mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+        elseif self.parameter ~= "AUTO_SET" and self.parameter ~= "RESET_SET" then
+            if mem.currentSettings[self.parameter] ~= nil then
+                local maxVal = self.parameter == "targetEngineLoad" and 110 or 100
+                mem.currentSettings[self.parameter] = math.max(0, math.min(maxVal, self.value))
+                if self.parameter ~= "targetEngineLoad" then
+                    mem.autoSwitchEnabled = false
+                    mem.mode = "MANUAL"
                 end
             end
         end

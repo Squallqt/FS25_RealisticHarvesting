@@ -190,20 +190,28 @@ function RHMCombineCalibrationGUI:open(vehicle)
     self.isCursorActive = true
 
     local cv = nil
-    if g_realisticHarvestManager then
+    if g_realisticHarvestManager and g_realisticHarvestManager.getControlledVehicle then
         cv = g_realisticHarvestManager:getControlledVehicle()
-    else
-        cv = g_currentMission.controlledVehicle
+    end
+    if not cv then
+        if g_localPlayer and g_localPlayer.getCurrentVehicle then
+            cv = g_localPlayer:getCurrentVehicle()
+        elseif g_currentMission then
+            if g_currentMission.getControlledVehicle then
+                cv = g_currentMission:getControlledVehicle()
+            elseif g_currentMission.controlledVehicle then
+                cv = g_currentMission.controlledVehicle
+            end
+        end
     end
 
-    if cv and cv.spec_enterable then
-        for _, camera in pairs(cv.spec_enterable.cameras) do
-            self.savedCameraRotatableInfo[camera] = camera.isRotatable
-            self.savedCameraZoomInfo[camera] = camera.allowZoom
-            camera.isRotatable = false
-            camera.allowTranslation = false
-            camera.allowZoom = false
-        end
+    local camTarget = (cv and cv.spec_enterable and cv)
+                   or (vehicle and vehicle.spec_enterable and vehicle)
+                   or (combineVehicle and combineVehicle.spec_enterable and combineVehicle)
+
+    if camTarget and camTarget.spec_enterable then
+        RHMInputUtil.setCameraRotation(camTarget, false, self.savedCameraRotatableInfo)
+        RHMInputUtil.setCameraZoom(camTarget, false, self.savedCameraZoomInfo)
     end
 
     self.activeVehicle = combineVehicle
@@ -218,23 +226,23 @@ function RHMCombineCalibrationGUI:close()
     self.isOpen = false
     self.isCursorActive = false
 
-    local vehicle = self.controllerVehicle
+    local vehicle = self.controllerVehicle or (g_realisticHarvestManager and g_realisticHarvestManager:getControlledVehicle()) or self.activeVehicle
+    local camTarget = (vehicle and vehicle.spec_enterable and vehicle)
+                   or (self.activeVehicle and self.activeVehicle.spec_enterable and self.activeVehicle)
 
     local hudCursorActive = g_realisticHarvestManager and g_realisticHarvestManager.isCursorVisible
     g_inputBinding:setShowMouseCursor(hudCursorActive or false)
 
-    for camera, savedRotatable in pairs(self.savedCameraRotatableInfo) do
-        local savedZoom = self.savedCameraZoomInfo[camera]
-        camera.isRotatable = savedRotatable ~= nil and savedRotatable or true
-        camera.allowTranslation = savedZoom ~= nil and savedZoom or true
-        camera.allowZoom = savedZoom ~= nil and savedZoom or true
+    if camTarget and camTarget.spec_enterable then
+        if hudCursorActive then
+            RHMInputUtil.setCameraRotation(camTarget, false, g_realisticHarvestManager.savedCameraRotatableInfo)
+        else
+            RHMInputUtil.setCameraRotation(camTarget, true, self.savedCameraRotatableInfo)
+            RHMInputUtil.setCameraZoom(camTarget, true, self.savedCameraZoomInfo)
+        end
     end
     self.savedCameraRotatableInfo = {}
     self.savedCameraZoomInfo = {}
-
-    if hudCursorActive and vehicle and vehicle.spec_enterable then
-        RHMInputUtil.setCameraRotation(vehicle, false, g_realisticHarvestManager.savedCameraRotatableInfo)
-    end
 end
 
 -- EN: Cycles to the previous (-1) or next (+1) crop in the machine-type-filtered list.
@@ -280,10 +288,19 @@ function RHMCombineCalibrationGUI:update(dt)
 
     if vehicleToCheck then
         local cv = nil
-        if g_realisticHarvestManager then
+        if g_realisticHarvestManager and g_realisticHarvestManager.getControlledVehicle then
             cv = g_realisticHarvestManager:getControlledVehicle()
-        else
-            cv = g_currentMission.controlledVehicle
+        end
+        if not cv then
+            if g_localPlayer and g_localPlayer.getCurrentVehicle then
+                cv = g_localPlayer:getCurrentVehicle()
+            elseif g_currentMission then
+                if g_currentMission.getControlledVehicle then
+                    cv = g_currentMission:getControlledVehicle()
+                elseif g_currentMission.controlledVehicle then
+                    cv = g_currentMission.controlledVehicle
+                end
+            end
         end
 
         if cv then
@@ -459,9 +476,10 @@ function RHMCombineCalibrationGUI:draw()
         local load = (spec.loadCalculator and spec.loadCalculator.engineLoad or 0) * 100
         local effPenalty = 0
         local lossPenalty = 0
-    if memory.currentCrop then
-        effPenalty, lossPenalty, _ = memory:checkSettingsForCrop(memory.currentCrop)
-    end
+        if memory.currentCrop then
+            local context = self:getHarvestContext(machineType)
+            effPenalty, lossPenalty, _ = memory:checkSettingsForCrop(memory.currentCrop, context)
+        end
     local isForage = (machineType == "forage")
 
     -- EN: Darker background for each individual section panel, matching the theme.
@@ -492,10 +510,15 @@ function RHMCombineCalibrationGUI:draw()
     -- EN: effPenalty < 0 = bonus (green), 0 = neutral (green), 0..2 = mild penalty (yellow), >2 = bad (red).
     -- UA: effPenalty < 0 = бонус (зелений), 0 = нейтральний (зелений), 0..2 = штраф (жовтий), >2 = поганий (червоний).
     local speedVal
+    local speedPrefix = ""
     if effPenalty < 0 then
         speedVal = math.abs(effPenalty) * 5.0
+        speedPrefix = "+"
     else
         speedVal = effPenalty
+        if speedVal > 0.05 then
+            speedPrefix = "-"
+        end
     end
     local speedColor
     if effPenalty < 0 then
@@ -510,9 +533,9 @@ function RHMCombineCalibrationGUI:draw()
 
     local sx2Center = sx2 + sectionW * 0.5
     setTextColor(unpack(ui.colors.textDim))
-    renderText(sx2Center, cy + sectionH * 0.55, ui.statusSize * 0.85, g_i18n:hasText("rhm_ui_speed_eff") and g_i18n:getText("rhm_ui_speed_eff") or "Speed")
+    renderText(sx2Center, cy + sectionH * 0.55, ui.statusSize * 0.85, g_i18n:hasText("rhm_ui_speed_eff") and g_i18n:getText("rhm_ui_speed_eff") or "Speed Eff.")
     setTextColor(unpack(speedColor))
-    renderText(sx2Center, cy + sectionH * 0.12, ui.fontSize, string.format("%.1f%%", speedVal))
+    renderText(sx2Center, cy + sectionH * 0.12, ui.fontSize, string.format("%s%.1f%%", speedPrefix, speedVal))
 
     -- ── Section 3: CROP LOSS ──
     local sx3 = sx2 + sectionW + sectionGap
@@ -552,23 +575,10 @@ function RHMCombineCalibrationGUI:draw()
 
     local function getLocalizedCropName(rawName)
         if not rawName then return g_i18n:getText("rhm_gui_none") end
-        local displayName = rawName
-        local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(rawName)
-        if fillTypeIndex and fillTypeIndex > 0 then
-            local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-            if fillType and fillType.title then
-                displayName = fillType.title
-            end
-        else
-            local l10nKey = "fillType_" .. string.lower(rawName)
-            if g_i18n:hasText(l10nKey) then
-                displayName = g_i18n:getText(l10nKey)
-            else
-                local cleanName = rawName:gsub("_", " ")
-                displayName = cleanName:sub(1,1):upper() .. cleanName:sub(2):lower()
-            end
+        if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName then
+            return RHM_CombineSettingsDatabase:getCropDisplayName(rawName)
         end
-        return displayName
+        return rawName
     end
 
     -- EN: Crop selector: [<] CROPNAME [>] — left side of the row.
@@ -765,6 +775,32 @@ end
 --     Прогрес-бар показує позицію поточного значення відносно повного діапазону (0-100%),
 --     з білим маркером в оптимальній позиції з бази даних.
 --     Підказка статусу показує "optimal" / "^ low" / "v high" з кольоровим кодуванням.
+---EN: Builds live harvest context for physics evaluations and optimal pin positions.
+---UA: Формує живий контекст збирання для оцінки фізики та позицій оптимальних позначок.
+function RHMCombineCalibrationGUI:getHarvestContext(machineType)
+    if self.activeVehicle and self.activeVehicle.spec_rhm_Combine then
+        local rhmSpec = self.activeVehicle.spec_rhm_Combine
+        return {
+            machineType = machineType or rhmSpec.machineType or "grain",
+            moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
+            yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
+            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
+            fillType = rhmSpec.lastFillType,
+            fruitType = rhmSpec.lastFruitType,
+        }
+    end
+    return { machineType = machineType or "grain" }
+end
+
+-- EN: Draws a single parameter row with: label | physical value | status hint | progress bar | [-] [+] buttons.
+--     Progress bar shows current value position relative to full range (0-100%),
+--     with a white marker at the optimal position from the database.
+--     Status hint shows "optimal" / "^ low" / "v high" with color coding.
+--     Smart step logic calculates physical increments (10 RPM / 0.5 mm) and converts back to %.
+-- UA: Малює один рядок параметра: мітка | фізичне значення | підказка статусу | прогрес-бар | кнопки [-] [+].
+--     Прогрес-бар показує позицію поточного значення відносно повного діапазону (0-100%),
+--     з білим маркером в оптимальній позиції з бази даних.
+--     Підказка статусу показує "optimal" / "^ low" / "v high" з кольоровим кодуванням.
 --     Розумна логіка кроку розраховує фізичні кроки (10 об/хв / 0.5 мм) і конвертує назад у %.
 function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory, ui, machineType)
     local val = memory.currentSettings[param] or 0
@@ -780,10 +816,11 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
         self:drawRect(x, y - 0.005, w, ui.lineHeight, ui.colors.paramRowHover)
     end
 
-    -- EN: Fetch optimal value and tolerance from database.
-    -- UA: Отримуємо оптимальне значення та допуск з бази даних.
+    -- EN: Fetch optimal value and tolerance from database with live context.
+    -- UA: Отримуємо оптимальне значення та допуск з бази даних з живим контекстом.
     if RHM_CombineSettingsDatabase and memory.currentCrop then
-        local settings = RHM_CombineSettingsDatabase:getSettingsForCrop(memory.currentCrop)
+        local context = self:getHarvestContext(machineType)
+        local settings = RHM_CombineSettingsDatabase:getSettingsForCrop(memory.currentCrop, context)
         if settings and settings[param] then
             optimal = settings[param].optimal
             tolerance = settings[param].tolerance or 5

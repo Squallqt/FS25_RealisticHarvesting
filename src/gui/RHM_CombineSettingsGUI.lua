@@ -84,8 +84,7 @@ function RHMCombineSettingsGUI:printStatus()
     -- EN: Currently harvested crop.
     -- UA: Поточна культура, що збирається.
     if memory.currentCrop then
-        local cropData = RHM_CombineSettingsDatabase:getCropData(memory.currentCrop)
-        local cropName = cropData and cropData.nameEN or memory.currentCrop
+        local cropName = RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName and RHM_CombineSettingsDatabase:getCropDisplayName(memory.currentCrop) or memory.currentCrop
         rhm_log("RHM [UI]: " .. string.format("Current Crop: %s", cropName))
     else
         rhm_log("RHM [UI]: " .. "Current Crop: NONE (start harvesting to detect)")

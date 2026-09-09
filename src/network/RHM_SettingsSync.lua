@@ -9,6 +9,13 @@ RHM_SettingsSync = {}
 -- EN: Broadcasts server settings to all clients. If called from a client admin, sends to server first.
 -- UA: Транслює серверні налаштування всім клієнтам. Якщо викликано від клієнта-адміна, спочатку надсилає на сервер.
 function RHM_SettingsSync:sendToClients(settings)
+    -- EN: Safety check for mission
+    -- UA: Перевірка безпеки для місії
+    if not g_currentMission then
+        rhm_log("RHM [Network]: RHM: [Sync] Error - g_currentMission is nil")
+        return
+    end
+    
     if not g_currentMission:getIsServer() then
         -- EN: We are a client (admin) — send the update to the server first.
         -- UA: Ми клієнт (адміністратор) — спочатку надсилаємо оновлення на сервер.
@@ -18,6 +25,11 @@ function RHM_SettingsSync:sendToClients(settings)
 
     -- EN: We are the server — broadcast the event to all connected clients.
     -- UA: Ми сервер — транслюємо подію всім підключеним клієнтам.
+    if not g_server then
+        rhm_log("RHM [Network]: RHM: [Sync] Error - g_server is nil on server")
+        return
+    end
+    
     local event = RHM_SettingsSyncEvent.new(settings)
     g_server:broadcastEvent(event)
 end

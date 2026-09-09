@@ -2,6 +2,16 @@
 
 ## Language: EN
 
+Changelog 1.5.1.0:
+- FIXED: FS25 compatibility issues with deprecated `g_currentMission.controlledVehicle` API
+- FIXED: Added multiple fallback methods for vehicle detection in FS25
+- FIXED: Added nil safety checks for critical game managers (g_fruitTypeManager, g_fillTypeManager, g_storeManager)
+- FIXED: Enhanced error handling in network synchronization and event processing
+- IMPROVED: Better string validation before pattern matching operations
+- IMPROVED: Optimized vehicle hierarchy search with cache validation
+- IMPROVED: Enhanced memory initialization with proper error handling
+- FIXED: Added safety checks for combine spec components during load calculation
+
 Changelog 1.5.0.0:
 - NEW: "Moisture System" Mod Integration! Added dynamic engine load penalties and increased crop losses when harvesting in damp conditions.
 - NEW: Real-time moisture percentage readout integrated into the draggable HUD.
@@ -148,6 +158,16 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: DE
+
+Changelog 1.5.1.0:
+- BEHOBEN: FS25-Kompatibilitätsprobleme mit der veralteten `g_currentMission.controlledVehicle` API
+- BEHOBEN: Mehrere Fallback-Methoden für Fahrzeugerkennung in FS25 hinzugefügt
+- BEHOBEN: Nil-Sicherheitsprüfungen für kritische Spiel-Manager (g_fruitTypeManager, g_fillTypeManager, g_storeManager)
+- BEHOBEN: Verbesserte Fehlerbehandlung bei Netzwerksynchronisation und Ereignisverarbeitung
+- VERBESSERT: Bessere String-Validierung vor Mustervergleichsoperationen
+- VERBESSERT: Optimierung der Fahrzeughierarchie-Suche mit Cache-Validierung
+- VERBESSERT: Verbesserte Speicherinitialisierung mit ordnungsgemäßer Fehlerbehandlung
+- BEHOBEN: Sicherheitsprüfungen für Combine-Spec-Komponenten während der Lastberechnung hinzugefügt
 
 Changelog 1.5.0.0:
 - NEU: "Moisture System"-Mod-Integration! Dynamische Motorlaststrafen und erhöhte Ernteverluste bei der Ernte unter feuchten Bedingungen hinzugefügt.

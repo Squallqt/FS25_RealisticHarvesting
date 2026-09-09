@@ -47,10 +47,10 @@ source(modDirectory .. "src/logic/RHM_LoadCalculator.lua")
 -- EN: DEV — crop factor editor (see src/dev/RHM_CropFactorTuning.lua header for removal).
 -- UA: DEV — редактор коефіцієнтів (інструкція з видалення на початку файлу).
 source(modDirectory .. "src/dev/RHM_CropFactorTuning.lua")
-source(modDirectory .. "src/RHM_Combine.lua")
+source(modDirectory .. "src/rhm_Combine.lua")
 -- EN: CRITICAL: rhm_Cutter must be loaded AFTER rhm_Combine for independent header launch to work.
 -- UA: КРИТИЧНО: rhm_Cutter має бути завантажений ПІСЛЯ rhm_Combine, щоб роздільний запуск жатки працював.
-source(modDirectory .. "src/RHM_Cutter.lua")
+source(modDirectory .. "src/rhm_Cutter.lua")
 source(modDirectory .. "src/RHM_RealisticHarvestManager.lua")
 
 -- EN: Global reference to the main mod manager instance (nil = disabled/not loaded).
@@ -176,7 +176,7 @@ end)
 --     Returns true to consume the event and prevent the game from handling it.
 -- UA: Хук події миші — перехоплює введення миші для перетягування HUD.
 --     Повертає true, щоб поглинути подію і не дати грі її обробити.
-FSBaseMission.mouseEvent = Utils.prependedFunction(FSBaseMission.mouseEvent, function(mission, posX, posY, isDown, isUp, button)
+FSBaseMission.mouseEvent = Utils.overwrittenFunction(FSBaseMission.mouseEvent, function(mission, superFunc, posX, posY, isDown, isUp, button)
     if rhm then
         local wasUsed = rhm:mouseEvent(posX, posY, isDown, isUp, button)
         if wasUsed then
@@ -185,6 +185,21 @@ FSBaseMission.mouseEvent = Utils.prependedFunction(FSBaseMission.mouseEvent, fun
             return true
         end
     end
+    return superFunc(mission, posX, posY, isDown, isUp, button)
+end)
+
+-- EN: Key event hook — captures keyboard input (e.g. ESC to close calibration GUI).
+--     Returns true to consume the event and prevent the game from handling it.
+-- UA: Хук клавіатури — перехоплює клавіші (наприклад ESC для закриття GUI калібрування).
+--     Повертає true, щоб поглинути подію і не відкривати стандартне меню гри.
+FSBaseMission.keyEvent = Utils.overwrittenFunction(FSBaseMission.keyEvent, function(mission, superFunc, unicode, sym, modifier, isDown)
+    if rhm and rhm.keyEvent then
+        local wasUsed = rhm:keyEvent(unicode, sym, modifier, isDown)
+        if wasUsed then
+            return true
+        end
+    end
+    return superFunc(mission, unicode, sym, modifier, isDown)
 end)
 
 -- EN: Register the specialization before vehicle types are validated.

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
-<modDesc descVersion="107">
+<modDesc descVersion="111">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.5.0.0</version>
+    <version>1.5.1.0</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
@@ -165,7 +165,7 @@ Funkciók:
     <multiplayer supported="true"/>
 
     <specializations>
-        <specialization name="rhm_Combine" className="rhm_Combine" filename="src/RHM_Combine.lua" />
+        <specialization name="rhm_Combine" className="rhm_Combine" filename="src/rhm_Combine.lua" />
     </specializations>
 
     <actions>
@@ -3997,57 +3997,18 @@ Vše se ukládá.]]>
             <![CDATA[Рівень 4: Система Opti-Harvest AI]]>
         </uk>
         </text>
-        <text name="rhm_help_upgrades_1">
-            <en><![CDATA[The factory standard combine. No advanced sensors installed. You will have to rely on sounds and visual cues to avoid overloading.]]></en>
-            <de><![CDATA[Der Mähdrescher in Werkseinstellung. Keine fortschrittlichen Sensoren. Sie müssen sich auf Geräusche und visuelle Hinweise verlassen, um Überlastungen zu vermeiden.]]></de>
-            <fr><![CDATA[La moissonneuse au standard d'usine. Aucun capteur avancé installé. Fiez-vous aux sons et aux indices visuels pour éviter la surcharge.]]></fr>
-            <it><![CDATA[La mietitrebbia standard di fabbrica. Nessun sensore avanzato installato. Affidati ai suoni e agli indizi visivi per evitare il sovraccarico.]]></it>
-            <es><![CDATA[La cosechadora estándar de fábrica. Sin sensores avanzados. Confíe en los sonidos y pistas visuales para evitar la sobrecarga.]]></es>
-            <br><![CDATA[A colheitadeira padrão de fábrica. Sem sensores avançados. Confie nos sons e pistas visuais para evitar a sobrecarga.]]></br>
-            <pl><![CDATA[Kombajn w standardzie fabrycznym. Brak zaawansowanych czujników. Aby uniknąć przeciążenia, musisz polegać na dźwiękach i wskazówkach wizualnych.]]></pl>
-            <ru><![CDATA[Заводской стандарт комбайна. Без продвинутых датчиков. Для предотвращения перегрузки вам придется полагаться на слух и визуальные подсказки.]]></ru>
-            <hu><![CDATA[A gyári alapfelszereltségű kombájn. Nincsenek fejlett érzékelők. Hangokra és vizuális jelekre kell hagyatkoznod a túlterhelés elkerüléséhez.]]></hu>
-            <cz><![CDATA[Tovární standard kombajnu. Bez pokročilých senzorů. K zabránění přetížení se musíte spoléhat na zvuky a vizuální podněty.]]></cz>
-            <uk><![CDATA[Заводський стандарт комбайна. Без просунутих датчиків. Щоб уникнути перевантаження, вам доведеться покладатися на звук та візуальні підказки.]]></uk>
-        </text>
-        <text name="rhm_help_upgrades_2">
-            <en><![CDATA[Installs basic load sensors, unlocking the HUD to monitor Engine Load, Speed, and Crop Loss. Calibration of the thresher must be done manually.]]></en>
-            <de><![CDATA[Installiert grundlegende Lastsensoren und schaltet das HUD frei, um Motorlast, Geschwindigkeit und Kornverluste zu überwachen. Die Kalibrierung muss manuell erfolgen.]]></de>
-            <fr><![CDATA[Installe des capteurs de charge de base, débloquant le HUD pour surveiller la charge moteur, la vitesse et la perte de récolte. Le calibrage est manuel.]]></fr>
-            <it><![CDATA[Installa sensori di carico di base, sbloccando l'HUD per monitorare Carico Motore, Velocità e Perdita di Raccolto. La calibrazione deve essere manuale.]]></it>
-            <es><![CDATA[Instala sensores de carga básicos, desbloqueando el HUD para monitorizar la Carga del Motor, Velocidad y Pérdidas. La calibración debe ser manual.]]></es>
-            <br><![CDATA[Instala sensores de carga básicos, desbloqueando o HUD para monitorar Carga do Motor, Velocidade e Perdas. A calibração deve ser manual.]]></br>
-            <pl><![CDATA[Instaluje podstawowe czujniki obciążenia, odblokowując HUD do monitorowania Obciążenia Silnika, Prędkości i Strat. Kalibrację należy wykonać ręcznie.]]></pl>
-            <ru><![CDATA[Устанавливает базовые датчики нагрузки, разблокируя HUD для мониторинга Нагрузки Двигателя, Скорости и Потерь. Калибровка выполняется вручную.]]></ru>
-            <hu><![CDATA[Alapvető terhelésérzékelőket telepít, feloldva a HUD-ot a Motor Terhelés, Sebesség és Veszteségek figyeléséhez. A kalibrálást kézzel kell elvégezni.]]></hu>
-            <cz><![CDATA[Nainstaluje základní senzory zatížení, čímž odemkne HUD pro sledování Zatížení Motoru, Rýchlosti a Ztrát. Kalibrace musí být prováděna manuálně.]]></cz>
-            <uk><![CDATA[Встановлює базові датчики навантаження, розблоковуючи HUD для моніторингу Навантаження Двигуна, Швидкості та Втрат врожаю. Калібрування потрібно виконувати вручну.]]></uk>
-        </text>
-        <text name="rhm_help_upgrades_3">
-            <en><![CDATA[Adds precise mass flow sensors. Unlocks the Yield (t/ha) and Productivity (t/h) metrics in the HUD for deeper performance monitoring.]]></en>
-            <de><![CDATA[Fügt präzise Massenstromsensoren hinzu. Schaltet Ertrags- (t/ha) und Produktivitätsmetriken (t/h) im HUD für eine tiefere Leistungsüberwachung frei.]]></de>
-            <fr><![CDATA[Ajoute des capteurs de débit massique précis. Débloque le rendement (t/ha) et la productivité (t/h) dans le HUD pour surveiller les performances.]]></fr>
-            <it><![CDATA[Aggiunge sensori di flusso di massa precisi. Sblocca la Resa (t/ha) e la Produttività (t/h) nell'HUD per un monitoraggio più profondo.]]></it>
-            <es><![CDATA[Añade sensores de flujo de masa precisos. Desbloquea el Rendimiento (t/ha) y Productividad (t/h) en el HUD para un mayor control.]]></es>
-            <br><![CDATA[Adiciona sensores precisos de fluxo de massa. Desbloqueia o Rendimento (t/ha) e Produtividade (t/h) no HUD para maior controle.]]></br>
-            <pl><![CDATA[Dodaje precyzyjne czujniki przepływu masy. Odblokowuje Plon (t/ha) i Produktywność (t/h) w HUD dla głębszego monitorowania wydajności.]]></pl>
-            <ru><![CDATA[Добавляет точные датчики массового расхода. Включает метрики Урожайности (т/га) и Производительности (т/ч) в HUD для более точного контроля.]]></ru>
-            <hu><![CDATA[Precíz tömegáram-érzékelőket ad hozzá. Feloldja a Hozam (t/ha) és Termelékenység (t/h) mutatókat a HUD-on a mélyebb teljesítménykövetéshez.]]></hu>
-            <cz><![CDATA[Přidává přesné senzory hmotnostního průtoku. Odemyká metriky Výnos (t/ha) a Produktivita (t/h) na HUD pro hlubší sledování výkonu.]]></cz>
-            <uk><![CDATA[Додає точні датчики масової витрати. Розблоковує показники Врожайності (т/га) та Продуктивності (т/год) у HUD для глибшого контролю.]]></uk>
-        </text>
-        <text name="rhm_help_upgrades_4">
-            <en><![CDATA[Equips the combine with a smart AI that automatically adjusts internal components (fan, rotor, sieves). Unlocks the "AUTO" mode in the Calibration Menu for optimal efficiency. Note: Automated speed management requires Cruise Control to be active.]]></en>
-            <de><![CDATA[Rüstet den Mähdrescher mit einer KI aus, die interne Komponenten (Gebläse, Rotor, Siebe) automatisch anpasst. Schaltet den "AUTO"-Modus frei. Hinweis: Die automatische Geschwindigkeitsanpassung erfordert einen aktiven Tempomaten.]]></de>
-            <fr><![CDATA[Équipe la moissonneuse d'une IA intelligente qui ajuste automatiquement les composants (ventilateur, rotor, grilles). Débloque le mode "AUTO" pour une efficacité optimale.]]></fr>
-            <it><![CDATA[Equipaggia la mietitrebbia con un'IA che regola automaticamente i componenti interni (ventola, rotore, crivelli). Sblocca la modalità "AUTO" per un'efficienza ottimale.]]></it>
-            <es><![CDATA[Equipa la cosechadora con una IA inteligente que ajusta automáticamente los componentes (ventilador, rotor, cribas). Desbloquea el modo "AUTO" para máxima eficiencia.]]></es>
-            <br><![CDATA[Equipa a colheitadeira com uma IA inteligente que ajusta automaticamente os componentes (ventilador, rotor, peneiras). Desbloqueia o modo "AUTO" para máxima eficiência.]]></br>
-            <pl><![CDATA[Wyposaża kombajn w inteligentną sztuczną inteligencję, która automatycznie dostosowuje podzespoły (wentylator, rotor, sita). Odblokowuje tryb "AUTO" dla optymalnej wydajności.]]></pl>
-            <ru><![CDATA[Оснащает комбайн умным ИИ, который автоматически настраивает внутренние узлы (вентилятор, ротор, решета). Разблокирует режим "АВТО" для максимальной эффективности. Примечание: Система автоматического подбора скорости требует включенного круиз-контроля.]]></ru>
-            <hu><![CDATA[Egy intelligens MI-vel szereli fel a kombájnt, amely automatikusan beállítja a belső alkatrészeket (ventilátor, rotor, rosták). Feloldja az "AUTO" módot az optimális hatékonyságért.]]></hu>
-            <cz><![CDATA[Vybaví kombajn chytrou AI, která automaticky nastavuje vnitřní komponenty (ventilátor, rotor, síta). Odemyká režim "AUTO" pro optimální účinnost.]]></cz>
-            <uk><![CDATA[Оснащує комбайн розумним ШІ, який автоматично налаштовує внутрішні вузли (вентилятор, ротор, решета). Розблоковує режим "АВТО" у меню калібрування для ідеальної ефективності. Примітка: Система автоматичного підбору швидкості вимагає увімкненого круїз-контролю.]]></uk>
+        <text name="rhm_ui_speed_eff">
+            <en><![CDATA[Speed Eff.]]></en>
+            <de><![CDATA[Geschw.-Eff.]]></de>
+            <fr><![CDATA[Eff. Vitesse]]></fr>
+            <it><![CDATA[Eff. Velocità]]></it>
+            <es><![CDATA[Ef. Velocidad]]></es>
+            <br><![CDATA[Ef. Velocidade]]></br>
+            <pl><![CDATA[Efekt. pręd.]]></pl>
+            <ru><![CDATA[Эффект. скор.]]></ru>
+            <hu><![CDATA[Sebesség hat.]]></hu>
+            <cz><![CDATA[Účinnost rych.]]></cz>
+            <uk><![CDATA[Ефект. шв.]]></uk>
         </text>
         
         <text name="rhm_help_moisture_title">

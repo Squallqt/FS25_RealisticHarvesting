@@ -11,7 +11,7 @@ RHMInputUtil = {}
 --     EN: Saves original camera states into a table so they can be restored later.
 --     UA: Зберігає оригінальні стани камер у таблицю, щоб їх можна було відновити пізніше.
 function RHMInputUtil.setCameraRotation(vehicle, enableRotation, savedRotatableInfo)
-    if not vehicle or not vehicle.spec_enterable then
+    if not vehicle or not vehicle.spec_enterable or not vehicle.spec_enterable.cameras then
         return
     end
 
@@ -21,21 +21,29 @@ function RHMInputUtil.setCameraRotation(vehicle, enableRotation, savedRotatableI
 
     for i, camera in pairs(vehicle.spec_enterable.cameras) do
         if enableRotation then
-            -- EN: Restore original rotation setting if it was saved previously.
-            -- UA: Відновлюємо оригінальне налаштування обертання, якщо воно було збережено.
-            local isRotatable = savedRotatableInfo[camera]
-            if isRotatable ~= nil then
-                camera.isRotatable = isRotatable
-                rhm_log(string.format("RHM [UI]: RHM: Camera %d restore isRotatable: %s", i, tostring(isRotatable)))
-            else
-                camera.isRotatable = true
+            -- EN: Unconditionally restore full camera rotation and movement.
+            -- UA: Безумовно відновлюємо повне обертання та рух камери.
+            camera.isRotatable = true
+            camera.allowTranslation = true
+            camera.allowZoom = true
+            if camera.rotSpeed == 0 and camera._rhmSavedRotSpeed then
+                camera.rotSpeed = camera._rhmSavedRotSpeed
+                camera._rhmSavedRotSpeed = nil
             end
+            savedRotatableInfo[camera] = nil
         else
-            -- EN: Save original rotation setting and disable camera rotation.
-            -- UA: Зберігаємо оригінальне налаштування обертання і вимикаємо обертання камери.
-            rhm_log(string.format("RHM [UI]: RHM: Camera %d disable rotation, current: %s", i, tostring(camera.isRotatable)))
-            savedRotatableInfo[camera] = camera.isRotatable
+            -- EN: Disable camera rotation and save token (never save false as baseline).
+            -- UA: Вимикаємо обертання камери та зберігаємо стан (ніколи не зберігаємо false як базу).
+            if savedRotatableInfo[camera] == nil then
+                savedRotatableInfo[camera] = true
+            end
             camera.isRotatable = false
+            camera.allowTranslation = false
+            camera.allowZoom = false
+            if camera.rotSpeed and camera.rotSpeed > 0 then
+                camera._rhmSavedRotSpeed = camera.rotSpeed
+                camera.rotSpeed = 0
+            end
         end
     end
 
@@ -44,14 +52,9 @@ end
 
 -- EN: Enable or disable camera zoom (mouse wheel) for all cameras on a vehicle.
 --     Used to block camera zoom when the GUI needs to capture scroll wheel events.
---     Saves original zoom states to a table so they can be restored later.
 -- UA: Вмикає або вимикає масштабування камери (колесо миші) для всіх камер транспортного засобу.
---     EN: Used to block zoom when the GUI needs to intercept scrolling.
---     UA: Використовується для блокування зуму, коли GUI потребує перехоплення прокрутки.
---     EN: Saves original states to a table for later restoration.
---     UA: Зберігає оригінальні стани у таблицю для подальшого відновлення.
 function RHMInputUtil.setCameraZoom(vehicle, enableZoom, savedZoomInfo)
-    if not vehicle or not vehicle.spec_enterable then
+    if not vehicle or not vehicle.spec_enterable or not vehicle.spec_enterable.cameras then
         return
     end
 
@@ -61,21 +64,15 @@ function RHMInputUtil.setCameraZoom(vehicle, enableZoom, savedZoomInfo)
 
     for i, camera in pairs(vehicle.spec_enterable.cameras) do
         if enableZoom then
-            -- EN: Restore original zoom (translation) state if it was saved.
-            -- UA: Відновлюємо оригінальний стан масштабування, якщо він був збережений.
-            local allowTranslation = savedZoomInfo[camera]
-            if allowTranslation ~= nil then
-                camera.allowTranslation = allowTranslation
-                rhm_log(string.format("RHM [UI]: RHM: Camera %d restore allowTranslation: %s", i, tostring(allowTranslation)))
-            else
-                camera.allowTranslation = true
-            end
+            camera.allowTranslation = true
+            camera.allowZoom = true
+            savedZoomInfo[camera] = nil
         else
-            -- EN: Save original zoom state and disable camera zoom.
-            -- UA: Зберігаємо оригінальний стан масштабування і вимикаємо зум камери.
-            rhm_log(string.format("RHM [UI]: RHM: Camera %d disable zoom, current: %s", i, tostring(camera.allowTranslation)))
-            savedZoomInfo[camera] = camera.allowTranslation
+            if savedZoomInfo[camera] == nil then
+                savedZoomInfo[camera] = true
+            end
             camera.allowTranslation = false
+            camera.allowZoom = false
         end
     end
 
