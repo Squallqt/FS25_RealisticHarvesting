@@ -725,7 +725,12 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     -- EN: Sync crop change and settings to clients in multiplayer.
     -- UA: Синхронізуємо зміну культури та налаштувань для клієнтів у мультиплеєрі.
     if self.isServer then
-        self:raiseDirtyFlags(spec.dirtyFlag)
+        if spec.settingsDirtyFlag then
+            self:raiseDirtyFlags(spec.settingsDirtyFlag)
+        end
+        if spec.dirtyFlag then
+            self:raiseDirtyFlags(spec.dirtyFlag)
+        end
     end
 end
 

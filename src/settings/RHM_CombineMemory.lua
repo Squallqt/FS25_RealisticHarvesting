@@ -436,11 +436,11 @@ function RHM_CombineMemory:switchCrop(newCropName)
 
     -- EN: Synchronize with server if in multiplayer
     -- UA: Синхронізуємо з сервером у мультиплеєрі
-    if g_client and self.combine then
-        local event = RHM_CombineSettingsEvent.new(self.combine, "CROP", 0, false, nil, newCropName)
-        if not g_server then
+    if self.combine then
+        if g_client and not g_server then
+            local event = RHM_CombineSettingsEvent.new(self.combine, "CROP", 0, false, nil, newCropName)
             g_client:getServerConnection():sendEvent(event)
-        else
+        elseif g_server then
             local spec = self.combine.spec_rhm_Combine
             if spec and spec.settingsDirtyFlag then
                 self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
