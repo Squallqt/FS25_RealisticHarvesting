@@ -163,7 +163,7 @@ end
 function RHMDraggableHUD:setVehicle(vehicle)
     self.vehicle = vehicle
     if vehicle then
-        self:update(vehicle)
+        self:update(0)
     else
         self.data.load = 0
         self.data.yield = 0
@@ -279,6 +279,8 @@ function RHMDraggableHUD:draw()
 
     self:drawContent()
     setTextBold(false)
+    setTextColor(1, 1, 1, 1)
+    setTextAlignment(RenderText.ALIGN_LEFT)
 end
 
 function RHMDraggableHUD:drawContent()

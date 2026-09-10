@@ -372,6 +372,13 @@ function RHM_RealisticHarvestManager:toggleCursor()
     end
 
     local combineVehicle = self.lastActiveCombine
+    if not combineVehicle then
+        local cv = self:getControlledVehicle()
+        if cv then
+            combineVehicle = findCombineInHierarchy(cv.rootVehicle or cv)
+            self.lastActiveCombine = combineVehicle
+        end
+    end
     if not (self.hud and combineVehicle) then
         if self.isCursorVisible then
             self.isCursorVisible = false

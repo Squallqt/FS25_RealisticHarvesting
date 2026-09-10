@@ -3,6 +3,11 @@
 ## Language: EN
 
 Changelog 1.5.1.0:
+- NEW: 100% Dynamic Physics-Based Crop Settings! Replaced static hardcoded templates with an ASABE & FS25-compliant physical calculation engine. All crops (vanilla and modded) dynamically calculate optimal fan, rotor, sieves, and feeder values based on bulk density and seed geometry.
+- NEW: Live Environmental Adjustments! Combine calibration pins dynamically shift based on real-time field moisture and yield conditions.
+- FIXED: Multiplayer & Dedicated Server crop selection in Shift+K menu: added bidirectional network event synchronization (`CROP`), preventing selected crops from reverting to "NONE" / "no crop".
+- FIXED: Resolved camera rotation and zoom locking issues when opening/closing menus or activating HUD cursor (RMB).
+- FIXED: Cleanly reset global text rendering states after drawing draggable HUD to prevent leaking state to the base game HUD.
 - FIXED: FS25 compatibility issues with deprecated `g_currentMission.controlledVehicle` API
 - FIXED: Added multiple fallback methods for vehicle detection in FS25
 - FIXED: Added nil safety checks for critical game managers (g_fruitTypeManager, g_fillTypeManager, g_storeManager)
@@ -1225,6 +1230,17 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: UK
+
+Зміни 1.5.1.0:
+- НОВЕ: 100% динамічні фізичні налаштування культур! Статичні захардкоджені шаблони повністю замінено фізичним розрахунковим модулем (стандарти ASABE та дані FS25). Усі культури (як стандартні, так і з модів) динамічно розраховують оптимальні значення вентилятора, ротора, решіт і похилої камери за насипною густиною та геометрією зерна.
+- НОВЕ: Живі поправки навколишнього середовища! Оптимальні позначки калібрування автоматично зміщуються залежно від поточної вологості та врожайності в полі.
+- ВИПРАВЛЕНО: Синхронізація вибору культури у мультиплеєрі та на виділеному сервері в меню Shift+K: додано двосторонню мережеву подію (`CROP`), що усунуло миттєве скидання вибору на "НЕМАЄ" / "no crop".
+- ВИПРАВЛЕНО: Усунуто зависання та блокування повороту/масштабування камери при відкритті/закритті меню або перемиканні курсору HUD (ПКМ).
+- ВИПРАВЛЕНО: Чисте скидання глобального стану рендерингу тексту після малювання HUD, щоб уникнути впливу на стандартний інтерфейс гри.
+- ВИПРАВЛЕНО: Проблеми сумісності з FS25 через застаріле API `g_currentMission.controlledVehicle`.
+- ВИПРАВЛЕНО: Додано надійні багаторівневі методи визначення керованого транспорту в FS25.
+- ВИПРАВЛЕНО: Додано перевірки на nil для критичних менеджерів гри (g_fruitTypeManager, g_fillTypeManager, g_storeManager).
+- ПОКРАЩЕНО: Оптимізовано пошук ієрархії транспорту з кешуванням для запобігання падінню FPS.
 
 Зміни 1.5.0.0:
 - НОВЕ: Інтеграція моду "Moisture System"! Додано динамічні штрафи до навантаження на двигун та підвищені втрати врожаю при збиранні у вологих умовах.
