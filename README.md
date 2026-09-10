@@ -1,6 +1,6 @@
 # Realistic Harvesting — Farming Simulator 25
 
-[![Version](https://img.shields.io/badge/version-1.4.2.0-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
+[![Version](https://img.shields.io/badge/version-1.5.1.0-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![FS25](https://img.shields.io/badge/FS25-Compatible-blue?style=for-the-badge&logo=farming-simulator)](https://www.farming-simulator.com/)
 [![Multiplayer](https://img.shields.io/badge/Multiplayer-Supported-brightgreen?style=for-the-badge&logo=users)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![License](https://img.shields.io/badge/License-All_Rights_Reserved-red?style=for-the-badge&logo=copyright)](LICENSE)
@@ -21,17 +21,19 @@
 
 ## What Does This Mod Do?
 
-In vanilla FS25, you can drive at full speed through any crop density with no consequences. **Realistic Harvesting** changes that.
+In vanilla FS25, you can drive at full speed through any crop density with no consequences. **Realistic Harvesting** changes that completely.
 
-Your combine now has a real engine load that responds to:
-- **Crop density** and type (30+ crops with unique difficulty coefficients)
-- **Header width** and engine horsepower
-- **Terrain slope**
-- **Calibration settings** (fan, rotor, sieves, feeder — unique per crop)
-- **Pickup Header / Swathing** (detected automatically, 0.75x load multiplier)
-- **Machine type** (grain combines, forage harvesters, root harvesters, cotton pickers)
+Your combine now features a **first-principles physical power-balance load engine** that responds realistically to:
+- **Mass Flow & Crop Density** (live tons per hour based on field yield, cut width, and forward speed)
+- **Crop Specific Energy ($E_{spec}$)** (physically calibrated for grains, oilseeds, pulses, corn, roots, forage, and cotton)
+- **Header Dimensions & Drag** (dynamic cutterbar friction queried directly from store data)
+- **Terrain Slope & Soil Resistance** (working uphill and on soft ground increases engine load)
+- **Mechanical Calibration** (fan speed, rotor RPM, upper/lower sieves, concave clearance / feeder intake)
+- **Swathing / Windrow Pickup** (automatically detected, eliminating cutterbar drag and computing windrow intake)
+- **Machine Type** (grain combines, forage harvesters, root harvesters, cotton pickers, and modular platforms like NEXAT)
+- **Crop Moisture** (optional seamless integration with the `FS25_MoistureSystem` mod)
 
-Drive too fast → engine overloads → you lose grain. Simple.
+Drive too fast or overload your separator → engine overloads → you lose grain. Simple and authentic.
 
 ![Gameplay Action](docs/images/gameplay.png)
 
@@ -39,13 +41,13 @@ Drive too fast → engine overloads → you lose grain. Simple.
 
 ## Quick Start — Your First 5 Minutes
 
-**You don't need to do anything special to start.** The mod works automatically.
+**You don't need to do anything complicated to start.** The mod works automatically out of the box.
 
-1. Enter your combine and start harvesting normally.
-2. A **HUD panel** appears on screen with live data.
-3. Watch the **Engine Load** bar — keep it below 100%.
-4. If Load goes over 95%, **crop losses begin**. Slow down.
-5. The mod will automatically suggest a safe speed.
+1. Enter your combine and begin harvesting normally.
+2. The **HUD panel** appears on screen displaying live telemetry.
+3. Watch the **Engine Load** bar — keep it in the green/yellow zone (below 80–90%).
+4. If Engine Load exceeds 80%, **crop losses begin** (and climb steeply above 100%). Slow down or follow the **Recommended Speed**.
+5. Press **Right Shift + K** at any time to inspect your combine settings and calibrate for the crop.
 
 That's it for the basics. Everything else is optional depth.
 
@@ -53,7 +55,7 @@ That's it for the basics. Everything else is optional depth.
 
 ## The HUD — Reading Your Data
 
-The HUD appears automatically when you enter a combine. Right-click to enable cursor and drag it anywhere on screen.
+The HUD appears automatically when you enter a combine. Right-click to enable cursor mode and drag the HUD anywhere on screen.
 
 ![HUD Metric](docs/images/hud_metric.png)
 ![HUD Imperial](docs/images/hud_imperial.png)
@@ -61,101 +63,94 @@ The HUD appears automatically when you enter a combine. Right-click to enable cu
 
 | Indicator | What It Means |
 |:---|:---|
-| **Engine Load %** | How hard your combine is working. Stay below 95%. |
-| **T/h or L/h** | Tons (or liters) per hour — your harvesting productivity. |
-| **Yield** | Live t/ha or bu/ac. Fluctuates naturally with field density. |
-| **Speed / Rec.** | Your speed vs. the recommended safe speed. |
-| **Loss** | LOW / MED / HIGH — how much grain you're losing right now. |
+| **Engine Load %** | Current machine load. Safe under 80% (green), warning 80–95% (yellow), critical overload >95% (red). |
+| **Productivity** | Live processing rate in tons/hour (`t/h`, `ton/h`), bushels/hour (`bu/h`), or volume (`L/h`). |
+| **Yield** | Live crop yield (`t/ha`, `ton/ac`, or `bu/ac`) sampled in real time from the cut field area. |
+| **Speed / Rec.** | Your current forward speed vs. the recommended safe speed limit calculated by the mod. |
+| **Loss** | Live crop loss percentage and status level: **LOW** / **MED** / **HIGH**. |
+| **Moisture %** | Live crop moisture content (displayed with Tier 3+ electronics when the Moisture System mod is active). |
 
-**Color code:** Green = good, Yellow = caution, Red = losing grain.
-
-Each metric can be individually shown or hidden. Switch between Metric (t/ha, km/h), Imperial (bu/ac, mph), and Bushel display units in ESC → Settings → Realistic Harvesting. HUD position is saved per-player.
+- **Color Code:** Green = optimal, Yellow = caution / elevated load, Red = overload / active crop loss.
+- **Units System:** Switch seamlessly between **Metric** (km/h, t/ha, t/h), **Imperial** (mph, ton/ac, ton/h), and **Bushels** (mph, bu/ac, bu/h) in `ESC → Settings → Realistic Harvesting`. HUD position and metric toggles are saved per player.
 
 ---
 
 ## Crop Loss — How It Works
 
-Losses happen from two independent sources:
+Losses happen dynamically from three potential sources:
 
-### 1. Overloading (Speed)
-- Engine Load > 95% → losses begin
-- The faster you push past the limit, the more grain you lose
-- Slow down, use a narrower header, or choose a more powerful combine
+### 1. Engine Overloading (Speed & Mass Flow)
+The mod calculates losses using a realistic progressive overload curve starting at **80% Engine Load**:
+- **0% to 80% Load:** Safe operating zone — **0.0% crop loss**.
+- **80% to 100% Load:** Progressive capacity boundary — small progressive loss (~0% to 2.0%).
+- **100% to 110% Load:** High throughput territory — acceptable operational loss (~2.0% to 4.5%).
+- **Above 110% Load:** Severe overloading — threshing drum and cleaning shoes choke, causing steep exponential losses (up to 50% max).
+
+Loss severity scales according to your selected **Crop Loss Severity** setting (Arcade: 0.5x, Normal: 1.0x, Realistic: 2.0x).
 
 ![High Crop Loss - Combine](docs/images/crop_loss_high_combine.png)
-*High losses — combine going too fast*
+*High losses — combine pushed past capacity*
 
 ![Low Crop Loss - Combine](docs/images/crop_loss_low_combine.png)
 *Optimal speed — minimal losses*
 
-### 2. Poor Calibration (Settings)
-If your combine's settings are incorrect for the current crop, you'll incur a calibration penalty on top of speed losses.
+### 2. Sub-Optimal Calibration (Machine Settings)
+If your machine's settings do not match the harvested crop, you incur additional efficiency and loss penalties:
 
-Each machine type now has **unique controls** — different parameters appear depending on whether you're driving a grain combine, forage harvester, root harvester, or cotton picker.
+- **1. Efficiency (Rotor / Feeder / Concave):**
+  These components pull crop into the machine and thresh it. Poor adjustment forces the engine to work harder, reducing ground speed. Perfect settings grant up to a **+5.0% Speed Bonus** and an **Overload Shield** that absorbs momentary yield spikes.
+- **2. Cleaning Shoe Loss (Fan & Sieves):**
+  These components separate grain from chaff. If the fan is too fast or sieves are badly set, clean grain gets blown out the back. Perfect settings ensure **0% Added Crop Loss**.
+- **Forage Harvesters:**
+  Silage choppers deliver all chopped material into the trailer (no grain loss), but incorrect drum or feed roll speeds severely penalize engine efficiency and throughput.
 
-> **Preview Loss** in the Calibration Menu shows the estimated penalty from your current settings — even when you're not harvesting!
-
-### Calibration Physics — Two Distinct Mechanics
-
-**1. Efficiency (Speed) — Rotor & Feeder House**
-These components pull crop into the machine and thresh it. Poor configuration makes the engine struggle, cruise control forces slower driving. Perfect settings grant up to a **+5.0% Speed Bonus**.
-
-**2. Crop Loss (Wasted Grain) — Fan & Sieves**
-These components separate grain from chaff. If the fan is too strong or sieves are badly adjusted, clean grain gets blown out the back. Perfect settings ensure **0% Added Crop Loss**.
-
-> **Overload Shield:** Perfect Efficiency settings also grant a protective shield that absorbs minor crop density spikes — preventing accidental crop losses when you're driving near the limit.
+### 3. Crop Moisture Penalties
+When the `FS25_MoistureSystem` mod is detected, harvesting in damp weather or wet crops increases engine threshing resistance and induces wet crop separation losses.
 
 ---
 
-## Difficulty Settings
+## Difficulty & Mod Settings
 
 Open: **ESC → Settings → Realistic Harvesting**
 
 ![Settings Menu](docs/images/settings_menu.png)
 
-### Engine Power
-| Mode | Capacity | Description |
+### Game & Server Settings (Admin-Controlled in MP)
+| Setting | Options | Description |
 |:---|:---:|:---|
-| Arcade | 200% | Very forgiving — almost impossible to overload |
-| Normal | 120% | Slight boost — default for casual play |
-| Realistic | 100% | Real machine specs — requires skill |
+| **Engine Power** | Arcade (200%) / Normal (120%) / Realistic (100%) | Scales combine engine processing capacity |
+| **Crop Loss Severity** | Arcade (50%) / Normal (100%) / Realistic (200%) | Multiplier applied to overload and calibration crop losses |
+| **Speed Limiter** | ON / OFF | Automatically regulates cruise control to keep engine load safe |
+| **Crop Loss System** | ON / OFF | Enables or disables grain loss simulation entirely |
+| **Moisture Integration** | ON / OFF | Enables dynamic moisture load penalties (when Moisture System is installed) |
 
-### Crop Loss Severity
-| Mode | Penalty | Description |
-|:---|:---:|:---|
-| Arcade | 50% | Half the standard penalty |
-| Normal | 100% | Standard |
-| Realistic | 200% | Very strict — even minor overload = heavy losses |
-
-### Additional Toggles
+### Client / Visuals Settings (Personal per Player)
 | Setting | Description |
 |:---|:---|
-| **Speed Limiter** (ON/OFF) | Automatically reduces speed when engine load is too high |
-| **Crop Loss System** (ON/OFF) | Enables or disables grain loss simulation entirely |
-| **Independent Launch** | Allows starting thresher without lowering the header first |
+| **Show HUD** | Master toggle for the draggable HUD panel |
+| **HUD Metric Toggles** | Individually toggle Yield, Load, Speed, Productivity, Loss, Moisture, and Load Warnings |
+| **Measurement Units** | Choose between **Metric** (km/h, t/ha), **Imperial** (mph, ton/ac), and **Bushels** (mph, bu/ac) |
 
-**Multiplayer:** Server settings (difficulty, speed limit, crop loss) are shared for all players and can only be changed by the admin. Client settings (HUD, units, position) are personal per-player. All settings persist across save games.
+**Multiplayer:** Gameplay settings are synchronized from the server, while HUD positioning, visibility toggles, and measurement units are stored individually for each player.
 
 ---
 
 ## RHM Electronics — Upgrade Packages
 
-When buying or modifying a combine, you can choose an **RHM Electronics** tier in the shop configuration menu:
+When purchasing or leasing a combine in the shop, choose an **RHM Electronics** package to match your career progression:
 
-| Tier | Name | Price | Features |
-|:---|:---|:---:|:---|
-| 1 | **Standard** | Free | Manual control. Engine load & speed limiting. Factory baseline settings on purchase |
-| 2 | **Sensor Kit** | $3,500 | Manual control. Unlocks live Yield (t/ha), Productivity (t/h), and parameter target hints |
-| 3 | **Yield & Loss Monitor** | $8,500 | Manual control. Real-time Crop Loss indicator, moisture tracking & detailed telemetry |
-| 4 | **Opti-Harvest AI** | $15,000 | Interactive AI calibration — harvest a few meters, press AUTO in Shift+K, and AI dials in optimal settings with continuous dynamic auto-trimming |
-
-> **Interactive Calibration:** Combines start in MANUAL mode upon purchase with slight factory baseline variance across machines. On Tiers 1–3, players manually tune parameters or load saved profiles. Tier 4 unlocks the **AUTO** button: harvest a few meters to gather crop stream data, open Shift+K, and let Opti-Harvest AI calibrate your combine for zero extra loss.
+| Tier | Package Name | Price | Features & Operation |
+|:---:|:---|:---:|:---|
+| **1** | **Standard** | Free | Base engine load physics & speed limiting. Factory mechanical baseline variance (~50% ± 8%). Strictly manual control. |
+| **2** | **Sensor Kit** | $3,500 | Adds live Yield (t/ha), Productivity (t/h), and green optimal target zone markers on calibration sliders. Strictly manual control. |
+| **3** | **Yield & Loss Monitor** | $8,500 | Adds real-time Crop Loss telemetry, live Moisture tracking (with Moisture System mod), and detailed field statistics. Strictly manual control. |
+| **4** | **Opti-Harvest AI** | $15,000 | Interactive AI calibration — samples incoming crop stream to calculate physical optimums and applies live continuous background auto-trimming. |
 
 ---
 
 ## Combine Calibration (Advanced)
 
-Press **Right Shift + K** while in a combine to open the Calibration Menu.
+Press **Right Shift + K** while in a combine to open the interactive Calibration Menu.
 
 ![GUI Accurate Settings](docs/images/gui_accurate.png)
 *Well-calibrated — low loss, high efficiency*
@@ -165,27 +160,27 @@ Press **Right Shift + K** while in a combine to open the Calibration Menu.
 
 ### Operating Modes & Progression
 
-| | Tier 1–3 (MANUAL) | Tier 4 (Opti-Harvest AI) |
+| Feature | Tiers 1–3 (Standard / Sensor / Monitor) | Tier 4 (Opti-Harvest AI) |
 |:---|:---|:---|
-| **Mode** | Strictly MANUAL | Starts in MANUAL, unlocks AUTO calibration button |
-| **At Purchase** | Factory baseline variance (~50% ± 8%) | Factory baseline variance (~50% ± 8%) |
-| **New Crop** | Retains factory settings on 1st crop; resets to 50% on crop change without profile | Harvest a few meters, then press **AUTO** in Shift+K to calibrate |
-| **In Field** | Player manually tunes sliders; Tier 2/3 sensors show green target zones | AI calculates physical optimum for current moisture/yield & runs live auto-trim |
-| **Profiles** | Save custom profiles for each crop via the SAVE button | Save custom profiles or re-engage AI at any time with AUTO |
+| **Operating Mode** | Strictly **MANUAL** | Starts in **MANUAL**, unlocks **AUTO** button |
+| **On Machine Purchase** | Factory baseline variance (~50% ± 8%) | Factory baseline variance (~50% ± 8%) |
+| **Field Tuning** | Operator manually tunes sliders using field experience or Tier 2/3 target markers | Harvest a few meters, open Shift+K, and press **AUTO** for instant physical calibration |
+| **Dynamic Trimming** | Static until operator adjusts sliders or loads a profile | Continuously micro-adjusts in background for field moisture and density shifts |
+| **Custom Profiles** | Create, save, and load custom profiles per crop | Save custom profiles or re-calibrate on the fly with AUTO |
 
-> **Pro Tip:** Tiers 1–3 reward mechanical skill and field knowledge. Tier 4 delivers automated precision for busy operators.
+> **Interactive AI Calibration:** Harvesters no longer magically auto-tune themselves behind the scenes. On Tier 4, enter the field, cut a short strip to gather live crop telemetry, open Shift+K, and click **AUTO** to let Opti-Harvest AI dial in zero-loss perfection.
 
 ---
 
-## Supported Machine Types
+## Supported Machine Types & Reference Settings
+
+Optimal settings are calculated dynamically by the mod's ASABE/FS25 physics engine based on bulk density, seed geometry, and live field moisture. The tables below show standard reference operating ranges:
 
 ### 🌾 Grain Combines — 5 Parameters
 *(Fan Speed · Rotor Speed · Upper Sieve · Lower Sieve · Concave Clearance)*
 
-Organized into sections:
-- **SEPARATION** (Rotor, Concave) — affects throughput efficiency  
-- **CLEANING** (Fan, Upper Sieve, Lower Sieve) — affects grain loss
-- **PERFORMANCE** (Concave Clearance) — affects overall speed
+- **SEPARATION** (Rotor Speed, Concave Clearance) — affects throughput capacity and engine load
+- **CLEANING** (Fan Speed, Upper Sieve, Lower Sieve) — affects cleaning shoe grain loss
 
 | Crop | Fan Speed (RPM) | Rotor Speed (RPM) | Upper Sieve (mm) | Lower Sieve (mm) | Concave Clearance (mm) |
 |:---|:---:|:---:|:---:|:---:|:---:|
@@ -207,8 +202,8 @@ Organized into sections:
 
 | Crop | Blower Speed (RPM) | Chopping Drum (RPM) | Feed Rolls (RPM) |
 |:---|:---:|:---:|:---:|
-| **Grass / Dry Grass** | 1150–1290 | 1110–1150 | 380–460 |
-| **Corn Silage (CHAFF)** | 1220–1360 | 1140–1180 | 440–520 |
+| **Grass / Dry Grass (Hay)** | 1150–1290 | 1110–1150 | 380–460 |
+| **Corn Silage (Chaff)** | 1220–1360 | 1140–1180 | 440–520 |
 
 ---
 
@@ -221,11 +216,11 @@ Organized into sections:
 | **Sugarbeet** | **640 RPM** | **240 RPM** | **300 RPM** | Harder than potato, faster cleaning |
 | **Beetroot** | **630 RPM** | **220 RPM** | **300 RPM** | Between potato and sugarbeet |
 | **Onion** | **850 RPM** ⬆️ | **210 RPM** | **270 RPM** | Strong airflow to separate skins/leaves |
-| **Carrot / Parsnip** | **580 RPM** | **190 RPM** | **330 RPM** ⬆️ | Very gentle, fast feeder to lift weight |
-| **Spinach** | **520 RPM** ⬇️ | **160 RPM** ⬇️ | **280 RPM** | Minimal air — leaves fly and tear easily |
-| **Green Bean** | **670 RPM** | **200 RPM** | **290 RPM** | Moderate; pods crack easily |
+| **Carrot / Parsnip** | **580 RPM** | **190 RPM** | **330 RPM** ⬆️ | Very gentle, fast elevator to lift mass |
+| **Spinach** | **520 RPM** ⬇️ | **160 RPM** ⬇️ | **280 RPM** | Minimal air — delicate leaves tear easily |
+| **Green Bean** | **670 RPM** | **200 RPM** | **290 RPM** | Moderate; pod stripping drum control |
 
-**Tolerance zone:** ±5–8% from the optimal value shown above.
+*Tolerance zone: ±5–8% from optimal value.*
 
 ---
 
@@ -236,49 +231,72 @@ Organized into sections:
 |:---|:---:|:---:|
 | **Fan Speed (RPM)** | 3250 | 3100–3400 |
 | **Picker Speed (RPM)** | 210 | 200–220 |
-| **Feeder House (RPM)** | 190 | 170–210 |
+| **Feeder Speed (RPM)** | 190 | 170–210 |
 
 ---
 
-## Engine Load Physics
+## Engine Load Physics (Power-Balance Model)
 
-Engine load is calculated based on **engine horsepower** and **crop difficulty**:
+Instead of arbitrary multipliers, **Realistic Harvesting** utilizes a first-principles power-balance physical engine:
 
-| Machine Type | Base Coefficient | Example |
+$$P_{total} = P_{base} + P_{header}(v) + P_{process} + P_{soil}$$
+
+### Power Breakdown:
+1. **$P_{base}$ — Parasitic Mechanical Load (~10–12% rated HP)**  
+   Internal drivetrain friction, chopper rotor idle inertia, and hydraulic pumps.
+2. **$P_{header}(v)$ — Cutting & Ingestion Drag**  
+   Dynamically queried from attached header store specifications. Drag scales with cutterbar width and ground speed ($v$). Driving an oversized header with an underpowered combine creates realistic mechanical drag.
+3. **$P_{process}$ — Threshing & Processing Work ($\dot{m} \times E_{spec}$)**  
+   Physical energy required to thresh, separate, or chop incoming mass flow rate ($\dot{m}$ in tons/hour):
+   - $\dot{m} = \text{Width} \times v \times \text{Yield}$
+   - $E_{spec}$ is the Specific Energy requirement (HP per t/h) based on physical crop families:
+
+| Crop Family | Specific Energy ($E_{spec}$) | Processing Characteristics |
 |:---|:---:|:---|
-| Grain Combines | 0.035 kg/s per HP | 500 HP → 17.5 kg/s base throughput |
-| Forage Harvesters | 0.051 kg/s per HP | 950 HP → ~400 t/hr corn silage |
-| Root/Vegetable Harvesters | 0.060–0.080 kg/s per HP | Higher capacity for heavy root crops |
-| Cotton Pickers | 0.015 kg/s per HP | Lower capacity — cotton is light |
+| **Cereals (Wheat, Barley, Rye, Oats)** | 10.5 – 13.0 HP/(t/h) | Heavy straw ingestion, dense threshing drum friction |
+| **Oilseeds (Canola, Sunflower)** | 11.0 – 12.5 HP/(t/h) | Brittle stems, high seed separation demand |
+| **Corn / Maize (Grain)** | 9.0 – 10.5 HP/(t/h) | High grain volume, cob separation |
+| **Legumes & Pulses (Soybeans, Peas)** | 12.0 – 15.0 HP/(t/h) | Pod fracture and tough vine handling |
+| **Green Beans (Pod Pickers)** | 16.0 – 18.0 HP/(t/h) | Mechanical stripping reels pulling tough pods from bushes |
+| **Root Crops (Potatoes, Sugarbeet, Carrots)** | 2.6 – 4.6 HP/(t/h) | Massive volumetric flow (150–250+ t/h) across soil sieve webs |
+| **Forage / Silage Choppers** | 1.8 – 2.2 HP/(t/h) | High-speed chopping drum processing extreme throughput (300–450+ t/h) |
+| **Cotton Pickers** | ~45.0 HP/(t/h) | High-speed rotating spindle drums & pneumatic conveying air ducts |
+| **Modded / Custom Crops** | Dynamic | Automatically calibrated based on GIANTS fillType `massPerLiter` |
 
-Each crop has a unique **difficulty coefficient** (e.g., Wheat = 0.814, Cotton = 4.782, Spinach = 2.880) that modifies how much load the crop puts on the engine. Heavier/denser crops fill the machine faster.
+4. **$P_{soil}$ — Terrain Slope & Rolling Resistance**  
+   Climbing hills or working on wet/tilled soil draws real tractive power, placing authentic extra demand on the engine.
 
-**NEXAT modular harvesters** are fully supported — the mod searches the vehicle hierarchy to find the correct engine power.
+> **Swathing / Windrow Pickup:** When harvesting swathed windrows with a pickup header, knife cutterbar drag ($P_{header}$) drops to zero, and power draw is calculated purely from pickup ingestion and threshing.
+
+> **NEXAT & Modular Harvesters:** Full hierarchy vehicle search resolves the true engine horsepower across modular gantry carriers and attachments.
 
 ---
 
 ## Frequently Asked Questions
 
-**Q: My combine is slowing down by itself. Is that normal?**
-Yes. The mod automatically limits speed when engine load is too high. This prevents grain loss. You can override it by pressing accelerator harder, but losses will increase.
+**Q: My combine slows down on its own in heavy crops. Is that normal?**  
+Yes. If the Speed Limiter is enabled, the mod automatically adjusts cruise control to prevent severe engine overloading and protect your yield. You can disable this setting if you prefer full manual control.
 
-**Q: I just installed the mod and my settings are all at 50%. Is that bad?**
-That's normal — the mod starts at 50% by default until it detects which crop you're harvesting. Once you start harvesting, AUTO mode automatically adjusts settings to near-optimal values for that crop. It's not always perfect though, so there may still be small losses. For zero loss, tune manually using the reference table above.
+**Q: I bought a new combine and settings are around 50%. Is that intentional?**  
+Yes. Real machines arrive with factory baseline variance (~50% ± 8%). On Tiers 1–3, you tune parameters manually or load saved profiles. On Tier 4, you can click **AUTO** to have the AI calibrate optimal settings.
 
-**Q: Does AUTO mode fully optimize for me?**
-No. AUTO is intentionally imperfect. A skilled manual operator can outperform AUTO.
+**Q: Why doesn't AUTO mode work immediately when I enter a field?**  
+Opti-Harvest AI (Tier 4) requires real crop stream telemetry to analyze density, seed geometry, and moisture. Simply harvest 5–10 meters of crop, open Shift+K, and click **AUTO**. (Tiers 1–3 are strictly manual and do not have AUTO mode).
 
-**Q: I lost a lot of grain. How do I prevent it?**
-Two main causes: (1) driving too fast — watch the Load bar, (2) wrong calibration — open RShift+K and check your settings for the current crop.
+**Q: When do crop losses actually begin?**  
+Losses start progressively when engine load exceeds **80%**. Overload between 80% and 100% results in minor acceptable loss (~0–2%), while pushing past 100–110% causes steep exponential loss. Sub-optimal calibration also adds a separate cleaning shoe loss.
 
-**Q: Does this work in Multiplayer?**
-Yes. Speed limiting syncs across all players. Each player has their own HUD settings. Server-side settings (difficulty, crop loss) are managed by the admin.
+**Q: Does this mod work with the FS25 Moisture System mod?**  
+Yes! Realistic Harvesting features a built-in soft-dependency bridge for `FS25_MoistureSystem`. When active, live moisture is displayed on the HUD (Tier 3+), wet crops increase engine power requirements, and wet harvesting losses are simulated.
 
-**Q: What are RHM Packages?**
-These are electronic upgrade tiers you select when buying/modifying a combine. They unlock additional HUD metrics and features, from basic monitoring to full AI-assisted zero-loss harvesting.
+**Q: Is Multiplayer / Dedicated Server supported?**  
+Yes. Physics, engine load, speed limits, and difficulty settings are fully synchronized across all players. Client HUD positions and unit preferences are personal per player.
 
-**Q: How do I open the Calibration Menu?**
-Press **Right Shift + K** while seated in a combine.
+**Q: What happens if I harvest a modded crop?**  
+The mod includes a universal ASABE/FS25 dynamic physics fallback that calculates specific processing energy ($E_{spec}$) and aerodynamic cleaning requirements using the crop's mass per liter and botanical traits.
+
+**Q: How do I open the Calibration Menu?**  
+Press **Right Shift + K** while seated inside a combine.
 
 ---
 
@@ -287,7 +305,7 @@ Press **Right Shift + K** while seated in a combine.
 1. Download from [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
 2. Place `FS25_RealisticHarvesting.zip` into your `mods` folder
    - Usually: `Documents/My Games/FarmingSimulator2025/mods/`
-3. Activate in the in-game Modhub
+3. Activate in the in-game Modhub / Mod selection screen
 
 ---
 
@@ -295,9 +313,9 @@ Press **Right Shift + K** while seated in a combine.
 
 **Created by:** exekx
 
-- **Bugs:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
-- **Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
-
+- **Bugs & Suggestions:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
+- **Official Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
+- **Community & Support:** [Discord Server](https://discord.gg/Dc2CvZJqU4)
 
 <div align="center">
 
