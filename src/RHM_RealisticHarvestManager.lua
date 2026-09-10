@@ -72,11 +72,6 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
         self.calibrationGUI = RHMCombineCalibrationGUI.new(modDirectory)
     end
 
-    if mission:getIsClient() and RHM_CropFactorTuning and RHM_CropFactorTuning.isEnabled and RHM_CropFactorTuning.isEnabled() then
-        self.cropFactorTuneGUI = RHM_CropFactorTuningGui.new(modDirectory)
-        RHM_CropFactorTuning.registerConsoleCommand()
-    end
-
     return self
 end
 
@@ -185,10 +180,6 @@ function RHM_RealisticHarvestManager:update(dt)
         self.calibrationGUI:update(dt)
     end
 
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:update(dt)
-    end
-
     -- EN: Self-healing camera manager: ensures cameras are locked ONLY when menu or HUD cursor is active,
     --     and guaranteed to be unlocked as soon as neither is active!
     -- UA: Менеджер самовідновлення камери: гарантує, що камери заблоковані ТІЛЬКИ коли відкрите меню або активний курсор HUD,
@@ -288,10 +279,6 @@ function RHM_RealisticHarvestManager:draw()
         return
     end
 
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:draw()
-    end
-
     -- EN: Calibration GUI is drawn above the HUD independently.
     -- UA: GUI калібрування малюється поверх HUD незалежно.
     if self.calibrationGUI then
@@ -327,10 +314,6 @@ function RHM_RealisticHarvestManager:delete()
         self.hud:delete()
         self.hud = nil
     end
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:delete()
-        self.cropFactorTuneGUI = nil
-    end
     if self.calibrationGUI then
         self.calibrationGUI:delete()
     end
@@ -343,10 +326,6 @@ end
 function RHM_RealisticHarvestManager:mouseEvent(posX, posY, isDown, isUp, button)
     if not self.mission:getIsClient() then
         return
-    end
-
-    if self.cropFactorTuneGUI and self.cropFactorTuneGUI:mouseEvent(posX, posY, isDown, isUp, button) then
-        return true
     end
 
     if self.calibrationGUI and self.calibrationGUI:mouseEvent(posX, posY, isDown, isUp, button) then

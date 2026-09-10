@@ -71,13 +71,12 @@ function RHM_DiagnosticTool:consoleCommandInspect()
     print(string.format("Input FruitType: %d (%s) | Output FillType: %d (%s)", inputFruitType, inputFruitName, outputFillType, outputFillName))
     print(string.format("RHM Current Crop: %s", tostring(calc.currentCrop or "None")))
 
-    -- Crop Factors
-    local baseFactor = calc.CROP_FACTORS[inputFruitType] or "nil"
-    if type(baseFactor) == "number" then baseFactor = string.format("%.3f", baseFactor) end
-    local ftFactor = calc.CROP_FACTORS_FT[outputFillType] or "nil"
-    if type(ftFactor) == "number" then ftFactor = string.format("%.3f", ftFactor) end
-    
-    print(string.format("Crop Factor Maps -> DirectCut (FruitType): %s | Pickup (FillType): %s", baseFactor, ftFactor))
+    -- Physical Power Model Info
+    local eSpec = calc.lastSpecificEnergy or 0
+    local headerHp = calc.headerHp or 0
+    print(string.format("Specific Energy (E_spec): %.2f HP/(t/h) | Header PTO Power: %.1f HP", eSpec, headerHp))
+    print(string.format("Power Balance: Base=%.1f HP, Header=%.1f HP, Process=%.1f HP -> Total: %.1f / %.1f HP",
+        calc.lastPowerBase or 0, calc.lastPowerHeader or 0, calc.lastPowerProcess or 0, calc.lastPowerTotal or 0, calc.lastPowerEngine or power))
     
     
     -- Modifiers

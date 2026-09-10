@@ -791,6 +791,18 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
         end
     end
     
+    -- EN: Support self-propelled machines where cutter is integrated directly on the vehicle (self.spec_cutter)
+    -- UA: Підтримка самохідних машин де жатка вбудована безпосередньо в машину (self.spec_cutter)
+    if not cutterIsWorking and self.spec_cutter then
+        local speedOk = self:getLastSpeed() > 0.5
+        local spec_cutter = self.spec_cutter
+        if self:getIsTurnedOn()
+            and speedOk
+            and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
+            cutterIsWorking = true
+        end
+    end
+    
     -- Якщо жатка НЕ працює - знімаємо обмеження відразу
     if not cutterIsWorking then
         spec.isSpeedLimitActive = false
@@ -1140,6 +1152,17 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 cutterIsTurnedOn = true
                 break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
             end
+        end
+    end
+    
+    -- EN: Fallback for self-propelled harvesters with integrated cutter (e.g. root/vegetable/specialized)
+    -- UA: Перевірка для самохідних комбайнів із вбудованою жаткою
+    if not cutterIsTurnedOn and self.spec_cutter then
+        local spec_cutter = self.spec_cutter
+        if self:getIsTurnedOn() 
+            and self:getLastSpeed() > 0.5 
+            and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
+            cutterIsTurnedOn = true
         end
     end
     

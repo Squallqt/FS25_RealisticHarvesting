@@ -3,6 +3,10 @@
 ## Language: EN
 
 Changelog 1.5.1.0:
+- NEW: Physical Power-Balance Load Engine! Completely eradicated arbitrary static crop coefficients. Harvester engine load and speed regulation are now calculated through a true physical power-balance equation: P_total = P_base + P_header(v) + P_process.
+  * P_base: Mechanical driveline, straw chopper & threshing idle resistance (~10% of engine power).
+  * P_header(v): Dynamically queries PTO requirements directly from the attached header's spec_powerConsumer or store XML, scaling with ground speed. Over-sized headers naturally drag underpowered combines down to realistic field speeds.
+  * P_process: Crop processing power derived from specific processing energy (HP per t/h) based on physical crop traits (standing whole-crop forage chopping, direct grass, grain with straw, oilseeds, pulses, corn cobs, roots, and cotton).
 - NEW: 100% Dynamic Physics-Based Crop Settings! Replaced static hardcoded templates with an ASABE & FS25-compliant physical calculation engine. All crops (vanilla and modded) dynamically calculate optimal fan, rotor, sieves, and feeder values based on bulk density and seed geometry.
 - NEW: Live Environmental Adjustments! Combine calibration pins dynamically shift based on real-time field moisture and yield conditions.
 - NEW: Electronics Tier Rebalance & Factory Variance! All newly purchased combines now arrive with realistic factory mechanical tolerances (~50% ± 8% per parameter) instead of flat identical numbers.
@@ -1235,6 +1239,10 @@ Changelog 1.1.0.0:
 ## Language: UK
 
 Зміни 1.5.1.0:
+- НОВЕ: Фізична модель балансу потужностей (Power-Balance Engine)! Повністю ліквідовано старі штучні коефіцієнти культур. Навантаження на двигун та регулювання швидкості тепер розраховуються з реального фізичного балансу потужностей: P_total = P_base + P_header(v) + P_process.
+  * P_base: Механічний опір трансмісії, приводу молотарки та подрібнювача на холостому ходу (~10% потужності двигуна).
+  * P_header(v): Динамічний запит вимог жатки до ВВП (PTO HP) безпосередньо з spec_powerConsumer та конфігурацій техніки в FS25, що масштабується зі швидкістю. Величезна важка жатка на слабкому комбайні тепер природно змушує його сповільнюватися.
+  * P_process: Потужність обмолоту та подрібнення розраховується на основі питомої енергії (к.с. на т/год) та фізичних властивостей культури (силосна кукурудза, трава, зернові з соломою, ріпак, соя, качани кукурудзи, коренеплоди, бавовна).
 - НОВЕ: 100% динамічні фізичні налаштування культур! Статичні захардкоджені шаблони повністю замінено фізичним розрахунковим модулем (стандарти ASABE та дані FS25). Усі культури (як стандартні, так і з модів) динамічно розраховують оптимальні значення вентилятора, ротора, решіт і похилої камери за насипною густиною та геометрією зерна.
 - НОВЕ: Живі поправки навколишнього середовища! Оптимальні позначки калібрування автоматично зміщуються залежно від поточної вологості та врожайності в полі.
 - НОВЕ: Ребаланс рівнів електроніки та заводські варіації! Усі щойно придбані комбайни тепер прибувають з реальними заводськими допусками та індивідуальними відхиленнями (~50% ± 8% для кожного параметра) замість однакових стерильних чисел.
