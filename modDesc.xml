@@ -1110,6 +1110,32 @@ Funkciók:
             <ru>Требуется пакет Опти-Гарвест AI (Уровень 4) в магазине.</ru>
             <hu>Opti-Harvest AI csomag szükséges (4. szint).</hu>
         </text>
+        <text name="rhm_msg_auto_need_crop">
+            <en>Opti-Harvest AI: Harvest a few meters of crop to begin auto-calibration!</en>
+            <de>Opti-Harvest AI: Ernten Sie einige Meter, um die automatische Kalibrierung zu starten!</de>
+            <fr>Opti-Harvest AI: Récoltez quelques mètres pour lancer l'étalonnage automatique !</fr>
+            <pl>Opti-Harvest AI: Skoś kilka metrów uprawy, aby rozpocząć autokalibrację!</pl>
+            <es>Opti-Harvest AI: ¡Coseche unos metros para iniciar la autocalibración!</es>
+            <it>Opti-Harvest AI: Raccogli qualche metro per avviare la calibrazione automatica!</it>
+            <cz>Opti-Harvest AI: Sklidte několik metrů pro spuštění autokalibrace!</cz>
+            <br>Opti-Harvest AI: Colha alguns metros para iniciar a autocalibração!</br>
+            <uk>Opti-Harvest AI: Почніть збирання культури (проїдьте кілька метрів) для запуску калібрування!</uk>
+            <ru>Opti-Harvest AI: Начните уборку культуры (проедьте пару метров) для запуска калибровки!</ru>
+            <hu>Opti-Harvest AI: Vágj le pár métert az automatikus kalibráció indításához!</hu>
+        </text>
+        <text name="rhm_msg_auto_calibrated">
+            <en>Opti-Harvest AI: Auto-calibrated successfully for %s!</en>
+            <de>Opti-Harvest AI: Erfolgreich für %s kalibriert!</de>
+            <fr>Opti-Harvest AI: Étalonnage automatique réussi pour %s !</fr>
+            <pl>Opti-Harvest AI: Pomyślnie skalibrowano dla %s!</pl>
+            <es>Opti-Harvest AI: ¡Autocalibrado con éxito para %s!</es>
+            <it>Opti-Harvest AI: Calibrazione automatica completata con successo per %s!</it>
+            <cz>Opti-Harvest AI: Úspěšně zkalibrováno pro %s!</cz>
+            <br>Opti-Harvest AI: Calibração automática concluída com sucesso para %s!</br>
+            <uk>Opti-Harvest AI: Автокалібрування успішно виконано для %s!</uk>
+            <ru>Opti-Harvest AI: Автокалибровка успешно выполнена для %s!</ru>
+            <hu>Opti-Harvest AI: Sikeresen kalibrálva a következőhöz: %s!</hu>
+        </text>
         <text name="rhm_help_title">
             <en>
             <![CDATA[Realistic Harvesting Guide]]>
@@ -1646,37 +1672,37 @@ Po dokončení pole bude vygenerován protokol o sklizni, který ukáže, jak ka
         </text>
         <text name="rhm_help_upgrades_1">
             <en>
-            <![CDATA[Base harvesting electronics. Standard factory equipment providing essential HUD data such as Engine Load and Productivity.]]>
+            <![CDATA[Standard factory electronics. Provides core HUD metrics (Engine Load, Productivity). Operates strictly in MANUAL mode with unique factory baseline tolerances on purchase (~50% ± 8%), requiring manual operator tuning.]]>
         </en>
             <de>
-            <![CDATA[Standard-Erne-Elektronik. Bietet wichtige HUD-Daten wie Motorlast und Produktivität.]]>
+            <![CDATA[Standard-Erne-Elektronik. Bietet wichtige HUD-Daten (Motorlast, Produktivität). Arbeitet rein im MANUAL-Modus mit Werkstoleranzen (~50% ± 8%) beim Kauf.]]>
         </de>
             <fr>
-            <![CDATA[Électronique de base. Fournit les données HUD essentielles comme la charge moteur et la productivité.]]>
+            <![CDATA[Électronique standard d'usine. Fournit les données HUD essentielles. Fonctionne strictement en mode MANUAL avec des tolérances d'usine à l'achat (~50% ± 8%).]]>
         </fr>
             <it>
-            <![CDATA[Elettronica standard. Fornisce dati HUD essenziali come carico motore e produttività.]]>
+            <![CDATA[Elettronica standard di fabbrica. Fornisce dati HUD essenziali. Funziona rigorosamente in modalità MANUAL con tolleranze di fabbrica (~50% ± 8%).]]>
         </it>
             <es>
-            <![CDATA[Electrónica básica. Proporciona datos esenciales del HUD como carga del motor y productividad.]]>
+            <![CDATA[Electrónica estándar de fábrica. Proporciona datos esenciales del HUD. Funciona estrictamente en modo MANUAL con tolerancias de fábrica (~50% ± 8%).]]>
         </es>
             <br>
-            <![CDATA[Eletrônica básica de colheita. Fornece dados essenciais do HUD, como carga do motor e produtividade.]]>
+            <![CDATA[Eletrônica padrão de fábrica. Fornece dados essenciais do HUD. Opera estritamente no modo MANUAL com tolerâncias de fábrica (~50% ± 8%).]]>
         </br>
             <pl>
-            <![CDATA[Podstawowa elektronika. Zapewnia kluczowe dane HUD, takie jak obciążenie silnika i wydajność.]]>
+            <![CDATA[Standardowa elektronika fabryczna. Zapewnia kluczowe dane HUD. Działa ściśle w trybie MANUAL z fabrycznymi tolerancjami przy zakupie (~50% ± 8%).]]>
         </pl>
             <ru>
-            <![CDATA[Стандартное заводское оборудование. Обеспечивает основные данные HUD, такие как нагрузка и производительность.]]>
+            <![CDATA[Стандартное заводское оборудование. Обеспечивает основные данные HUD. Работает строго в ручном режиме (MANUAL) с заводскими допусками при покупке (~50% ± 8%).]]>
         </ru>
             <hu>
-            <![CDATA[Alapvető betakarítási elektronika. Kulcsfontosságú HUD adatokat szolgáltat: motorterhelés és termelékenység.]]>
+            <![CDATA[Alapfelszereltségű gyári elektronika. Alapvető HUD adatokat szolgáltat. Szigorúan MANUAL módban működik, vásárláskor gyári tűrésekkel (~50% ± 8%).]]>
         </hu>
             <cz>
-            <![CDATA[Základní elektronika sklizně. Poskytuje základní údaje HUD, jako je zatížení motoru a produktivita.]]>
+            <![CDATA[Standardní tovární elektronika. Poskytuje základní údaje HUD. Pracuje striktně v režimu MANUAL s výrobními tolerancemi při nákupu (~50% ± 8%).]]>
         </cz>
             <uk>
-            <![CDATA[Стандартна заводська електроніка. Забезпечує основні дані HUD, такі як навантаження двигуна та продуктивність.]]>
+            <![CDATA[Стандартна заводська електроніка. Забезпечує основні дані HUD (навантаження двигуна та продуктивність). Комбайн постачається з унікальними заводськими допусками налаштувань (~50% ± 8%) та працює виключно в ручному режимі (MANUAL).]]>
         </uk>
         </text>
         <text name="rhm_help_upgrades_2">
@@ -1751,37 +1777,37 @@ Po dokončení pole bude vygenerován protokol o sklizni, který ukáže, jak ka
         </text>
         <text name="rhm_help_upgrades_4">
             <en>
-            <![CDATA[The ultimate upgrade. Fully automated header height and ground speed control based on real-time mass flow. Minimizes human error and maximizes efficiency.]]>
+            <![CDATA[The ultimate upgrade. Unlocks Opti-Harvest AI: harvest a few meters into the field, then press AUTO in the Calibration Menu (RShift + K) to run instant AI calibration tailored to live field telemetry with continuous dynamic auto-trimming.]]>
         </en>
             <de>
-            <![CDATA[Das ultimative Upgrade. Vollautomatische Schneidwerkshöhen- und Geschwindigkeitssteuerung basierend auf dem Massestrom.]]>
+            <![CDATA[Das ultimative Upgrade. Schaltet Opti-Harvest AI frei: Ernten Sie einige Meter im Feld und drücken Sie dann AUTO im Kalibrierungsmenü (RShift + K) für eine sofortige KI-Kalibrierung mit kontinuierlicher dynamischer Nachjustierung.]]>
         </de>
             <fr>
-            <![CDATA[L'ultime amélioration. Contrôle entièrement automatisé de la hauteur de coupe et de la vitesse basé sur le flux de masse.]]>
+            <![CDATA[L'ultime amélioration. Débloque Opti-Harvest AI : récoltez quelques mètres dans le champ, puis appuyez sur AUTO dans le menu de calibrage (RShift + K) pour lancer un étalonnage IA instantané avec ajustement dynamique continu.]]>
         </fr>
             <it>
-            <![CDATA[Il potenziamento definitivo. Controllo automatico dell'altezza testata e della velocità basato sul flusso del prodotto.]]>
+            <![CDATA[Il potenziamento definitivo. Sblocca Opti-Harvest AI: raccogli qualche metro sul campo, quindi premi AUTO nel menu di calibrazione (RShift + K) per eseguire una calibrazione istantanea con regolazione dinamica continua.]]>
         </it>
             <es>
-            <![CDATA[La mejora definitiva. Control totalmente automatizado de altura del cabezal y velocidad basado en el flujo de masa.]]>
+            <![CDATA[La mejora definitiva. Desbloquea Opti-Harvest AI: coseche unos metros en el campo y luego presione AUTO en el menú de calibración (RShift + K) para una calibración por IA instantánea con ajuste dinámico continuo.]]>
         </es>
             <br>
-            <![CDATA[A melhoria definitiva. Controle totalmente automatizado da altura da plataforma e velocidade baseado no fluxo de massa.]]>
+            <![CDATA[A melhoria definitiva. Libera o Opti-Harvest AI: colha alguns metros no campo e pressione AUTO no menu de calibração (RShift + K) para uma calibração instantânea com ajuste dinâmico contínuo.]]>
         </br>
             <pl>
-            <![CDATA[Najwyższe ulepszenie. W pełni automatyczne sterowanie wysokością hederu i prędkością na podstawie przepływu masy.]]>
+            <![CDATA[Najwyższe ulepszenie. Odblokowuje Opti-Harvest AI: skoś kilka metrów na polu, a następnie naciśnij AUTO w menu kalibracji (RShift + K), aby uruchomić natychmiastową kalibrację AI z ciągłym dynamicznym dostrajaniem.]]>
         </pl>
             <ru>
-            <![CDATA[Лучшее улучшение. Полностью автоматическое управление высотой жатки и скоростью на основе потока массы.]]>
+            <![CDATA[Лучшее улучшение. Открывает систему Opti-Harvest AI: проедьте пару метров по полю, затем нажмите кнопку AUTO в меню калибровки (RShift + K) для мгновенной AI-калибровки под влажность и массу с динамической подстройкой на ходу.]]>
         </ru>
             <hu>
-            <![CDATA[A végső fejlesztés. Teljesen automatizált vágóasztal-magasság és sebességszabályozás a tömegáram alapján.]]>
+            <![CDATA[A végső fejlesztés. Feloldja az Opti-Harvest AI rendszert: vágj pár métert a mezőn, majd nyomd meg az AUTO gombot a Kalibrációs Menüben (RShift + K) az azonnali AI kalibrációhoz és folyamatos dinamikus finomhangoláshoz.]]>
         </hu>
             <cz>
-            <![CDATA[Špičkový upgrade. Plně automatizované ovládání výšky žací lišty a rychlosti pojezdu na základě hmotnostního toku.]]>
+            <![CDATA[Špičkový upgrade. Odemkne Opti-Harvest AI: sklidte několik metrů na poli a stiskněte AUTO v nabídce kalibrace (RShift + K) pro okamžitou AI kalibraci s plynulým dynamickým dolaďováním.]]>
         </cz>
             <uk>
-            <![CDATA[Найкраще покращення. Повністю автоматичне керування висотою жатки та швидкістю на основі масового потоку зерна.]]>
+            <![CDATA[Найвищий рівень автоматизації. Відкриває систему Opti-Harvest AI: проїдьте кілька метрів у полі, потім натисніть кнопку AUTO в меню калібрування (RShift + K) для миттєвого автокалібрування під поточну вологість та масу з подальшим динамічним авто-підлаштуванням на ходу.]]>
         </uk>
         </text>
         <text name="rhm_help_hud_2_1">
@@ -4093,34 +4119,38 @@ Vše se ukládá.]]>
             <en><![CDATA[Combine performance depends heavily on proper calibration.
 Open the Calibration Menu anytime with (RShift + K).
 
-For every crop there is an optimal target. The game estimates how much material is being processed and converts it into engine load. If your calibration is off, you get extra crop loss on top of overload.
+For every crop there is an optimal target. The game estimates material throughput and converts it into engine load. If calibration is off, you incur extra crop loss on top of overload penalties.
 
-Calibration splits into two mechanics:
+Operating Modes:
+- Tiers 1–3: Strictly MANUAL. You adjust settings by hand and save custom profiles for each crop via the SAVE button.
+- Tier 4 (Opti-Harvest AI): Unlocks the AUTO button. Harvest a few meters into a field to gather telemetry, then press AUTO for instant AI calibration tailored to live moisture and yield.
+
+Calibration parts:
 - Efficiency parts (Rotor + Feeder House) affect throughput speed.
-- Cleaning parts (Fan + Sieves) affect separation quality (where most "extra" crop loss comes from).
-
-Use Preview Loss when you change crop/header or when you see RED losses on the HUD.
-Aim for GREEN engine load near your target and LOW crop losses.]]></en>
-            <de><![CDATA[Die Mähdrescherleistung hängt stark von der richtigen Kalibrierung ab. Öffne das Menü mit (RShift + K). Jede Frucht hat einen optimalen Zielwert. Je weiter der Regler vom Ziel entfernt ist, desto mehr Verlust entsteht (max. 25% Strafe).]]></de>
-            <fr><![CDATA[Les performances dépendent d'un calibrage correct. Ouvrez le menu avec (RShift + K). Chaque culture a une valeur cible optimale. Plus le curseur s'en éloigne, plus les pertes augmentent (jusqu'à 25%).]]></fr>
-            <it><![CDATA[Le prestazioni dipendono dalla calibrazione. Apri il menu con (RShift + K). Ogni coltura ha un valore target ottimale. Più il cursore si allontana dal target, più aumentano le perdite (fino al 25%).]]></it>
-            <es><![CDATA[El rendimiento depende de una calibración correcta. Abra el menú con (RShift + K). Cada cultivo tiene un valor objetivo óptimo. Cuanto más lejos esté el control deslizante, mayores serán las pérdidas (hasta 25%).]]></es>
-            <br><![CDATA[O desempenho depende da calibração. Abra o menu com (RShift + K). Cada cultura tem um valor alvo ideal. Quanto mais longe o controle estiver do alvo, mais perdas ocorrerão (até 25%).]]></br>
-            <pl><![CDATA[Wydajność zależy od kalibracji. Otwórz menu przez (RShift + K). Każda uprawa ma optymalną wartość docelową. Im dalej suwak od celu, tym większe straty (max. 25%).]]></pl>
-            <ru><![CDATA[Эффективность зависит от калибровки. Откройте меню через (RShift + K). Каждая культура имеет оптимальное целевое значение. Чем дальше ползунок от цели — тем больше потери (до 25%).]]></ru>
-            <hu><![CDATA[A teljesítmény a kalibrálástól függ. Nyisd meg a menüt (RShift + K) billentyűkkel. Minden terménynek van optimális célértéke. Minél messzebb a csúszka, annál nagyobb a veszteség (max 25%).]]></hu>
-            <cz><![CDATA[Výkon závisí na kalibraci. Otevřete menu přes (RShift + K). Každá plodina má optimální cílovou hodnotu. Čím dál je posuvník od cíle, tím větší jsou ztráty (max. 25%).]]></cz>
+- Cleaning parts (Fan + Sieves) affect separation quality (extra crop loss).]]></en>
+            <de><![CDATA[Die Mähdrescherleistung hängt stark von der richtigen Kalibrierung ab. Öffne das Menü mit (RShift + K). Tiers 1-3 arbeiten rein manuell mit Speicherfunktion. Tier 4 schaltet die AUTO-Taste frei: Ernten Sie einige Meter und drücken Sie AUTO für sofortige KI-Kalibrierung.]]></de>
+            <fr><![CDATA[Les performances dépendent d'un calibrage correct. Ouvrez le menu avec (RShift + K). Niveaux 1-3 : mode MANUAL. Niveau 4 : débloque le bouton AUTO pour un étalonnage IA automatique après avoir récolté quelques mètres.]]></fr>
+            <it><![CDATA[Le prestazioni dipendono dalla calibrazione. Apri il menu con (RShift + K). Livelli 1-3: modalità MANUAL. Livello 4: sblocca il pulsante AUTO per la calibrazione istantanea dopo aver raccolto qualche metro.]]></it>
+            <es><![CDATA[El rendimiento depende de una calibración correcta. Abra el menú con (RShift + K). Niveles 1-3: modo MANUAL. Nivel 4: desbloquea el botón AUTO para una calibración automática por IA tras cosechar unos metros.]]></es>
+            <br><![CDATA[O desempenho depende da calibração. Abra o menu com (RShift + K). Níveis 1-3: modo MANUAL. Nível 4: libera o botão AUTO para calibração automática por IA após colher alguns metros.]]></br>
+            <pl><![CDATA[Wydajność zależy od kalibracji. Otwórz menu przez (RShift + K). Poziomy 1-3: tryb MANUAL ze zapisem profili. Poziom 4: odblokowuje przycisk AUTO do natychmiastowej kalibracji AI po skoszeniu kilku metrów.]]></pl>
+            <ru><![CDATA[Эффективность зависит от калибровки. Откройте меню через (RShift + K).
+Уровни 1–3: строго ручной режим (MANUAL) с сохранением профилей кнопкой SAVE.
+Уровень 4 (Opti-Harvest AI): открывает кнопку AUTO — проедьте пару метров по полю и нажмите AUTO для автокалибровки под влажность и массу.]]></ru>
+            <hu><![CDATA[A teljesítmény a kalibrálástól függ. Nyisd meg a menüt (RShift + K). 1-3. szint: MANUAL mód profilmentéssel. 4. szint: feloldja az AUTO gombot azonnali AI kalibrációhoz pár méter betakarítása után.]]></hu>
+            <cz><![CDATA[Výkon závisí na kalibraci. Otevřete menu přes (RShift + K). Úrovně 1-3: režim MANUAL. Úroveň 4: odemkne tlačítko AUTO pro okamžitou AI kalibraci po sklizení několika metrů.]]></cz>
             <uk><![CDATA[Ефективність комбайна напряму залежить від правильного калібрування.
 Відкрийте меню калібрування (RShift + K) у будь-який момент.
 
 Для кожної культури є своя оптимальна ціль. Гра оцінює, скільки матеріалу проходить через систему, і переводить це в навантаження двигуна. Якщо калібрування не влучає в ціль, ви отримуєте додаткові втрати поверх перевантаження.
 
-Калібрування працює через дві механіки:
-- Компоненти ефективності (Ротор + Похила камера) впливають на пропускну здатність.
-- Компоненти очищення (Вентилятор + решета) впливають на якість сепарації (саме звідти йде більшість “додаткових” втрат).
+Режими роботи:
+- Тіри 1–3: Виключно MANUAL (ручний). Ви самостійно налаштовуєте параметри та зберігаєте профілі кнопкою SAVE.
+- Тір 4 (Opti-Harvest AI): Відкриває кнопку AUTO. Проїдьте кілька метрів у полі для зчитування культури сенсорами, потім натисніть AUTO для миттєвого автокалібрування та динамічного підлаштування на ходу.
 
-Використовуйте Preview Loss, коли міняєте культуру/жатку або коли бачите ЧЕРВОНИЙ рівень втрат на HUD.
-Ціль: ЗЕЛЕНЕ навантаження двигуна біля вашої цілі та НИЗЬКІ втрати.]]></uk>
+Вузли калібрування:
+- Компоненти ефективності (Ротор + Похила камера) впливають на пропускну здатність.
+- Компоненти очищення (Вентилятор + решета) впливають на якість сепарації та втрати.]]></uk>
         </text>
         <text name="rhm_help_calibration_rotor_sub">
             <en><![CDATA[Grain Combine]]></en>

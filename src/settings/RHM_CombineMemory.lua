@@ -26,15 +26,20 @@ function RHM_CombineMemory.new(combine, machineType)
     self.currentSettings = {}
     local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
     for _, paramName in ipairs(activeParams) do
-        self.currentSettings[paramName] = 50
+        -- EN: Factory baseline variation: machines leave dealership with slight mechanical offsets around 50%
+        -- UA: Заводська варіація: машини виходять з дилерського центру з невеликими відхиленнями навколо 50%
+        local offset = math.random(-8, 8)
+        self.currentSettings[paramName] = math.max(25, math.min(75, 50 + offset))
     end
     self.currentSettings["targetEngineLoad"] = 95
 
     self.currentYieldCalibration = 1.0
 
-    self.mode = "AUTO"            -- EN: Starts in AUTO mode by default / UA: За замовчуванням починає в AUTO режимі
-    self.autoSwitchEnabled = true -- EN: Auto-applies optimal settings on crop change / UA: Автоматично застосовує оптимальні при зміні культури
-    self.showWarnings = true      -- EN: Show warnings for incorrect settings / UA: Показувати попередження при неправильних налаштуваннях
+    -- EN: Default mode is always MANUAL for all combines. AUTO calibration is user-triggered on Tier 4.
+    -- UA: Режим за замовчуванням завжди MANUAL для всіх комбайнів. AUTO калібрування запускається гравцем на Тір 4.
+    self.mode = "MANUAL"
+    self.autoSwitchEnabled = false
+    self.showWarnings = true
 
     return self
 end
@@ -86,9 +91,15 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
         -- UA: Культура невідома, але продовжуємо зі значеннями за замовчуванням.
     end
 
-    if forceOptimal and optimalSettings then
-        -- EN: AUTO mode: sets exactly the 100% optimal values (Opti-Harvest Level 4 exclusive).
-        -- UA: AUTO режим: встановлює рівно 100% оптимальні значення (ексклюзив для пакету Opti-Harvest 4 рівня).
+    local pkgLevel = 1
+    if self.combine and self.combine.spec_rhm_Combine then
+        pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
+    end
+    local canAutoOptimal = (pkgLevel >= 4)
+
+    if forceOptimal and canAutoOptimal and optimalSettings then
+        -- EN: AUTO mode: sets calculated optimal values (Opti-Harvest Level 4 exclusive).
+        -- UA: AUTO режим: встановлює розраховані оптимальні значення (ексклюзив для Opti-Harvest 4 рівня).
         local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
         for _, pName in ipairs(activeParams) do
             if optimalSettings[pName] then
@@ -99,17 +110,19 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
         end
 
         self.mode = "AUTO"
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Auto settings applied for: %s (forceOptimal=%s)", cropName, tostring(forceOptimal)))
+        self.autoSwitchEnabled = true
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Opti-Harvest AI auto settings applied for: %s", cropName))
     else
-        -- EN: RESET mode: set all active params to the neutral 50% position.
-        -- UA: Режим RESET: встановлюємо всі активні параметри на нейтральну позицію 50%.
+        -- EN: MANUAL / RESET mode: set all active params to neutral 50% position.
+        -- UA: Режим MANUAL / RESET: встановлюємо всі активні параметри на нейтральну позицію 50%.
         local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
         for _, pName in ipairs(activeParams) do
             self.currentSettings[pName] = 50
         end
 
         self.mode = "MANUAL"
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Default settings (50%%) applied for: %s", cropName))
+        self.autoSwitchEnabled = false
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Neutral settings (50%%) applied for: %s", cropName))
     end
 
     -- EN: Reset yield calibration when switching to a new crop without an existing profile.
@@ -128,7 +141,23 @@ end
 -- UA: Надсилає мережевий запит на сервер для застосування AUTO налаштувань для поточної культури.
 --     В однокористувацькій грі обробляє подію локально.
 function RHM_CombineMemory:requestAutoSettings()
-    if not self.currentCrop then return end
+    local pkgLevel = 1
+    if self.combine and self.combine.spec_rhm_Combine then
+        pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
+    end
+
+    if pkgLevel < 4 then
+        rhm_log("RHM [RHM_CombineMemory]: [!] requestAutoSettings ignored: requires Tier 4 (Opti-Harvest AI)")
+        return
+    end
+
+    if not self.currentCrop then
+        if g_currentMission and g_currentMission.hud then
+            local text = g_i18n:hasText("rhm_msg_auto_need_crop") and g_i18n:getText("rhm_msg_auto_need_crop") or "Opti-Harvest AI: Harvest a few meters to begin auto-calibration!"
+            g_currentMission.hud:showInGameMessage("RHM", text, -1)
+        end
+        return
+    end
 
     if g_client and self.combine then
         local event = RHM_CombineSettingsEvent.new(self.combine, "AUTO_SET", 1)
@@ -138,6 +167,15 @@ function RHM_CombineMemory:requestAutoSettings()
             event:run(nil) -- EN: Singleplayer: process locally / UA: Однокористувацька: обробляємо локально
         end
         rhm_log("RHM [RHM_CombineMemory]: RHM: [Sync] Requested AUTO settings from server")
+    end
+
+    if g_currentMission and g_currentMission.hud then
+        local cropTitle = self.currentCrop
+        if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
+            cropTitle = RHM_CombineSettingsDatabase:getCropTitle(self.currentCrop)
+        end
+        local formatStr = g_i18n:hasText("rhm_msg_auto_calibrated") and g_i18n:getText("rhm_msg_auto_calibrated") or "Opti-Harvest AI: Auto-calibrated for %s!"
+        g_currentMission.hud:showInGameMessage("RHM", string.format(formatStr, tostring(cropTitle)), -1)
     end
 end
 
@@ -338,18 +376,31 @@ end
 --           на виділеному сервері без культури — позначає очікуючий AUTO і чекає.
 --     MANUAL: вимикає автоконфігурацію.
 function RHM_CombineMemory:setMode(mode)
+    local pkgLevel = 1
+    if self.combine and self.combine.spec_rhm_Combine then
+        pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
+    end
+
     if mode == "AUTO" then
+        if pkgLevel < 4 then
+            self.mode = "MANUAL"
+            self.autoSwitchEnabled = false
+            rhm_log("RHM [RHM_CombineMemory]: [!] Cannot set AUTO mode: requires Tier 4 (Opti-Harvest AI)")
+            return
+        end
+
         if self.currentCrop then
             self:autoConfigureForCrop(self.currentCrop, true)
         else
-            -- EN: Dedicated server: crop not yet detected. Store mode for later when crop is first harvested.
-            -- UA: Виділений сервер: культура ще не визначена. Зберігаємо режим до першого збору врожаю.
+            -- EN: Dedicated server / unharvested: crop not yet detected. Store mode for later.
+            -- UA: Виділений сервер / не зібрано: культура ще не визначена. Зберігаємо режим.
             self.mode = "AUTO"
             self.autoSwitchEnabled = true
-            rhm_log("RHM [RHM_CombineMemory]: RHM: [AUTO] currentCrop is nil on DS, pending AUTO mode set. Will apply when crop detected.")
+            rhm_log("RHM [RHM_CombineMemory]: RHM: [AUTO] currentCrop is nil, pending AUTO mode set.")
         end
     elseif mode == "MANUAL" then
         self.mode = "MANUAL"
+        self.autoSwitchEnabled = false
     end
 end
 
@@ -406,33 +457,31 @@ function RHM_CombineMemory:updateStatistics(harvestedLiters, cropLoss, cropName)
     end
 end
 
--- EN: Switches to a new crop: saves the current crop's profile, sets the new crop,
---     then loads its profile or applies auto/default settings depending on mode.
--- UA: Переключається на нову культуру: зберігає профіль поточної культури, встановлює нову,
---     а потім завантажує її профіль або застосовує авто/стандартні налаштування залежно від режиму.
+-- EN: Switches to a new crop: updates the active crop name and synchronizes with server.
+--     Does NOT auto-save or auto-load profiles, and does NOT alter combine settings.
+--     The combine's mechanical settings remain untouched until the player manually adjusts them,
+--     loads a saved preset via [Load Preset], or triggers AUTO calibration (Tier 4).
+-- UA: Перемикається на нову культуру: оновлює активну назву культури та синхронізує з сервером.
+--     НЕ зберігає та НЕ завантажує профілі автоматично, і НЕ змінює налаштування комбайна.
+--     Механічні налаштування комбайна залишаються незмінними, доки гравець вручну не налаштує їх,
+--     не завантажить збережений пресет через [Load Preset], або не запустить AUTO калібрування (Тір 4).
 function RHM_CombineMemory:switchCrop(newCropName)
     if not newCropName or newCropName == self.currentCrop then
         return
     end
 
-    if self.currentCrop then
-        self:saveCurrentProfile(self.currentCrop)
-    end
-
     self.currentCrop = newCropName
 
-    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
-    if pm and pm:getProfile(newCropName) then
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: Switching to crop %s - Loading global profile", newCropName))
-        self:loadUserPreset()
-    else
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: Switching to crop %s - No profile, applying defaults", newCropName))
-        if self.autoSwitchEnabled then
-            self:autoConfigureForCrop(newCropName, true)
-        else
-            self:autoConfigureForCrop(newCropName, false)
-        end
-    end
+    -- EN: Switching crop always drops to MANUAL mode so Tier 4 requires explicit re-calibration.
+    -- UA: Зміна культури завжди переводить у режим MANUAL, тому для Тір 4 потрібне явне повторне калібрування.
+    self.mode = "MANUAL"
+    self.autoSwitchEnabled = false
+
+    -- EN: Reset yield calibration for new crop
+    -- UA: Скидаємо калібрування врожайності для нової культури
+    self.currentYieldCalibration = 1.0
+
+    rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: Detected crop: %s (MANUAL mode, current settings retained)", newCropName))
 
     -- EN: Synchronize with server if in multiplayer
     -- UA: Синхронізуємо з сервером у мультиплеєрі
@@ -484,6 +533,18 @@ end
 -- UA: Перемикає прапорець режиму автоперемикання. У мультиплеєрі надсилає мережеву подію серверу.
 --     В однокористувацькій грі застосовує локально і негайно налаштовує для поточної культури при переключенні в AUTO.
 function RHM_CombineMemory:toggleAutoMode()
+    local pkgLevel = 1
+    if self.combine and self.combine.spec_rhm_Combine then
+        pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
+    end
+
+    if pkgLevel < 4 then
+        self.mode = "MANUAL"
+        self.autoSwitchEnabled = false
+        rhm_log("RHM [RHM_CombineMemory]: [!] AUTO mode locked - requires Tier 4 (Opti-Harvest AI)")
+        return
+    end
+
     if g_client and self.combine and not g_server then
         -- EN: Multiplayer client: send request to server.
         -- UA: Клієнт мультиплеєру: надсилаємо запит на сервер.

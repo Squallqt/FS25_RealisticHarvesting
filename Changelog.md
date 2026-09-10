@@ -5,6 +5,9 @@
 Changelog 1.5.1.0:
 - NEW: 100% Dynamic Physics-Based Crop Settings! Replaced static hardcoded templates with an ASABE & FS25-compliant physical calculation engine. All crops (vanilla and modded) dynamically calculate optimal fan, rotor, sieves, and feeder values based on bulk density and seed geometry.
 - NEW: Live Environmental Adjustments! Combine calibration pins dynamically shift based on real-time field moisture and yield conditions.
+- NEW: Electronics Tier Rebalance & Factory Variance! All newly purchased combines now arrive with realistic factory mechanical tolerances (~50% ± 8% per parameter) instead of flat identical numbers.
+- NEW: Strict MANUAL Mode for Tiers 1, 2, and 3: Combines operate purely manually; auto-switch and optimal presets are completely blocked. Players must manually tune sliders or save custom profiles.
+- NEW: Interactive Opti-Harvest AI (Tier 4) Auto-Calibration: Harvesters no longer silently auto-tune settings behind the scenes. Operators harvest a few meters into a field to gather telemetry, then press AUTO in the Shift+K menu to run AI calibration tailored to live field moisture and yield, activating continuous dynamic auto-trimming.
 - FIXED: Multiplayer & Dedicated Server crop selection in Shift+K menu: added bidirectional network event synchronization (`CROP`), preventing selected crops from reverting to "NONE" / "no crop".
 - FIXED: Resolved camera rotation and zoom locking issues when opening/closing menus or activating HUD cursor (RMB).
 - FIXED: Cleanly reset global text rendering states after drawing draggable HUD to prevent leaking state to the base game HUD.
@@ -1234,6 +1237,9 @@ Changelog 1.1.0.0:
 Зміни 1.5.1.0:
 - НОВЕ: 100% динамічні фізичні налаштування культур! Статичні захардкоджені шаблони повністю замінено фізичним розрахунковим модулем (стандарти ASABE та дані FS25). Усі культури (як стандартні, так і з модів) динамічно розраховують оптимальні значення вентилятора, ротора, решіт і похилої камери за насипною густиною та геометрією зерна.
 - НОВЕ: Живі поправки навколишнього середовища! Оптимальні позначки калібрування автоматично зміщуються залежно від поточної вологості та врожайності в полі.
+- НОВЕ: Ребаланс рівнів електроніки та заводські варіації! Усі щойно придбані комбайни тепер прибувають з реальними заводськими допусками та індивідуальними відхиленнями (~50% ± 8% для кожного параметра) замість однакових стерильних чисел.
+- НОВЕ: Суворий ручний режим для Тірів 1, 2 і 3: комбайни працюють виключно в MANUAL режимі; автоматичне виставлення оптимуму та режим AUTO заблоковані. Гравець власноруч налаштовує параметри та зберігає профілі.
+- НОВЕ: Інтерактивне автокалібрування Opti-Harvest AI (Тір 4): комбайни більше не виставляють налаштування потайки самі по собі. Гравець збирає перші кілька метрів культури для зчитування телеметрії (вологість, маса), після чого тисне кнопку AUTO в меню Shift+K для запуску AI-калібрування та активації динамічного авто-підлаштування на ходу.
 - ВИПРАВЛЕНО: Синхронізація вибору культури у мультиплеєрі та на виділеному сервері в меню Shift+K: додано двосторонню мережеву подію (`CROP`), що усунуло миттєве скидання вибору на "НЕМАЄ" / "no crop".
 - ВИПРАВЛЕНО: Усунуто зависання та блокування повороту/масштабування камери при відкритті/закритті меню або перемиканні курсору HUD (ПКМ).
 - ВИПРАВЛЕНО: Чисте скидання глобального стану рендерингу тексту після малювання HUD, щоб уникнути впливу на стандартний інтерфейс гри.

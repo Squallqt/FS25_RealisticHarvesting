@@ -705,10 +705,10 @@ function rhm_Combine:addCutterArea(superFunc, ...)
 end
 
 -- EN: Called when the detected crop type changes. Delegates to RHM_CombineMemory:switchCrop which
---     saves the old profile, loads the new one, and triggers network sync.
+--     updates the active crop and triggers network sync without altering physical settings.
 --     Does NOT set currentCrop directly — switchCrop handles all state transitions.
 -- UA: Викликається при зміні визначеного типу культури. Делегує до RHM_CombineMemory:switchCrop який
---     зберігає старий профіль, завантажує новий та запускає мережеву синхронізацію.
+--     оновлює активну культуру та запускає мережеву синхронізацію без зміни фізичних налаштувань.
 --     НЕ встановлює currentCrop напряму — switchCrop обробляє всі переходи стану.
 function rhm_Combine:onCropTypeChanged(newCropName)
     local spec = self.spec_rhm_Combine
@@ -716,10 +716,8 @@ function rhm_Combine:onCropTypeChanged(newCropName)
         return
     end
     
-    -- EN: Delegate to switchCrop — it sets currentCrop, saves old profile, loads new one.
-    --     Do NOT set currentCrop here directly!
-    -- UA: Делегуємо до switchCrop — він встановлює currentCrop, зберігає старий, завантажує новий.
-    --     НЕ встановлювати currentCrop тут напряму!
+    -- EN: Delegate to switchCrop — updates currentCrop without changing settings.
+    -- UA: Делегуємо до switchCrop — оновлює currentCrop без зміни налаштувань.
     spec.combineMemory:switchCrop(newCropName)
     
     -- EN: Sync crop change and settings to clients in multiplayer.
@@ -1472,7 +1470,7 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
         end
     end
     
-    safeSet(cur .. "#mode",       mem.mode or "AUTO")
+    safeSet(cur .. "#mode",       mem.mode or "MANUAL")
     safeSet(cur .. "#autoSwitch", mem.autoSwitchEnabled ~= false)
     safeSet(cur .. "#currentCrop", mem.currentCrop or "")
     safeSet(cur .. "#fan",        settings.fan or 50)
@@ -1492,8 +1490,16 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
     
     -- Поточні налаштування
     local cur = key .. ".combineMemory.current"
-    spec.combineMemory.mode              = xmlFile:getValue(cur .. "#mode", "AUTO")
-    spec.combineMemory.autoSwitchEnabled = xmlFile:getValue(cur .. "#autoSwitch", true)
+    local isTier4 = (spec.packageLevel or 1) >= 4
+    local loadedMode = xmlFile:getValue(cur .. "#mode", "MANUAL")
+    local loadedAutoSwitch = xmlFile:getValue(cur .. "#autoSwitch", false)
+    if isTier4 then
+        spec.combineMemory.mode              = loadedMode
+        spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
+    else
+        spec.combineMemory.mode              = "MANUAL"
+        spec.combineMemory.autoSwitchEnabled = false
+    end
     local savedCrop = xmlFile:getValue(cur .. "#currentCrop")
     spec.combineMemory.currentCrop = (savedCrop ~= "" and savedCrop) or nil
     spec.combineMemory.currentSettings.fan              = xmlFile:getValue(cur .. "#fan", 50)
@@ -1549,6 +1555,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
     
     -- RHM_CombineMemory settings (sync on initial connect)
     local mem = spec.combineMemory
+    local isTier4 = (spec.packageLevel or 1) >= 4
     if mem then
         streamWriteUInt8(streamId, mem.currentSettings.fan or 50)
         streamWriteUInt8(streamId, mem.currentSettings.rotor or 50)
@@ -1556,7 +1563,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, mem.currentSettings.lowerSieve or 50)
         streamWriteUInt8(streamId, mem.currentSettings.feeder or 50)
         streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 95)
-        streamWriteString(streamId, mem.mode or "AUTO")
+        streamWriteString(streamId, isTier4 and (mem.mode or "MANUAL") or "MANUAL")
         streamWriteString(streamId, mem.currentCrop or "")
     else
         streamWriteUInt8(streamId, 50)
@@ -1565,7 +1572,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 50)
         streamWriteUInt8(streamId, 50)
         streamWriteUInt8(streamId, 95)
-        streamWriteString(streamId, "AUTO")
+        streamWriteString(streamId, "MANUAL")
         streamWriteString(streamId, "")
     end
 end
@@ -1629,7 +1636,14 @@ function rhm_Combine:onReadStream(streamId, connection)
         spec.combineMemory.currentSettings.lowerSieve = lowerSieve
         spec.combineMemory.currentSettings.feeder = feeder
         spec.combineMemory.currentSettings.targetEngineLoad = targetEngineLoad or 95
-        spec.combineMemory.mode = mode or "AUTO"
+        local isTier4 = (spec.packageLevel or 1) >= 4
+        if isTier4 then
+            spec.combineMemory.mode = mode or "MANUAL"
+            spec.combineMemory.autoSwitchEnabled = (spec.combineMemory.mode == "AUTO")
+        else
+            spec.combineMemory.mode = "MANUAL"
+            spec.combineMemory.autoSwitchEnabled = false
+        end
         spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
     end
 end
@@ -1681,7 +1695,14 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
                 spec.combineMemory.currentSettings.lowerSieve = lowerSieve
                 spec.combineMemory.currentSettings.feeder = feeder
                 spec.combineMemory.currentSettings.targetEngineLoad = targetEngineLoad or 95
-                spec.combineMemory.mode = mode or "AUTO"
+                local isTier4 = (spec.packageLevel or 1) >= 4
+                if isTier4 then
+                    spec.combineMemory.mode = mode or "MANUAL"
+                    spec.combineMemory.autoSwitchEnabled = (spec.combineMemory.mode == "AUTO")
+                else
+                    spec.combineMemory.mode = "MANUAL"
+                    spec.combineMemory.autoSwitchEnabled = false
+                end
                 spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
             end
         end
@@ -1728,7 +1749,8 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, mem.currentSettings.lowerSieve or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.feeder or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 95)
-                streamWriteString(streamId, mem.mode or "AUTO")
+                local isTier4 = (spec.packageLevel or 1) >= 4
+                streamWriteString(streamId, isTier4 and (mem.mode or "MANUAL") or "MANUAL")
                 streamWriteString(streamId, mem.currentCrop or "")
             else
                 streamWriteUInt8(streamId, 50)
@@ -1737,7 +1759,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 95)
-                streamWriteString(streamId, "AUTO")
+                streamWriteString(streamId, "MANUAL")
                 streamWriteString(streamId, "")
             end
         end

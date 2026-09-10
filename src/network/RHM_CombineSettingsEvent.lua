@@ -124,13 +124,21 @@ function RHM_CombineSettingsEvent:run(connection)
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied crop switch to %s", self.cropName))
                 end
             elseif self.parameter == "AUTO_SET" then
-                -- EN: Client requested AUTO mode — configure optimal settings for current crop.
-                -- UA: Клієнт запросив AUTO режим — налаштовуємо оптимальні значення для поточної культури.
-                mem.autoSwitchEnabled = true
-                mem.mode = "AUTO"
-                if mem.currentCrop then
-                    mem:autoConfigureForCrop(mem.currentCrop, true)
-                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
+                -- EN: Client requested AUTO mode — configure optimal settings for current crop (Tier 4 exclusive).
+                -- UA: Клієнт запросив AUTO режим — налаштовуємо оптимальні значення для поточної культури (тільки Тір 4).
+                local spec = self.vehicle.spec_rhm_Combine
+                local pkgLevel = spec and (spec.packageLevel or 1) or 1
+                if pkgLevel >= 4 then
+                    mem.autoSwitchEnabled = true
+                    mem.mode = "AUTO"
+                    if mem.currentCrop then
+                        mem:autoConfigureForCrop(mem.currentCrop, true)
+                        rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
+                    end
+                else
+                    rhm_log(string.format("RHM [Network]: RHM: [!] Server rejected AUTO_SET: packageLevel %d < 4", pkgLevel))
+                    mem.autoSwitchEnabled = false
+                    mem.mode = "MANUAL"
                 end
             elseif self.parameter == "RESET_SET" then
                 -- EN: Client requested RESET — revert all settings to neutral 50%.
@@ -142,10 +150,17 @@ function RHM_CombineSettingsEvent:run(connection)
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied RESET to 50%% for %s", mem.currentCrop))
                 end
             elseif self.parameter == "AUTO_MODE" then
-                -- EN: Toggle the auto-switch behavior flag (1 = enabled, 0 = disabled).
-                -- UA: Перемикаємо прапорець автоматичного перемикання (1 = увімкнено, 0 = вимкнено).
-                mem.autoSwitchEnabled = (self.value == 1)
-                mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+                -- EN: Toggle the auto-switch behavior flag (Tier 4 exclusive).
+                -- UA: Перемикаємо прапорець автоматичного перемикання (тільки Тір 4).
+                local spec = self.vehicle.spec_rhm_Combine
+                local pkgLevel = spec and (spec.packageLevel or 1) or 1
+                if pkgLevel >= 4 then
+                    mem.autoSwitchEnabled = (self.value == 1)
+                    mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+                else
+                    mem.autoSwitchEnabled = false
+                    mem.mode = "MANUAL"
+                end
             else
                 -- EN: Apply a single parameter change (e.g. "fan" = 65).
                 -- UA: Застосовуємо зміну одного параметру (наприклад "fan" = 65).
@@ -197,8 +212,15 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.currentCrop = self.cropName
             end
         elseif self.parameter == "AUTO_MODE" then
-            mem.autoSwitchEnabled = (self.value == 1)
-            mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+            local spec = self.vehicle.spec_rhm_Combine
+            local pkgLevel = spec and (spec.packageLevel or 1) or 1
+            if pkgLevel >= 4 then
+                mem.autoSwitchEnabled = (self.value == 1)
+                mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+            else
+                mem.autoSwitchEnabled = false
+                mem.mode = "MANUAL"
+            end
         elseif self.parameter ~= "AUTO_SET" and self.parameter ~= "RESET_SET" then
             if mem.currentSettings[self.parameter] ~= nil then
                 local maxVal = self.parameter == "targetEngineLoad" and 110 or 100

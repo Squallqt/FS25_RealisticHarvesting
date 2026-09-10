@@ -144,12 +144,12 @@ When buying or modifying a combine, you can choose an **RHM Electronics** tier i
 
 | Tier | Name | Price | Features |
 |:---|:---|:---:|:---|
-| 1 | **Standard** | Free | Basic engine load and speed limiting |
-| 2 | **Sensor Kit** | $3,500 | Unlocks live Yield (t/ha) and Productivity (t/h) readouts on HUD |
-| 3 | **Yield & Loss Monitor** | $8,500 | Full real-time Crop Loss indicator + color-coded warnings |
-| 4 | **Opti-Harvest AI** | $15,000 | Autonomous calibration system — auto-detects crop and sets optimal parameters for 0% loss |
+| 1 | **Standard** | Free | Manual control. Engine load & speed limiting. Factory baseline settings on purchase |
+| 2 | **Sensor Kit** | $3,500 | Manual control. Unlocks live Yield (t/ha), Productivity (t/h), and parameter target hints |
+| 3 | **Yield & Loss Monitor** | $8,500 | Manual control. Real-time Crop Loss indicator, moisture tracking & detailed telemetry |
+| 4 | **Opti-Harvest AI** | $15,000 | Interactive AI calibration — harvest a few meters, press AUTO in Shift+K, and AI dials in optimal settings with continuous dynamic auto-trimming |
 
-> Tier 4 is the ultimate upgrade: plug-and-play zero-loss harvesting. Let the AI handle calibration while you focus on driving.
+> **Interactive Calibration:** Combines start in MANUAL mode upon purchase with slight factory baseline variance across machines. On Tiers 1–3, players manually tune parameters or load saved profiles. Tier 4 unlocks the **AUTO** button: harvest a few meters to gather crop stream data, open Shift+K, and let Opti-Harvest AI calibrate your combine for zero extra loss.
 
 ---
 
@@ -163,15 +163,17 @@ Press **Right Shift + K** while in a combine to open the Calibration Menu.
 ![GUI Inaccurate Settings](docs/images/gui_inaccurate.png)
 *Poorly calibrated — high loss penalty*
 
-### AUTO vs MANUAL
+### Operating Modes & Progression
 
-| | AUTO | MANUAL |
+| | Tier 1–3 (MANUAL) | Tier 4 (Opti-Harvest AI) |
 |:---|:---|:---|
-| How it works | Sets near-optimal values automatically | You adjust everything yourself |
-| Accuracy | Good starting point, intentionally imperfect | Can be perfect — if you know what you're doing |
-| Loss penalty | Small (AUTO isn't perfect) | Zero or better — if tuned correctly |
+| **Mode** | Strictly MANUAL | Starts in MANUAL, unlocks AUTO calibration button |
+| **At Purchase** | Factory baseline variance (~50% ± 8%) | Factory baseline variance (~50% ± 8%) |
+| **New Crop** | Retains factory settings on 1st crop; resets to 50% on crop change without profile | Harvest a few meters, then press **AUTO** in Shift+K to calibrate |
+| **In Field** | Player manually tunes sliders; Tier 2/3 sensors show green target zones | AI calculates physical optimum for current moisture/yield & runs live auto-trim |
+| **Profiles** | Save custom profiles for each crop via the SAVE button | Save custom profiles or re-engage AI at any time with AUTO |
 
-> AUTO is convenient. MANUAL rewards the skilled operator with up to **+2.5% efficiency bonus**.
+> **Pro Tip:** Tiers 1–3 reward mechanical skill and field knowledge. Tier 4 delivers automated precision for busy operators.
 
 ---
 
