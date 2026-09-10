@@ -23,6 +23,8 @@ Changelog 1.5.1.0:
 - IMPROVED: Optimized vehicle hierarchy search with cache validation
 - IMPROVED: Enhanced memory initialization with proper error handling
 - FIXED: Added safety checks for combine spec components during load calculation
+- FIXED: Grain tank loss deduction now dynamically resolves the active harvesting fillUnitIndex instead of hardcoded 1, ensuring losses properly deduct grain on vehicles where fuel or DEF occupies fillUnit 1
+- FIXED: Hand-held tool package and passive harvesters (without spec_turnOnVehicle) are no longer blocked from harvesting root crops by the thresher-on check
 
 Changelog 1.5.0.0:
 - NEW: "Moisture System" Mod Integration! Added dynamic engine load penalties and increased crop losses when harvesting in damp conditions.

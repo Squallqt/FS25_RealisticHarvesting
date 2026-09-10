@@ -427,6 +427,9 @@ function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
                 if fillTypeIndex and fillTypeIndex ~= FillType.UNKNOWN then
                      spec.lastFillType = fillTypeIndex
                 end
+                if fillUnitIndex then
+                    spec.lastFillUnitIndex = fillUnitIndex
+                end
             end
         end
     end
@@ -1043,9 +1046,9 @@ end
 function rhm_Combine:verifyCombine(superFunc, fruitType, outputFillType)
     local isAIActive = self:getIsAIActive()
     
-    -- EN: Block harvesting if thresher is off (unless AI is active).
-    -- UA: Блокуємо збирання якщо молотарка вимкнена (якщо тільки AI не активний).
-    if not self:getIsTurnedOn() and not isAIActive then
+    -- EN: Block harvesting if thresher is off (unless AI is active, or vehicle has no turnOn mechanism e.g. hand tools).
+    -- UA: Блокуємо збирання якщо молотарка вимкнена (якщо тільки AI не активний, або машина не має механізму вмикання як ручні інструменти).
+    if self.spec_turnOnVehicle ~= nil and not self:getIsTurnedOn() and not isAIActive then
         return nil  -- Блокуємо харвестинг
     end
     
@@ -1256,7 +1259,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 local lossRatio = cropLoss / 100
                 local lostLiters = liters * lossRatio
                 
-                local fillUnitIndex = 1
+                local fillUnitIndex = spec.lastFillUnitIndex or (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
                 local spec_fillUnit = self.spec_fillUnit
                 if spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
                     self:addFillUnitFillLevel(
