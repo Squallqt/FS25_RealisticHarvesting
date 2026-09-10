@@ -507,27 +507,20 @@ function RHMCombineCalibrationGUI:draw()
     local sx2 = sx1 + sectionW + sectionGap
     self:drawRect(sx2, cy, sectionW, sectionH, sectionBg)
 
-    -- EN: effPenalty < 0 = bonus (green), 0 = neutral (green), 0..2 = mild penalty (yellow), >2 = bad (red).
-    -- UA: effPenalty < 0 = бонус (зелений), 0 = нейтральний (зелений), 0..2 = штраф (жовтий), >2 = поганий (червоний).
-    local speedVal
+    -- EN: effPenalty: 0.0% = 100% factory efficiency (green). >0.05% = penalty debuff (yellow/red).
+    -- UA: effPenalty: 0.0% = 100% заводський ККД (зелений). >0.05% = штрафний дебаф (жовтий/червоний).
+    local speedVal = math.max(0, effPenalty)
     local speedPrefix = ""
-    if effPenalty < 0 then
-        speedVal = math.abs(effPenalty) * 5.0
-        speedPrefix = "+"
-    else
-        speedVal = effPenalty
-        if speedVal > 0.05 then
-            speedPrefix = "-"
-        end
-    end
     local speedColor
-    if effPenalty < 0 then
-        speedColor = ui.colors.success   -- EN: Bonus speed / UA: Бонус швидкості
-    elseif effPenalty <= 0.1 then
-        speedColor = ui.colors.success   -- EN: Perfect settings / UA: Ідеальні налаштування
-    elseif effPenalty <= 2.0 then
+    if speedVal <= 0.05 then
+        speedVal = 0.0
+        speedPrefix = ""
+        speedColor = ui.colors.success   -- EN: Perfect 100% efficiency / UA: Ідеальний 100% ККД
+    elseif speedVal <= 2.0 then
+        speedPrefix = "-"
         speedColor = ui.colors.warning   -- EN: Mild penalty / UA: Легкий штраф
     else
+        speedPrefix = "-"
         speedColor = ui.colors.error     -- EN: Significant penalty / UA: Значний штраф
     end
 
@@ -551,19 +544,23 @@ function RHMCombineCalibrationGUI:draw()
         setTextColor(unpack(ui.colors.textDim))
         renderText(sx3Center, cy + sectionH * 0.12, ui.fontSize, "N/A")
     else
-        -- EN: Loss penalty can be negative internally (bonus), but physically loss can't be negative. Clamp to 0.
-        -- UA: Штраф за втрати внутрішньо може бути від'ємним (бонус), але фізично втрати не можуть бути < 0.
+        -- EN: Loss penalty clamped to >= 0.
+        -- UA: Штраф за втрати обмежений до >= 0.
         local displayLoss = math.max(0, lossPenalty)
         local lossColor
-        if displayLoss <= 0.1 then
+        local lossPrefix = ""
+        if displayLoss <= 0.05 then
+            displayLoss = 0.0
             lossColor = ui.colors.success    -- EN: No loss / UA: Без втрат
         elseif displayLoss <= 2.0 then
+            lossPrefix = "+"
             lossColor = ui.colors.warning    -- EN: Mild loss / UA: Помірні втрати
         else
+            lossPrefix = "+"
             lossColor = ui.colors.error      -- EN: Significant loss / UA: Значні втрати
         end
         setTextColor(unpack(lossColor))
-        renderText(sx3Center, cy + sectionH * 0.12, ui.fontSize, string.format("%.1f%%", displayLoss))
+        renderText(sx3Center, cy + sectionH * 0.12, ui.fontSize, string.format("%s%.1f%%", lossPrefix, displayLoss))
     end
 
         setTextBold(false)

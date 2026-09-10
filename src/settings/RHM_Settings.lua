@@ -20,7 +20,7 @@ RHMSettings.DIFFICULTY_REALISTIC = 3
 -- UA: Значення збільшення потужності, що застосовуються до розрахунку пропускної здатності двигуна.
 --     Більший буст = комбайн може збирати швидше до досягнення обмежень швидкості.
 RHMSettings.POWER_BOOST_ARCADE = 100     -- EN: 100% boost (2x throughput) / UA: 100% буст (2x пропускна здатність)
-RHMSettings.POWER_BOOST_NORMAL = 20      -- EN: 20% boost (slightly forgiving) / UA: 20% буст (трохи прощаючий)
+RHMSettings.POWER_BOOST_NORMAL = 35      -- EN: 35% boost (calibrated gameplay sweet spot) / UA: 35% буст (відкалібрована комфортна гра)
 RHMSettings.POWER_BOOST_REALISTIC = 0   -- EN: 0% boost (true-to-life physics) / UA: 0% буст (реалістична фізика)
 
 -- EN: Unit system constants for speed, productivity, area, and yield display.

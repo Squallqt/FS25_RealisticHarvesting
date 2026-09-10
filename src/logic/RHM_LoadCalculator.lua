@@ -79,9 +79,33 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    if motorObj.spec_motorized and motorObj.spec_motorized.motor and motorObj.spec_motorized.motor.hp then
-        local hp = tonumber(motorObj.spec_motorized.motor.hp)
-        if hp and hp > 0 then return hp end
+    if motorObj.spec_motorized and motorObj.spec_motorized.motor then
+        local motor = motorObj.spec_motorized.motor
+        if motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
+            return tonumber(motor.hp)
+        end
+        if motor.getPeakMotorPower then
+            local kw = motor:getPeakMotorPower()
+            if kw and tonumber(kw) and tonumber(kw) > 0 then
+                return tonumber(kw) * 1.35962
+            end
+        end
+        if motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
+            return tonumber(motor.peakMotorPower) * 1.35962
+        end
+        if motor.motorPower and tonumber(motor.motorPower) and tonumber(motor.motorPower) > 0 then
+            return tonumber(motor.motorPower) * 1.35962
+        end
+    end
+
+    if motorObj.getMotor and type(motorObj.getMotor) == "function" then
+        local motor = motorObj:getMotor()
+        if motor and motor.getPeakMotorPower then
+            local kw = motor:getPeakMotorPower()
+            if kw and tonumber(kw) and tonumber(kw) > 0 then
+                return tonumber(kw) * 1.35962
+            end
+        end
     end
 
     -- 2. Check motor configuration if motor.hp is not yet loaded
@@ -265,21 +289,32 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                 end
             end
 
-            -- D: Physical fallback based on working width
-            if ptoHp == 0 then
-                local width = 6.0
-                if obj.spec_cutter and obj.spec_cutter.workingWidth then
-                    width = obj.spec_cutter.workingWidth
-                end
-                if isForageCutter then
-                    ptoHp = width * 85.0 -- ~85 HP/m for rotary forage cutter
-                elseif obj.spec_cutter ~= nil then
-                    ptoHp = width * 12.0 -- ~12 HP/m for grain cutter
-                elseif isTrailedHarvester then
-                    ptoHp = 120.0 -- Trailed root/grain harvester baseline
-                end
+            -- D: Enforce physical minimum power requirements based on working width and cutter type
+            local width = 6.0
+            if obj.spec_cutter and obj.spec_cutter.workingWidth then
+                width = obj.spec_cutter.workingWidth
             end
 
+            local minHpPerM = 14.0 -- Standard grain/draper cutter minimum (14 HP/m)
+            if isForageCutter then
+                minHpPerM = 60.0 -- High-speed rotary forage cutter (Kemper/XCollect)
+            elseif isPickup then
+                minHpPerM = 20.0 -- Windrow pickup reel
+            elseif isTrailedHarvester then
+                minHpPerM = 35.0
+            end
+
+            local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+            if cropUpper:find("CORN") or cropUpper:find("MAIZE") then
+                if not isForageCutter then
+                    minHpPerM = 28.0 -- Chopping corn header with stalk shredders
+                end
+            elseif cropUpper:find("POTATO") or cropUpper:find("BEET") or cropUpper:find("CARROT") or cropUpper:find("PARSNIP")
+                or cropUpper:find("ONION") or cropUpper:find("GARLIC") then
+                minHpPerM = 18.0 -- Root intake & lifting knives / topper
+            end
+
+            ptoHp = math.max(ptoHp, width * minHpPerM)
             headerHp = headerHp + ptoHp
         end
     end
@@ -339,99 +374,132 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
     -- 1. FORAGE HARVESTERS (Chopping whole plant: corn silage, grass, poplar, etc.)
     if machineType == "forage" or isForageCutter then
         if cropName:find("POPLAR") or cropName:find("WOOD") then
-            return 6.5 -- Poplar wood chipping: heavy wood cutting drum resistance
+            return 10.0 -- Poplar wood chipping: high-resistance wood cutting drum
         elseif cropName:find("MAIZE") or cropName:find("CORN") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
-            return 2.1 -- Whole corn silage: ~2.1 HP per t/h
+            return 2.0 -- Whole corn silage: heavy biomass + corn cracker roller mills
         elseif cropName:find("GRASS") or cropName:find("MEADOW") or cropName:find("ALFALFA") or cropName:find("LUCERNE") or cropName:find("CLOVER") then
             if isPickup then
-                return 1.8 -- Swath pickup: ~1.8 HP per t/h
+                return 1.8 -- Swath pickup: pre-mowed windrow, low cutter resistance
             else
-                return 2.6 -- Direct-cut standing grass (tough elastic fibers): ~2.6 HP per t/h
+                return 3.4 -- Direct-cut standing fresh grass: tough elastic fibers + disc mower power
             end
         elseif cropName:find("STRAW") or cropName:find("HAY") or cropName:find("DRYGRASS") then
             return 1.8 -- Dry windrow pickup: ~1.8 HP per t/h
         else
-            return isPickup and 1.8 or 2.2 -- Universal forage fallback
+            return isPickup and 1.8 or 2.8 -- Universal forage fallback
         end
 
     -- 2. ROOT & SPECIALIZED VEGETABLE HARVESTERS (Lifting, cleaning, pod stripping)
     elseif machineType == "root" then
         if cropName:find("SPINACH") then
-            -- Spinach: dense leafy green carpet, high moisture, large biomass
-            return 6.0 -- ~6.0 HP per t/h
+            -- Spinach: dense wet leafy biomass, Oxbo cutter bar
+            return 12.5
         elseif (cropName:find("GREEN") and (cropName:find("BEAN") or cropName:find("PEA")))
                or cropName:find("GREENBEANS") or cropName:find("GREENBEAN") then
-            -- Fresh green beans / pod peas: very low bunker yield (~4.2 t/ha), stripper reel
-            -- chews through massive green bushes (~40-50 t/ha) to extract the pods!
-            return 12.5 -- ~12.5 HP per t/h
+            -- Fresh green beans: pod stripping reel through massive bush mass
+            return 13.0
         elseif cropName:find("PEA") or cropName:find("BEAN") or cropName:find("LENTIL") or cropName:find("LUPIN") then
-            -- Specialized vegetable peas / beans / lupins
-            return 8.5 -- ~8.5 HP per t/h
+            return 10.2
         elseif cropName:find("POTATO") then
-            -- Potatoes: scooping whole soil ridges, sifting hundreds of tons of dirt/clods, front haulm topper
-            return 1.85 -- ~1.85 HP per t/h
-        elseif cropName:find("CARROT") or cropName:find("PARSNIP") or cropName:find("RUTABAGA") or cropName:find("TURNIP") then
-            -- Deep taproots (20-25 cm): tight soil grip, pulling belts, top-chopping knives
-            return 1.35 -- ~1.35 HP per t/h
+            -- Potatoes: heavy ridge lifting, soil separation sieves, haulm chopper
+            return 1.35
+        elseif cropName:find("SUGARBEET") or cropName:find("BEET") then
+            -- Sugar beets: round shape, squeeze wheels, heavy turbine cleaning
+            return 1.15
         elseif cropName:find("BEETROOT") or cropName:find("RED BEET") or cropName:find("REDBEET") then
             -- Red table beet: firm root, rubber pulling belts
-            return 1.25 -- ~1.25 HP per t/h
-        elseif cropName:find("SUGARBEET") or cropName:find("BEET") then
-            -- Sugar beets: round shape, lifted by squeeze wheels, smooth turbine webs
-            return 1.00 -- ~1.00 HP per t/h
-        elseif cropName:find("ONION") or cropName:find("GARLIC") then
-            -- Onions / Garlic: shallow lifting, gentle sorting webs
-            return 0.95 -- ~0.95 HP per t/h
+            return 1.25
+        elseif cropName:find("CARROT") then
+            -- Carrots: deep taproots, pulling belts, haulm cutters
+            return 1.20
+        elseif cropName:find("PARSNIP") or cropName:find("RUTABAGA") or cropName:find("TURNIP") then
+            -- Parsnips: tapered taproot, firm soil suction
+            return 1.20
+        elseif cropName:find("ONION") then
+            return 1.25
+        elseif cropName:find("GARLIC") then
+            return 1.30
         else
-            return 1.35 -- Universal modded root fallback
+            return 1.20 -- Universal root fallback
         end
 
     -- 3. COTTON HARVESTERS (Fluffy, low density lint picking & baling)
     elseif machineType == "cotton" or cropName:find("COTTON") then
-        return 12.0 -- Spindle picking + round/square bale chamber hydraulic compaction
+        return 55.0 -- High-speed spindle drums + on-board round/square bale chamber hydraulic compaction
 
     -- 4. SUGARCANE HARVESTERS
     elseif cropName:find("SUGARCANE") or cropName:find("CANE") then
-        return 2.2 -- Base chopping, billet chopper cylinder, extractor fans (high tonnage: 80-120 t/ha)
+        return 5.5 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
 
     -- 5. GRAPES & OLIVES (Specialized straddle harvesters)
-    elseif cropName:find("GRAPE") or cropName:find("OLIVE") then
-        return 3.5 -- Shaker rods, bucket elevators, cleaning blowers
+    elseif cropName:find("GRAPE") then
+        return 3.8 -- Shaker rod frequency, sorting belts, destemmer
+    elseif cropName:find("OLIVE") then
+        return 2.6 -- Olive shaker beaters, leaf blowers
 
     -- 6. GRAIN COMBINE HARVESTERS (Grain tank stream processing)
     else
         if isPickup then
-            return 3.0
-        elseif hasStraw then
-            -- Cereals with straw (Wheat, Barley, Oat, Rye, Triticale, Spelt, Rice): thresher + straw chopper
-            if cropName:find("RICE") then
-                return 5.8 -- Wet silicon-rich rice straw (higher cutting resistance)
-            else
-                return 5.2 -- Standard straw cereals
-            end
+            return 2.2 -- Windrow pickup for grain combine
         elseif cropName:find("CORN") or cropName:find("MAIZE") then
-            -- Corn for grain: only cobs enter the combine (stalks chopped on header)
-            return 2.8
-        elseif cropName:find("SORGHUM") then
-            -- Sorghum: thick fibrous stalks, hard seed heads
-            return 5.2
-        elseif cropName:find("CANOLA") or cropName:find("OILSEED") or cropName:find("FLAX") or cropName:find("LINSEED") or cropName:find("MUSTARD") or cropName:find("POPPY") or cropName:find("RADISH") then
-            -- Oilseeds & Oilseed Radish: low seed yield (~3.5 t/ha) with massive tough stalk volume
-            return 9.5
+            -- Corn for grain: cobs snapped on header, threshed in rotor
+            return 3.8
         elseif cropName:find("SUNFLOWER") then
-            return 6.2
-        elseif cropName:find("SOYBEAN") or cropName:find("PEA") or cropName:find("LENTIL") or cropName:find("CHICKPEA") or cropName:find("BEAN") then
-            if cropName:find("GREEN") then
-                return 12.5 -- Fresh green beans / pods
+            -- Sunflower: low density (0.35), massive head volume, stalk cutting
+            return 19.0
+        elseif cropName:find("CANOLA") or cropName:find("RAPESEED") then
+            return 11.0
+        elseif cropName:find("SOYBEAN") then
+            return 11.5
+        elseif cropName:find("OAT") or cropName:find("OATS") then
+            -- Oat: light seeds (0.50 kg/L) with heavy tough fibrous straw
+            return 12.5
+        elseif cropName:find("POPPY") then
+            return 17.5
+        elseif cropName:find("LINSEED") or cropName:find("FLAX") then
+            return 13.0
+        elseif cropName:find("MUSTARD") then
+            return 12.2
+        elseif cropName:find("HEMP") then
+            return 11.2
+        elseif cropName:find("LENTIL") then
+            return 10.2
+        elseif cropName:find("CHICKPEA") then
+            return 9.8
+        elseif cropName:find("BUCKWHEAT") then
+            return 9.8
+        elseif cropName:find("SPELT") then
+            return 7.8
+        elseif cropName:find("MILLET") then
+            return 7.8
+        elseif cropName:find("RICE") then
+            if cropName:find("LONG") then
+                return 6.0 -- Rice Long Grain (US)
             else
-                return 5.8 -- Dry grain pulses
+                return 7.5 -- Asian Rice (higher silica straw resistance)
             end
+        elseif cropName:find("RYE") then
+            return 6.3
+        elseif cropName:find("TRITICALE") then
+            return 6.4
+        elseif cropName:find("BARLEY") then
+            return 6.2
+        elseif cropName:find("PEA") then
+            return 6.0
+        elseif cropName:find("SORGHUM") then
+            return 6.0
+        elseif cropName:find("WHEAT") then
+            return 6.0
+        elseif hasStraw then
+            return 6.0 -- Standard straw cereals
         else
-            -- Universal dynamic fallback for unknown / modded crops based on physical properties
+            -- Universal dynamic fallback for unknown / modded crops based on physical density
             if density < 0.50 then
-                return 8.5 -- Light seeds with heavy biomass
+                return 14.0 -- Very light seed with high biomass
+            elseif density < 0.70 then
+                return 11.0 -- Medium density oilseeds/legumes
             else
-                return 4.5 -- Dense grain
+                return 6.0  -- Dense grain
             end
         end
     end
@@ -625,9 +693,9 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     if isCutterActive or isActivelyHarvesting then
         -- Base mechanical & driveline losses:
         -- Normal grain / forage combines: ~10% (calibrated with empirical ASABE field standards)
-        -- Heavy hydrostatic root harvesters (Dewulf, Grimme, Ropa, Holmer): ~20%
+        -- Heavy hydrostatic root harvesters (Dewulf, Grimme, Ropa, Holmer): ~12%
         if machineType == "root" then
-            pBase = effectiveEngineHp * 0.20
+            pBase = effectiveEngineHp * 0.12
         else
             pBase = effectiveEngineHp * 0.10
         end
@@ -662,7 +730,7 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
                     end
                 end
             end
-            pSoil = width * 20.0 -- ~20 HP per meter of cutting width in soil
+            pSoil = width * 5.0 -- ~5 HP per meter of cutting width in soil
         end
     end
 
@@ -719,8 +787,8 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         return
     end
 
-    -- Target engine load from combine settings or default to 95%
-    local targetLoad = 0.95
+    -- Target engine load from combine settings or default to 88%
+    local targetLoad = 0.88
     if self.combineMemory and self.combineMemory.currentSettings and self.combineMemory.currentSettings.targetEngineLoad then
         targetLoad = self.combineMemory.currentSettings.targetEngineLoad / 100.0
     end
@@ -846,21 +914,16 @@ function RHM_LoadCalculator:updateSettingsImpact()
     if not self.combineMemory or not self.currentCrop then return end
     local effPenalty, lossPenalty, _ = self.combineMemory:checkSettingsForCrop(self.currentCrop)
     
-    if effPenalty < 0 then
-        self.settingsEfficiency = 1.0 + (math.abs(effPenalty) * 5.0 / 100.0)
-    else
-        self.settingsEfficiency = 1.0 - (effPenalty / 100.0)
-    end
+    local penalty = math.max(0.0, effPenalty or 0)
+    self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
     
     -- EN: Forage harvesters (silage choppers) produce no grain losses — all crop goes to tank/trailer.
     -- UA: Силосні комбайни не мають втрат зерна — весь врожай йде в бак/причеп.
     local machineType = self.combineMemory.machineType
     if machineType == "forage" then
         self.settingsLoss = 0
-    elseif lossPenalty < 0 then
-        self.settingsLoss = 0 
     else
-        self.settingsLoss = lossPenalty
+        self.settingsLoss = math.max(0.0, lossPenalty or 0)
     end
 end
 

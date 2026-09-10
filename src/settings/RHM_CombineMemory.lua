@@ -31,7 +31,7 @@ function RHM_CombineMemory.new(combine, machineType)
         local offset = math.random(-8, 8)
         self.currentSettings[paramName] = math.max(25, math.min(75, 50 + offset))
     end
-    self.currentSettings["targetEngineLoad"] = 95
+    self.currentSettings["targetEngineLoad"] = 88
 
     self.currentYieldCalibration = 1.0
 
@@ -226,7 +226,7 @@ function RHM_CombineMemory:loadUserPreset()
                     self.currentSettings[paramName] = profile[paramName]
                 end
             end
-            self.currentSettings.targetEngineLoad = profile.targetEngineLoad or 95
+            self.currentSettings.targetEngineLoad = profile.targetEngineLoad or 88
             self.mode = "MANUAL"
             self.autoSwitchEnabled = false
         end
@@ -278,14 +278,14 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
 
             local score = 0
             if deviation <= tolerance then
-                -- EN: GREEN ZONE: linear curve from -0.5 (perfect center) to +0.5 (edge of tolerance).
-                -- UA: ЗЕЛЕНА ЗОНА: лінійна крива від -0.5 (ідеальний центр) до +0.5 (межа допуску).
-                score = (deviation / tolerance - 0.5) * 1.0
+                -- EN: GREEN ZONE: Within tolerance = 100% factory efficiency, 0 penalty, 0 bonus.
+                -- UA: ЗЕЛЕНА ЗОНА: У межах допуску = 100% заводський ККД, 0 штрафу, 0 бонусу.
+                score = 0.0
             else
-                -- EN: RED ZONE: linear increase from +0.5, capped at 6.0 (extreme maladjustment).
-                -- UA: ЧЕРВОНА ЗОНА: лінійне зростання від +0.5, обмежено до 6.0 (крайнє розрегулювання).
+                -- EN: RED ZONE: Maladjustment penalty only, capped at 6.0 per parameter.
+                -- UA: ЧЕРВОНА ЗОНА: Тільки штраф за розрегулювання, обмежений до 6.0 на параметр.
                 local excess = deviation - tolerance
-                score = math.min(6.0, 0.5 + excess * 0.33)
+                score = math.min(6.0, excess * 0.33)
 
                 table.insert(warnings, {
                     param    = param,
@@ -327,9 +327,9 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
     end
 
     -- EN: Normalize scores so that machines with fewer parameters (e.g., forage/root)
-    --     can still reach the same max bonus and max penalty as 5-parameter grain combines.
+    --     can still reach the same max penalty as 5-parameter grain combines.
     -- UA: Нормалізуємо бали, щоб машини з меншою кількістю параметрів (напр., форажні/бурякові)
-    --     могли досягати тих же максимальних бонусів/штрафів, що й 5-параметрові зернові комбайни.
+    --     могли досягати тих же максимальних штрафів, що й 5-параметрові зернові комбайни.
     if effParamCount > 0 then
         -- Grain combines have 2 efficiency params (feeder, rotor). We scale to 2.
         efficiencyScore = efficiencyScore * (2.0 / effParamCount)
@@ -340,14 +340,10 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
         lossScore = lossScore * (3.0 / lossParamCount)
     end
 
-    -- EN: Clamp penalties to reasonable bounds.
-    --     Efficiency: max bonus is -1.0%, max penalty is 20%.
-    --     Loss: max bonus is -1.5%, max penalty is 20%.
-    -- UA: Обмежуємо штрафи до розумних меж.
-    --     Ефективність: максимальний бонус -1.0%, максимальний штраф 20%.
-    --     Втрати: максимальний бонус -1.5%, максимальний штраф 20%.
-    local efficiencyPenalty = math.max(-1.0, math.min(efficiencyScore, 20.0))
-    local lossPenalty = math.max(-1.5, math.min(lossScore, 20.0))
+    -- EN: Clamp penalties strictly to [0.0, 25.0] (no negative/bonus values).
+    -- UA: Обмежуємо штрафи строго до [0.0, 25.0] (жодних від'ємних значень/бонусів).
+    local efficiencyPenalty = math.max(0.0, math.min(efficiencyScore, 25.0))
+    local lossPenalty = math.max(0.0, math.min(lossScore, 25.0))
 
     return efficiencyPenalty, lossPenalty, warnings
 end
