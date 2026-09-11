@@ -83,6 +83,28 @@ function RHM_RealisticHarvestManager:toggleMenu(vehicle)
     end
 end
 
+-- EN: Toggles the small telemetry HUD overlay visibility and saves setting.
+-- UA: Перемикає видимість малого телеметричного HUD та зберігає налаштування.
+function RHM_RealisticHarvestManager:toggleHUD()
+    if not self.settings then return end
+    self.settings.showHUD = not self.settings.showHUD
+    if self.settings.save then
+        self.settings:save()
+    end
+    local stateStr = self.settings.showHUD and "ON" or "OFF"
+    if g_i18n then
+        if self.settings.showHUD and g_i18n:hasText("ui_on") then
+            stateStr = g_i18n:getText("ui_on")
+        elseif not self.settings.showHUD and g_i18n:hasText("ui_off") then
+            stateStr = g_i18n:getText("ui_off")
+        end
+    end
+    local msg = string.format("RHM HUD: %s", stateStr)
+    if g_currentMission and g_currentMission.showBlinkingWarning then
+        g_currentMission:showBlinkingWarning(msg, 2000)
+    end
+end
+
 -- EN: Called after the mission finishes loading. Initializes HUD overlay assets (textures, positions).
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
@@ -179,6 +201,8 @@ function RHM_RealisticHarvestManager:update(dt)
     if self.calibrationGUI then
         self.calibrationGUI:update(dt)
     end
+
+    local controlledVehicle = self:getControlledVehicle()
 
     if self.hud then
         local vehicle = controlledVehicle

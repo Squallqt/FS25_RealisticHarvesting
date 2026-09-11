@@ -174,11 +174,15 @@ Funkciók:
 
     <actions>
         <action name="RHM_OPEN_MENU" category="VEHICLE" />
+        <action name="RHM_TOGGLE_HUD" category="VEHICLE" />
     </actions>
     
     <inputBinding>
         <actionBinding action="RHM_OPEN_MENU">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_k" />
+        </actionBinding>
+        <actionBinding action="RHM_TOGGLE_HUD">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_h" />
         </actionBinding>
     </inputBinding>
 
@@ -228,6 +232,20 @@ Funkciók:
             <uk>Меню Налаштувань Жнив</uk>
             <ru>Меню Настроек Жатвы</ru>
             <hu>Kombájn Menü</hu>
+        </text>
+        
+        <text name="input_RHM_TOGGLE_HUD">
+            <en>Toggle Harvesting HUD</en>
+            <de>Ernte-HUD umschalten</de>
+            <fr>Basculer l'affichage HUD</fr>
+            <pl>Przełącz HUD żniw</pl>
+            <es>Alternar HUD de cosecha</es>
+            <it>Attiva/Disattiva HUD raccolta</it>
+            <cz>Přepnout HUD sklizně</cz>
+            <br>Alternar HUD de colheita</br>
+            <uk>Перемкнути HUD жнив</uk>
+            <ru>Переключить HUD жатвы</ru>
+            <hu>Betakarítási HUD ki/be</hu>
         </text>
         
         <text name="rhm_difficulty"><en>Difficulty</en><uk>Складність</uk><de>Schwierigkeit</de><fr>Difficulté</fr><pl>Trudność</pl><es>Dificultad</es><it>Difficoltà</it><cz>Obtížnost</cz><br>Dificuldade</br><ru>Сложность</ru><hu>Nehézség</hu></text>

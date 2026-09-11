@@ -53,6 +53,7 @@ Drive too fast or overload your separator → engine overloads → you lose grai
 3. Watch the **Engine Load** bar — keep it in the green/yellow zone (below 80–90%).
 4. If Engine Load exceeds 80%, **crop losses begin** (and climb steeply above 100%). Slow down or follow the **Recommended Speed**.
 5. Press **Right Shift + K** at any time to inspect your combine settings and calibrate for the crop.
+6. Press **Right Shift + H** at any time to toggle the telemetry HUD overlay on or off.
 
 That's it for the basics. Everything else is optional depth.
 
@@ -60,7 +61,7 @@ That's it for the basics. Everything else is optional depth.
 
 ## The HUD — Reading Your Data
 
-The HUD appears automatically when you enter a combine. Right-click to enable cursor mode and drag the HUD anywhere on screen.
+The HUD appears automatically when you enter a combine. Open the Calibration Menu (**Right Shift + K**) to activate the mouse cursor and drag the HUD anywhere on screen, or press **Right Shift + H** to toggle the HUD display on or off.
 
 ![HUD Metric](docs/images/hud_metric.png)
 ![HUD Imperial](docs/images/hud_imperial.png)
@@ -321,6 +322,9 @@ The mod includes a universal ASABE/FS25 dynamic physics fallback that calculates
 
 **Q: How do I open the Calibration Menu?**  
 Press **Right Shift + K** while seated inside a combine.
+
+**Q: How do I toggle the HUD display?**  
+Press **Right Shift + H** while seated inside a combine to toggle the small telemetry HUD overlay on or off at any time.
 
 **Q: What happens when I hire an AI Worker or run Courseplay?**  
 When an AI helper or Courseplay takes the wheel and engages the cutter, the combine automatically calibrates its mechanical parameters based on the installed **RHM Electronics Tier**:

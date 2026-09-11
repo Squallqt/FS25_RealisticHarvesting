@@ -192,6 +192,15 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
         g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
         -- RHM_Debug.log("Combine", "RHM: [NEXAT] Registered RHM_OPEN_MENU for non-combine vehicle: " .. tostring(vehicle:getFullName()))
     end
+    if InputAction.RHM_TOGGLE_HUD then
+        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_HUD, vehicle,
+            function(self, ...)
+                if g_realisticHarvestManager then
+                    g_realisticHarvestManager:toggleHUD()
+                end
+            end, false, true, false, true, nil)
+        g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
+    end
 end
 
 -- Apply global hook ONCE (guard against double-loading)
@@ -2017,6 +2026,11 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
                 local _, menuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_MENU, self, rhm_Combine.actionOpenMenu, false, true, false, true, nil)
                 g_inputBinding:setActionEventTextPriority(menuEventId, GS_PRIO_HIGH)
             end
+            -- Реєструємо дію Перемикання HUD (RShift+H)
+            if InputAction.RHM_TOGGLE_HUD then
+                local _, hudEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_HUD, self, rhm_Combine.actionToggleHUD, false, true, false, true, nil)
+                g_inputBinding:setActionEventTextPriority(hudEventId, GS_PRIO_HIGH)
+            end
         end
     end
 end
@@ -2024,6 +2038,12 @@ end
 function rhm_Combine:actionOpenMenu(actionName, inputValue, callbackState, isAnalog)
     if g_realisticHarvestManager then
         g_realisticHarvestManager:toggleMenu(self)
+    end
+end
+
+function rhm_Combine:actionToggleHUD(actionName, inputValue, callbackState, isAnalog)
+    if g_realisticHarvestManager then
+        g_realisticHarvestManager:toggleHUD()
     end
 end
 
