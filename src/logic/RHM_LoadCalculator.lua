@@ -58,6 +58,38 @@ function RHM_LoadCalculator.new(modDirectory)
     self.combineMemory = nil  -- EN: Will be set by rhm_Combine / UA: Буде встановлено з rhm_Combine
     self.currentCrop = nil    -- EN: Current crop for loss calc / UA: Поточна культура для розрахунку втрат
     
+    -- EN: Pre-allocated circular ring buffers for rolling metrics (zero runtime table allocations)
+    -- UA: Попередньо виділені кільцеві буфери для ковзних метрик (без виділення пам'яті в рантаймі)
+    local PROD_RING_SIZE = 180
+    self.prodRingSize = PROD_RING_SIZE
+    self.prodRingMass = {}
+    self.prodRingLiters = {}
+    self.prodRingTime = {}
+    self.prodRingArea = {}
+    for i = 1, PROD_RING_SIZE do
+        self.prodRingMass[i] = 0
+        self.prodRingLiters[i] = 0
+        self.prodRingTime[i] = 0
+        self.prodRingArea[i] = 0
+    end
+    self.prodRingHead = 1
+    self.prodSumMass = 0
+    self.prodSumLiters = 0
+    self.prodSumTime = 0
+    self.prodSumArea = 0
+
+    local YIELD_RING_SIZE = 180
+    self.yieldRingSize = YIELD_RING_SIZE
+    self.yieldRingMass = {}
+    self.yieldRingArea = {}
+    for i = 1, YIELD_RING_SIZE do
+        self.yieldRingMass[i] = 0
+        self.yieldRingArea[i] = 0
+    end
+    self.yieldRingHead = 1
+    self.yieldSumMass = 0
+    self.yieldSumArea = 0
+
     self.debug = false  -- EN: Kept for compatibility, unused / UA: Залишено для сумісності, не використовується
     rhm_log("RHM [RHM_LoadCalculator]: RHM: RHM_LoadCalculator initialized")
     
@@ -199,6 +231,16 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     return resolvedHp
 end
 
+local HEADER_OBJECTS_TO_SCAN = {}
+local HEADER_SCANNED = {}
+
+local function addHeaderScanObj(obj)
+    if obj and not HEADER_SCANNED[obj] then
+        HEADER_SCANNED[obj] = true
+        table.insert(HEADER_OBJECTS_TO_SCAN, obj)
+    end
+end
+
 ---EN: Resolves attached cutter power requirements (HP) and properties dynamically from FS25 XML/specs.
 ---    Seamlessly supports standard combines, NEXAT modular systems, self-propelled harvesters with integrated
 ---    cutters (e.g. potato/carrot/cotton), and multi-implement tractor trains (front topper + rear harvester).
@@ -233,39 +275,29 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         end
     end
 
-    -- Collect all objects in the harvesting train:
-    -- 1. The vehicle itself (supports self-propelled harvesters with integrated cutters)
-    -- 2. Direct implements of vehicle
-    -- 3. Implements of the motor carrier/tractor (discovers front haulm toppers, rear lifters, NEXAT modules)
-    local objectsToScan = {}
-    local scanned = {}
+    -- Collect all objects in the harvesting train (reusing pre-allocated tables to eliminate GC allocations):
+    for k in pairs(HEADER_SCANNED) do HEADER_SCANNED[k] = nil end
+    for i = #HEADER_OBJECTS_TO_SCAN, 1, -1 do HEADER_OBJECTS_TO_SCAN[i] = nil end
 
-    local function addObj(obj)
-        if obj and not scanned[obj] then
-            scanned[obj] = true
-            table.insert(objectsToScan, obj)
-        end
-    end
-
-    addObj(vehicle)
+    addHeaderScanObj(vehicle)
 
     if vehicle.getAttachedImplements then
         for _, implement in pairs(vehicle:getAttachedImplements()) do
-            addObj(implement.object)
+            addHeaderScanObj(implement.object)
         end
     end
 
     if motorCarrier and motorCarrier ~= vehicle then
-        addObj(motorCarrier)
+        addHeaderScanObj(motorCarrier)
         if motorCarrier.getAttachedImplements then
             for _, implement in pairs(motorCarrier:getAttachedImplements()) do
-                addObj(implement.object)
+                addHeaderScanObj(implement.object)
             end
         end
     end
 
     -- Traverse collected equipment
-    for _, obj in ipairs(objectsToScan) do
+    for _, obj in ipairs(HEADER_OBJECTS_TO_SCAN) do
         local isCutter = (obj.spec_cutter ~= nil or obj.spec_forageHarvesterCutter ~= nil 
                        or obj.spec_forageCutter ~= nil or obj.spec_pickup ~= nil)
 
@@ -992,7 +1024,13 @@ end
 ---EN: Calculates Vehicle Speed Limit based on physical power load and target load.
 ---UA: Розраховує обмеження швидкості на основі навантаження двигуна та цільового навантаження.
 function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
-    local headerHp, maxWorkingSpeed = self:getAttachedHeaderInfo(vehicle)
+    -- EN: Reuse maxWorkingSpeed calculated in calculateEngineLoad to avoid duplicate hierarchy/XML scans.
+    -- UA: Перевикористовуємо maxWorkingSpeed з calculateEngineLoad без повторного сканування ієрархії/XML.
+    local maxWorkingSpeed = self.maxWorkingSpeed
+    if not maxWorkingSpeed then
+        local _, mws = self:getAttachedHeaderInfo(vehicle)
+        maxWorkingSpeed = mws or 10.0
+    end
     local maxAllowedSpeed = self.genuineSpeedLimit
     if maxAllowedSpeed and maxAllowedSpeed > 0 then
         maxAllowedSpeed = math.min(maxAllowedSpeed, maxWorkingSpeed)
@@ -1146,14 +1184,29 @@ function RHM_LoadCalculator:reset()
     self.litersPerHour = 0
     self.hectaresPerHour = 0
     
-    self.prodBuffer = {}
-    self.prodStartIndex = 1
-    self.prodEndIndex = 0
-    self.currentBufferTime = 0
-    
-    self.yieldBuffer = {}
-    self.yieldStartIndex = 1
-    self.yieldEndIndex = 0
+    self.prodRingHead = 1
+    self.prodSumMass = 0
+    self.prodSumLiters = 0
+    self.prodSumTime = 0
+    self.prodSumArea = 0
+    if self.prodRingMass then
+        for i = 1, (self.prodRingSize or 180) do
+            self.prodRingMass[i] = 0
+            self.prodRingLiters[i] = 0
+            self.prodRingTime[i] = 0
+            self.prodRingArea[i] = 0
+        end
+    end
+
+    self.yieldRingHead = 1
+    self.yieldSumMass = 0
+    self.yieldSumArea = 0
+    if self.yieldRingMass then
+        for i = 1, (self.yieldRingSize or 180) do
+            self.yieldRingMass[i] = 0
+            self.yieldRingArea[i] = 0
+        end
+    end
     
     self.currentYield = 0
     self.instantYield = 0
@@ -1232,7 +1285,9 @@ function RHM_LoadCalculator:calculateTotalCropLoss()
     if self.combineMemory and self.combineMemory.currentCrop then
         self.currentCrop = self.combineMemory.currentCrop
     end
-    self:updateSettingsImpact()
+    if not self.settingsLoss then
+        self:updateSettingsImpact()
+    end
     local baseLoss = self:calculateCropLoss()
     local settingsAddedLoss = self.settingsLoss or 0
     local totalLoss = baseLoss + settingsAddedLoss
@@ -1256,42 +1311,58 @@ function RHM_LoadCalculator:getHectaresPerHour()
     return self.hectaresPerHour or 0
 end
 
----EN: Updates sliding window rolling averages for metric evaluations / UA: Оновлює ковзні середні продуктивності
+---EN: Updates sliding window rolling averages for metric evaluations (O(1) circular ring buffer)
+---UA: Оновлює ковзні середні продуктивності (O(1) кільцевий буфер без виділення пам'яті)
 function RHM_LoadCalculator:updateProductivity(mass, liters, dt, area)
-    self.totalOutputMass = self.totalOutputMass + mass
+    self.totalOutputMass = self.totalOutputMass + (mass or 0)
     
-    self.prodBuffer = self.prodBuffer or {}
-    self.prodStartIndex = self.prodStartIndex or 1
-    self.prodEndIndex = self.prodEndIndex or 0
-    
-    self.prodEndIndex = self.prodEndIndex + 1
-    self.prodBuffer[self.prodEndIndex] = {m = mass, l = liters or 0, t = dt, a = area or 0}
-    
-    self.currentBufferTime = (self.currentBufferTime or 0) + dt
-    while (self.prodEndIndex - self.prodStartIndex + 1) > 1 and self.currentBufferTime > 12000 do
-        local old = self.prodBuffer[self.prodStartIndex]
-        self.currentBufferTime = self.currentBufferTime - old.t
-        self.prodBuffer[self.prodStartIndex] = nil -- free memory
-        self.prodStartIndex = self.prodStartIndex + 1
+    if not self.prodRingMass then
+        self.prodRingSize = 180
+        self.prodRingMass = {}
+        self.prodRingLiters = {}
+        self.prodRingTime = {}
+        self.prodRingArea = {}
+        for i = 1, self.prodRingSize do
+            self.prodRingMass[i] = 0
+            self.prodRingLiters[i] = 0
+            self.prodRingTime[i] = 0
+            self.prodRingArea[i] = 0
+        end
+        self.prodRingHead = 1
+        self.prodSumMass = 0
+        self.prodSumLiters = 0
+        self.prodSumTime = 0
+        self.prodSumArea = 0
     end
-    
-    local sumMass = 0
-    local sumLiters = 0
-    local sumTime = 0
-    local sumArea = 0
-    for i = self.prodStartIndex, self.prodEndIndex do
-        local v = self.prodBuffer[i]
-        sumMass = sumMass + v.m
-        sumLiters = sumLiters + v.l
-        sumTime = sumTime + v.t
-        sumArea = sumArea + (v.a or 0)
-    end
-    
-    if sumTime > 100 then
-        local hours = sumTime / 3600000
-        local rawTonPerHour = (sumMass / 1000) / hours
-        self.litersPerHour = sumLiters / hours
-        local rawHectaresPerHour = (sumArea / 10000) / hours
+
+    local head = self.prodRingHead
+    local oldM = self.prodRingMass[head]
+    local oldL = self.prodRingLiters[head]
+    local oldT = self.prodRingTime[head]
+    local oldA = self.prodRingArea[head]
+
+    local m = mass or 0
+    local l = liters or 0
+    local t = dt or 0
+    local a = area or 0
+
+    self.prodSumMass = math.max(0, self.prodSumMass - oldM + m)
+    self.prodSumLiters = math.max(0, self.prodSumLiters - oldL + l)
+    self.prodSumTime = math.max(0, self.prodSumTime - oldT + t)
+    self.prodSumArea = math.max(0, self.prodSumArea - oldA + a)
+
+    self.prodRingMass[head] = m
+    self.prodRingLiters[head] = l
+    self.prodRingTime[head] = t
+    self.prodRingArea[head] = a
+
+    self.prodRingHead = (head % self.prodRingSize) + 1
+
+    if self.prodSumTime > 100 then
+        local hours = self.prodSumTime / 3600000
+        local rawTonPerHour = (self.prodSumMass / 1000) / hours
+        self.litersPerHour = self.prodSumLiters / hours
+        local rawHectaresPerHour = (self.prodSumArea / 10000) / hours
         local alpha = 0.05
         if self.tonPerHour == 0 then self.tonPerHour = rawTonPerHour end
         self.tonPerHour = self.tonPerHour * (1 - alpha) + rawTonPerHour * alpha
@@ -1305,36 +1376,45 @@ function RHM_LoadCalculator:updateProductivity(mass, liters, dt, area)
     end
 end
 
----EN: Processes complete physical output block calculations / UA: Виконує розрахунки врожайності
+---EN: Processes complete physical output block calculations (O(1) running sum, zero GC allocations)
+---UA: Виконує розрахунки врожайності (O(1) ковзна сума, нуль алокацій у GC)
 function RHM_LoadCalculator:updateProductivityAndYield(mass, liters, area, dt)
     self:updateProductivity(mass, liters, dt, area)
-    if area <= 0.0001 and mass <= 0.001 then
+    if (area or 0) <= 0.0001 and (mass or 0) <= 0.001 then
         self.currentYield = self.currentYield or 0
         return
     end
     
-    self.yieldBuffer = self.yieldBuffer or {}
-    self.yieldStartIndex = self.yieldStartIndex or 1
-    self.yieldEndIndex = self.yieldEndIndex or 0
-    
-    self.yieldEndIndex = self.yieldEndIndex + 1
-    self.yieldBuffer[self.yieldEndIndex] = {m = mass, a = area}
-    
-    if (self.yieldEndIndex - self.yieldStartIndex + 1) > 600 then 
-        self.yieldBuffer[self.yieldStartIndex] = nil
-        self.yieldStartIndex = self.yieldStartIndex + 1
+    if not self.yieldRingMass then
+        self.yieldRingSize = 180
+        self.yieldRingMass = {}
+        self.yieldRingArea = {}
+        for i = 1, self.yieldRingSize do
+            self.yieldRingMass[i] = 0
+            self.yieldRingArea[i] = 0
+        end
+        self.yieldRingHead = 1
+        self.yieldSumMass = 0
+        self.yieldSumArea = 0
     end
-    
-    local sumMass = 0
-    local sumArea = 0
-    for i = self.yieldStartIndex, self.yieldEndIndex do 
-        local v = self.yieldBuffer[i]
-        sumMass = sumMass + v.m
-        sumArea = sumArea + v.a 
-    end
-    
-    if sumArea > 0.1 then
-        local rawYield = (sumMass / sumArea) * 10
+
+    local head = self.yieldRingHead
+    local oldM = self.yieldRingMass[head]
+    local oldA = self.yieldRingArea[head]
+
+    local m = mass or 0
+    local a = area or 0
+
+    self.yieldSumMass = math.max(0, self.yieldSumMass - oldM + m)
+    self.yieldSumArea = math.max(0, self.yieldSumArea - oldA + a)
+
+    self.yieldRingMass[head] = m
+    self.yieldRingArea[head] = a
+
+    self.yieldRingHead = (head % self.yieldRingSize) + 1
+
+    if self.yieldSumArea > 0.1 then
+        local rawYield = (self.yieldSumMass / self.yieldSumArea) * 10
         local alpha = 0.03
         if not self.currentYield or self.currentYield == 0 then self.currentYield = rawYield end
         self.currentYield = self.currentYield * (1 - alpha) + rawYield * alpha
@@ -1342,24 +1422,7 @@ function RHM_LoadCalculator:updateProductivityAndYield(mass, liters, area, dt)
 end
 
 function RHM_LoadCalculator:setRealTimeYield(yieldTha)
-    self.yieldBuffer = self.yieldBuffer or {}
-    self.yieldStartIndex = self.yieldStartIndex or 1
-    self.yieldEndIndex = self.yieldEndIndex or 0
-    
-    self.yieldEndIndex = self.yieldEndIndex + 1
-    self.yieldBuffer[self.yieldEndIndex] = yieldTha
-    
-    if (self.yieldEndIndex - self.yieldStartIndex + 1) > 20 then 
-        self.yieldBuffer[self.yieldStartIndex] = nil
-        self.yieldStartIndex = self.yieldStartIndex + 1
-    end
-    
-    local sum = 0
-    local count = self.yieldEndIndex - self.yieldStartIndex + 1
-    for i = self.yieldStartIndex, self.yieldEndIndex do 
-        sum = sum + self.yieldBuffer[i] 
-    end
-    self.currentYield = sum / count
+    self.currentYield = yieldTha or 0
 end
 
 ---EN: Returns formatted yield string / UA: Отримує форматований рядок врожайності

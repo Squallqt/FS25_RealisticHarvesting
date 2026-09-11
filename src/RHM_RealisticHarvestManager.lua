@@ -113,28 +113,23 @@ function RHM_RealisticHarvestManager:onMissionLoaded()
     end
 end
 
--- EN: Recursively searches the vehicle hierarchy for the first vehicle with spec_rhm_Combine.
---     Used to find the combine when the player is controlling a tractor in a Nexat modular system.
--- UA: Рекурсивно шукає в ієрархії транспорту перший транспортний засіб з spec_rhm_Combine.
---     Використовується для пошуку комбайна коли гравець керує трактором у модульній системі Nexat.
-local function findCombineInHierarchy(vehicle, checkedVehicles)
-    if not vehicle then return nil end
+local SEARCH_CHECKED = {}
 
-    checkedVehicles = checkedVehicles or {}
-    if checkedVehicles[vehicle] then return nil end
-    checkedVehicles[vehicle] = true
+local function findCombineInHierarchyInternal(vehicle)
+    if not vehicle or SEARCH_CHECKED[vehicle] then return nil end
+    SEARCH_CHECKED[vehicle] = true
 
     if vehicle.spec_rhm_Combine then return vehicle end
 
     -- EN: Search up through parent (rootVehicle, attacherVehicle) and down through children.
     -- UA: Шукаємо вгору через батьків (rootVehicle, attacherVehicle) і вниз через дочірні.
-    if vehicle.rootVehicle and not checkedVehicles[vehicle.rootVehicle] then
-        local found = findCombineInHierarchy(vehicle.rootVehicle, checkedVehicles)
+    if vehicle.rootVehicle and not SEARCH_CHECKED[vehicle.rootVehicle] then
+        local found = findCombineInHierarchyInternal(vehicle.rootVehicle)
         if found then return found end
     end
 
-    if vehicle.attacherVehicle and not checkedVehicles[vehicle.attacherVehicle] then
-        local found = findCombineInHierarchy(vehicle.attacherVehicle, checkedVehicles)
+    if vehicle.attacherVehicle and not SEARCH_CHECKED[vehicle.attacherVehicle] then
+        local found = findCombineInHierarchyInternal(vehicle.attacherVehicle)
         if found then return found end
     end
 
@@ -142,8 +137,8 @@ local function findCombineInHierarchy(vehicle, checkedVehicles)
         local implements = vehicle:getAttachedImplements()
         if implements then
             for _, implement in ipairs(implements) do
-                if implement.object and not checkedVehicles[implement.object] then
-                    local found = findCombineInHierarchy(implement.object, checkedVehicles)
+                if implement.object and not SEARCH_CHECKED[implement.object] then
+                    local found = findCombineInHierarchyInternal(implement.object)
                     if found then return found end
                 end
             end
@@ -151,6 +146,18 @@ local function findCombineInHierarchy(vehicle, checkedVehicles)
     end
 
     return nil
+end
+
+-- EN: Recursively searches the vehicle hierarchy for the first vehicle with spec_rhm_Combine.
+--     Reuses a module-level table to eliminate garbage collection overhead.
+-- UA: Рекурсивно шукає в ієрархії транспорту перший транспортний засіб з spec_rhm_Combine.
+--     Перевикористовує таблицю на рівні модуля для усунення навантаження на GC.
+local function findCombineInHierarchy(vehicle)
+    if not vehicle then return nil end
+    for k in pairs(SEARCH_CHECKED) do
+        SEARCH_CHECKED[k] = nil
+    end
+    return findCombineInHierarchyInternal(vehicle)
 end
 
 -- EN: Returns the vehicle currently controlled by the local player.
@@ -203,6 +210,7 @@ function RHM_RealisticHarvestManager:update(dt)
     end
 
     local controlledVehicle = self:getControlledVehicle()
+    self.lastControlledVehicle = controlledVehicle
 
     if self.hud then
         local vehicle = controlledVehicle
@@ -215,10 +223,10 @@ function RHM_RealisticHarvestManager:update(dt)
             local now = g_time
             local throttleMs = 250
             
-            -- EN: Cache optimization: only search hierarchy if vehicle changed or timeout expired
-            -- UA: Оптимізація кешу: шукаємо ієрархію тільки якщо транспорт змінився або таймаут минув
+            -- EN: Cache optimization: only search hierarchy if vehicle changed or timeout expired (works for both combines and non-combines)
+            -- UA: Оптимізація кешу: шукаємо ієрархію тільки якщо транспорт змінився або таймаут минув (працює як для комбайнів, так і для не-комбайнів)
             if vehicle == self._rhmHudVehicleRef and searchRoot == self._rhmHudSearchRootRef
-                and self.lastActiveCombine and (now - (self._rhmHudHierarchySearchTime or 0)) < throttleMs then
+                and (now - (self._rhmHudHierarchySearchTime or 0)) < throttleMs then
                 combineVehicle = self.lastActiveCombine
             else
                 combineVehicle = findCombineInHierarchy(searchRoot)
@@ -270,18 +278,19 @@ function RHM_RealisticHarvestManager:draw()
     end
 
     local combineVehicle = self.lastActiveCombine
+    if not (self.hud and combineVehicle) then
+        return
+    end
 
-    -- EN: Don't draw HUD if the player has exited the vehicle.
-    -- UA: Не малюємо HUD якщо гравець вийшов з транспортного засобу.
-    local playerVehicle = self:getControlledVehicle()
+    -- EN: Don't draw HUD if the player has exited the vehicle. Reuses cached vehicle from update() to avoid duplicate API calls.
+    -- UA: Не малюємо HUD якщо гравець вийшов з транспортного засобу. Перевикористовує кеш з update() без повторних викликів API.
+    local playerVehicle = self.lastControlledVehicle or self:getControlledVehicle()
     if not playerVehicle then
         return
     end
 
-    if self.hud and combineVehicle then
-        if self.settings and self.settings.showHUD then
-            self.hud:draw()
-        end
+    if self.settings and self.settings.showHUD then
+        self.hud:draw()
     end
 end
 

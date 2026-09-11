@@ -418,6 +418,21 @@ function RHM_CombineSettingsDatabase:applyEnvironmentalOffsets(baseTemplate, con
     local yield = context.yield
     local machineType = context.machineType or "grain"
 
+    -- EN: Early exit if not a grain combine or moisture is absent/zero, avoiding deep-copy GC churn.
+    -- UA: Ранній вихід якщо не зерновий комбайн або вологість відсутня, без непотрібного копіювання таблиць.
+    if machineType ~= "grain" or not moisture or moisture <= 0 then
+        return baseTemplate
+    end
+
+    local refMoisture = baseTemplate.moistureLimit or 14.0
+    local deltaM = moisture - refMoisture
+    local hasMoistureOffset = (deltaM > 0 or deltaM < -2.0)
+    local hasYieldOffset = (yield and yield > 8.0)
+
+    if not hasMoistureOffset and not hasYieldOffset then
+        return baseTemplate
+    end
+
     -- Deep copy template so we don't modify the static database template
     local adjusted = {}
     for k, v in pairs(baseTemplate) do

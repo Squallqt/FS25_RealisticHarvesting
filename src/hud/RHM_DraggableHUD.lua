@@ -12,6 +12,10 @@ RHMDraggableHUD.__index = RHMDraggableHUD
 RHMDraggableHUD.DRAG_DELAY_MS = 15
 RHMDraggableHUD.DRAG_LIMIT = 2
 
+local COLOR_LOAD_LOW = {1.0, 1.0, 1.0}
+local COLOR_LOAD_MID = {0.91, 0.78, 0.25}
+local COLOR_LOAD_HIGH = {0.89, 0.29, 0.29}
+
 function RHMDraggableHUD.new(modDirectory, settings)
     local self = setmetatable({}, RHMDraggableHUD)
 
@@ -242,7 +246,13 @@ function RHMDraggableHUD:draw()
     local btnX = self.x + self.width - btnW
     local btnY = self.y + self.height
 
-    local settingsButtonArea = { x = btnX, y = btnY, w = btnW, h = btnH }
+    local settingsButtonArea = self.menuButtonArea or {}
+    settingsButtonArea.x = btnX
+    settingsButtonArea.y = btnY
+    settingsButtonArea.w = btnW
+    settingsButtonArea.h = btnH
+    self.menuButtonArea = settingsButtonArea
+
     local mx, my = g_inputBinding:getMousePosition()
     local isHovered = mx >= settingsButtonArea.x and mx <= settingsButtonArea.x + settingsButtonArea.w and
                       my >= settingsButtonArea.y and my <= settingsButtonArea.y + settingsButtonArea.h
@@ -274,8 +284,6 @@ function RHMDraggableHUD:draw()
         iconSettings:render()
     end
     setTextBold(false)
-
-    self.menuButtonArea = settingsButtonArea
 
     self:drawContent()
     setTextBold(false)
@@ -490,11 +498,11 @@ end
 -- UA: Навантаження двигуна → колір: тепло-білий < 60%, бурштиново-жовтий 60-85%, червоний > 85%.
 function RHMDraggableHUD:getLoadColor(load)
     if load < 60 then
-        return {1.0, 1.0, 1.0}
+        return COLOR_LOAD_LOW
     elseif load < 85 then
-        return {0.91, 0.78, 0.25}
+        return COLOR_LOAD_MID
     else
-        return {0.89, 0.29, 0.29}
+        return COLOR_LOAD_HIGH
     end
 end
 

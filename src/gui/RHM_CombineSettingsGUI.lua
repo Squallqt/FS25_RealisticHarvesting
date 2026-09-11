@@ -110,7 +110,8 @@ function RHMCombineSettingsGUI:printStatus()
     -- EN: Evaluate settings against the current crop and show any loss penalties.
     -- UA: Оцінюємо налаштування для поточної культури і показуємо будь-які штрафи.
     if memory.currentCrop then
-        local penalty, warnings = memory:checkSettingsForCrop(memory.currentCrop)
+        local effPenalty, lossPenalty, warnings = memory:checkSettingsForCrop(memory.currentCrop, nil, true)
+        local penalty = math.max(effPenalty or 0, lossPenalty or 0)
 
         if penalty > 0 then
             rhm_log("RHM [UI]: " .. "======================================================")

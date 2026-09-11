@@ -326,26 +326,27 @@ end
 -- UA: Оцінює всі поточні налаштування відносно оптимальних значень бази даних для культури.
 --     Повертає окремо штрафи за ефективність (швидкість) і втрати врожаю, плюс таблицю попереджень.
 --     Подача/Ротор впливають на ефективність (пропускну здатність), Вентилятор/Решета — на втрати (якість очищення).
-function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
+function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarnings)
     if not context and self.combine and self.combine.spec_rhm_Combine then
         local rhmSpec = self.combine.spec_rhm_Combine
-        context = {
-            machineType = self.machineType,
-            moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
-            yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
-            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-            fillType = rhmSpec.lastFillType,
-            fruitType = rhmSpec.lastFruitType,
-        }
+        self._cachedContext = self._cachedContext or {}
+        local ctx = self._cachedContext
+        ctx.machineType = self.machineType
+        ctx.moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0
+        ctx.yield = (rhmSpec.data and rhmSpec.data.yield) or 0
+        ctx.isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false
+        ctx.fillType = rhmSpec.lastFillType
+        ctx.fruitType = rhmSpec.lastFruitType
+        context = ctx
     end
 
     local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
 
     if not optimalSettings then
-        return 0, 0, {}
+        return 0, 0, returnWarnings and {} or nil
     end
 
-    local warnings = {}
+    local warnings = returnWarnings and {} or nil
     local efficiencyScore = 0  -- EN: Impacts throughput/speed / UA: Впливає на пропускну здатність/швидкість
     local lossScore = 0        -- EN: Impacts direct crop loss / UA: Впливає на прямі втрати врожаю
     
@@ -369,13 +370,15 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context)
                 local excess = deviation - tolerance
                 score = math.min(6.0, excess * 0.33)
 
-                table.insert(warnings, {
-                    param    = param,
-                    current  = value,
-                    optimal  = optimal,
-                    deviation = deviation,
-                    penalty  = score,
-                })
+                if warnings then
+                    table.insert(warnings, {
+                        param    = param,
+                        current  = value,
+                        optimal  = optimal,
+                        deviation = deviation,
+                        penalty  = score,
+                    })
+                end
             end
 
             -- EN: Route penalty to the appropriate physical effect based on parameter type.
