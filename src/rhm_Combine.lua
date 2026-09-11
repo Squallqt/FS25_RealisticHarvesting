@@ -104,6 +104,7 @@ end
 function rhm_Combine.registerEventListeners(vehicleType)
     rhm_log("RHM [Combine]: RHM: Registering event listeners for rhm_Combine")
     SpecializationUtil.registerEventListener(vehicleType, "onLoad", rhm_Combine)
+    SpecializationUtil.registerEventListener(vehicleType, "onPostLoad", rhm_Combine)
     SpecializationUtil.registerEventListener(vehicleType, "onUpdateTick", rhm_Combine)
     SpecializationUtil.registerEventListener(vehicleType, "onDraw", rhm_Combine)
     
@@ -400,6 +401,22 @@ function rhm_Combine:onLoad(savegame)
     
     -- TEST: Прапорець для показу тестового повідомлення
     spec.testMessageShown = false
+
+    -- EN: Restore saved combine settings from savegame if loading a saved game
+    -- UA: Відновлюємо збережені налаштування комбайна з savegame при завантаженні збереження
+    if savegame ~= nil then
+        self:loadFromSavegame(savegame)
+    end
+end
+
+-- EN: Post-load hook called after all vehicle components and attached implements are loaded.
+--     Ensures savegame settings are restored if not already loaded during onLoad.
+-- UA: Хук post-load, що викликається після завантаження всіх компонентів засобу та навісного обладнання.
+--     Гарантує відновлення налаштувань збереження, якщо вони ще не були завантажені в onLoad.
+function rhm_Combine:onPostLoad(savegame)
+    if savegame ~= nil and not self._rhmSettingsLoadedFromSavegame then
+        self:loadFromSavegame(savegame)
+    end
 end
 
 -- EN: Override for addFillUnitFillLevel — tracks actual liters added to the bunker (hopper).
@@ -1571,14 +1588,47 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
         tostring(settings.targetEngineLoad)))
 end
 
----Завантаження стану з savegame файлу
-function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
+---Завантаження стану з savegame
+function rhm_Combine:loadFromSavegame(savegame)
+    if not savegame or not savegame.xmlFile or not savegame.key then
+        return false
+    end
+    if savegame.resetVehicles then
+        return false
+    end
+
     local spec = self.spec_rhm_Combine
-    if not spec or not spec.combineMemory then return end
-    
-    -- Поточні налаштування
-    local cur = key .. ".combineMemory.current"
-    
+    if not spec or not spec.combineMemory then
+        return false
+    end
+
+    local xmlFile = savegame.xmlFile
+    local modName = g_currentModName 
+        or (g_realisticHarvestManager and g_realisticHarvestManager.modName)
+        or "FS25_RealisticHarvesting"
+
+    local candidateKeys = {
+        savegame.key .. ".combineMemory.current",
+        string.format("%s.%s.rhm_Combine.combineMemory.current", savegame.key, modName),
+        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.combineMemory.current", savegame.key),
+    }
+
+    local cur = nil
+    for _, path in ipairs(candidateKeys) do
+        if xmlFile:hasProperty(path) then
+            cur = path
+            break
+        end
+    end
+
+    if not cur then
+        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] No saved combine settings found for %s in savegame (tested key: %s)",
+            self:getFullName() or "?", tostring(candidateKeys[2])))
+        return false
+    end
+
     local function readInt(path, def)
         local val = nil
         if xmlFile.getInt then
@@ -1637,6 +1687,9 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
     local savedCrop = readString(cur .. "#currentCrop", "")
     if savedCrop and savedCrop ~= "" then
         spec.combineMemory.currentCrop = savedCrop
+        if spec.loadCalculator then
+            spec.loadCalculator.currentCrop = savedCrop
+        end
     end
 
     local curSettings = spec.combineMemory.currentSettings
@@ -1655,16 +1708,31 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
         if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
         if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
     end
-    
-    rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Loaded combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
-        self:getName() or "?",
+
+    self._rhmSettingsLoadedFromSavegame = true
+
+    Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+        tostring(self:getFullName()),
         tostring(spec.combineMemory.currentCrop),
+        tostring(spec.combineMemory.mode),
+        tostring(spec.combineMemory.autoSwitchEnabled),
         tostring(curSettings and curSettings.fan),
         tostring(curSettings and curSettings.upperSieve),
         tostring(curSettings and curSettings.lowerSieve),
         tostring(curSettings and curSettings.rotor),
         tostring(curSettings and curSettings.feeder),
         tostring(curSettings and curSettings.targetEngineLoad)))
+
+    return true
+end
+
+---Завантаження стану з savegame файлу (адаптер для сумісності)
+function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
+    return self:loadFromSavegame({
+        xmlFile = xmlFile,
+        key = key,
+        resetVehicles = resetVehicles
+    })
 end
 
 -- ============================================================================
