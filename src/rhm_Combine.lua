@@ -55,6 +55,12 @@ function rhm_Combine.initSpecialization()
     end
 end
 
+-- EN: Registers rhm_Combine member functions on the Vehicle class.
+-- UA: Реєструє функції-члени rhm_Combine на класі Vehicle.
+function rhm_Combine.registerFunctions(vehicleType)
+    SpecializationUtil.registerFunction(vehicleType, "loadFromSavegame", rhm_Combine.loadFromSavegame)
+end
+
 -- EN: Registers rhm_Combine's overwritten (proxied) functions before event listeners.
 --     These intercept combine core behaviors to inject our load and speed logic.
 -- UA: Реєструє перевизначені (proxy) функції rhm_Combine до подій-прислухачів.
@@ -405,7 +411,10 @@ function rhm_Combine:onLoad(savegame)
     -- EN: Restore saved combine settings from savegame if loading a saved game
     -- UA: Відновлюємо збережені налаштування комбайна з savegame при завантаженні збереження
     if savegame ~= nil then
-        self:loadFromSavegame(savegame)
+        local ok, err = pcall(rhm_Combine.loadFromSavegame, self, savegame)
+        if not ok then
+            Logging.error("RHM: Error loading savegame for %s: %s", tostring(self:getFullName()), tostring(err))
+        end
     end
 end
 
@@ -415,7 +424,10 @@ end
 --     Гарантує відновлення налаштувань збереження, якщо вони ще не були завантажені в onLoad.
 function rhm_Combine:onPostLoad(savegame)
     if savegame ~= nil and not self._rhmSettingsLoadedFromSavegame then
-        self:loadFromSavegame(savegame)
+        local ok, err = pcall(rhm_Combine.loadFromSavegame, self, savegame)
+        if not ok then
+            Logging.error("RHM: Error post-loading savegame for %s: %s", tostring(self:getFullName()), tostring(err))
+        end
     end
 end
 
@@ -1728,7 +1740,7 @@ end
 
 ---Завантаження стану з savegame файлу (адаптер для сумісності)
 function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
-    return self:loadFromSavegame({
+    return rhm_Combine.loadFromSavegame(self, {
         xmlFile = xmlFile,
         key = key,
         resetVehicles = resetVehicles

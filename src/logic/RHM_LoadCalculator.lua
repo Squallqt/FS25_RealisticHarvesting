@@ -124,15 +124,24 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     -- 2. Inspect vehicle XML via XMLFile for exact motorConfiguration hp or storeData specs
     if not resolvedHp and motorObj.configFileName then
         local xmlFile = nil
+        local schema = (Vehicle and Vehicle.xmlSchema) or nil
         if XMLFile and XMLFile.loadIfExists then
-            xmlFile = XMLFile.loadIfExists("RHM_EngineHpCheck", motorObj.configFileName)
+            xmlFile = XMLFile.loadIfExists("RHM_EngineHpCheck", motorObj.configFileName, schema)
         elseif loadXMLFile then
             xmlFile = loadXMLFile("RHM_EngineHpCheck", motorObj.configFileName)
         end
 
         if xmlFile then
             local hp = nil
-            if xmlFile.getValue and XMLValueType then
+            if xmlFile.getInt then
+                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getInt("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
+                end
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getInt("vehicle.storeData.specs.power")
+                end
+            elseif xmlFile.getValue and XMLValueType then
                 hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1), XMLValueType.INT)
                 if not hp or hp <= 0 then
                     hp = xmlFile:getValue("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp", XMLValueType.INT)
