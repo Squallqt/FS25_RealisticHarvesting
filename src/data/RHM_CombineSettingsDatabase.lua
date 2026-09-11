@@ -685,16 +685,115 @@ function RHM_CombineSettingsDatabase:getAllCropNames()
     return names
 end
 
--- EN: Returns a sorted list of crop names that match the specified machine type.
--- UA: Повертає відсортований список назв культур що відповідають заданому типу машини.
+---EN: Discovers and registers all harvestable crops from the active map via g_fruitTypeManager.
+---UA: Виявляє та реєструє всі культури з поточної карти через g_fruitTypeManager.
+function RHM_CombineSettingsDatabase:initMapCrops()
+    if self._mapCropsInitialized then
+        return
+    end
+    if not g_fruitTypeManager or not g_fruitTypeManager.getFruitTypes then
+        return
+    end
+
+    local mapFruitTypes = g_fruitTypeManager:getFruitTypes()
+    if not mapFruitTypes or #mapFruitTypes == 0 then
+        return
+    end
+
+    self._mapCropsInitialized = true
+    local validMapCrops = {}
+
+    -- Helper to classify machine type for unknown/mod crops
+    local function detectMachineType(nameUpper)
+        if nameUpper == "COTTON" then
+            return "cotton"
+        elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
+            or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
+            or nameUpper:find("SPINACH") or (nameUpper:find("BEAN") and not nameUpper:find("SOYBEAN"))
+            or nameUpper:find("SUGARCANE") then
+            return "root"
+        elseif nameUpper:find("GRASS") or nameUpper:find("ALFALFA") or nameUpper:find("CLOVER")
+            or nameUpper:find("SILAGE") or nameUpper:find("CHAFF") or nameUpper:find("FORAGE")
+            or nameUpper:find("LUCERNE") or nameUpper:find("POPLAR") or nameUpper:find("MEADOW") then
+            return "forage"
+        else
+            return "grain"
+        end
+    end
+
+    for _, fruit in pairs(mapFruitTypes) do
+        local rawName = fruit.name
+        if rawName and rawName ~= "" then
+            local nameUpper = rawName:upper()
+            validMapCrops[nameUpper] = true
+
+            if self.crops[nameUpper] then
+                if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
+                    self.crops[nameUpper].fillType = fruit.fillTypeIndex
+                end
+            else
+                local mType = detectMachineType(nameUpper)
+                local context = {
+                    machineType = mType,
+                    fruitType = fruit.index,
+                    fillType = fruit.fillTypeIndex
+                }
+                local template = self:calculatePhysicalOptimalSettings(nameUpper, context)
+                self.crops[nameUpper] = {
+                    name = fruit.title or nameUpper,
+                    nameEN = fruit.title or nameUpper,
+                    template = template,
+                    machineType = mType,
+                    group = "mapCustom",
+                    fillType = fruit.fillTypeIndex
+                }
+                rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' (%s) -> %s", nameUpper, tostring(fruit.title), mType))
+            end
+        end
+    end
+
+    -- Add standard forage windrows/chaff variants if base crop exists
+    if validMapCrops["GRASS"] or validMapCrops["MEADOW"] then
+        validMapCrops["GRASS_WINDROW"] = true
+        validMapCrops["DRYGRASS_WINDROW"] = true
+    end
+    if validMapCrops["WHEAT"] or validMapCrops["BARLEY"] or validMapCrops["OAT"] then
+        validMapCrops["STRAW_WINDROW"] = true
+    end
+    if validMapCrops["MAIZE"] then
+        validMapCrops["MAIZE_FORAGE"] = true
+    end
+    if validMapCrops["ALFALFA"] or validMapCrops["LUCERNE"] then
+        validMapCrops["ALFALFA_WINDROW"] = true
+    end
+    if validMapCrops["CLOVER"] then
+        validMapCrops["CLOVER_WINDROW"] = true
+    end
+
+    self.validMapCrops = validMapCrops
+end
+
+-- EN: Returns a sorted list of crop names that match the specified machine type and exist on the current map.
+-- UA: Повертає відсортований список назв культур що відповідають типу машини та існують на поточній карті.
 function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType)
+    self:initMapCrops()
+
     local names = {}
     for cropName, cropData in pairs(self.crops) do
         if cropData.machineType == machineType then
-            table.insert(names, cropName)
+            if not self.validMapCrops or self.validMapCrops[cropName] then
+                table.insert(names, cropName)
+            end
         end
     end
-    table.sort(names)
+
+    -- Sort alphabetically by localized display name
+    table.sort(names, function(a, b)
+        local nameA = self:getCropDisplayName(a):lower()
+        local nameB = self:getCropDisplayName(b):lower()
+        return nameA < nameB
+    end)
+
     return names
 end
 

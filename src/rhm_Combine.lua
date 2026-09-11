@@ -378,6 +378,7 @@ function rhm_Combine:onLoad(savegame)
     
     -- Відстеження поточної жатки для визначення зміни
     spec.currentCutter = nil
+    spec._lastAiTunedCrop = nil
     
     -- Прапорець чи активне обмеження швидкості
     spec.isSpeedLimitActive = false
@@ -712,6 +713,22 @@ end
 -- EN: Called when the detected crop type changes. Delegates to RHM_CombineMemory:switchCrop which
 --     updates the active crop and triggers network sync without altering physical settings.
 --     Does NOT set currentCrop directly — switchCrop handles all state transitions.
+---EN: Checks if the vehicle is currently operated by an AI helper or Courseplay.
+---UA: Перевіряє чи комбайном зараз керує наймит або Courseplay.
+function rhm_Combine.isAiWorkerActive(vehicle)
+    if not vehicle then return false end
+    if vehicle.getIsAIActive and vehicle:getIsAIActive() then
+        return true
+    end
+    if vehicle.cp and (vehicle.cp.isDriving or vehicle.cp.isFieldWorkActive) then
+        return true
+    end
+    return false
+end
+
+-- EN: Called when the detected crop type changes. Delegates to RHM_CombineMemory:switchCrop which
+--     updates the active crop and triggers network sync without altering physical settings.
+--     Does NOT set currentCrop directly — switchCrop handles all state transitions.
 -- UA: Викликається при зміні визначеного типу культури. Делегує до RHM_CombineMemory:switchCrop який
 --     оновлює активну культуру та запускає мережеву синхронізацію без зміни фізичних налаштувань.
 --     НЕ встановлює currentCrop напряму — switchCrop обробляє всі переходи стану.
@@ -724,6 +741,13 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     -- EN: Delegate to switchCrop — updates currentCrop without changing settings.
     -- UA: Делегуємо до switchCrop — оновлює currentCrop без зміни налаштувань.
     spec.combineMemory:switchCrop(newCropName)
+
+    -- EN: If an AI worker or Courseplay helper is driving, auto-tune settings for this crop by tier
+    -- UA: Якщо керує наймит або Courseplay, автоматично калібруємо налаштування за рівнем електроніки
+    if self.isServer and rhm_Combine.isAiWorkerActive(self) then
+        spec._lastAiTunedCrop = newCropName
+        spec.combineMemory:applyAiWorkerTuning(newCropName)
+    end
     
     -- EN: Sync crop change and settings to clients in multiplayer.
     -- UA: Синхронізуємо зміну культури та налаштувань для клієнтів у мультиплеєрі.
@@ -1327,6 +1351,28 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.combineMemory:updateAutoTrim(dt)
     end
 
+    -- EN: Auto-tune settings when AI worker / Courseplay operates the combine.
+    --     Applies once upon starting or switching crop, preserving manual control when player drives.
+    -- UA: Автоналаштування коли керує наймит або Courseplay.
+    --     Застосовується один раз при старті або зміні культури, зберігаючи повністю ручне керування для гравця.
+    if self.isServer and cutterIsTurnedOn then
+        local isAi = rhm_Combine.isAiWorkerActive(self)
+        if isAi then
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if currentCrop and currentCrop ~= "" and spec._lastAiTunedCrop ~= currentCrop then
+                spec._lastAiTunedCrop = currentCrop
+                spec.combineMemory:applyAiWorkerTuning(currentCrop)
+                if spec.settingsDirtyFlag then
+                    self:raiseDirtyFlags(spec.settingsDirtyFlag)
+                end
+            end
+        else
+            -- EN: Player is manually driving - reset tracking so AI will re-tune next time it takes over.
+            -- UA: Гравець керує вручну - скидаємо трекінг, щоб наймит налаштувався знову при перехопленні.
+            spec._lastAiTunedCrop = nil
+        end
+    end
+
     -- EN: Diagnostic test auto-sampling (if rhm_auto_record is enabled)
     -- UA: Автоматичний збір телеметрії (якщо увімкнено rhm_auto_record)
     if RHM_DiagnosticTool and RHM_DiagnosticTool.autoRecordEnabled and cutterIsTurnedOn then
@@ -1514,7 +1560,15 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     safeSet(cur .. "#feeder",     settings.feeder or 50)
     safeSet(cur .. "#targetEngineLoad", settings.targetEngineLoad or 95)
     
-    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s", self:getName() or "?"))
+    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+        self:getName() or "?",
+        tostring(mem.currentCrop),
+        tostring(settings.fan),
+        tostring(settings.upperSieve),
+        tostring(settings.lowerSieve),
+        tostring(settings.rotor),
+        tostring(settings.feeder),
+        tostring(settings.targetEngineLoad)))
 end
 
 ---Завантаження стану з savegame файлу
@@ -1524,9 +1578,54 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
     
     -- Поточні налаштування
     local cur = key .. ".combineMemory.current"
+    
+    local function readInt(path, def)
+        local val = nil
+        if xmlFile.getInt then
+            val = xmlFile:getInt(path)
+        end
+        if val == nil and XMLValueType and XMLValueType.INT then
+            val = xmlFile:getValue(path, XMLValueType.INT)
+        end
+        if val == nil then
+            val = xmlFile:getValue(path)
+        end
+        return (val ~= nil and tonumber(val)) or def
+    end
+
+    local function readString(path, def)
+        local val = nil
+        if xmlFile.getString then
+            val = xmlFile:getString(path)
+        end
+        if val == nil and XMLValueType and XMLValueType.STRING then
+            val = xmlFile:getValue(path, XMLValueType.STRING)
+        end
+        if val == nil then
+            val = xmlFile:getValue(path)
+        end
+        return (val ~= nil and tostring(val)) or def
+    end
+
+    local function readBool(path, def)
+        local val = nil
+        if xmlFile.getBool then
+            val = xmlFile:getBool(path)
+        end
+        if val == nil and XMLValueType and XMLValueType.BOOL then
+            val = xmlFile:getValue(path, XMLValueType.BOOL)
+        end
+        if val == nil then
+            val = xmlFile:getValue(path)
+        end
+        if val == nil then return def end
+        if type(val) == "boolean" then return val end
+        return tostring(val):lower() == "true"
+    end
+
     local isTier4 = (spec.packageLevel or 1) >= 4
-    local loadedMode = xmlFile:getValue(cur .. "#mode", "MANUAL")
-    local loadedAutoSwitch = xmlFile:getValue(cur .. "#autoSwitch", false)
+    local loadedMode = readString(cur .. "#mode", "MANUAL")
+    local loadedAutoSwitch = readBool(cur .. "#autoSwitch", false)
     if isTier4 then
         spec.combineMemory.mode              = loadedMode
         spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
@@ -1534,16 +1633,38 @@ function rhm_Combine:loadFromXMLFile(xmlFile, key, resetVehicles)
         spec.combineMemory.mode              = "MANUAL"
         spec.combineMemory.autoSwitchEnabled = false
     end
-    local savedCrop = xmlFile:getValue(cur .. "#currentCrop")
-    spec.combineMemory.currentCrop = (savedCrop ~= "" and savedCrop) or nil
-    spec.combineMemory.currentSettings.fan              = xmlFile:getValue(cur .. "#fan", 50)
-    spec.combineMemory.currentSettings.upperSieve       = xmlFile:getValue(cur .. "#upperSieve", 50)
-    spec.combineMemory.currentSettings.lowerSieve       = xmlFile:getValue(cur .. "#lowerSieve", 50)
-    spec.combineMemory.currentSettings.rotor            = xmlFile:getValue(cur .. "#rotor", 50)
-    spec.combineMemory.currentSettings.feeder           = xmlFile:getValue(cur .. "#feeder", 50)
-    spec.combineMemory.currentSettings.targetEngineLoad = xmlFile:getValue(cur .. "#targetEngineLoad", 95)
+
+    local savedCrop = readString(cur .. "#currentCrop", "")
+    if savedCrop and savedCrop ~= "" then
+        spec.combineMemory.currentCrop = savedCrop
+    end
+
+    local curSettings = spec.combineMemory.currentSettings
+    if curSettings then
+        local loadedFan = readInt(cur .. "#fan", nil)
+        local loadedUpper = readInt(cur .. "#upperSieve", nil)
+        local loadedLower = readInt(cur .. "#lowerSieve", nil)
+        local loadedRotor = readInt(cur .. "#rotor", nil)
+        local loadedFeeder = readInt(cur .. "#feeder", nil)
+        local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
+        
+        if loadedFan ~= nil then curSettings.fan = loadedFan end
+        if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
+        if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
+        if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
+        if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
+        if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+    end
     
-    rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Loaded combine state for %s", self:getName() or "?"))
+    rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Loaded combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+        self:getName() or "?",
+        tostring(spec.combineMemory.currentCrop),
+        tostring(curSettings and curSettings.fan),
+        tostring(curSettings and curSettings.upperSieve),
+        tostring(curSettings and curSettings.lowerSieve),
+        tostring(curSettings and curSettings.rotor),
+        tostring(curSettings and curSettings.feeder),
+        tostring(curSettings and curSettings.targetEngineLoad)))
 end
 
 -- ============================================================================

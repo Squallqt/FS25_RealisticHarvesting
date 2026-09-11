@@ -136,6 +136,88 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
     return true
 end
 
+---EN: Automatically tunes the combine settings for an active AI Worker or Courseplay helper
+---    based on the machine's installed electronics package level (Tiers 1–4).
+---UA: Автоматично налаштовує комбайн для наймита або Courseplay відповідно до встановленого
+---    рівня електроніки (Тір 1–4).
+function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
+    if not cropName or cropName == "" then
+        cropName = self.currentCrop
+    end
+    if not cropName then
+        return false
+    end
+
+    local pkgLevel = 1
+    if self.combine and self.combine.spec_rhm_Combine then
+        pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
+    end
+
+    if not context and self.combine and self.combine.spec_rhm_Combine then
+        local rhmSpec = self.combine.spec_rhm_Combine
+        context = {
+            machineType = self.machineType,
+            moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
+            yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
+            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
+            fillType = rhmSpec.lastFillType,
+            fruitType = rhmSpec.lastFruitType,
+        }
+    end
+
+    local optimalSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
+    if not optimalSettings then
+        return false
+    end
+
+    local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
+
+    -- Define variance band based on electronics package level:
+    -- Tier 1 (Standard): rough baseline (±18%)
+    -- Tier 2 (Sensor Kit): improved tuning (±10%)
+    -- Tier 3 (Yield & Loss Monitor): high precision (±4%)
+    -- Tier 4 (Opti-Harvest AI): 100% optimal (0%) + dynamic auto-trim enabled
+    local varianceRange = 18
+    if pkgLevel == 2 then
+        varianceRange = 10
+    elseif pkgLevel == 3 then
+        varianceRange = 4
+    elseif pkgLevel >= 4 then
+        varianceRange = 0
+    end
+
+    for _, pName in ipairs(activeParams) do
+        local optVal = optimalSettings[pName] and optimalSettings[pName].optimal or 50
+        local offset = (varianceRange > 0) and math.random(-varianceRange, varianceRange) or 0
+        self.currentSettings[pName] = math.max(0, math.min(100, math.floor(optVal + offset + 0.5)))
+    end
+
+    if pkgLevel >= 4 then
+        self.mode = "AUTO"
+        self.autoSwitchEnabled = true
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier 4 (Opti-Harvest AI) applied perfect settings for %s", cropName))
+    else
+        self.mode = "MANUAL"
+        self.autoSwitchEnabled = false
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier %d applied helper tuning for %s (variance: ±%d%%)", pkgLevel, cropName, varianceRange))
+    end
+
+    self.currentCrop = cropName
+    if self.combine and self.combine.spec_rhm_Combine and self.combine.spec_rhm_Combine.loadCalculator then
+        self.combine.spec_rhm_Combine.loadCalculator.currentCrop = cropName
+    end
+
+    -- In multiplayer, notify clients of updated helper settings
+    if self.combine and g_server then
+        local spec = self.combine.spec_rhm_Combine
+        if spec and spec.settingsDirtyFlag then
+            self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
+        end
+    end
+
+    return true
+end
+
 -- EN: Sends a network request to the server to apply AUTO settings for the current crop.
 --     In singleplayer, processes the event locally.
 -- UA: Надсилає мережевий запит на сервер для застосування AUTO налаштувань для поточної культури.

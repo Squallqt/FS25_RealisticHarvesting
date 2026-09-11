@@ -216,6 +216,22 @@ function RHMCombineCalibrationGUI:open(vehicle)
 
     self.activeVehicle = combineVehicle
     self.controllerVehicle = cv or vehicle or combineVehicle
+
+    -- EN: If combine has no active crop selected, default to first available crop on the map
+    -- UA: Якщо на комбайні ще не вибрано культуру, встановлюємо першу доступну на карті
+    if combineVehicle and combineVehicle.spec_rhm_Combine and combineVehicle.spec_rhm_Combine.combineMemory then
+        local mem = combineVehicle.spec_rhm_Combine.combineMemory
+        if not mem.currentCrop then
+            local mType = combineVehicle.spec_rhm_Combine.machineType or "grain"
+            local mapCrops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(mType)
+            if mapCrops and #mapCrops > 0 then
+                mem.currentCrop = mapCrops[1]
+                if combineVehicle.spec_rhm_Combine.loadCalculator then
+                    combineVehicle.spec_rhm_Combine.loadCalculator.currentCrop = mapCrops[1]
+                end
+            end
+        end
+    end
 end
 
 -- EN: Closes the calibration GUI. Restores camera rotation and zoom.
@@ -263,9 +279,11 @@ function RHMCombineCalibrationGUI:cycleCrop(direction)
                 break
             end
         end
+        index = index + direction
+    else
+        index = (direction > 0) and 1 or #crops
     end
 
-    index = index + direction
     if index > #crops then index = 1 end
     if index < 1 then index = #crops end
 
