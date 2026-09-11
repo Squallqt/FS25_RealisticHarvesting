@@ -78,6 +78,25 @@ local function safeFillType(ft)
     return (ft ~= nil and ft ~= 0) and ft or nil
 end
 
+-- EN: Crop synonyms/aliases table. Allows bidirectional matching between common naming conventions
+--     (e.g. FLAX <-> LINSEED, MAIZE <-> CORN, LUCERNE <-> ALFALFA).
+-- UA: Таблиця синонімів/аліасів культур. Дозволяє двостороннє зіставлення між загальними назвами
+--     (напр. FLAX <-> LINSEED, MAIZE <-> CORN, LUCERNE <-> ALFALFA).
+RHM_CombineSettingsDatabase.cropAliases = {
+    ["FLAX"]            = "LINSEED",
+    ["LINSEED"]         = "FLAX",
+    ["MAIZE"]           = "CORN",
+    ["CORN"]            = "MAIZE",
+    ["LUCERNE"]         = "ALFALFA",
+    ["ALFALFA"]         = "LUCERNE",
+    ["OATS"]            = "OAT",
+    ["OAT"]             = "OATS",
+    ["HAY"]             = "DRYGRASS",
+    ["RICELONGGRAIN"]   = "RICE_LONG_GRAIN",
+    ["RICE_LONGGRAIN"]  = "RICE_LONG_GRAIN",
+    ["ONION_DIRTY"]     = "ONION",
+}
+
 RHM_CombineSettingsDatabase.crops = {
     -- Зернові
     ["WHEAT"]   = { machineType = "grain", group = "grain",   fillType = safeFillType(FillType.WHEAT) },
@@ -94,7 +113,8 @@ RHM_CombineSettingsDatabase.crops = {
     ["SUNFLOWER"] = { machineType = "grain", group = "oilseed", fillType = safeFillType(FillType.SUNFLOWER) },
     
     -- Кукурудза
-    ["CORN"] = { machineType = "grain", group = "corn", fillType = safeFillType(FillType.MAIZE) },
+    ["CORN"]  = { machineType = "grain", group = "corn", fillType = safeFillType(FillType.MAIZE) },
+    ["MAIZE"] = { machineType = "grain", group = "corn", fillType = safeFillType(FillType.MAIZE) },
     
     -- Бобові
     ["SOYBEAN"]  = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.SOYBEAN) },
@@ -140,9 +160,11 @@ RHM_CombineSettingsDatabase.crops = {
     ["GRASS_WINDROW"]    = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.GRASS_WINDROW) },
     ["DRYGRASS_WINDROW"] = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.DRYGRASS_WINDROW) },
     ["STRAW_WINDROW"]    = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.STRAW) },
-    ["ALFALFA"]          = { machineType = "forage", group = "forage", fillType = nil },
-    ["ALFALFA_WINDROW"]  = { machineType = "forage", group = "forage", fillType = nil },
-    ["CLOVER_WINDROW"]   = { machineType = "forage", group = "forage", fillType = nil },
+    ["ALFALFA"]          = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.ALFALFA) },
+    ["LUCERNE"]          = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.ALFALFA) },
+    ["ALFALFA_WINDROW"]  = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.ALFALFA_WINDROW) },
+    ["LUCERNE_WINDROW"]  = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.ALFALFA_WINDROW) },
+    ["CLOVER_WINDROW"]   = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.CLOVER_WINDROW) },
     ["MAIZE_FORAGE"]     = { machineType = "forage", group = "forage", fillType = safeFillType(FillType.MAIZE) },
 
     -- Бавовник (machineType = "cotton")
@@ -499,15 +521,32 @@ function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
 end
 
 -- EN: Converts a game FillType integer to the internal crop name used in the database.
---     Handles windrow variants (_WINDROW suffix) and cut variants (CUT_ prefix) via fallback logic.
+--     Prioritizes actively discovered map crops and alias preservation.
 -- UA: Перетворює ціле число FillType гри на внутрішню назву культури у базі даних.
---     Обробляє варіанти валків (_WINDROW суфікс) та зрізані варіанти (CUT_ префікс) через резервну логіку.
-function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
+--     Пріоритезує активно виявлені культури карти та збереження аліасів.
+function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFruitType)
+    -- 1. Try inputFruitType first if available (most reliable direct field detection)
+    if inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
+        if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByIndex then
+            local fDesc = g_fruitTypeManager:getFruitTypeByIndex(inputFruitType)
+            if fDesc and fDesc.name then
+                local fNameUpper = fDesc.name:upper()
+                if self.validMapCrops and self.validMapCrops[fNameUpper] then
+                    return fNameUpper
+                end
+                local alias = self.cropAliases and self.cropAliases[fNameUpper]
+                if alias and self.validMapCrops and self.validMapCrops[alias] then
+                    return alias
+                end
+            end
+        end
+    end
+
     if not fillType or fillType == FillType.UNKNOWN then
         return nil
     end
 
-    -- Отримуємо точний рядок-ключ з таблиці FillType (наприклад "RICE_LONG_GRAIN")
+    -- 2. Extract string key from FillType index
     local fillTypeKey = nil
     for k, v in pairs(FillType) do
         if v == fillType then
@@ -524,14 +563,28 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
         return nil
     end
 
-    -- Шукаємо crop за ключем FillType
+    fillTypeKey = fillTypeKey:upper()
+
+    -- 3. If fillTypeKey is directly an active map crop, return it!
+    if self.validMapCrops and self.validMapCrops[fillTypeKey] then
+        return fillTypeKey
+    end
+
+    -- 4. If fillTypeKey has an alias registered on the map, prefer the map's naming
+    local directAlias = self.cropAliases and self.cropAliases[fillTypeKey]
+    if directAlias and self.validMapCrops and self.validMapCrops[directAlias] then
+        return directAlias
+    end
+
+    -- 5. Standard fillType to internal crop mapping table
     local fillTypeMapping = {
         ["WHEAT"] = "WHEAT",
         ["BARLEY"] = "BARLEY",
         ["OAT"] = "OAT",
         ["CANOLA"] = "CANOLA",
         ["SUNFLOWER"] = "SUNFLOWER",
-        ["MAIZE"] = "CORN",
+        ["MAIZE"] = "MAIZE",
+        ["CORN"] = "MAIZE",
         ["SOYBEAN"] = "SOYBEAN",
         ["SORGHUM"] = "SORGHUM",
         ["RICE"] = "RICE",
@@ -551,7 +604,7 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
         ["BUCKWHEAT"] = "BUCKWHEAT",
 
         ["LINSEED"] = "LINSEED",
-        ["FLAX"] = "LINSEED",
+        ["FLAX"] = "FLAX",
         ["MUSTARD"] = "MUSTARD",
         ["POPPY"] = "POPPY",
         ["HEMP"] = "HEMP",
@@ -592,13 +645,21 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
 
     local matchedName = fillTypeMapping[fillTypeKey]
 
+    -- If mapped name has an alias on current map, prefer the map's active fruit
+    if matchedName and self.validMapCrops then
+        local alias = self.cropAliases and self.cropAliases[matchedName]
+        if alias and self.validMapCrops[alias] and not self.validMapCrops[matchedName] then
+            matchedName = alias
+        end
+    end
+
     if not matchedName and fillTypeKey then
         if fillTypeKey:find("_WINDROW") then
             local baseType = fillTypeKey:gsub("_WINDROW", "")
-            matchedName = fillTypeMapping[baseType]
+            matchedName = fillTypeMapping[baseType] or baseType
         elseif fillTypeKey:find("CUT_") then
             local baseType = fillTypeKey:gsub("CUT_", "")
-            matchedName = fillTypeMapping[baseType]
+            matchedName = fillTypeMapping[baseType] or baseType
         end
     end
 
@@ -611,35 +672,58 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType)
     return matchedName
 end
 
----EN: Resolves the localized display name for a crop directly from the FS25 engine (fillType.title).
----UA: Отримує локалізовану назву культури безпосередньо з рушія FS25 (fillType.title).
+---EN: Resolves the localized display name for a crop directly from the FS25 engine (fillType.title or fruitType.title).
+---UA: Отримує локалізовану назву культури безпосередньо з рушія FS25 (fillType.title або fruitType.title).
 function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
     if not cropName then return "" end
 
     local cropData = self.crops[cropName]
+    local alias = self.cropAliases and self.cropAliases[cropName]
+    local aliasData = alias and self.crops[alias]
+
+    -- 0. Check stored localized title or name from initMapCrops
+    if cropData and cropData.title and cropData.title ~= "" then
+        return cropData.title
+    end
+    if cropData and cropData.name and cropData.name ~= "" and cropData.name ~= cropName then
+        return cropData.name
+    end
+    if aliasData and aliasData.title and aliasData.title ~= "" then
+        return aliasData.title
+    end
+    if aliasData and aliasData.name and aliasData.name ~= "" and aliasData.name ~= alias then
+        return aliasData.name
+    end
 
     -- 1. Try registered fillType index via g_fillTypeManager
-    if cropData and cropData.fillType and g_fillTypeManager then
-        local ft = g_fillTypeManager:getFillTypeByIndex(cropData.fillType)
+    local ftIdx = (cropData and cropData.fillType) or (aliasData and aliasData.fillType)
+    if ftIdx and g_fillTypeManager then
+        local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
         if ft and ft.title and ft.title ~= "" then
             return ft.title
         end
     end
 
-    -- 2. Try looking up fillType by cropName directly
+    -- 2. Try looking up fillType by cropName directly (and alias)
     if g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName then
-        local ftIdx = g_fillTypeManager:getFillTypeIndexByName(cropName)
-        if ftIdx and ftIdx > 0 then
-            local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
+        local idx = g_fillTypeManager:getFillTypeIndexByName(cropName)
+        if (not idx or idx <= 0) and alias then
+            idx = g_fillTypeManager:getFillTypeIndexByName(alias)
+        end
+        if idx and idx > 0 then
+            local ft = g_fillTypeManager:getFillTypeByIndex(idx)
             if ft and ft.title and ft.title ~= "" then
                 return ft.title
             end
         end
     end
 
-    -- 3. Try FruitType manager title
+    -- 3. Try FruitType manager title (and alias)
     if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByName then
         local fruit = g_fruitTypeManager:getFruitTypeByName(cropName)
+        if (not fruit or not fruit.title or fruit.title == "") and alias then
+            fruit = g_fruitTypeManager:getFruitTypeByName(alias)
+        end
         if fruit and fruit.title and fruit.title ~= "" then
             return fruit.title
         end
@@ -650,10 +734,20 @@ function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
     if g_i18n and g_i18n.hasText and g_i18n:hasText(l10nKey) then
         return g_i18n:getText(l10nKey)
     end
+    if alias then
+        local aliasKey = "fillType_" .. string.lower(alias)
+        if g_i18n and g_i18n.hasText and g_i18n:hasText(aliasKey) then
+            return g_i18n:getText(aliasKey)
+        end
+    end
 
     -- 5. Clean formatted fallback string
     local cleanName = cropName:gsub("_", " ")
     return cleanName:sub(1,1):upper() .. cleanName:sub(2):lower()
+end
+
+function RHM_CombineSettingsDatabase:getCropTitle(cropName)
+    return self:getCropDisplayName(cropName)
 end
 
 -- EN: Returns the full crop data record (template, machineType, group, fillType, names).
@@ -740,6 +834,11 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                     if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
                         self.crops[nameUpper].fillType = fruit.fillTypeIndex
                     end
+                    if fruit.title and fruit.title ~= "" then
+                        self.crops[nameUpper].title = fruit.title
+                        self.crops[nameUpper].name = fruit.title
+                    end
+                    self.crops[nameUpper].fruitType = fruit.index
                 else
                     local context = {
                         machineType = mType,
@@ -750,12 +849,28 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                     self.crops[nameUpper] = {
                         name = fruit.title or nameUpper,
                         nameEN = fruit.title or nameUpper,
+                        title = fruit.title or nameUpper,
                         template = template,
                         machineType = mType,
                         group = "mapCustom",
-                        fillType = fruit.fillTypeIndex
+                        fillType = fruit.fillTypeIndex,
+                        fruitType = fruit.index
                     }
                     rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' (%s) -> %s", nameUpper, tostring(fruit.title), mType))
+                end
+
+                -- Also link alias if defined in self.cropAliases (e.g. FLAX <-> LINSEED, MAIZE <-> CORN)
+                local alias = self.cropAliases and self.cropAliases[nameUpper]
+                if alias and self.crops[alias] then
+                    if not self.crops[alias].fillType and fruit.fillTypeIndex then
+                        self.crops[alias].fillType = fruit.fillTypeIndex
+                    end
+                    if fruit.title and fruit.title ~= "" then
+                        self.crops[alias].title = fruit.title
+                        self.crops[alias].name = fruit.title
+                    end
+                    self.crops[alias].fruitType = fruit.index
+                    self.crops[alias].canonicalMapCrop = nameUpper
                 end
             end
         end

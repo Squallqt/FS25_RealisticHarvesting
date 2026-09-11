@@ -625,7 +625,7 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --     grain, roots (POTATO/ONION/CARROT), vegetables (SPINACH/GREENBEAN), and forage outputs.
         -- UA: Визначаємо назву культури через RHM_CombineSettingsDatabase — повна таблиця включаючи
         --     зернові, коренеплоди (POTATO/ONION/CARROT), овочі (SPINACH/GREENBEAN) та форажні виводи.
-        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType)
+        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, inputFruitType)
 
         -- EN: CHAFF and SILAGE map to MAIZE_FORAGE in the DB — correct for corn silage but WRONG for
         --     direct grass/meadow silage (same output fill types in FS). That used factor ~0.30 and felt like

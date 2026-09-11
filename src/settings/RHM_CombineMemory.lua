@@ -544,7 +544,22 @@ end
 --     Механічні налаштування комбайна залишаються незмінними, доки гравець вручну не налаштує їх,
 --     не завантажить збережений пресет через [Load Preset], або не запустить AUTO калібрування (Тір 4).
 function RHM_CombineMemory:switchCrop(newCropName)
-    if not newCropName or newCropName == self.currentCrop then
+    if not newCropName then
+        return
+    end
+
+    -- EN: Normalize alias to active map crop name if needed (e.g. LINSEED -> FLAX if map uses FLAX)
+    -- UA: Нормалізуємо аліас до активної назви культури карти якщо потрібно (напр. LINSEED -> FLAX якщо карта має FLAX)
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.validMapCrops then
+        if not RHM_CombineSettingsDatabase.validMapCrops[newCropName] then
+            local alias = RHM_CombineSettingsDatabase.cropAliases and RHM_CombineSettingsDatabase.cropAliases[newCropName]
+            if alias and RHM_CombineSettingsDatabase.validMapCrops[alias] then
+                newCropName = alias
+            end
+        end
+    end
+
+    if newCropName == self.currentCrop then
         return
     end
 

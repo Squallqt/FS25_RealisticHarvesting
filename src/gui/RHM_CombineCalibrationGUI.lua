@@ -232,6 +232,20 @@ function RHMCombineCalibrationGUI:open(vehicle)
                     break
                 end
             end
+            -- EN: If currentCrop is an alias (e.g. LINSEED when map has FLAX), normalize to active map crop
+            -- UA: Якщо currentCrop є аліасом (напр. LINSEED коли на карті FLAX), нормалізуємо до культури карти
+            if not isValidCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
+                local alias = RHM_CombineSettingsDatabase.cropAliases[mem.currentCrop]
+                if alias then
+                    for _, c in ipairs(mapCrops) do
+                        if c == alias then
+                            mem.currentCrop = alias
+                            isValidCrop = true
+                            break
+                        end
+                    end
+                end
+            end
         end
 
         if not isValidCrop and mapCrops and #mapCrops > 0 then
@@ -305,6 +319,19 @@ function RHMCombineCalibrationGUI:cycleCrop(direction)
             if name == current then
                 index = i
                 break
+            end
+        end
+        -- EN: If current crop is an alias of a crop in the list, match the alias index
+        -- UA: Якщо поточна культура є аліасом у списку, зіставляємо індекс аліасу
+        if index == 1 and crops[1] ~= current and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
+            local alias = RHM_CombineSettingsDatabase.cropAliases[current]
+            if alias then
+                for i, name in ipairs(crops) do
+                    if name == alias then
+                        index = i
+                        break
+                    end
+                end
             end
         end
         index = index + direction
