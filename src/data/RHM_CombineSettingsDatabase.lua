@@ -707,6 +707,12 @@ function RHM_CombineSettingsDatabase:initMapCrops()
     local function detectMachineType(nameUpper)
         if nameUpper == "COTTON" then
             return "cotton"
+        elseif nameUpper:find("GRAPE") then
+            return "grape"
+        elseif nameUpper:find("OLIVE") then
+            return "olive"
+        elseif nameUpper:find("WEED") or nameUpper:find("OILSEEDRADISH") or nameUpper:find("STONE") then
+            return nil -- Not harvestable by standard combines
         elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
             or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
             or nameUpper:find("SPINACH") or (nameUpper:find("BEAN") and not nameUpper:find("SOYBEAN"))
@@ -725,29 +731,32 @@ function RHM_CombineSettingsDatabase:initMapCrops()
         local rawName = fruit.name
         if rawName and rawName ~= "" then
             local nameUpper = rawName:upper()
-            validMapCrops[nameUpper] = true
+            local mType = detectMachineType(nameUpper)
 
-            if self.crops[nameUpper] then
-                if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
-                    self.crops[nameUpper].fillType = fruit.fillTypeIndex
+            if mType ~= nil then
+                validMapCrops[nameUpper] = true
+
+                if self.crops[nameUpper] then
+                    if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
+                        self.crops[nameUpper].fillType = fruit.fillTypeIndex
+                    end
+                else
+                    local context = {
+                        machineType = mType,
+                        fruitType = fruit.index,
+                        fillType = fruit.fillTypeIndex
+                    }
+                    local template = self:calculatePhysicalOptimalSettings(nameUpper, context)
+                    self.crops[nameUpper] = {
+                        name = fruit.title or nameUpper,
+                        nameEN = fruit.title or nameUpper,
+                        template = template,
+                        machineType = mType,
+                        group = "mapCustom",
+                        fillType = fruit.fillTypeIndex
+                    }
+                    rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' (%s) -> %s", nameUpper, tostring(fruit.title), mType))
                 end
-            else
-                local mType = detectMachineType(nameUpper)
-                local context = {
-                    machineType = mType,
-                    fruitType = fruit.index,
-                    fillType = fruit.fillTypeIndex
-                }
-                local template = self:calculatePhysicalOptimalSettings(nameUpper, context)
-                self.crops[nameUpper] = {
-                    name = fruit.title or nameUpper,
-                    nameEN = fruit.title or nameUpper,
-                    template = template,
-                    machineType = mType,
-                    group = "mapCustom",
-                    fillType = fruit.fillTypeIndex
-                }
-                rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' (%s) -> %s", nameUpper, tostring(fruit.title), mType))
             end
         end
     end
@@ -774,15 +783,54 @@ function RHM_CombineSettingsDatabase:initMapCrops()
 end
 
 -- EN: Returns a sorted list of crop names that match the specified machine type and exist on the current map.
+--     Optionally filters by the active vehicle's hopper/tank supported fill types if provided.
 -- UA: Повертає відсортований список назв культур що відповідають типу машини та існують на поточній карті.
-function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType)
+--     Опціонально фільтрує за підтримуваними типами в бункері комбайна якщо вказано техніку.
+function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, vehicle)
     self:initMapCrops()
+
+    -- Gather supported fillType indices from vehicle hopper/tank if available
+    local supportedFillTypes = nil
+    if vehicle and vehicle.getFillUnits then
+        local fillUnits = vehicle:getFillUnits()
+        if fillUnits and #fillUnits > 0 then
+            for _, fu in ipairs(fillUnits) do
+                if fu.supportedFillTypes and next(fu.supportedFillTypes) ~= nil then
+                    supportedFillTypes = supportedFillTypes or {}
+                    for ftIdx, isSupp in pairs(fu.supportedFillTypes) do
+                        if isSupp then
+                            supportedFillTypes[ftIdx] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
 
     local names = {}
     for cropName, cropData in pairs(self.crops) do
         if cropData.machineType == machineType then
             if not self.validMapCrops or self.validMapCrops[cropName] then
-                table.insert(names, cropName)
+                local isSupported = true
+                if supportedFillTypes and cropData.fillType then
+                    if not supportedFillTypes[cropData.fillType] then
+                        isSupported = false
+                    end
+                end
+                if isSupported then
+                    table.insert(names, cropName)
+                end
+            end
+        end
+    end
+
+    -- Fallback to all map crops of this machineType if vehicle hopper filter was empty
+    if #names == 0 and supportedFillTypes ~= nil then
+        for cropName, cropData in pairs(self.crops) do
+            if cropData.machineType == machineType then
+                if not self.validMapCrops or self.validMapCrops[cropName] then
+                    table.insert(names, cropName)
+                end
             end
         end
     end

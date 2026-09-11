@@ -217,18 +217,40 @@ function RHMCombineCalibrationGUI:open(vehicle)
     self.activeVehicle = combineVehicle
     self.controllerVehicle = cv or vehicle or combineVehicle
 
-    -- EN: If combine has no active crop selected, default to first available crop on the map
-    -- UA: Якщо на комбайні ще не вибрано культуру, встановлюємо першу доступну на карті
+    -- EN: Validate or set active crop on the combine for the current machine type and map
+    -- UA: Перевіряємо або встановлюємо активну культуру на комбайні для поточного типу машини та карти
     if combineVehicle and combineVehicle.spec_rhm_Combine and combineVehicle.spec_rhm_Combine.combineMemory then
         local mem = combineVehicle.spec_rhm_Combine.combineMemory
-        if not mem.currentCrop then
-            local mType = combineVehicle.spec_rhm_Combine.machineType or "grain"
-            local mapCrops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(mType)
-            if mapCrops and #mapCrops > 0 then
-                mem.currentCrop = mapCrops[1]
-                if combineVehicle.spec_rhm_Combine.loadCalculator then
-                    combineVehicle.spec_rhm_Combine.loadCalculator.currentCrop = mapCrops[1]
+        local mType = combineVehicle.spec_rhm_Combine.machineType or "grain"
+        local mapCrops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(mType, combineVehicle)
+
+        local isValidCrop = false
+        if mem.currentCrop and mapCrops then
+            for _, c in ipairs(mapCrops) do
+                if c == mem.currentCrop then
+                    isValidCrop = true
+                    break
                 end
+            end
+        end
+
+        if not isValidCrop and mapCrops and #mapCrops > 0 then
+            local defaultCrop = mapCrops[1]
+            local preferred = (mType == "grain" and "WHEAT")
+                           or (mType == "root" and "POTATO")
+                           or (mType == "forage" and "MAIZE_FORAGE")
+                           or (mType == "cotton" and "COTTON")
+            if preferred then
+                for _, c in ipairs(mapCrops) do
+                    if c == preferred then
+                        defaultCrop = preferred
+                        break
+                    end
+                end
+            end
+            mem.currentCrop = defaultCrop
+            if combineVehicle.spec_rhm_Combine.loadCalculator then
+                combineVehicle.spec_rhm_Combine.loadCalculator.currentCrop = defaultCrop
             end
         end
     end
@@ -266,7 +288,7 @@ end
 function RHMCombineCalibrationGUI:cycleCrop(direction)
     local spec = self.activeVehicle.spec_rhm_Combine
     local machineType = spec.machineType or "grain"
-    local crops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType)
+    local crops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, self.activeVehicle)
     if #crops == 0 then return end
 
     local current = spec.combineMemory.currentCrop
