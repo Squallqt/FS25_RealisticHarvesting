@@ -505,7 +505,12 @@ end
 function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
     if not cropName then return nil end
 
-    local crop = self.crops[cropName]
+    if not self._mapCropsInitialized then
+        self:initMapCrops()
+    end
+
+    local rawUpper = cropName:upper()
+    local crop = self.crops[cropName] or self.crops[rawUpper]
     local baseTemplate = nil
 
     if crop then
@@ -517,15 +522,18 @@ function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
         -- Completely unknown or custom mod crop: dynamically derive physical template
         baseTemplate = self:calculatePhysicalOptimalSettings(cropName, context)
         local fillTypeIdx = (context and context.fillType) or (g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName and g_fillTypeManager:getFillTypeIndexByName(cropName))
+        local resolvedTitle = self:resolveEngineCropTitle(cropName, context and context.fruitType, fillTypeIdx)
+        resolvedTitle = resolvedTitle or self:getCropDisplayName(cropName)
         self.crops[cropName] = {
-            name = cropName,
-            nameEN = cropName,
+            name = resolvedTitle,
+            nameEN = resolvedTitle,
+            title = resolvedTitle,
             template = baseTemplate,
             machineType = (context and context.machineType) or "grain",
             group = "custom",
             fillType = (fillTypeIdx and fillTypeIdx > 0) and fillTypeIdx or nil,
         }
-        rhm_log(string.format("RHM: [CROP DB] Dynamically generated physical profile for mod crop '%s' (machine: %s)", cropName, tostring(self.crops[cropName].machineType)))
+        rhm_log(string.format("RHM: [CROP DB] Dynamically generated physical profile for mod crop '%s' ('%s', machine: %s)", cropName, tostring(resolvedTitle), tostring(self.crops[cropName].machineType)))
     end
 
     if context and (context.moisture or context.yield) then
@@ -540,6 +548,10 @@ end
 -- UA: Перетворює ціле число FillType гри на внутрішню назву культури у базі даних.
 --     Пріоритезує активно виявлені культури карти та збереження аліасів.
 function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFruitType)
+    if not self._mapCropsInitialized then
+        self:initMapCrops()
+    end
+
     -- 1. Try inputFruitType first if available (most reliable direct field detection)
     if inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
         if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByIndex then
@@ -609,6 +621,7 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
 
         -- FS25 New & Mod Crops
         ["PEA"] = "PEA",
+        ["PEAS"] = "PEAS",
         ["LENTIL"] = "LENTIL",
         ["CHICKPEA"] = "CHICKPEA",
 
@@ -687,76 +700,209 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
     return matchedName
 end
 
----EN: Resolves the localized display name for a crop directly from the FS25 engine (fillType.title or fruitType.title).
----UA: Отримує локалізовану назву культури безпосередньо з рушія FS25 (fillType.title або fruitType.title).
-function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
-    if not cropName then return "" end
-
-    local cropData = self.crops[cropName]
-    local alias = self.cropAliases and self.cropAliases[cropName]
-    local aliasData = alias and self.crops[alias]
-
-    -- 0. Check stored localized title or name from initMapCrops
-    if cropData and cropData.title and cropData.title ~= "" then
-        return cropData.title
-    end
-    if cropData and cropData.name and cropData.name ~= "" and cropData.name ~= cropName then
-        return cropData.name
-    end
-    if aliasData and aliasData.title and aliasData.title ~= "" then
-        return aliasData.title
-    end
-    if aliasData and aliasData.name and aliasData.name ~= "" and aliasData.name ~= alias then
-        return aliasData.name
+---EN: Resolves the official localized display name for a crop directly from the map/engine
+---    (fillType.title, fruitType.fillType -> fillType.title, or l10n dictionary).
+---UA: Отримує офіційну локалізовану назву культури безпосередньо з карти/рушія гри
+---    (fillType.title, fruitType.fillType -> fillType.title, або словник l10n).
+function RHM_CombineSettingsDatabase:resolveEngineCropTitle(cropName, fruitTypeIndex, fillTypeIndex)
+    if not cropName and not fruitTypeIndex and not fillTypeIndex then
+        return nil
     end
 
-    -- 1. Try registered fillType index via g_fillTypeManager
-    local ftIdx = (cropData and cropData.fillType) or (aliasData and aliasData.fillType)
-    if ftIdx and g_fillTypeManager then
-        local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
-        if ft and ft.title and ft.title ~= "" then
-            return ft.title
+    local rawNameUpper = cropName and cropName:upper()
+    local alias = rawNameUpper and self.cropAliases and self.cropAliases[rawNameUpper]
+
+    local function isValidTitle(title)
+        if not title or title == "" then return false end
+        local tUpper = title:upper()
+        if rawNameUpper and tUpper == rawNameUpper then return false end
+        if alias and tUpper == alias:upper() then return false end
+        return true
+    end
+
+    local function checkTitleStr(str)
+        if not str or str == "" then return nil end
+        if str:sub(1, 6) == "$l10n_" and g_i18n and g_i18n.hasText then
+            local key = str:sub(7)
+            if g_i18n:hasText(key) then
+                local res = g_i18n:getText(key)
+                if isValidTitle(res) then return res end
+            end
+        end
+        if isValidTitle(str) then
+            return str
+        end
+        return nil
+    end
+
+    -- 1. Try explicit fillTypeIndex via g_fillTypeManager
+    if fillTypeIndex and fillTypeIndex ~= FillType.UNKNOWN and g_fillTypeManager then
+        local ft = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+        if ft and ft.title then
+            local res = checkTitleStr(ft.title)
+            if res then return res end
         end
     end
 
-    -- 2. Try looking up fillType by cropName directly (and alias)
-    if g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName then
-        local idx = g_fillTypeManager:getFillTypeIndexByName(cropName)
-        if (not idx or idx <= 0) and alias then
-            idx = g_fillTypeManager:getFillTypeIndexByName(alias)
-        end
-        if idx and idx > 0 then
-            local ft = g_fillTypeManager:getFillTypeByIndex(idx)
-            if ft and ft.title and ft.title ~= "" then
-                return ft.title
+    -- 2. Try fruitTypeIndex -> fruit.fillTypeIndex -> fillType.title
+    if fruitTypeIndex and g_fruitTypeManager then
+        local fruit = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+        if fruit then
+            if fruit.fillTypeIndex and fruit.fillTypeIndex ~= FillType.UNKNOWN and g_fillTypeManager then
+                local ft = g_fillTypeManager:getFillTypeByIndex(fruit.fillTypeIndex)
+                if ft and ft.title then
+                    local res = checkTitleStr(ft.title)
+                    if res then return res end
+                end
+            end
+            if fruit.title then
+                local res = checkTitleStr(fruit.title)
+                if res then return res end
             end
         end
     end
 
-    -- 3. Try FruitType manager title (and alias)
-    if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByName then
-        local fruit = g_fruitTypeManager:getFruitTypeByName(cropName)
-        if (not fruit or not fruit.title or fruit.title == "") and alias then
+    -- 3. Try lookup by cropName in g_fillTypeManager (and alias)
+    if rawNameUpper and g_fillTypeManager then
+        if g_fillTypeManager.getFillTypeByName then
+            local ft = g_fillTypeManager:getFillTypeByName(rawNameUpper)
+            if ft and ft.title then
+                local res = checkTitleStr(ft.title)
+                if res then return res end
+            end
+            if alias then
+                local ftAlias = g_fillTypeManager:getFillTypeByName(alias)
+                if ftAlias and ftAlias.title then
+                    local res = checkTitleStr(ftAlias.title)
+                    if res then return res end
+                end
+            end
+        end
+        if g_fillTypeManager.getFillTypeIndexByName then
+            local ftIdx = g_fillTypeManager:getFillTypeIndexByName(rawNameUpper)
+            if ftIdx and ftIdx > 0 then
+                local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
+                if ft and ft.title then
+                    local res = checkTitleStr(ft.title)
+                    if res then return res end
+                end
+            end
+            if alias then
+                local ftIdxAlias = g_fillTypeManager:getFillTypeIndexByName(alias)
+                if ftIdxAlias and ftIdxAlias > 0 then
+                    local ft = g_fillTypeManager:getFillTypeByIndex(ftIdxAlias)
+                    if ft and ft.title then
+                        local res = checkTitleStr(ft.title)
+                        if res then return res end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 4. Try lookup by cropName in g_fruitTypeManager (and alias)
+    if rawNameUpper and g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByName then
+        local fruit = g_fruitTypeManager:getFruitTypeByName(rawNameUpper)
+        if not fruit and alias then
             fruit = g_fruitTypeManager:getFruitTypeByName(alias)
         end
+        if fruit then
+            if fruit.fillTypeIndex and fruit.fillTypeIndex ~= FillType.UNKNOWN and g_fillTypeManager then
+                local ft = g_fillTypeManager:getFillTypeByIndex(fruit.fillTypeIndex)
+                if ft and ft.title then
+                    local res = checkTitleStr(ft.title)
+                    if res then return res end
+                end
+            end
+            if fruit.title then
+                local res = checkTitleStr(fruit.title)
+                if res then return res end
+            end
+        end
+    end
+
+    -- 5. Try game and map l10n dictionary
+    if rawNameUpper and g_i18n and g_i18n.hasText then
+        local namesToCheck = { rawNameUpper }
+        if alias then table.insert(namesToCheck, alias) end
+        for _, n in ipairs(namesToCheck) do
+            local low = n:lower()
+            if g_i18n:hasText("fillType_" .. low) then
+                local res = g_i18n:getText("fillType_" .. low)
+                if isValidTitle(res) then return res end
+            end
+            if g_i18n:hasText("fruitType_" .. low) then
+                local res = g_i18n:getText("fruitType_" .. low)
+                if isValidTitle(res) then return res end
+            end
+        end
+    end
+
+    -- 6. Loose fallback: return whatever non-empty title was found in fillType or fruit
+    if fillTypeIndex and fillTypeIndex ~= FillType.UNKNOWN and g_fillTypeManager then
+        local ft = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+        if ft and ft.title and ft.title ~= "" then
+            return ft.title
+        end
+    end
+    if rawNameUpper and g_fillTypeManager and g_fillTypeManager.getFillTypeByName then
+        local ft = g_fillTypeManager:getFillTypeByName(rawNameUpper)
+        if ft and ft.title and ft.title ~= "" then
+            return ft.title
+        end
+    end
+    if fruitTypeIndex and g_fruitTypeManager then
+        local fruit = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
         if fruit and fruit.title and fruit.title ~= "" then
             return fruit.title
         end
     end
 
-    -- 4. Try base game l10n key (fillType_<name>)
-    local l10nKey = "fillType_" .. string.lower(cropName)
-    if g_i18n and g_i18n.hasText and g_i18n:hasText(l10nKey) then
-        return g_i18n:getText(l10nKey)
-    end
-    if alias then
-        local aliasKey = "fillType_" .. string.lower(alias)
-        if g_i18n and g_i18n.hasText and g_i18n:hasText(aliasKey) then
-            return g_i18n:getText(aliasKey)
-        end
+    return nil
+end
+
+---EN: Resolves the localized display name for a crop directly from the FS25 engine (fillType.title or fruitType.title).
+---UA: Отримує локалізовану назву культури безпосередньо з рушія FS25 (fillType.title або fruitType.title).
+function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
+    if not cropName then return "" end
+
+    if not self._mapCropsInitialized then
+        self:initMapCrops()
     end
 
-    -- 5. Clean formatted fallback string
+    local rawUpper = cropName:upper()
+    local cropData = self.crops[cropName] or self.crops[rawUpper]
+    local alias = self.cropAliases and (self.cropAliases[cropName] or self.cropAliases[rawUpper])
+    local aliasData = alias and self.crops[alias]
+
+    -- 0. Check stored localized title or name from initMapCrops if genuinely localized (not raw uppercase key)
+    if cropData and cropData.title and cropData.title ~= "" and cropData.title:upper() ~= rawUpper then
+        return cropData.title
+    end
+    if cropData and cropData.name and cropData.name ~= "" and cropData.name:upper() ~= rawUpper then
+        return cropData.name
+    end
+    if aliasData and aliasData.title and aliasData.title ~= "" and aliasData.title:upper() ~= rawUpper then
+        return aliasData.title
+    end
+    if aliasData and aliasData.name and aliasData.name ~= "" and aliasData.name:upper() ~= rawUpper then
+        return aliasData.name
+    end
+
+    -- 1. Try resolving directly from engine (fillType / fruitType / l10n)
+    local ftIdx = (cropData and cropData.fillType) or (aliasData and aliasData.fillType)
+    local frIdx = (cropData and cropData.fruitType) or (aliasData and aliasData.fruitType)
+    local engineTitle = self:resolveEngineCropTitle(cropName, frIdx, ftIdx)
+    if engineTitle and engineTitle ~= "" then
+        -- Cache into crop record so subsequent calls are instant
+        if cropData then
+            cropData.title = engineTitle
+            cropData.name = engineTitle
+        end
+        return engineTitle
+    end
+
+    -- 2. Clean formatted fallback string (e.g. "Peas", "Greenbean")
     local cleanName = cropName:gsub("_", " ")
     return cleanName:sub(1,1):upper() .. cleanName:sub(2):lower()
 end
@@ -769,15 +915,20 @@ end
 -- UA: Повертає повний запис даних культури (шаблон, тип машини, група, fillType, назви).
 function RHM_CombineSettingsDatabase:getCropData(cropName)
     if not cropName then return nil end
-    local crop = self.crops[cropName]
+    if not self._mapCropsInitialized then
+        self:initMapCrops()
+    end
+    local rawUpper = cropName:upper()
+    local crop = self.crops[cropName] or self.crops[rawUpper]
     if crop then
         if not crop.template then
             crop.template = self:calculatePhysicalOptimalSettings(cropName)
         end
         -- Dynamic backward compatibility for external consumers expecting .name or .nameEN
-        if not crop.name then
+        if not crop.name or crop.name:upper() == rawUpper then
             crop.name = self:getCropDisplayName(cropName)
             crop.nameEN = crop.name
+            crop.title = crop.name
         end
     end
     return crop
@@ -845,13 +996,16 @@ function RHM_CombineSettingsDatabase:initMapCrops()
             if mType ~= nil then
                 validMapCrops[nameUpper] = true
 
+                local resolvedTitle = self:resolveEngineCropTitle(nameUpper, fruit.index, fruit.fillTypeIndex)
+                resolvedTitle = resolvedTitle or (fruit.title and fruit.title ~= "" and fruit.title) or nameUpper
+
                 if self.crops[nameUpper] then
                     if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
                         self.crops[nameUpper].fillType = fruit.fillTypeIndex
                     end
-                    if fruit.title and fruit.title ~= "" then
-                        self.crops[nameUpper].title = fruit.title
-                        self.crops[nameUpper].name = fruit.title
+                    if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
+                        self.crops[nameUpper].title = resolvedTitle
+                        self.crops[nameUpper].name = resolvedTitle
                     end
                     self.crops[nameUpper].fruitType = fruit.index
                 else
@@ -862,16 +1016,16 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                     }
                     local template = self:calculatePhysicalOptimalSettings(nameUpper, context)
                     self.crops[nameUpper] = {
-                        name = fruit.title or nameUpper,
-                        nameEN = fruit.title or nameUpper,
-                        title = fruit.title or nameUpper,
+                        name = resolvedTitle,
+                        nameEN = resolvedTitle,
+                        title = resolvedTitle,
                         template = template,
                         machineType = mType,
                         group = "mapCustom",
                         fillType = fruit.fillTypeIndex,
                         fruitType = fruit.index
                     }
-                    rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' (%s) -> %s", nameUpper, tostring(fruit.title), mType))
+                    rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' ('%s') -> %s", nameUpper, tostring(resolvedTitle), mType))
                 end
 
                 -- Also link alias if defined in self.cropAliases (e.g. FLAX <-> LINSEED, MAIZE <-> CORN)
@@ -880,9 +1034,9 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                     if not self.crops[alias].fillType and fruit.fillTypeIndex then
                         self.crops[alias].fillType = fruit.fillTypeIndex
                     end
-                    if fruit.title and fruit.title ~= "" then
-                        self.crops[alias].title = fruit.title
-                        self.crops[alias].name = fruit.title
+                    if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
+                        self.crops[alias].title = resolvedTitle
+                        self.crops[alias].name = resolvedTitle
                     end
                     self.crops[alias].fruitType = fruit.index
                     self.crops[alias].canonicalMapCrop = nameUpper

@@ -85,6 +85,12 @@ local function loadedMission(mission, node)
         RHM_MoistureAdapter.initialize()
     end
 
+    -- EN: Register and localize all map fruit and fill types immediately on mission load
+    -- UA: Реєструємо та локалізуємо всі типи культур та врожаїв карти одразу при завантаженні місії
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.initMapCrops then
+        RHM_CombineSettingsDatabase:initMapCrops()
+    end
+
     -- EN: Register custom help menu tab icons
     -- UA: Реєструємо власні іконки для вкладок меню довідки
     local tabs = {"overview", "hud", "calibration", "special", "croploss", "difficulty", "upgrades", "moisture"}
