@@ -349,9 +349,22 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
             end
 
             -- D: Enforce physical minimum power requirements based on working width and cutter type
-            local width = 6.0
-            if obj.spec_cutter and obj.spec_cutter.workingWidth then
+            local width = 0
+            if obj.getWorkingWidth then
+                local w = obj:getWorkingWidth()
+                if w and w > 0 then width = w end
+            end
+            if width == 0 and obj.spec_cutter and obj.spec_cutter.workingWidth then
                 width = obj.spec_cutter.workingWidth
+            end
+            if width == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+                local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+                if item and item.specs and item.specs.workingWidth then
+                    width = tonumber(item.specs.workingWidth) or width
+                end
+            end
+            if width == 0 then
+                width = 6.0
             end
 
             local minHpPerM = 7.5 -- Standard grain/draper cutter (7.5 HP/m - matches GIANTS neededMaxPtoPower)
@@ -389,8 +402,24 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
     end
 
     -- If self-propelled machine with built-in cutter and no separate PTO consumer was registered:
-    if headerHp == 0 and vehicle == motorCarrier and vehicle.spec_cutter ~= nil then
-        local width = (vehicle.spec_cutter and vehicle.spec_cutter.workingWidth) or 3.0
+    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil) then
+        local width = 0
+        if vehicle.getWorkingWidth then
+            local w = vehicle:getWorkingWidth()
+            if w and w > 0 then width = w end
+        end
+        if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
+            width = vehicle.spec_cutter.workingWidth
+        end
+        if width == 0 and vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+            local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+            if item and item.specs and item.specs.workingWidth then
+                width = tonumber(item.specs.workingWidth) or width
+            end
+        end
+        if width == 0 then
+            width = 3.0
+        end
         local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
         local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
         if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
@@ -877,17 +906,26 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
 
         local isSurfaceCrop = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
         if machineType == "root" and not isSurfaceCrop then
-            local width = 3.0
-            if vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
+            local width = 0
+            if vehicle.getWorkingWidth then
+                local w = vehicle:getWorkingWidth()
+                if w and w > 0 then width = w end
+            end
+            if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
                 width = vehicle.spec_cutter.workingWidth
-            elseif vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+            elseif width == 0 and vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
                 for cutter, _ in pairs(vehicle.spec_combine.attachedCutters) do
+                    if cutter.getWorkingWidth then
+                        local w = cutter:getWorkingWidth()
+                        if w and w > 0 then width = w break end
+                    end
                     if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
                         width = cutter.spec_cutter.workingWidth
                         break
                     end
                 end
             end
+            if width == 0 then width = 3.0 end
             pSoil = width * 7.0 -- ~7 HP per meter of cutting width in soil
         end
     end

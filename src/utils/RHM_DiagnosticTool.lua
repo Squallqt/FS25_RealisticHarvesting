@@ -97,8 +97,18 @@ function RHM_DiagnosticTool:extractVehicleData(vehicle)
             local obj = impl.object
             if obj and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter or obj.spec_pickup) then
                 headerName = obj:getFullName() or headerName
-                if obj.spec_cutter and obj.spec_cutter.workingWidth then
+                if obj.getWorkingWidth then
+                    local w = obj:getWorkingWidth()
+                    if w and w > 0 then headerWidth = w end
+                end
+                if headerWidth == 0 and obj.spec_cutter and obj.spec_cutter.workingWidth then
                     headerWidth = obj.spec_cutter.workingWidth
+                end
+                if headerWidth == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+                    local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+                    if item and item.specs and item.specs.workingWidth then
+                        headerWidth = tonumber(item.specs.workingWidth) or headerWidth
+                    end
                 end
                 if obj.xmlFile then
                     headerCat = obj.xmlFile:getValue("vehicle.storeData.category") or headerCat
@@ -106,8 +116,18 @@ function RHM_DiagnosticTool:extractVehicleData(vehicle)
             end
         end
     end
+    if headerWidth == 0 and vehicle.getWorkingWidth then
+        local w = vehicle:getWorkingWidth()
+        if w and w > 0 then headerWidth = w end
+    end
     if headerWidth == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
         headerWidth = vehicle.spec_cutter.workingWidth
+    end
+    if headerWidth == 0 and vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+        local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+        if item and item.specs and item.specs.workingWidth then
+            headerWidth = tonumber(item.specs.workingWidth) or headerWidth
+        end
     end
     if headerWidth == 0 then
         headerWidth = 3.0 -- safe fallback
