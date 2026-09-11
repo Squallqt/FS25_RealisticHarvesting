@@ -364,13 +364,23 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
             end
 
             local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+            local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+            if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+                local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+                if fruitTypeDesc and fruitTypeDesc.name then
+                    cropUpper = string.upper(fruitTypeDesc.name)
+                end
+            end
+
             if cropUpper:find("CORN") or cropUpper:find("MAIZE") then
                 if not isForageCutter then
                     minHpPerM = 18.0 -- Chopping corn header with stalk shredders
                 end
+            elseif cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH") then
+                minHpPerM = 28.0 -- Vegetable pod stripper / spinach cutter
             elseif cropUpper:find("POTATO") or cropUpper:find("BEET") or cropUpper:find("CARROT") or cropUpper:find("PARSNIP")
                 or cropUpper:find("ONION") or cropUpper:find("GARLIC") then
-                minHpPerM = 15.0 -- Root intake & lifting knives / topper
+                minHpPerM = 22.0 -- Root intake & lifting knives / topper
             end
 
             ptoHp = math.max(ptoHp, width * minHpPerM)
@@ -382,8 +392,15 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
     if headerHp == 0 and vehicle == motorCarrier and vehicle.spec_cutter ~= nil then
         local width = (vehicle.spec_cutter and vehicle.spec_cutter.workingWidth) or 3.0
         local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+        if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+            local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+            if fruitTypeDesc and fruitTypeDesc.name then
+                cropUpper = string.upper(fruitTypeDesc.name)
+            end
+        end
         local isStripper = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
-        local hpPerMeter = isStripper and 38.0 or 25.0
+        local hpPerMeter = isStripper and 28.0 or 22.0
         headerHp = width * hpPerMeter
     end
 
@@ -454,34 +471,34 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
     elseif machineType == "root" then
         if cropName:find("SPINACH") then
             -- Spinach: dense wet leafy biomass, Oxbo cutter bar
-            baseESpec = 12.5
+            baseESpec = 6.5
         elseif (cropName:find("GREEN") and (cropName:find("BEAN") or cropName:find("PEA")))
                or cropName:find("GREENBEANS") or cropName:find("GREENBEAN") then
             -- Fresh green beans: pod stripping reel through massive bush mass
-            baseESpec = 13.0
+            baseESpec = 18.0
         elseif cropName:find("PEA") or cropName:find("BEAN") or cropName:find("LENTIL") or cropName:find("LUPIN") then
-            baseESpec = 10.2
+            baseESpec = 16.0
         elseif cropName:find("POTATO") then
             -- Potatoes: heavy ridge lifting, soil separation sieves, haulm chopper
-            baseESpec = 1.35
+            baseESpec = 3.05
         elseif cropName:find("SUGARBEET") or cropName:find("BEET") then
             -- Sugar beets: round shape, squeeze wheels, heavy turbine cleaning
-            baseESpec = 1.15
+            baseESpec = 2.10
         elseif cropName:find("BEETROOT") or cropName:find("RED BEET") or cropName:find("REDBEET") then
             -- Red table beet: firm root, rubber pulling belts
-            baseESpec = 1.25
+            baseESpec = 2.20
         elseif cropName:find("CARROT") then
             -- Carrots: deep taproots, pulling belts, haulm cutters
-            baseESpec = 1.20
+            baseESpec = 2.20
         elseif cropName:find("PARSNIP") or cropName:find("RUTABAGA") or cropName:find("TURNIP") then
             -- Parsnips: tapered taproot, firm soil suction
-            baseESpec = 1.20
+            baseESpec = 2.20
         elseif cropName:find("ONION") then
-            baseESpec = 1.25
+            baseESpec = 2.20
         elseif cropName:find("GARLIC") then
-            baseESpec = 1.30
+            baseESpec = 2.30
         else
-            baseESpec = 1.20 -- Universal root fallback
+            baseESpec = 2.10 -- Universal root fallback
         end
 
     -- 3. COTTON HARVESTERS (Fluffy, low density lint picking & baling)
@@ -587,10 +604,22 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         actualYield = yRef
     end
 
-    -- Agricultural Harvest Index curve (power law alpha = 0.70)
+    -- Agricultural Harvest Index curve:
+    -- In grain combines, grain-to-straw ratio improves at high yields (alpha = 0.70).
+    -- In root, vegetable, forage, and whole-crop harvesters, the entire mass is processed without straw dilution (alpha = 0.12).
+    local alpha = 0.70
+    local minFactor = 0.45
+    if machineType == "root" then
+        alpha = 0.12
+        minFactor = 0.75
+    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" then
+        alpha = 0.15
+        minFactor = 0.75
+    end
+
     local yieldRatio = yRef / actualYield
-    local yieldFactor = math.pow(yieldRatio, 0.70)
-    yieldFactor = math.max(0.45, math.min(1.25, yieldFactor))
+    local yieldFactor = math.pow(yieldRatio, alpha)
+    yieldFactor = math.max(minFactor, math.min(1.25, yieldFactor))
 
     return baseESpec * yieldFactor
 end
@@ -833,6 +862,14 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
         -- Only for subterranean root crops (carrots, parsnips, potatoes, sugar beets, onions).
         -- Surface vegetables (green beans, peas, spinach) do not cut underground!
         local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+        if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+            local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+            if fruitTypeDesc and fruitTypeDesc.name then
+                cropUpper = string.upper(fruitTypeDesc.name)
+            end
+        end
+
         local isSurfaceCrop = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
         if machineType == "root" and not isSurfaceCrop then
             local width = 3.0
@@ -846,7 +883,7 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
                     end
                 end
             end
-            pSoil = width * 5.0 -- ~5 HP per meter of cutting width in soil
+            pSoil = width * 7.0 -- ~7 HP per meter of cutting width in soil
         end
     end
 
