@@ -82,6 +82,7 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.INT,    cur .. "#lowerSieve",  "Lower sieve", 50)
     schema:register(XMLValueType.INT,    cur .. "#rotor",       "Rotor", 50)
     schema:register(XMLValueType.INT,    cur .. "#feeder",      "Feeder", 50)
+    schema:register(XMLValueType.INT,    cur .. "#targetEngineLoad", "Target engine load", 88)
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -293,9 +294,10 @@ function rhm_Combine:onLoad(savegame)
                         local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
                         if ft and ft.name then
                             local name = string.upper(ft.name)
-                            if name == "POTATO" or name == "SUGARBEET" or name == "BEETROOT"
-                               or name == "CARROT" or name == "PARSNIP" or name == "ONION"
-                               or name == "SPINACH" or name == "GREENBEAN" or name == "SUGARCANE" then
+                            if name:find("POTATO") or name:find("BEET") or name:find("CARROT")
+                               or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
+                               or name:find("SPINACH") or (name:find("BEAN") and not name:find("SOYBEAN"))
+                               or name:find("SUGARCANE") then
                                 isRoot = true
                                 break
                             elseif name == "COTTON" then

@@ -123,7 +123,13 @@ function RHM_DiagnosticTool:extractVehicleData(vehicle)
     local fillDesc = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(outputFillType)
     local fillName = (fillDesc and fillDesc.name) or fruitName
 
-    local density = (fillDesc and fillDesc.massPerLiter and fillDesc.massPerLiter > 0 and fillDesc.massPerLiter) or 0.75
+    local density = 0.75
+    if fillDesc and fillDesc.massPerLiter and fillDesc.massPerLiter > 0 then
+        density = fillDesc.massPerLiter
+        if density < 0.05 then
+            density = density * 1000
+        end
+    end
 
     local lpsqm = 0.85
     if fruitDesc then

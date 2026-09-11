@@ -454,7 +454,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         if cropName:find("POPLAR") or cropName:find("WOOD") then
             baseESpec = 10.0 -- Poplar wood chipping: high-resistance wood cutting drum
         elseif cropName:find("MAIZE") or cropName:find("CORN") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
-            baseESpec = 2.0 -- Whole corn silage: heavy biomass + corn cracker roller mills
+            baseESpec = 2.35 -- Whole corn silage: heavy biomass + corn cracker roller mills
         elseif cropName:find("GRASS") or cropName:find("MEADOW") or cropName:find("ALFALFA") or cropName:find("LUCERNE") or cropName:find("CLOVER") then
             if isPickup then
                 baseESpec = 1.8 -- Swath pickup: pre-mowed windrow, low cutter resistance
@@ -467,32 +467,35 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
             baseESpec = isPickup and 1.8 or 2.8 -- Universal forage fallback
         end
 
-    -- 2. ROOT & SPECIALIZED VEGETABLE HARVESTERS (Lifting, cleaning, pod stripping)
+    -- 2. ROOT & SPECIALIZED VEGETABLE HARVESTERS (Lifting, cleaning, pod stripping, stalk cutting)
     elseif machineType == "root" then
-        if cropName:find("SPINACH") then
+        if cropName:find("SUGARCANE") or cropName:find("CANE") then
+            -- Sugarcane harvesters categorized as root vehicles in FS25
+            baseESpec = 4.8
+        elseif cropName:find("SPINACH") then
             -- Spinach: dense wet leafy biomass, Oxbo cutter bar
-            baseESpec = 6.5
+            baseESpec = 7.8
         elseif (cropName:find("GREEN") and (cropName:find("BEAN") or cropName:find("PEA")))
                or cropName:find("GREENBEANS") or cropName:find("GREENBEAN") then
             -- Fresh green beans: pod stripping reel through massive bush mass
-            baseESpec = 18.0
+            baseESpec = 14.5
         elseif cropName:find("PEA") or cropName:find("BEAN") or cropName:find("LENTIL") or cropName:find("LUPIN") then
-            baseESpec = 16.0
+            baseESpec = 14.0
         elseif cropName:find("POTATO") then
             -- Potatoes: heavy ridge lifting, soil separation sieves, haulm chopper
-            baseESpec = 3.05
+            baseESpec = 2.55
         elseif cropName:find("SUGARBEET") or cropName:find("BEET") then
             -- Sugar beets: round shape, squeeze wheels, heavy turbine cleaning
             baseESpec = 2.10
         elseif cropName:find("BEETROOT") or cropName:find("RED BEET") or cropName:find("REDBEET") then
             -- Red table beet: firm root, rubber pulling belts
-            baseESpec = 2.20
+            baseESpec = 2.40
         elseif cropName:find("CARROT") then
             -- Carrots: deep taproots, pulling belts, haulm cutters
-            baseESpec = 2.20
+            baseESpec = 1.65
         elseif cropName:find("PARSNIP") or cropName:find("RUTABAGA") or cropName:find("TURNIP") then
             -- Parsnips: tapered taproot, firm soil suction
-            baseESpec = 2.20
+            baseESpec = 2.10
         elseif cropName:find("ONION") then
             baseESpec = 2.20
         elseif cropName:find("GARLIC") then
@@ -507,7 +510,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
 
     -- 4. SUGARCANE HARVESTERS
     elseif cropName:find("SUGARCANE") or cropName:find("CANE") then
-        baseESpec = 5.5 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
+        baseESpec = 4.8 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
 
     -- 5. GRAPES & OLIVES (Specialized straddle harvesters)
     elseif cropName:find("GRAPE") then
@@ -521,7 +524,9 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
             baseESpec = 2.2 -- Windrow pickup for grain combine
         elseif cropName:find("CORN") or cropName:find("MAIZE") then
             -- Corn for grain: cobs snapped on header, threshed in rotor
-            baseESpec = 3.8
+            baseESpec = 4.4
+        elseif cropName:find("ONION") or cropName:find("GARLIC") then
+            baseESpec = 2.20 -- Trailed onion lifters running on tractor/grain spec
         elseif cropName:find("SUNFLOWER") then
             -- Sunflower: low density (0.35), massive head volume, stalk cutting
             baseESpec = 19.0
