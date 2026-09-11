@@ -9,6 +9,24 @@ RHM_DiagnosticTool.recordedThisPass = {}
 RHM_DiagnosticTool.autoRecordEnabled = false
 RHM_DiagnosticTool.harvestStableTime = {}
 
+local function safeString(val, default)
+    if val == nil then return default or "" end
+    if type(val) == "string" then return val end
+    if type(val) == "number" or type(val) == "boolean" then return tostring(val) end
+    if type(val) == "table" then
+        local parts = {}
+        for _, v in pairs(val) do
+            if type(v) == "string" or type(v) == "number" then
+                table.insert(parts, tostring(v))
+            end
+        end
+        if #parts > 0 then
+            return table.concat(parts, ", ")
+        end
+    end
+    return default or ""
+end
+
 ---EN: Returns path to the XML file for saving crop test records.
 ---UA: Повертає шлях до XML файлу для збереження результатів тестування культур.
 function RHM_DiagnosticTool:getXmlFilePath()
@@ -83,7 +101,17 @@ function RHM_DiagnosticTool:extractVehicleData(vehicle)
     -- 1. VEHICLE INFO
     local vehicleName = vehicle:getFullName() or "Unknown Vehicle"
     local vehicleConfig = vehicle.configFileName or ""
-    local category = (vehicle.xmlFile and vehicle.xmlFile:getValue("vehicle.storeData.category")) or "unknown"
+    local category = "unknown"
+    if vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+        local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+        if item and item.categoryName then
+            category = item.categoryName
+        end
+    end
+    if category == "unknown" and vehicle.xmlFile then
+        local rawCat = vehicle.xmlFile:getValue("vehicle.storeData.category")
+        category = safeString(rawCat, "unknown")
+    end
     local machineType = (rhmSpec.combineMemory and rhmSpec.combineMemory.machineType) or rhmSpec.machineType or "grain"
     local engineHp = calc:getEnginePowerHp(vehicle)
     local effectiveHp = calc.lastEffectiveHp or engineHp
@@ -110,8 +138,15 @@ function RHM_DiagnosticTool:extractVehicleData(vehicle)
                         headerWidth = tonumber(item.specs.workingWidth) or headerWidth
                     end
                 end
-                if obj.xmlFile then
-                    headerCat = obj.xmlFile:getValue("vehicle.storeData.category") or headerCat
+                if obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+                    local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+                    if item and item.categoryName then
+                        headerCat = item.categoryName
+                    end
+                end
+                if headerCat == "unknown" and obj.xmlFile then
+                    local rawCat = obj.xmlFile:getValue("vehicle.storeData.category")
+                    headerCat = safeString(rawCat, headerCat)
                 end
             end
         end
@@ -257,35 +292,35 @@ function RHM_DiagnosticTool:saveRecordToXml(data)
 
         local k = string.format("cropTestRecords.record(%d)", count)
         xml:setInt(k .. "#id", count + 1)
-        xml:setString(k .. "#timestamp", data.timestamp or "")
-        xml:setString(k .. "#crop", data.fruitName or "")
-        xml:setString(k .. "#fillType", data.fillName or "")
-        xml:setString(k .. "#vehicle", data.vehicleName or "")
-        xml:setString(k .. "#category", data.category or "")
-        xml:setString(k .. "#machineType", data.machineType or "")
-        xml:setFloat(k .. "#engineHp", data.engineHp or 0)
-        xml:setString(k .. "#header", data.headerName or "")
-        xml:setFloat(k .. "#width", data.headerWidth or 0)
-        xml:setFloat(k .. "#headerHp", data.headerHp or 0)
-        xml:setFloat(k .. "#yieldTph", data.actualYield or 0)
-        xml:setFloat(k .. "#nominalYieldTph", data.yRef or 0)
-        xml:setFloat(k .. "#yieldRatio", data.yieldRatio or 1.0)
-        xml:setFloat(k .. "#speedKmh", data.currentSpeed or 0)
-        xml:setFloat(k .. "#targetSpeedKmh", data.targetSpeed or 0)
-        xml:setFloat(k .. "#vanillaSpeedKmh", data.vanillaSpeed or 0)
-        xml:setFloat(k .. "#throughputTph", data.throughputTph or 0)
-        xml:setFloat(k .. "#massFlowKgS", data.massFlowKgS or 0)
-        xml:setFloat(k .. "#engineLoadPct", data.engineLoad or 0)
-        xml:setFloat(k .. "#cropLossPct", data.cropLoss or 0)
-        xml:setFloat(k .. "#eSpec", data.eSpec or 0)
-        xml:setFloat(k .. "#moisture", data.moisture or 0)
-        xml:setFloat(k .. "#density", data.density or 0.75)
-        xml:setFloat(k .. "#lpsqm", data.lpsqm or 0.85)
-        xml:setFloat(k .. "#pBase", data.pBase or 0)
-        xml:setFloat(k .. "#pHeader", data.pHeader or 0)
-        xml:setFloat(k .. "#pProcess", data.pProcess or 0)
-        xml:setFloat(k .. "#pSoil", data.pSoil or 0)
-        xml:setFloat(k .. "#pTotal", data.pTotal or 0)
+        xml:setString(k .. "#timestamp", safeString(data.timestamp))
+        xml:setString(k .. "#crop", safeString(data.fruitName))
+        xml:setString(k .. "#fillType", safeString(data.fillName))
+        xml:setString(k .. "#vehicle", safeString(data.vehicleName))
+        xml:setString(k .. "#category", safeString(data.category))
+        xml:setString(k .. "#machineType", safeString(data.machineType))
+        xml:setFloat(k .. "#engineHp", tonumber(data.engineHp) or 0)
+        xml:setString(k .. "#header", safeString(data.headerName))
+        xml:setFloat(k .. "#width", tonumber(data.headerWidth) or 0)
+        xml:setFloat(k .. "#headerHp", tonumber(data.headerHp) or 0)
+        xml:setFloat(k .. "#yieldTph", tonumber(data.actualYield) or 0)
+        xml:setFloat(k .. "#nominalYieldTph", tonumber(data.yRef) or 0)
+        xml:setFloat(k .. "#yieldRatio", tonumber(data.yieldRatio) or 1.0)
+        xml:setFloat(k .. "#speedKmh", tonumber(data.currentSpeed) or 0)
+        xml:setFloat(k .. "#targetSpeedKmh", tonumber(data.targetSpeed) or 0)
+        xml:setFloat(k .. "#vanillaSpeedKmh", tonumber(data.vanillaSpeed) or 0)
+        xml:setFloat(k .. "#throughputTph", tonumber(data.throughputTph) or 0)
+        xml:setFloat(k .. "#massFlowKgS", tonumber(data.massFlowKgS) or 0)
+        xml:setFloat(k .. "#engineLoadPct", tonumber(data.engineLoad) or 0)
+        xml:setFloat(k .. "#cropLossPct", tonumber(data.cropLoss) or 0)
+        xml:setFloat(k .. "#eSpec", tonumber(data.eSpec) or 0)
+        xml:setFloat(k .. "#moisture", tonumber(data.moisture) or 0)
+        xml:setFloat(k .. "#density", tonumber(data.density) or 0.75)
+        xml:setFloat(k .. "#lpsqm", tonumber(data.lpsqm) or 0.85)
+        xml:setFloat(k .. "#pBase", tonumber(data.pBase) or 0)
+        xml:setFloat(k .. "#pHeader", tonumber(data.pHeader) or 0)
+        xml:setFloat(k .. "#pProcess", tonumber(data.pProcess) or 0)
+        xml:setFloat(k .. "#pSoil", tonumber(data.pSoil) or 0)
+        xml:setFloat(k .. "#pTotal", tonumber(data.pTotal) or 0)
 
         xml:save()
         xml:delete()

@@ -676,10 +676,27 @@ end
 ---UA: Розраховує номінальну базову пропускну здатність (кг/с) на основі потужності двигуна та типу машини.
 function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
     local hp = self:getEnginePowerHp(vehicle)
-    local keyCategory = "vehicle.storeData.category"
-    local category = vehicle.xmlFile and vehicle.xmlFile:getValue(keyCategory) or ""
-    local isForage = (category == "forageHarvesters" or category == "forageHarvesterCutters")
-    local isRoot = (category == "beetVehicles" or category == "beetHarvesting" or category == "potatoVehicles" or category == "vegetableVehicles")
+    local category = ""
+    if vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+        local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+        if item and item.categoryName then
+            category = tostring(item.categoryName):lower()
+        end
+    end
+    if category == "" and vehicle.xmlFile then
+        local rawCat = vehicle.xmlFile:getValue("vehicle.storeData.category")
+        if type(rawCat) == "table" then
+            category = table.concat(rawCat, " "):lower()
+        elseif type(rawCat) == "string" then
+            category = rawCat:lower()
+        end
+    end
+
+    local rhmSpec = vehicle.spec_rhm_Combine
+    local machineType = (rhmSpec and rhmSpec.combineMemory and rhmSpec.combineMemory.machineType) or (rhmSpec and rhmSpec.machineType) or ""
+
+    local isForage = (machineType == "forage" or category:find("forage") ~= nil)
+    local isRoot = (machineType == "root" or category:find("beet") ~= nil or category:find("potato") ~= nil or category:find("vegetable") ~= nil)
 
     -- Nominal throughput at 100% processing load (t/h)
     local nominalTph = 0
