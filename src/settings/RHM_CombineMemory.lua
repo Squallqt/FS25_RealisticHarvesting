@@ -153,6 +153,67 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
     end
 
+    local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
+
+    -- 1. Prioritize user-saved profile for this crop if player has previously saved one
+    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
+    local userProfile = pm and pm:getProfile(cropName)
+
+    if userProfile then
+        for _, pName in ipairs(activeParams) do
+            if userProfile[pName] ~= nil then
+                self.currentSettings[pName] = userProfile[pName]
+            end
+        end
+        if userProfile.targetEngineLoad ~= nil then
+            self.currentSettings.targetEngineLoad = userProfile.targetEngineLoad
+        end
+
+        if pkgLevel >= 4 then
+            self.mode = "AUTO"
+            self.autoSwitchEnabled = true
+        else
+            self.mode = "MANUAL"
+            self.autoSwitchEnabled = false
+        end
+
+        self.currentCrop = cropName
+        if self.combine and self.combine.spec_rhm_Combine and self.combine.spec_rhm_Combine.loadCalculator then
+            self.combine.spec_rhm_Combine.loadCalculator.currentCrop = cropName
+        end
+
+        local cropTitle = cropName
+        if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
+            cropTitle = RHM_CombineSettingsDatabase:getCropTitle(cropName)
+        end
+
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Loaded player's saved profile for %s (rotor=%s, fan=%s, conc=%s, top=%s, bot=%s, targetLoad=%s)",
+            cropName,
+            tostring(self.currentSettings.rotor),
+            tostring(self.currentSettings.fan),
+            tostring(self.currentSettings.feeder),
+            tostring(self.currentSettings.upperSieve),
+            tostring(self.currentSettings.lowerSieve),
+            tostring(self.currentSettings.targetEngineLoad)))
+
+        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+            local btnText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_gui_btn_load_preset")) and g_i18n:getText("rhm_gui_btn_load_preset") or "Loaded Profile"
+            local msg = string.format("RHM [AI]: %s (%s)", btnText, tostring(cropTitle))
+            g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+        end
+
+        -- In multiplayer, notify clients of updated helper settings
+        if self.combine and g_server then
+            local spec = self.combine.spec_rhm_Combine
+            if spec and spec.settingsDirtyFlag then
+                self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
+            end
+        end
+
+        return true
+    end
+
+    -- 2. Fall back to electronics package tier-based tuning when no profile is saved
     if not context and self.combine and self.combine.spec_rhm_Combine then
         local rhmSpec = self.combine.spec_rhm_Combine
         context = {
@@ -169,8 +230,6 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     if not optimalSettings then
         return false
     end
-
-    local activeParams = RHM_CombineSettingsDatabase:getParamsForMachineType(self.machineType)
 
     -- Define variance band based on electronics package level:
     -- Tier 1 (Standard): rough baseline (±18%)

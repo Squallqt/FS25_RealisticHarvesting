@@ -391,6 +391,14 @@ function RHMCombineCalibrationGUI:update(dt)
         if not isEntered and vehicleToCheck.getIsEntered then
             isEntered = vehicleToCheck:getIsEntered()
         end
+        if not isEntered and vehicleToCheck.spec_enterable and vehicleToCheck.spec_enterable.isEntered then
+            isEntered = true
+        end
+        if not isEntered and vehicleToCheck.getIsAIActive and vehicleToCheck:getIsAIActive() then
+            if vehicleToCheck.isEntered or (vehicleToCheck.rootVehicle and vehicleToCheck.rootVehicle.isEntered) then
+                isEntered = true
+            end
+        end
     end
 
     if not isEntered then

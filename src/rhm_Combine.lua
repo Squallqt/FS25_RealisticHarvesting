@@ -146,8 +146,12 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
         return
     end
     
-    -- Only register if the player is actively in this vehicle
-    if not isActiveForInputIgnoreSelection then
+    -- Only register if the player is actively in this vehicle (even if AI/Courseplay is driving)
+    local canRegister = isActiveForInputIgnoreSelection
+        or vehicle.isActiveForInputIgnoreSelectionIgnoreAI
+        or (vehicle.getIsEntered and vehicle:getIsEntered())
+
+    if not canRegister then
         return
     end
     
@@ -756,6 +760,9 @@ end
 function rhm_Combine.isAiWorkerActive(vehicle)
     if not vehicle then return false end
     if vehicle.getIsAIActive and vehicle:getIsAIActive() then
+        return true
+    end
+    if vehicle.getIsCpActive and vehicle:getIsCpActive() then
         return true
     end
     if vehicle.cp and (vehicle.cp.isDriving or vehicle.cp.isFieldWorkActive) then
@@ -2020,7 +2027,13 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
         local spec = self.spec_rhm_Combine
         self:clearActionEventsTable(spec.actionEvents)
         
-        if isActiveForInputIgnoreSelection then
+        -- EN: Allow registration when player is inside the combine, even while AI / Courseplay is operating it.
+        -- UA: Дозволяємо реєстрацію коли гравець у комбайні, навіть якщо ним керує ШІ / Courseplay.
+        local canRegister = isActiveForInputIgnoreSelection
+            or self.isActiveForInputIgnoreSelectionIgnoreAI
+            or (self.getIsEntered and self:getIsEntered())
+
+        if canRegister then
             -- Реєструємо дію Відкриття Меню (RShift+K)
             if InputAction.RHM_OPEN_MENU then
                 local _, menuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_MENU, self, rhm_Combine.actionOpenMenu, false, true, false, true, nil)
