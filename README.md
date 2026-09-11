@@ -31,8 +31,8 @@ Your combine now features a **first-principles physical power-balance load engin
 - **Mechanical Calibration** (fan speed, rotor RPM, upper/lower sieves, concave clearance / feeder intake)
 - **Swathing / Windrow Pickup** (automatically detected, eliminating cutterbar drag and computing windrow intake)
 - **Machine Type** (grain combines, forage harvesters, root harvesters, cotton pickers, and modular platforms like NEXAT)
-- **Precision Farming (PF) & Custom Maps** (native dynamic yield scaling across variable soil types, nitrogen zones, and cushioned field-edge entry smoothing)
-- **Crop Moisture** (optional seamless integration with the `FS25_MoistureSystem` mod)
+- **[Precision Farming (PF)](https://www.farming-simulator.com/mod.php?mod_id=318936) & Custom Maps** (native dynamic yield scaling across variable soil types, nitrogen zones, and cushioned field-edge entry smoothing)
+- **Crop Moisture** (optional seamless integration with the [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025) mod)
 
 Drive too fast or overload your separator → engine overloads → you lose grain. Simple and authentic.
 
@@ -106,7 +106,7 @@ If your machine's settings do not match the harvested crop, you incur additional
   Silage choppers deliver all chopped material into the trailer (no grain loss), but incorrect drum or feed roll speeds severely penalize engine efficiency and throughput.
 
 ### 3. Crop Moisture Penalties
-When the `FS25_MoistureSystem` mod is detected, harvesting in damp weather or wet crops increases engine threshing resistance and induces wet crop separation losses.
+When the [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025) mod is detected, harvesting in damp weather or wet crops increases engine threshing resistance and induces wet crop separation losses.
 
 ---
 
@@ -299,10 +299,10 @@ Opti-Harvest AI (Tier 4) requires real crop stream telemetry to analyze density,
 Losses start progressively when engine load exceeds **80%**. Overload between 80% and 100% results in minor acceptable loss (~0–2%), while pushing past 100–110% causes steep exponential loss. Sub-optimal calibration also adds a separate cleaning shoe loss.
 
 **Q: Does this mod work with the FS25 Moisture System mod?**  
-Yes! Realistic Harvesting features a built-in soft-dependency bridge for `FS25_MoistureSystem`. When active, live moisture is displayed on the HUD (Tier 3+), wet crops increase engine power requirements, and wet harvesting losses are simulated.
+Yes! Realistic Harvesting features a built-in soft-dependency bridge for the [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025) mod. When active, live moisture is displayed on the HUD (Tier 3+), wet crops increase engine power requirements, and wet harvesting losses are simulated.
 
 **Q: Does this mod work with Precision Farming?**  
-Yes! Realistic Harvesting features native dynamic yield scaling for Precision Farming. Harvester load and cruise control automatically adjust to varying soil types, nitrogen fertilization rates, and yield maps across the field without any manual intervention. It also includes cushioned field-edge smoothing so entering a cut doesn't cause a jerky speed drop.
+Yes! Realistic Harvesting features native dynamic yield scaling for [Precision Farming](https://www.farming-simulator.com/mod.php?mod_id=318936). Harvester load and cruise control automatically adjust to varying soil types, nitrogen fertilization rates, and yield maps across the field without any manual intervention. It also includes cushioned field-edge smoothing so entering a cut doesn't cause a jerky speed drop.
 
 **Q: What does the "Target Engine Load" setting in the Shift+K menu do?**  
 It sets the cruise control setpoint (default: 88%) when the Speed Limiter is active. If you want maximum throughput and don't mind occasional light loss spikes, raise it towards 92%. If you want absolute zero loss on steep hills or bumpy terrain, lower it to 82–85%.
