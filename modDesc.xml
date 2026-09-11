@@ -173,14 +173,10 @@ Funkciók:
     </specializations>
 
     <actions>
-        <action name="RHM_TOGGLE_CURSOR" category="VEHICLE" />
         <action name="RHM_OPEN_MENU" category="VEHICLE" />
     </actions>
     
     <inputBinding>
-        <actionBinding action="RHM_TOGGLE_CURSOR">
-            <binding device="KB_MOUSE_DEFAULT" input="MOUSE_BUTTON_RIGHT" />
-        </actionBinding>
         <actionBinding action="RHM_OPEN_MENU">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_k" />
         </actionBinding>
@@ -220,20 +216,6 @@ Funkciók:
             <hu>Realisztikus betakarítás - Megjelenítés</hu>
         </text>
         
-        <text name="input_RHM_TOGGLE_CURSOR">
-            <en>Toggle HUD Cursor</en>
-            <de>HUD-Cursor umschalten</de>
-            <fr>Basc. curseur HUD</fr>
-            <pl>Włącz kursor HUD</pl>
-            <es>Alternar cursor HUD</es>
-            <it>Alterna cursore HUD</it>
-            <cz>Přepnout kurzor HUD</cz>
-            <br>Alternar cursor HUD</br>
-            <uk>Показати курсор HUD</uk>
-            <ru>Показать курсор HUD</ru>
-            <hu>HUD kurzor váltás</hu>
-        </text>
-
         <text name="input_RHM_OPEN_MENU">
             <en>Combine Settings Menu</en>
             <de>Mähdrescher-Menü</de>

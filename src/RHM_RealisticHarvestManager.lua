@@ -180,52 +180,6 @@ function RHM_RealisticHarvestManager:update(dt)
         self.calibrationGUI:update(dt)
     end
 
-    -- EN: Self-healing camera manager: ensures cameras are locked ONLY when menu or HUD cursor is active,
-    --     and guaranteed to be unlocked as soon as neither is active!
-    -- UA: Менеджер самовідновлення камери: гарантує, що камери заблоковані ТІЛЬКИ коли відкрите меню або активний курсор HUD,
-    --     і гарантовано розблоковані, як тільки вони неактивні!
-    local controlledVehicle = self:getControlledVehicle()
-    local shouldBlockCamera = (self.isCursorVisible == true) or (self.calibrationGUI ~= nil and self.calibrationGUI.isOpen == true)
-
-    local vehiclesToManage = {}
-    if controlledVehicle and controlledVehicle.spec_enterable and controlledVehicle.spec_enterable.cameras then
-        table.insert(vehiclesToManage, controlledVehicle)
-    end
-    if self.lastActiveCombine and self.lastActiveCombine ~= controlledVehicle and self.lastActiveCombine.spec_enterable and self.lastActiveCombine.spec_enterable.cameras then
-        table.insert(vehiclesToManage, self.lastActiveCombine)
-    end
-
-    if #vehiclesToManage > 0 then
-        for _, v in ipairs(vehiclesToManage) do
-            for _, camera in pairs(v.spec_enterable.cameras) do
-                if shouldBlockCamera then
-                    if camera.isRotatable then camera.isRotatable = false end
-                    if camera.allowTranslation then camera.allowTranslation = false end
-                    if camera.allowZoom then camera.allowZoom = false end
-                    if camera.rotSpeed and camera.rotSpeed > 0 then
-                        camera._rhmSavedRotSpeed = camera.rotSpeed
-                        camera.rotSpeed = 0
-                    end
-                else
-                    -- Fail-safe unlock: camera must be rotatable during normal play!
-                    if not camera.isRotatable then camera.isRotatable = true end
-                    if not camera.allowTranslation then camera.allowTranslation = true end
-                    if not camera.allowZoom then camera.allowZoom = true end
-                    if camera.rotSpeed == 0 and camera._rhmSavedRotSpeed then
-                        camera.rotSpeed = camera._rhmSavedRotSpeed
-                        camera._rhmSavedRotSpeed = nil
-                    end
-                end
-            end
-        end
-    else
-        -- If player is not controlling an enterable vehicle, ensure cursor mode is off
-        if self.isCursorVisible then
-            self.isCursorVisible = false
-            g_inputBinding:setShowMouseCursor(false)
-        end
-    end
-
     if self.hud then
         local vehicle = controlledVehicle
         local combineVehicle = nil
@@ -339,72 +293,20 @@ function RHM_RealisticHarvestManager:mouseEvent(posX, posY, isDown, isUp, button
     return false
 end
 
--- EN: Toggles mouse cursor visibility for HUD drag interaction.
---     Disables camera rotation while cursor is visible.
--- UA: Перемикає видимість курсора миші для взаємодії з перетягуванням HUD.
---     Вимикає обертання камери поки курсор видимий.
+-- EN: Legacy cursor toggle stub — camera and cursor are now exclusively managed
+--     by the calibration GUI (Shift+K) to prevent conflicts with Courseplay and AutoDrive RMB.
+-- UA: Застарілий стаб перемикача курсора — камера та курсор тепер керуються виключно
+--     через GUI калібрування (Shift+K) для усунення конфліктів з правою кнопкою миші Courseplay та AutoDrive.
 function RHM_RealisticHarvestManager:toggleCursor()
-    -- EN: If calibration GUI is open, do NOT close it (it has its own close handlers: Shift+K, ESC, [X]).
-    -- UA: Якщо GUI калібрування відкритий, НЕ закриваємо його (він має власні обробники: Shift+K, ESC, [X]).
-    if self.calibrationGUI and self.calibrationGUI.isOpen then
-        return
-    end
-
-    local combineVehicle = self.lastActiveCombine
-    if not combineVehicle then
-        local cv = self:getControlledVehicle()
-        if cv then
-            combineVehicle = findCombineInHierarchy(cv.rootVehicle or cv)
-            self.lastActiveCombine = combineVehicle
-        end
-    end
-    if not (self.hud and combineVehicle) then
-        if self.isCursorVisible then
-            self.isCursorVisible = false
-            g_inputBinding:setShowMouseCursor(false)
-            local vehicle = self:getControlledVehicle()
-            if vehicle then
-                RHMInputUtil.setCameraRotation(vehicle, true, self.savedCameraRotatableInfo)
-            end
-        end
-        return
-    end
-
-    self.isCursorVisible = not self.isCursorVisible
-    g_inputBinding:setShowMouseCursor(self.isCursorVisible)
-
-    local vehicle = self:getControlledVehicle()
-
-    if self.isCursorVisible then
-        if g_currentMission then
-            g_currentMission:showBlinkingWarning("RHM: HUD Cursor Enabled - Drag HUD to move", 3000)
-        end
-        if vehicle then
-            RHMInputUtil.setCameraRotation(vehicle, false, self.savedCameraRotatableInfo)
-        end
-    else
-        g_inputBinding:setShowMouseCursor(false)
-        if vehicle then
-            RHMInputUtil.setCameraRotation(vehicle, true, self.savedCameraRotatableInfo)
-        end
-    end
+    -- No-op: Cursor and camera are cleanly managed by Shift+K calibration GUI
 end
 
--- EN: Key event handler. Allows pressing ESC to cleanly close calibration GUI or HUD cursor.
--- UA: Обробник подій клавіатури. Дозволяє клавішею ESC чисто закривати GUI калібрування або курсор HUD.
+-- EN: Key event handler. Allows pressing ESC to cleanly close calibration GUI.
+-- UA: Обробник подій клавіатури. Дозволяє клавішею ESC чисто закривати GUI калібрування.
 function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
     if isDown and sym == Input.KEY_esc then
         if self.calibrationGUI and self.calibrationGUI.isOpen then
             self.calibrationGUI:close()
-            return true
-        end
-        if self.isCursorVisible then
-            self.isCursorVisible = false
-            g_inputBinding:setShowMouseCursor(false)
-            local vehicle = self:getControlledVehicle()
-            if vehicle then
-                RHMInputUtil.setCameraRotation(vehicle, true, self.savedCameraRotatableInfo)
-            end
             return true
         end
     end

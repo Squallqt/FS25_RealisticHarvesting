@@ -268,16 +268,22 @@ function RHMCombineCalibrationGUI:close()
     local camTarget = (vehicle and vehicle.spec_enterable and vehicle)
                    or (self.activeVehicle and self.activeVehicle.spec_enterable and self.activeVehicle)
 
-    local hudCursorActive = g_realisticHarvestManager and g_realisticHarvestManager.isCursorVisible
-    g_inputBinding:setShowMouseCursor(hudCursorActive or false)
+    -- Do not hide mouse cursor if Courseplay or AutoDrive editor currently owns it
+    local otherModOwnsCursor = false
+    if CpHud and CpHud.isHudActive then
+        otherModOwnsCursor = true
+    end
+    if AutoDrive and AutoDrive.isEditorModeEnabled and AutoDrive:isEditorModeEnabled() then
+        otherModOwnsCursor = true
+    end
+
+    if not otherModOwnsCursor then
+        g_inputBinding:setShowMouseCursor(false)
+    end
 
     if camTarget and camTarget.spec_enterable then
-        if hudCursorActive then
-            RHMInputUtil.setCameraRotation(camTarget, false, g_realisticHarvestManager.savedCameraRotatableInfo)
-        else
-            RHMInputUtil.setCameraRotation(camTarget, true, self.savedCameraRotatableInfo)
-            RHMInputUtil.setCameraZoom(camTarget, true, self.savedCameraZoomInfo)
-        end
+        RHMInputUtil.setCameraRotation(camTarget, true, self.savedCameraRotatableInfo)
+        RHMInputUtil.setCameraZoom(camTarget, true, self.savedCameraZoomInfo)
     end
     self.savedCameraRotatableInfo = {}
     self.savedCameraZoomInfo = {}

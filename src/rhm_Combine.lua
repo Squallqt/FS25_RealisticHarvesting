@@ -2012,23 +2012,12 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
         self:clearActionEventsTable(spec.actionEvents)
         
         if isActiveForInputIgnoreSelection then
-            -- Реєструємо дію Перемикання Курсора (RMB за замовчуванням)
-            local _, eventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_CURSOR, self, rhm_Combine.actionToggleCursor, false, true, false, true, nil)
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
-            
             -- Реєструємо дію Відкриття Меню (RShift+K)
             if InputAction.RHM_OPEN_MENU then
                 local _, menuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_MENU, self, rhm_Combine.actionOpenMenu, false, true, false, true, nil)
                 g_inputBinding:setActionEventTextPriority(menuEventId, GS_PRIO_HIGH)
             end
         end
-    end
-end
-
--- Callback для дії
-function rhm_Combine:actionToggleCursor(actionName, inputValue, callbackState, isAnalog)
-    if g_realisticHarvestManager then
-        g_realisticHarvestManager:toggleCursor()
     end
 end
 
@@ -2043,10 +2032,6 @@ end
 function rhm_Combine:onLeaveVehicle(wasEntered)
     if self.isClient then
         if g_realisticHarvestManager then
-            if g_realisticHarvestManager.isCursorVisible then
-                g_realisticHarvestManager.isCursorVisible = false
-                g_inputBinding:setShowMouseCursor(false)
-            end
             if g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
                 g_realisticHarvestManager.calibrationGUI:close()
             end
@@ -2056,6 +2041,10 @@ function rhm_Combine:onLeaveVehicle(wasEntered)
                 camera.isRotatable = true
                 camera.allowTranslation = true
                 camera.allowZoom = true
+                if camera.rotSpeed == 0 and camera._rhmSavedRotSpeed then
+                    camera.rotSpeed = camera._rhmSavedRotSpeed
+                    camera._rhmSavedRotSpeed = nil
+                end
             end
         end
     end
