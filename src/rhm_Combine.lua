@@ -1324,6 +1324,12 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     if spec.combineMemory and spec.combineMemory.updateAutoTrim and cutterIsTurnedOn then
         spec.combineMemory:updateAutoTrim(dt)
     end
+
+    -- EN: Diagnostic test auto-sampling (if rhm_auto_record is enabled)
+    -- UA: Автоматичний збір телеметрії (якщо увімкнено rhm_auto_record)
+    if RHM_DiagnosticTool and RHM_DiagnosticTool.autoRecordEnabled and cutterIsTurnedOn then
+        RHM_DiagnosticTool:checkAutoRecord(self, dt)
+    end
     
     -- === SPEED LIMIT ENFORCEMENT (Server Side) ===
     -- Courseplay (and some cruise control implementations) can bypass `getSpeedLimit()`.
