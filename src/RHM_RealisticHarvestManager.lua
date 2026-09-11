@@ -192,15 +192,23 @@ end
 --     Шукає в ієрархії транспорту гравця специфікацію комбайна для відстеження живих даних.
 --     Оновлює HUD тільки коли знайдено і запущено комбайн.
 function RHM_RealisticHarvestManager:update(dt)
+    -- EN: Dedicated servers have no local client, HUD or UI. Skip client updates.
+    -- UA: Виділені сервери не мають локального клієнта, HUD або UI. Пропускаємо клієнтські оновлення.
+    if not self.mission:getIsClient() then
+        return
+    end
+
     -- EN: If any game GUI (ESC pause menu, shop, map) is open, cleanly close our calibration GUI
     -- UA: Якщо відкритий будь-який GUI гри (меню паузи ESC, магазин, карта), чисто закриваємо GUI калібрування
-    if g_gui:getIsGuiVisible() then
+    if g_gui and g_gui.getIsGuiVisible and g_gui:getIsGuiVisible() then
         if self.calibrationGUI and self.calibrationGUI.isOpen then
             self.calibrationGUI:close()
         end
         if self.isCursorVisible then
             self.isCursorVisible = false
-            g_inputBinding:setShowMouseCursor(false)
+            if g_inputBinding and g_inputBinding.setShowMouseCursor then
+                g_inputBinding:setShowMouseCursor(false)
+            end
         end
         return
     end
@@ -259,9 +267,13 @@ end
 --     Пригнічує всі малювання коли відкрите будь-яке меню гри, коли HUD гри прихований,
 --     або коли гравець не в транспортному засобі.
 function RHM_RealisticHarvestManager:draw()
+    if not self.mission:getIsClient() then
+        return
+    end
+
     -- EN: Skip all drawing when any FS25 GUI screen is visible (e.g. ESC menu, map, settings).
     -- UA: Пропускаємо все малювання коли відкритий будь-який GUI екран FS25 (меню ESC, карта, налаштування).
-    if g_gui:getIsGuiVisible() then
+    if g_gui and g_gui.getIsGuiVisible and g_gui:getIsGuiVisible() then
         return
     end
 

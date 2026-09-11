@@ -351,7 +351,7 @@ function RHM_CombineMemory:loadUserPreset()
     local profile = pm:getProfile(self.currentCrop)
     if profile then
         if g_client and self.combine then
-            local event = RHM_CombineSettingsEvent.new(self.combine, "", 0, true, profile)
+            local event = RHM_CombineSettingsEvent.new(self.combine, "", 0, true, profile, self.currentCrop, "MANUAL")
             if not g_server then
                 g_client:getServerConnection():sendEvent(event)
             else

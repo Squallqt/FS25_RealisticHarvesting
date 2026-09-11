@@ -399,6 +399,7 @@ function rhm_Combine:onLoad(savegame)
     -- Відстеження поточної жатки для визначення зміни
     spec.currentCutter = nil
     spec._lastAiTunedCrop = nil
+    spec._lastAiClientTunedCrop = nil
     
     -- Прапорець чи активне обмеження швидкості
     spec.isSpeedLimitActive = false
@@ -1039,14 +1040,14 @@ function rhm_Combine:startThreshing(superFunc)
     -- UA: Логіка запуску жатки:
     --     - Незалежний запуск ВИМКНЕНИЙ → завжди запускаємо жатки (ванільна поведінка)
     --     - Незалежний запуск УВІМКНЕНИЙ → запускаємо лише для AI
-    local isAIActive = self:getIsAIActive()
+    local isAIActive = rhm_Combine.isAiWorkerActive(self)
     local shouldStartCutters = (not isIndependentLaunchEnabled) or (isIndependentLaunchEnabled and isAIActive)
     
     if spec_combine.numAttachedCutters > 0 and shouldStartCutters then
         -- EN: Start cutters — always for AI, for player only when Independent Launch is disabled.
         -- UA: Запускаємо жатки — завжди для AI, для гравця лише коли Незалежний Запуск вимкнений.
         local isTurning = type(self.rootVehicle.getAIFieldWorkerIsTurning) == "function" and self.rootVehicle:getAIFieldWorkerIsTurning()
-        local allowLowering = not self:getIsAIActive() or not isTurning
+        local allowLowering = not isAIActive or not isTurning
         
         for _, cutter in pairs(spec_combine.attachedCutters) do
             if allowLowering and cutter ~= self then
@@ -1101,7 +1102,7 @@ function rhm_Combine:stopThreshing(superFunc)
     -- EN: Do NOT stop cutters automatically — player controls them independently.
     -- UA: НЕ вимикаємо жатки автоматично — гравець керує ними незалежно.
     
-    if spec_combine.threshingStartAnimation ~= nil and spec_combine.playAnimation ~= nil then
+    if spec_combine.threshingStartAnimation ~= nil and self.playAnimation ~= nil then
         self:playAnimation(spec_combine.threshingStartAnimation, -spec_combine.threshingStartAnimationSpeedScale, self:getAnimationTime(spec_combine.threshingStartAnimation), true)
     end
     
@@ -1115,7 +1116,7 @@ end
 --     (запобігає збору культури коли увімкнена лише жатка без молотарки).
 --     AI звільнений від цієї перевірки.
 function rhm_Combine:verifyCombine(superFunc, fruitType, outputFillType)
-    local isAIActive = self:getIsAIActive()
+    local isAIActive = rhm_Combine.isAiWorkerActive(self)
     
     -- EN: Block harvesting if thresher is off (unless AI is active, or vehicle has no turnOn mechanism e.g. hand tools).
     -- UA: Блокуємо збирання якщо молотарка вимкнена (якщо тільки AI не активний, або машина не має механізму вмикання як ручні інструменти).
@@ -1418,6 +1419,31 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         end
     end
 
+    -- EN: Dedicated Server AI Profile Sync: If Courseplay / AI helper is harvesting on a dedicated server,
+    --     the client owning/controlling this combine automatically sends their locally saved crop preset (if any).
+    -- UA: Синхронізація профілю для виділеного сервера: якщо наймит/Courseplay збирає врожай на виділеному сервері,
+    --     клієнт що володіє/керує цим комбайном автоматично надсилає свій локально збережений пресет культури (якщо є).
+    if not self.isServer and self.isClient and cutterIsTurnedOn then
+        local isAi = rhm_Combine.isAiWorkerActive(self)
+        if isAi then
+            local isMyVehicle = (self.getIsEntered and self:getIsEntered())
+                or (self.getIsControlled and self:getIsControlled())
+                or (g_currentMission and g_currentMission.player and self:getOwnerFarmId() == g_currentMission.player.farmId)
+            if isMyVehicle then
+                local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+                if currentCrop and currentCrop ~= "" and spec._lastAiClientTunedCrop ~= currentCrop then
+                    spec._lastAiClientTunedCrop = currentCrop
+                    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
+                    if pm and pm:getProfile(currentCrop) then
+                        spec.combineMemory:loadUserPreset()
+                    end
+                end
+            end
+        else
+            spec._lastAiClientTunedCrop = nil
+        end
+    end
+
     -- EN: Diagnostic test auto-sampling (if rhm_auto_record is enabled)
     -- UA: Автоматичний збір телеметрії (якщо увімкнено rhm_auto_record)
     if RHM_DiagnosticTool and RHM_DiagnosticTool.autoRecordEnabled and cutterIsTurnedOn then
@@ -1430,7 +1456,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --  - AI vehicles
     --  - player-controlled vehicles (so in-cab cruise reacts to load)
     if self.isServer and cutterIsTurnedOn then
-        local isAI = self:getIsAIActive()
+        local isAI = rhm_Combine.isAiWorkerActive(self)
         local isPlayerControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
 
         if isAI or isPlayerControlled then

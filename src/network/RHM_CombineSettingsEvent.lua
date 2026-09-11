@@ -19,7 +19,7 @@ end
 -- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
 -- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
 -- UA: Створює нову подію, що цілить на конкретний транспорт і несе дані зміни налаштувань.
-function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings, cropName)
+function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings, cropName, mode)
     local self = RHM_CombineSettingsEvent.emptyNew()
     self.vehicle = vehicle
     self.parameter = parameter or ""
@@ -27,6 +27,7 @@ function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, 
     self.isFullProfile = isFullProfile == true
     self.fullSettings = fullSettings
     self.cropName = cropName or ""
+    self.mode = mode or ""
     return self
 end
 
@@ -37,8 +38,8 @@ function RHM_CombineSettingsEvent:readStream(streamId, connection)
     self.isFullProfile = streamReadBool(streamId)
 
     if self.isFullProfile then
-        -- EN: Full profile mode: read all 6 parameter values.
-        -- UA: Режим повного профілю: зчитуємо всі 6 значень параметрів.
+        -- EN: Full profile mode: read all 6 parameter values, cropName, and mode.
+        -- UA: Режим повного профілю: зчитуємо всі 6 значень параметрів, назву культури та режим.
         self.fullSettings = {}
         self.fullSettings.fan = streamReadUInt8(streamId)
         self.fullSettings.rotor = streamReadUInt8(streamId)
@@ -46,6 +47,8 @@ function RHM_CombineSettingsEvent:readStream(streamId, connection)
         self.fullSettings.lowerSieve = streamReadUInt8(streamId)
         self.fullSettings.feeder = streamReadUInt8(streamId)
         self.fullSettings.targetEngineLoad = streamReadUInt8(streamId)
+        self.cropName = streamReadString(streamId)
+        self.mode = streamReadString(streamId)
     else
         -- EN: Single parameter mode: read parameter name and its value.
         -- UA: Режим одного параметру: зчитуємо назву параметру і його значення.
@@ -65,8 +68,8 @@ function RHM_CombineSettingsEvent:writeStream(streamId, connection)
     streamWriteBool(streamId, self.isFullProfile)
 
     if self.isFullProfile then
-        -- EN: Write all 6 parameter values for a full profile transfer (safely guarded against nil).
-        -- UA: Записуємо всі 6 значень параметрів для передачі повного профілю (безпечно проти nil).
+        -- EN: Write all 6 parameter values, cropName, and mode for a full profile transfer.
+        -- UA: Записуємо всі 6 значень параметрів, назву культури та режим для передачі повного профілю.
         local s = self.fullSettings or {}
         streamWriteUInt8(streamId, s.fan or 50)
         streamWriteUInt8(streamId, s.rotor or 50)
@@ -74,6 +77,8 @@ function RHM_CombineSettingsEvent:writeStream(streamId, connection)
         streamWriteUInt8(streamId, s.lowerSieve or 50)
         streamWriteUInt8(streamId, s.feeder or 50)
         streamWriteUInt8(streamId, s.targetEngineLoad or 95)
+        streamWriteString(streamId, self.cropName or "")
+        streamWriteString(streamId, self.mode or "")
     else
         -- EN: Write single parameter name and value.
         -- UA: Записуємо назву та значення одного параметру.
@@ -114,8 +119,16 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
                 mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
             end
-            mem.autoSwitchEnabled = false
-            mem.mode = "MANUAL"
+            if self.cropName and self.cropName ~= "" and mem.currentCrop ~= self.cropName then
+                mem:switchCrop(self.cropName)
+            end
+            if self.mode and self.mode ~= "" then
+                mem.mode = self.mode
+                mem.autoSwitchEnabled = (self.mode == "AUTO")
+            else
+                mem.autoSwitchEnabled = false
+                mem.mode = "MANUAL"
+            end
             rhm_log("RHM [Network]: RHM: [Sync] Received full user profile settings via network")
         else
             if self.parameter == "CROP" then
@@ -185,7 +198,20 @@ function RHM_CombineSettingsEvent:run(connection)
             feeder = mem.currentSettings.feeder,
             targetEngineLoad = mem.currentSettings.targetEngineLoad
         }
-        g_server:broadcastEvent(RHM_CombineSettingsEvent.new(self.vehicle, "", 0, true, fullSettings), nil, connection, self.vehicle)
+        g_server:broadcastEvent(
+            RHM_CombineSettingsEvent.new(
+                self.vehicle,
+                "",
+                0,
+                true,
+                fullSettings,
+                mem.currentCrop or "",
+                mem.mode or "MANUAL"
+            ),
+            nil,
+            connection,
+            self.vehicle
+        )
         local spec = self.vehicle.spec_rhm_Combine
         if spec and spec.settingsDirtyFlag then
             self.vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
@@ -205,8 +231,19 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
                 mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
             end
-            mem.autoSwitchEnabled = false
-            mem.mode = "MANUAL"
+            if self.cropName and self.cropName ~= "" then
+                mem.currentCrop = self.cropName
+                if self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.loadCalculator then
+                    self.vehicle.spec_rhm_Combine.loadCalculator.currentCrop = self.cropName
+                end
+            end
+            if self.mode and self.mode ~= "" then
+                mem.mode = self.mode
+                mem.autoSwitchEnabled = (self.mode == "AUTO")
+            else
+                mem.autoSwitchEnabled = false
+                mem.mode = "MANUAL"
+            end
         elseif self.parameter == "CROP" then
             if self.cropName and self.cropName ~= "" then
                 mem.currentCrop = self.cropName
