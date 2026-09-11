@@ -31,6 +31,7 @@ Your combine now features a **first-principles physical power-balance load engin
 - **Mechanical Calibration** (fan speed, rotor RPM, upper/lower sieves, concave clearance / feeder intake)
 - **Swathing / Windrow Pickup** (automatically detected, eliminating cutterbar drag and computing windrow intake)
 - **Machine Type** (grain combines, forage harvesters, root harvesters, cotton pickers, and modular platforms like NEXAT)
+- **Precision Farming (PF) & Custom Maps** (native dynamic yield scaling across variable soil types, nitrogen zones, and cushioned field-edge entry smoothing)
 - **Crop Moisture** (optional seamless integration with the `FS25_MoistureSystem` mod)
 
 Drive too fast or overload your separator → engine overloads → you lose grain. Simple and authentic.
@@ -170,6 +171,16 @@ Press **Right Shift + K** while in a combine to open the interactive Calibration
 
 > **Interactive AI Calibration:** Harvesters no longer magically auto-tune themselves behind the scenes. On Tier 4, enter the field, cut a short strip to gather live crop telemetry, open Shift+K, and click **AUTO** to let Opti-Harvest AI dial in zero-loss perfection.
 
+### 🎯 Target Engine Load (Auto-Throttling Cruise Control)
+
+Inside the Calibration Menu (**Right Shift + K**), you can dial in your machine's **Target Engine Load** (default: **88%**, adjustable from 70% to 95%):
+
+- **Conservative (75–82%):** Maximum yield protection and zero loss. Ideal buffer for hilly terrain, uneven fields, or dense weed patches.
+- **Balanced (85–90%):** Standard sweet spot. Maximizes field throughput while staying safely below the critical overload threshold.
+- **Aggressive (91–95%):** High-speed operation for operators seeking maximum hectares per hour, accepting occasional light loss spikes.
+
+When the **Speed Limiter** is enabled, it dynamically adjusts cruise control to hover smoothly around this target load, featuring an intelligent deadzone that prevents throttle surging.
+
 ---
 
 ## Supported Machine Types & Reference Settings
@@ -256,10 +267,11 @@ $$P_{total} = P_{base} + P_{header}(v) + P_{process} + P_{soil}$$
 | **Cereals (Wheat, Barley, Rye, Oats)** | 10.5 – 13.0 HP/(t/h) | Heavy straw ingestion, dense threshing drum friction |
 | **Oilseeds (Canola, Sunflower)** | 11.0 – 12.5 HP/(t/h) | Brittle stems, high seed separation demand |
 | **Corn / Maize (Grain)** | 9.0 – 10.5 HP/(t/h) | High grain volume, cob separation |
-| **Legumes & Pulses (Soybeans, Peas)** | 12.0 – 15.0 HP/(t/h) | Pod fracture and tough vine handling |
-| **Green Beans (Pod Pickers)** | 16.0 – 18.0 HP/(t/h) | Mechanical stripping reels pulling tough pods from bushes |
-| **Root Crops (Potatoes, Sugarbeet, Carrots)** | 2.6 – 4.6 HP/(t/h) | Massive volumetric flow (150–250+ t/h) across soil sieve webs |
-| **Forage / Silage Choppers** | 1.8 – 2.2 HP/(t/h) | High-speed chopping drum processing extreme throughput (300–450+ t/h) |
+| **Legumes & Pulses (Soybeans, Peas, Lentils)** | 10.0 – 14.0 HP/(t/h) | Pod fracture and tough vine handling |
+| **Green Beans (Oxbo Pod Stripper)** | ~8.5 HP/(t/h) | Specialized rotary stripping reel pulling pods from bushes |
+| **Spinach** | ~4.0 HP/(t/h) | Direct surface cut with gentle low-rpm handling |
+| **Root Crops (Potatoes, Sugarbeet, Carrots, etc.)** | 1.2 – 2.2 HP/(t/h) | Massive volumetric flow (150–350+ t/h) across high-capacity soil sieve webs |
+| **Forage / Silage Choppers** | 1.8 – 3.4 HP/(t/h) | High-speed chopping drum processing extreme throughput (300–450+ t/h) or direct-cut standing grass |
 | **Cotton Pickers** | ~45.0 HP/(t/h) | High-speed rotating spindle drums & pneumatic conveying air ducts |
 | **Modded / Custom Crops** | Dynamic | Automatically calibrated based on GIANTS fillType `massPerLiter` |
 
@@ -288,6 +300,12 @@ Losses start progressively when engine load exceeds **80%**. Overload between 80
 
 **Q: Does this mod work with the FS25 Moisture System mod?**  
 Yes! Realistic Harvesting features a built-in soft-dependency bridge for `FS25_MoistureSystem`. When active, live moisture is displayed on the HUD (Tier 3+), wet crops increase engine power requirements, and wet harvesting losses are simulated.
+
+**Q: Does this mod work with Precision Farming?**  
+Yes! Realistic Harvesting features native dynamic yield scaling for Precision Farming. Harvester load and cruise control automatically adjust to varying soil types, nitrogen fertilization rates, and yield maps across the field without any manual intervention. It also includes cushioned field-edge smoothing so entering a cut doesn't cause a jerky speed drop.
+
+**Q: What does the "Target Engine Load" setting in the Shift+K menu do?**  
+It sets the cruise control setpoint (default: 88%) when the Speed Limiter is active. If you want maximum throughput and don't mind occasional light loss spikes, raise it towards 92%. If you want absolute zero loss on steep hills or bumpy terrain, lower it to 82–85%.
 
 **Q: Is Multiplayer / Dedicated Server supported?**  
 Yes. Physics, engine load, speed limits, and difficulty settings are fully synchronized across all players. Client HUD positions and unit preferences are personal per player.
