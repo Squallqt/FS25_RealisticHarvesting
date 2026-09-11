@@ -2,7 +2,7 @@
 <modDesc descVersion="111">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.5.1.0</version>
+    <version>1.5.2.0</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
@@ -23,14 +23,16 @@
 Features:
 - Dynamic engine load calculation based on throughput (mass/sec)
 - Automatic speed limiting to prevent overloading
-- Visual Crop Loss indicator (LOW/MED/HIGH)
-- Yield Monitor (t/ha, bu/ac) with realistic fluctuation
+- Visual & Physical Crop Loss indicator (LOW/MED/HIGH)
+- Yield Monitor (t/ha, bu/ac) with realistic field fluctuation
 - Customizable HUD with real-time metrics
+- Combine Calibration System (Right Shift + K) with map crop extraction
+- Multi-tier AI Worker & Courseplay auto-tuning based on electronics package
+- Full savegame persistence for active combine settings and profiles
 - Full multiplayer support with server-side settings
 - Support for all harvest types (Grain, Forage, Roots, Cotton)
-- Pickup Header support (Swathing)
-- Experimental NEXAT support
-- Combine Settings & Calibration System
+- Pickup Header support (Swathing) & Experimental NEXAT support
+- Seamless integration with Precision Farming & Moisture System
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></en>
 <de><![CDATA[Fügt realistische Erntemechanik zu Ihren Mähdreschern hinzu.
@@ -132,11 +134,13 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></br>
 - Візуальний та фізичний індикатор втрат врожаю (НИЗЬКІ/СЕРЕДНІ/ВИСОКІ)
 - Монітор врожайності (т/га, бу/акр) з реалістичними коливаннями
 - Налаштовуваний HUD з метриками в реальному часі
+- Система калібрування комбайна (Right Shift + K) з вилученням культур карти
+- Авто-налаштування наймитів (AI Worker та Courseplay) за рівнями електроніки
+- Повне збереження налаштувань та обраної культури комбайна у Savegame
 - Повна підтримка мультиплеєра та налаштувань сервера
 - Підтримка всіх типів збирання (зернові, кормові, коренеплоди, бавовна)
-- Підтримка жаток-підбирачів (валкування)
-- Експериментальна підтримка NEXAT
-- Система налаштувань та калібрування компонентів
+- Підтримка жаток-підбирачів (валкування) та експериментальна підтримка NEXAT
+- Інтеграція з Precision Farming та Moisture System
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></uk>
 <ru><![CDATA[Добавляет реалистичную механику уборки урожая к вашим комбайнам.

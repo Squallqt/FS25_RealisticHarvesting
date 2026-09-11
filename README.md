@@ -1,6 +1,6 @@
 # Realistic Harvesting — Farming Simulator 25
 
-[![Version](https://img.shields.io/badge/version-1.5.1.0-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
+[![Version](https://img.shields.io/badge/version-1.5.2.0-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![FS25](https://img.shields.io/badge/FS25-Compatible-blue?style=for-the-badge&logo=farming-simulator)](https://www.farming-simulator.com/)
 [![Multiplayer](https://img.shields.io/badge/Multiplayer-Supported-brightgreen?style=for-the-badge&logo=users)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![License](https://img.shields.io/badge/License-All_Rights_Reserved-red?style=for-the-badge&logo=copyright)](LICENSE)
@@ -29,6 +29,10 @@ Your combine now features a **first-principles physical power-balance load engin
 - **Header Dimensions & Drag** (dynamic cutterbar friction queried directly from store data)
 - **Terrain Slope & Soil Resistance** (working uphill and on soft ground increases engine load)
 - **Mechanical Calibration** (fan speed, rotor RPM, upper/lower sieves, concave clearance / feeder intake)
+- **Dynamic Map Crop Extraction & Localization** (the calibration menu scans your active map, displaying only native crops with full translation into your language, plus instant physical templates for custom modded crops)
+- **Multi-Tier AI Worker & Courseplay Auto-Tuning** (helpers auto-adjust settings according to your combine's electronics tier, while player manual driving remains 100% untouched)
+- **Savegame Persistence** (all slider adjustments, selected crops, and target engine loads are permanently preserved in your career savegame)
+- **Contract & Machinery Leasing Progression** (rented machinery starts on standard Tier 1, rewarding investment in your own farm fleet)
 - **Swathing / Windrow Pickup** (automatically detected, eliminating cutterbar drag and computing windrow intake)
 - **Machine Type** (grain combines, forage harvesters, root harvesters, cotton pickers, and modular platforms like NEXAT)
 - **[Precision Farming (PF)](https://www.farming-simulator.com/mod.php?mod_id=318936) & Custom Maps** (native dynamic yield scaling across variable soil types, nitrogen zones, and cushioned field-edge entry smoothing)
@@ -140,12 +144,12 @@ Open: **ESC → Settings → Realistic Harvesting**
 
 When purchasing or leasing a combine in the shop, choose an **RHM Electronics** package to match your career progression:
 
-| Tier | Package Name | Price | Features & Operation |
-|:---:|:---|:---:|:---|
-| **1** | **Standard** | Free | Base engine load physics & speed limiting. Factory mechanical baseline variance (~50% ± 8%). Strictly manual control. |
-| **2** | **Sensor Kit** | $3,500 | Adds live Yield (t/ha), Productivity (t/h), and green optimal target zone markers on calibration sliders. Strictly manual control. |
-| **3** | **Yield & Loss Monitor** | $8,500 | Adds real-time Crop Loss telemetry, live Moisture tracking (with Moisture System mod), and detailed field statistics. Strictly manual control. |
-| **4** | **Opti-Harvest AI** | $15,000 | Interactive AI calibration — samples incoming crop stream to calculate physical optimums and applies live continuous background auto-trimming. |
+| Tier | Package Name | Price | Human Driver Operation | AI Worker & Courseplay Auto-Tuning |
+|:---:|:---|:---:|:---|:---|
+| **1** | **Standard** | Free | Base load physics & speed limiting. Factory baseline variance (~50% ± 8%). Strictly manual slider control. | **±18% setting variance** (simulates an inexperienced hired operator; higher losses and lower throughput). |
+| **2** | **Sensor Kit** | $3,500 | Adds live Yield (t/ha), Productivity (t/h), and green optimal target zone guides on sliders. Strictly manual control. | **±10% setting variance** (moderate operator competence; decent field performance). |
+| **3** | **Yield & Loss Monitor** | $8,500 | Adds real-time Crop Loss telemetry, live Moisture tracking (with Moisture System mod), and detailed field statistics. Strictly manual control. | **±4% setting variance** (experienced operator; close to zero loss). |
+| **4** | **Opti-Harvest AI** | $15,000 | Interactive AI calibration button (**AUTO**) with continuous live auto-trimming for field moisture and yield variations. | **0% optimal factory calibration** + continuous live micro-trimming during harvest! |
 
 ---
 
@@ -163,13 +167,15 @@ Press **Right Shift + K** while in a combine to open the interactive Calibration
 
 | Feature | Tiers 1–3 (Standard / Sensor / Monitor) | Tier 4 (Opti-Harvest AI) |
 |:---|:---|:---|
-| **Operating Mode** | Strictly **MANUAL** | Starts in **MANUAL**, unlocks **AUTO** button |
+| **Human Driver Mode** | Strictly **MANUAL** | Starts in **MANUAL**, unlocks **AUTO** button |
 | **On Machine Purchase** | Factory baseline variance (~50% ± 8%) | Factory baseline variance (~50% ± 8%) |
-| **Field Tuning** | Operator manually tunes sliders using field experience or Tier 2/3 target markers | Harvest a few meters, open Shift+K, and press **AUTO** for instant physical calibration |
+| **Crop Selection** | Scans active map (`g_fruitTypeManager`), showing only present crops localized in your language | Same, plus instant physical templates for custom modded crops |
+| **AI Worker / Courseplay** | Automatically calibrated based on installed Tier (T1: ±18%, T2: ±10%, T3: ±4%) | Automatically calibrated to 0% optimal + live dynamic auto-trimming |
+| **Field Tuning (Human)** | Operator manually tunes sliders using field experience or Tier 2/3 target markers | Harvest a few meters, open Shift+K, and press **AUTO** for instant physical calibration |
 | **Dynamic Trimming** | Static until operator adjusts sliders or loads a profile | Continuously micro-adjusts in background for field moisture and density shifts |
-| **Custom Profiles** | Create, save, and load custom profiles per crop | Save custom profiles or re-calibrate on the fly with AUTO |
+| **Custom Profiles & Savegame** | Saved per crop and permanently stored in career savegame XML | Same, with instant AUTO re-calibration whenever needed |
 
-> **Interactive AI Calibration:** Harvesters no longer magically auto-tune themselves behind the scenes. On Tier 4, enter the field, cut a short strip to gather live crop telemetry, open Shift+K, and click **AUTO** to let Opti-Harvest AI dial in zero-loss perfection.
+> **Interactive AI Calibration:** Harvesters no longer magically auto-tune themselves behind the scenes when driven by the player. On Tier 4, enter the field, cut a short strip to gather live crop telemetry, open Shift+K, and click **AUTO** to let Opti-Harvest AI dial in zero-loss perfection. When hiring an AI worker or using Courseplay, the system automatically uses your electronics package tier.
 
 ### 🎯 Target Engine Load (Auto-Throttling Cruise Control)
 
@@ -315,6 +321,23 @@ The mod includes a universal ASABE/FS25 dynamic physics fallback that calculates
 
 **Q: How do I open the Calibration Menu?**  
 Press **Right Shift + K** while seated inside a combine.
+
+**Q: What happens when I hire an AI Worker or run Courseplay?**  
+When an AI helper or Courseplay takes the wheel and engages the cutter, the combine automatically calibrates its mechanical parameters based on the installed **RHM Electronics Tier**:
+- **Tier 1 (Standard):** AI tunes with a ±18% error margin (simulates an inexperienced hired hand; higher losses and reduced throughput).
+- **Tier 2 (Sensor Kit):** AI tunes with a ±10% error margin.
+- **Tier 3 (Yield & Loss Monitor):** AI tunes with a ±4% error margin (near zero loss).
+- **Tier 4 (Opti-Harvest AI):** AI tunes with 0% perfect factory settings and continuously auto-trims for live field variations.  
+*Note: When you drive manually, your settings remain 100% under your control — the mod never silently modifies your sliders.*
+
+**Q: What electronics tier do I get when renting equipment for a contract?**  
+In FS25, leased machinery for contracts spawns in the baseline factory configuration (**Tier 1 Standard**). This means contract combines have simple manual controls, and hired workers on contracts operate with Tier 1 accuracy (±18% margin). To benefit from high-precision monitors and Opti-Harvest AI, invest in your own farm machinery!
+
+**Q: Are my combine settings saved when I exit the game?**  
+Yes! All slider adjustments, current crop selections, operating mode, and Target Engine Load are saved directly into your career savegame XML (`vehicles.xml`). When you reload your save, every combine in your fleet retains its exact configured state.
+
+**Q: Why do I only see crops that grow on my current map in the Shift+K menu?**  
+To keep the calibration menu clean, fast, and relevant, Realistic Harvesting scans the active map upon load. It filters out crops that do not exist on your map, presents the available ones in alphabetical order translated into your game language, and automatically computes physical threshing templates for any custom map crops.
 
 ---
 
