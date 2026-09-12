@@ -248,6 +248,10 @@ Funkciók:
             <hu>Betakarítási HUD ki/be</hu>
         </text>
         
+        <text name="rhm_hud_load"><en>LOAD</en><uk>НАВАНТ</uk><de>LAST</de><fr>CHARGE</fr><pl>OBCIĄŻ</pl><es>CARGA</es><it>CARICO</it><cz>ZÁTĚŽ</cz><br>CARGA</br><ru>НАГРУЗ</ru><hu>TERHELÉS</hu></text>
+        <text name="rhm_hud_loss"><en>LOSS</en><uk>ВТРАТИ</uk><de>VERLUST</de><fr>PERTE</fr><pl>STRATY</pl><es>PÉRDIDA</es><it>PERDITA</it><cz>ZTRÁTA</cz><br>PERDA</br><ru>ПОТЕРИ</ru><hu>VESZT</hu></text>
+        <text name="rhm_hud_moist"><en>MOIST</en><uk>ВОЛОГА</uk><de>FEUCHTE</de><fr>HUMID</fr><pl>WILG</pl><es>HUMED</es><it>UMID</it><cz>VLHKOST</cz><br>UMID</br><ru>ВЛАГА</ru><hu>NEDV</hu></text>
+
         <text name="rhm_difficulty"><en>Difficulty</en><uk>Складність</uk><de>Schwierigkeit</de><fr>Difficulté</fr><pl>Trudność</pl><es>Dificultad</es><it>Difficoltà</it><cz>Obtížnost</cz><br>Dificuldade</br><ru>Сложность</ru><hu>Nehézség</hu></text>
         <text name="rhm_difficulty_motor"><en>Engine Power Limit</en><uk>Обмеження Потужності</uk><de>Motorleistung</de><fr>Puissance moteur</fr><pl>Moc silnika</pl><es>Potencia del motor</es><it>Potenza del motore</it><cz>Výkon motoru</cz><br>Potência do motor</br><ru>Мощность двигателя</ru><hu>Motorteljesítmény</hu></text>
         <text name="rhm_difficulty_motor_short"><en>Engine Limit</en><uk>Потужність</uk><de>Motor</de><fr>Moteur</fr><pl>Silnik</pl><es>Motor</es><it>Motore</it><cz>Motor</cz><br>Motor</br><ru>Мотор</ru><hu>Motor</hu></text>
@@ -4734,12 +4738,30 @@ Kukuřice / Slunečnice: 18 mm / 11-12 mm.
         </text>
         <text name="rhm_help_cropsettings_title">
             <en>Crop Settings Guide</en>
+            <de>Ernteeinstellungen-Ratgeber</de>
+            <fr>Guide de réglage des cultures</fr>
+            <it>Guida alle impostazioni delle colture</it>
+            <es>Guía de ajustes de cultivos</es>
+            <br>Guia de configurações de culturas</br>
+            <pl>Przewodnik ustawień upraw</pl>
+            <cz>Průvodce nastavením plodin</cz>
             <uk>Довідник Налаштувань Культур</uk>
+            <ru>Справочник настроек культур</ru>
+            <hu>Terménybeállítási útmutató</hu>
         </text>
 
         <text name="rhm_help_cropsettings_grain_sub">
             <en>Grain Combines</en>
+            <de>Mähdrescher</de>
+            <fr>Moissonneuses-batteuses</fr>
+            <it>Mietitrebbie</it>
+            <es>Cosechadoras de grano</es>
+            <br>Colheitadeiras de grãos</br>
+            <pl>Kombajny zbożowe</pl>
+            <cz>Sklízecí mlátičky</cz>
             <uk>Зернозбиральні Комбайни</uk>
+            <ru>Зерноуборочные комбайны</ru>
+            <hu>Gabonakombájnok</hu>
         </text>
 
         <text name="rhm_help_cropsettings_grain_text">
@@ -4748,30 +4770,120 @@ Kukuřice / Slunečnice: 18 mm / 11-12 mm.
 • Oilseeds (Canola, Sunflower): Rotor 300-500 RPM, Fan 600-700 RPM, Sieves 12mm / 6mm. (Careful: light seeds blow away)
 • Corn: Rotor 300-400 RPM, Fan 850-950 RPM, Sieves 18mm / 12mm. (Slow rotor, high airflow)
 • Legumes: Rotor 300-500 RPM, Fan 800-950 RPM, Sieves 15mm / 10mm. (Gentle threshing)]]></en>
+            <de><![CDATA[Optimale Zielbereiche für Mähdrescher:
+• Getreide (Weizen, Gerste, Reis): Rotor 600-850 U/min, Gebläse 700-850 U/min, Siebe 14mm / 8mm.
+• Ölsaaten (Raps, Sonnenblumen): Rotor 300-500 U/min, Gebläse 600-700 U/min, Siebe 12mm / 6mm. (Vorsicht: leichte Körner verblasen)
+• Mais: Rotor 300-400 U/min, Gebläse 850-950 U/min, Siebe 18mm / 12mm. (Langsamer Rotor, starker Luftstrom)
+• Hülsenfrüchte: Rotor 300-500 U/min, Gebläse 800-950 U/min, Siebe 15mm / 10mm. (Schonender Drusch)]]></de>
+            <fr><![CDATA[Plages optimales pour moissonneuses-batteuses :
+• Céréales (Blé, Orge, Riz) : Rotor 600-850 tr/min, Ventilateur 700-850 tr/min, Grilles 14mm / 8mm.
+• Oléagineux (Colza, Tournesol) : Rotor 300-500 tr/min, Ventilateur 600-700 tr/min, Grilles 12mm / 6mm. (Attention : graines légères emportées)
+• Maïs : Rotor 300-400 tr/min, Ventilateur 850-950 tr/min, Grilles 18mm / 12mm. (Rotor lent, fort débit d'air)
+• Légumineuses : Rotor 300-500 tr/min, Ventilateur 800-950 tr/min, Grilles 15mm / 10mm. (Battage délicat)]]></fr>
+            <it><![CDATA[Intervalli ottimali per mietitrebbie da granella:
+• Cereali (Grano, Orzo, Riso): Rotore 600-850 giri/min, Ventola 700-850 giri/min, Crivelli 14mm / 8mm.
+• Oleaginose (Colza, Girasole): Rotore 300-500 giri/min, Ventola 600-700 giri/min, Crivelli 12mm / 6mm. (Attenzione: i semi leggeri volano via)
+• Mais: Rotore 300-400 giri/min, Ventola 850-950 giri/min, Crivelli 18mm / 12mm. (Rotore lento, flusso d'aria elevato)
+• Legumi: Rotore 300-500 giri/min, Ventola 800-950 giri/min, Crivelli 15mm / 10mm. (Trebbiazione delicata)]]></it>
+            <es><![CDATA[Rangos óptimos para cosechadoras de grano:
+• Cereales (Trigo, Cebada, Arroz): Rotor 600-850 RPM, Ventilador 700-850 RPM, Cribas 14mm / 8mm.
+• Oleaginosas (Colza, Girasol): Rotor 300-500 RPM, Ventilador 600-700 RPM, Cribas 12mm / 6mm. (Cuidado: semillas ligeras se vuelan)
+• Maíz: Rotor 300-400 RPM, Ventilador 850-950 RPM, Cribas 18mm / 12mm. (Rotor lento, alto flujo de aire)
+• Legumbres: Rotor 300-500 RPM, Ventilador 800-950 RPM, Cribas 15mm / 10mm. (Trilla delicada)]]></es>
+            <br><![CDATA[Faixas ideais para colheitadeiras de grãos:
+• Cereais (Trigo, Cevada, Arroz): Rotor 600-850 RPM, Ventilador 700-850 RPM, Peneiras 14mm / 8mm.
+• Oleaginosas (Canola, Girassol): Rotor 300-500 RPM, Ventilador 600-700 RPM, Peneiras 12mm / 6mm. (Cuidado: sementes leves sopram para fora)
+• Milho: Rotor 300-400 RPM, Ventilador 850-950 RPM, Peneiras 18mm / 12mm. (Rotor lento, fluxo de ar alto)
+• Leguminosas: Rotor 300-500 RPM, Ventilador 800-950 RPM, Peneiras 15mm / 10mm. (Trilha delicada)]]></br>
+            <pl><![CDATA[Optymalne zakresy dla kombajnów zbożowych:
+• Zboża (Pszenica, Jęczmień, Ryż): Rotor 600-850 RPM, Wentylator 700-850 RPM, Sita 14mm / 8mm.
+• Oleiste (Rzepak, Słonecznik): Rotor 300-500 RPM, Wentylator 600-700 RPM, Sita 12mm / 6mm. (Uwaga: lekkie nasiona są wywiewane)
+• Kukurydza: Rotor 300-400 RPM, Wentylator 850-950 RPM, Sita 18mm / 12mm. (Wolny rotor, silny nadmuch)
+• Strączkowe: Rotor 300-500 RPM, Wentylator 800-950 RPM, Sita 15mm / 10mm. (Delikatny omłot)]]></pl>
+            <cz><![CDATA[Optimální rozsahy pro sklízecí mlátičky:
+• Obiloviny (Pšenice, Ječmen, Rýže): Rotor 600-850 ot/min, Ventilátor 700-850 ot/min, Síta 14mm / 8mm.
+• Olejniny (Řepka, Slunečnice): Rotor 300-500 ot/min, Ventilátor 600-700 ot/min, Síta 12mm / 6mm. (Pozor: lehká semena odfukují)
+• Kukuřice: Rotor 300-400 ot/min, Ventilátor 850-950 ot/min, Síta 18mm / 12mm. (Pomalý rotor, silný proud vzduchu)
+• Luštěniny: Rotor 300-500 ot/min, Ventilátor 800-950 ot/min, Síta 15mm / 10mm. (Jemný výmlat)]]></cz>
             <uk><![CDATA[Оптимальні діапазони для зернозбиральних комбайнів:
 • Зернові (Пшениця, Ячмінь): Ротор 600-850 RPM, Вентил. 700-850 RPM, Решета 14mm / 8mm.
 • Олійні (Ріпак, Соняшник): Ротор 300-500 RPM, Вентил. 600-700 RPM, Решета 12mm / 6mm. (Легке насіння видувається)
 • Кукурудза: Ротор 300-400 RPM, Вентил. 850-950 RPM, Решета 18mm / 12mm. (Мінімум обертів, сильний обдув)
 • Бобові: Ротор 300-500 RPM, Вентил. 800-950 RPM, Решета 15mm / 10mm. (Делікатний обмолот)]]></uk>
+            <ru><![CDATA[Оптимальные диапазоны для зерноуборочных комбайнов:
+• Зерновые (Пшеница, Ячмень, Рис): Ротор 600-850 об/мин, Вентил. 700-850 об/мин, Решета 14мм / 8мм.
+• Масличные (Рапс, Подсолнечник): Ротор 300-500 об/мин, Вентил. 600-700 об/мин, Решета 12мм / 6мм. (Осторожно: легкие семена выдуваются)
+• Кукуруза: Ротор 300-400 об/мин, Вентил. 850-950 об/мин, Решета 18мм / 12мм. (Низкие обороты, сильный обдув)
+• Бобовые: Ротор 300-500 об/мин, Вентил. 800-950 об/мин, Решета 15мм / 10мм. (Деликатный обмолот)]]></ru>
+            <hu><![CDATA[Optimális célértékek gabonakombájnokhoz:
+• Gabonafélék (Búza, Árpa, Rizs): Rotor 600-850 ford./perc, Ventilátor 700-850 ford./perc, Rosták 14mm / 8mm.
+• Olajos magvak (Repce, Napraforgó): Rotor 300-500 ford./perc, Ventilátor 600-700 ford./perc, Rosták 12mm / 6mm. (Figyelem: a könnyű magvak kifújódhatnak)
+• Kukorica: Rotor 300-400 ford./perc, Ventilátor 850-950 ford./perc, Rosták 18mm / 12mm. (Lassú rotor, erős légáram)
+• Hüvelyesek: Rotor 300-500 ford./perc, Ventilátor 800-950 ford./perc, Rosták 15mm / 10mm. (Kíméletes cséplés)]]></hu>
         </text>
 
         <text name="rhm_help_cropsettings_forage_sub">
             <en>Forage Harvesters</en>
+            <de>Feldhäcksler</de>
+            <fr>Ensileuses</fr>
+            <it>Trinciaerba</it>
+            <es>Picadoras de forraje</es>
+            <br>Forrageiras</br>
+            <pl>Sieczkarnie samojezdne</pl>
+            <cz>Sklízecí řezačky</cz>
             <uk>Кормозбиральні Комбайни (Силос)</uk>
+            <ru>Кормоуборочные комбайны (Силос)</ru>
+            <hu>Járvaszecskázók</hu>
         </text>
 
         <text name="rhm_help_cropsettings_forage_text">
             <en><![CDATA[• Corn Silage: Drum 1100-1160 RPM, Fan 1150-1290 RPM, Feeder 400-480 RPM.
 • Grass / Hay: Drum 700-900 RPM, Fan 800-1000 RPM, Feeder 300-450 RPM.
 * Tip: If Loss is RED but Engine Load is stable, the airflow (Fan) is blowing crops out. Reduce Fan speed.]]></en>
+            <de><![CDATA[• Maissilage: Häckseltrommel 1100-1160 U/min, Gebläse 1150-1290 U/min, Einzug 400-480 U/min.
+• Gras / Heu: Häckseltrommel 700-900 U/min, Gebläse 800-1000 U/min, Einzug 300-450 U/min.
+* Tipp: Ist der Verlust ROT bei stabiler Motorlast, bläst der Luftstrom das Erntegut heraus. Gebläse reduzieren.]]></de>
+            <fr><![CDATA[• Ensilage de maïs : Tambour 1100-1160 tr/min, Ventilateur 1150-1290 tr/min, Alimentation 400-480 tr/min.
+• Herbe / Foin : Tambour 700-900 tr/min, Ventilateur 800-1000 tr/min, Alimentation 300-450 tr/min.
+* Astuce : Si la perte est ROUGE avec une charge moteur stable, le flux d'air souffle la récolte. Réduisez le ventilateur.]]></fr>
+            <it><![CDATA[• Insilato di mais: Tamburo 1100-1160 giri/min, Ventola 1150-1290 giri/min, Alimentatore 400-480 giri/min.
+• Erba / Fieno: Tamburo 700-900 giri/min, Ventola 800-1000 giri/min, Alimentatore 300-450 giri/min.
+* Consiglio: Se le perdite sono ROSSE con carico motore stabile, il flusso d'aria soffia via il raccolto. Ridurre la ventola.]]></it>
+            <es><![CDATA[• Ensilaje de maíz: Tambor 1100-1160 RPM, Ventilador 1150-1290 RPM, Alimentador 400-480 RPM.
+• Hierba / Heno: Tambor 700-900 RPM, Ventilador 800-1000 RPM, Alimentador 300-450 RPM.
+* Consejo: Si la pérdida es ROJA con carga de motor estable, el flujo de aire expulsa el cultivo. Reduzca el ventilador.]]></es>
+            <br><![CDATA[• Silagem de milho: Tambor 1100-1160 RPM, Ventilador 1150-1290 RPM, Alimentador 400-480 RPM.
+• Grama / Feno: Tambor 700-900 RPM, Ventilador 800-1000 RPM, Alimentador 300-450 RPM.
+* Dica: Se a perda estiver VERMELHA com carga estável, o fluxo de ar está expulsando a cultura. Reduza o ventilador.]]></br>
+            <pl><![CDATA[• Kiszonka z kukurydzy: Bęben 1100-1160 RPM, Dmuchawa 1150-1290 RPM, Podajnik 400-480 RPM.
+• Trawa / Siano: Bęben 700-900 RPM, Dmuchawa 800-1000 RPM, Podajnik 300-450 RPM.
+* Wskazówka: Jeśli strata jest CZERWONA przy stabilnym obciążeniu silnika, nadmuch wywiewa plon. Zmniejsz dmuchawę.]]></pl>
+            <cz><![CDATA[• Kukuřičná siláž: Buben 1100-1160 ot/min, Ventilátor 1150-1290 ot/min, Vkládání 400-480 ot/min.
+• Tráva / Seno: Buben 700-900 ot/min, Ventilátor 800-1000 ot/min, Vkládání 300-450 ot/min.
+* Tip: Pokud je ztráta ČERVENÁ při stabilním zatížení motoru, proud vzduchu vyfukuje plodinu. Snižte ventilátor.]]></cz>
             <uk><![CDATA[• Кукурудзяний Силос: Барабан 1100-1160 RPM, Вентил. 1150-1290 RPM, Подача 400-480 RPM.
 • Трава / Сіно: Барабан 700-900 RPM, Вентил. 800-1000 RPM, Подача 300-450 RPM.
 * Підказка: Барабан - інтенсивність різання, Подача - об'єм. Якщо "Loss" червоний при стабільному Load, зменшіть Вентилятор.]]></uk>
+            <ru><![CDATA[• Кукурузный силос: Барабан 1100-1160 об/мин, Вентил. 1150-1290 об/мин, Подача 400-480 об/мин.
+• Трава / Сено: Барабан 700-900 об/мин, Вентил. 800-1000 об/мин, Подача 300-450 об/мин.
+* Подсказка: Барабан - резка, Подача - объем. Если потери КРАСНЫЕ при нормальной нагрузке, уменьшите обороты вентилятора.]]></ru>
+            <hu><![CDATA[• Kukoricaszilázs: Dob 1100-1160 ford./perc, Ventilátor 1150-1290 ford./perc, Behúzó 400-480 ford./perc.
+• Fű / Széna: Dob 700-900 ford./perc, Ventilátor 800-1000 ford./perc, Behúzó 300-450 ford./perc.
+* Tipp: Ha a veszteség PIROS, de a terhelés stabil, a légáram kifújja a terményt. Csökkentse a ventilátor fordulatszámát.]]></hu>
         </text>
 
         <text name="rhm_help_cropsettings_root_sub">
             <en>Root &amp; Vegetable Harvesters</en>
+            <de>Rüben- und Gemüseroder</de>
+            <fr>Récolteuses de racines et légumes</fr>
+            <it>Raccoglitrici di radici e ortaggi</it>
+            <es>Cosechadoras de raíces y hortalizas</es>
+            <br>Colhedoras de raízes e vegetais</br>
+            <pl>Kombajny do roślin okopowych i warzyw</pl>
+            <cz>Sklízeče okopanin a zeleniny</cz>
             <uk>Коренезбиральні Комбайни (Копачки)</uk>
+            <ru>Корнеуборочные комбайны и овощеуборщики</ru>
+            <hu>Gyökérzöldség-betakarítók</hu>
         </text>
 
         <text name="rhm_help_cropsettings_root_text">
@@ -4780,11 +4892,56 @@ Kukuřice / Slunečnice: 18 mm / 11-12 mm.
 • Onion: Roller ~300 RPM, Fan ~900-1100 RPM, Elevator ~600 RPM.
 • Spinach: Roller ~150 RPM, Fan ~100-200 RPM, Elevator ~700 RPM.
 * Tip: Rollers wash crops (bruise Potatoes if too fast). Fan blows off tops (keep max for Onions, min for Spinach). Elevator controls intake speed.]]></en>
+            <de><![CDATA[• Schwer (Kartoffeln, Rüben): Walzen ~400 U/min, Gebläse ~400-500 U/min, Elevator ~800 U/min.
+• Leicht (Karotten, Pastinaken): Walzen ~250 U/min, Gebläse ~300 U/min, Elevator ~900 U/min.
+• Zwiebeln: Walzen ~300 U/min, Gebläse ~900-1100 U/min, Elevator ~600 U/min.
+• Spinat: Walzen ~150 U/min, Gebläse ~100-200 U/min, Elevator ~700 U/min.
+* Tipp: Walzen reinigen (Kartoffeln beschädigen bei zu hoher Drehzahl). Gebläse bläst Kraut ab. Elevator steuert Einzugsrate.]]></de>
+            <fr><![CDATA[• Lourds (Pommes de terre, Betteraves) : Rouleaux ~400 tr/min, Ventilateur ~400-500 tr/min, Élévateur ~800 tr/min.
+• Légers (Carottes, Panais) : Rouleaux ~250 tr/min, Ventilateur ~300 tr/min, Élévateur ~900 tr/min.
+• Oignons : Rouleaux ~300 tr/min, Ventilateur ~900-1100 tr/min, Élévateur ~600 tr/min.
+• Épinards : Rouleaux ~150 tr/min, Ventilateur ~100-200 tr/min, Élévateur ~700 tr/min.
+* Astuce : Les rouleaux nettoient sans abîmer. Le ventilateur souffle les fanes (max oignons, min épinards). L'élévateur gère le flux.]]></fr>
+            <it><![CDATA[• Pesanti (Patate, Barbabietole): Rulli ~400 giri/min, Ventola ~400-500 giri/min, Elevatore ~800 giri/min.
+• Leggeri (Carote, Pastinache): Rulli ~250 giri/min, Ventola ~300 giri/min, Elevatore ~900 giri/min.
+• Cipolle: Rulli ~300 giri/min, Ventola ~900-1100 giri/min, Elevatore ~600 giri/min.
+• Spinaci: Rulli ~150 giri/min, Ventola ~100-200 giri/min, Elevatore ~700 giri/min.
+* Consiglio: I rulli puliscono (non eccedere con le patate). La ventola rimuove le foglie. L'elevatore controlla il flusso.]]></it>
+            <es><![CDATA[• Pesados (Patatas, Remolacha): Rodillos ~400 RPM, Ventilador ~400-500 RPM, Elevador ~800 RPM.
+• Ligeros (Zanahoria, Chirivía): Rodillos ~250 RPM, Ventilador ~300 RPM, Elevador ~900 RPM.
+• Cebolla: Rodillos ~300 RPM, Ventilador ~900-1100 RPM, Elevador ~600 RPM.
+• Espinaca: Rodillos ~150 RPM, Ventilador ~100-200 RPM, Elevador ~700 RPM.
+* Consejo: Los rodillos limpian la tierra. El ventilador elimina las hojas. El elevador controla la velocidad de carga.]]></es>
+            <br><![CDATA[• Pesados (Batata, Beterraba): Rolos ~400 RPM, Ventilador ~400-500 RPM, Elevador ~800 RPM.
+• Leves (Cenoura, Pastinaca): Rolos ~250 RPM, Ventilador ~300 RPM, Elevador ~900 RPM.
+• Cebola: Rolos ~300 RPM, Ventilador ~900-1100 RPM, Elevador ~600 RPM.
+• Espinafre: Rolos ~150 RPM, Ventilador ~100-200 RPM, Elevador ~700 RPM.
+* Dica: Os rolos limpam sem machucar. O ventilador remove ramas e cascas. O elevador controla a vazão de entrada.]]></br>
+            <pl><![CDATA[• Ciężkie (Ziemniaki, Buraki): Rolki ~400 RPM, Wentylator ~400-500 RPM, Przenośnik ~800 RPM.
+• Lekkie (Marchew, Pasternak): Rolki ~250 RPM, Wentylator ~300 RPM, Przenośnik ~900 RPM.
+• Cebula: Rolki ~300 RPM, Wentylator ~900-1100 RPM, Przenośnik ~600 RPM.
+• Szpinak: Rolki ~150 RPM, Wentylator ~100-200 RPM, Przenośnik ~700 RPM.
+* Wskazówka: Rolki oczyszczają z ziemi (ostrożnie z ziemniakami). Wentylator odrywa naci. Przenośnik kontroluje przepustowość.]]></pl>
+            <cz><![CDATA[• Těžké (Brambory, Řepa): Válce ~400 ot/min, Ventilátor ~400-500 ot/min, Elevátor ~800 ot/min.
+• Lehké (Mrkev, Pastinák): Válce ~250 ot/min, Ventilátor ~300 ot/min, Elevátor ~900 ot/min.
+• Cibule: Válce ~300 ot/min, Ventilátor ~900-1100 ot/min, Elevátor ~600 ot/min.
+• Špenát: Válce ~150 ot/min, Ventilátor ~100-200 ot/min, Elevátor ~700 ot/min.
+* Tip: Válce čistí hlínu (nepřetěžujte u brambor). Ventilátor odfukuje nať. Elevátor řídí rychlost plnění.]]></cz>
             <uk><![CDATA[• Важкі (Картопля, Буряк): Ролики ~400 RPM, Вентил. ~400-500 RPM, Елеватор ~800 RPM.
 • Легкі (Морква, Пастернак): Ролики ~250 RPM, Вентил. ~300 RPM, Елеватор ~900 RPM.
 • Цибуля: Ролики ~300 RPM, Вентил. ~900-1100 RPM, Елеватор ~600 RPM.
 • Шпинат: Ролики ~150 RPM, Вентил. ~100-200 RPM, Елеватор ~700 RPM.
 * Підказка: Ролики виконують очищення (не ставте високі для картоплі!). Вентилятор відриває гичку (максимум для цибулі, мінімум для шпинату). Елеватор керує швидкістю втягування в бункер.]]></uk>
+            <ru><![CDATA[• Тяжелые (Картофель, Свекла): Ролики ~400 об/мин, Вентил. ~400-500 об/мин, Элеватор ~800 об/мин.
+• Легкие (Морковь, Пастернак): Ролики ~250 об/мин, Вентил. ~300 об/мин, Элеватор ~900 об/мин.
+• Лук: Ролики ~300 об/мин, Вентил. ~900-1100 об/мин, Элеватор ~600 об/мин.
+• Шпинат: Ролики ~150 об/мин, Вентил. ~100-200 об/мин, Элеватор ~700 об/мин.
+* Подсказка: Ролики очищают грязь (не завышайте для картофеля!). Вентилятор отрывает ботву (максимум для лука, минимум для шпината). Элеватор задает скорость подачи.]]></ru>
+            <hu><![CDATA[• Nehéz (Burgonya, Cukorrépa): Hengerek ~400 ford./perc, Ventilátor ~400-500 ford./perc, Felhordó ~800 ford./perc.
+• Könnyű (Sárgarépa, Paszternák): Hengerek ~250 ford./perc, Ventilátor ~300 ford./perc, Felhordó ~900 ford./perc.
+• Hagyma: Hengerek ~300 ford./perc, Ventilátor ~900-1100 ford./perc, Felhordó ~600 ford./perc.
+• Spenót: Hengerek ~150 ford./perc, Ventilátor ~100-200 ford./perc, Felhordó ~700 ford./perc.
+* Tipp: A hengerek tisztítanak (a burgonyát ne zúzzuk össze). A ventilátor fújja le a szárat. A felhordó szabályozza a behordást.]]></hu>
         </text>
 
         <text name="rhm_help_calibration_forage_intro_text">
@@ -4798,6 +4955,76 @@ What each lever does:
 - Chopping Drum: Intensity of chopping (higher = more power used).
 - Feed Rolls: Throughput limit (main driver of Engine Load).
 - Intake Blower: Airflow for separation (too high = blow out crops).]]></en>
+            <de><![CDATA[Feldhäcksler reagieren sehr empfindlich auf Überfütterung.
+- Dichte Maissilage erfordert hohe Trommeldrehzahl und starken Luftstrom.
+- Gras und Heu sind empfindlich — gleichmäßiger Gutfluss schützt den Motor.
+
+Geht die Motorlast im HUD auf ROT, überfüttern Sie die Maschine (Geschwindigkeit verringern).
+
+Funktion der Hebel:
+- Häckseltrommel: Schnittintensität (höher = mehr Leistungsbedarf).
+- Einzugswalzen: Durchsatzmenge (Hauptfaktor der Motorlast).
+- Auswurfbeschleuniger: Luftstrom für die Abscheidung (zu hoch = Verlust).]]></de>
+            <fr><![CDATA[Les ensileuses sont très sensibles à la surcharge d'alimentation.
+- L'ensilage de maïs dense nécessite une vitesse de tambour élevée et un fort flux d'air.
+- L'herbe et le foin sont délicats — maintenez une alimentation fluide pour ménager le moteur.
+
+Si la charge moteur passe au ROUGE, vous surchargez la machine (ralentissez).
+
+Fonction des leviers :
+- Tambour hacheur : intensité de coupe (plus élevé = plus de puissance requise).
+- Rouleaux d'alimentation : débit de matière (facteur principal de charge moteur).
+- Accélérateur d'éjection : flux d'air d'évacuation (trop élevé = pertes de matière).]]></fr>
+            <it><![CDATA[Le trinciaerba sono estremamente sensibili al sovraccarico.
+- Il trinciato di mais fitto richiede alta velocità del tamburo e forte flusso d'aria.
+- Erba e fieno sono delicati: mantieni un flusso regolare per evitare sforzi al motore.
+
+Se il carico motore diventa ROSSO, stai sovraccaricando la trincia (rallenta).
+
+Cosa controllano le levette:
+- Tamburo trinciante: intensità di taglio (più alto = maggiore potenza assorbita).
+- Rulli di alimentazione: portata del materiale (influenza diretta sul carico motore).
+- Acceleratore di scarico: flusso d'aria per l'espulsione (troppo alto = perdite).]]></it>
+            <es><![CDATA[Las picadoras de forraje son muy sensibles a la sobrealimentación.
+- El ensilaje espeso de maíz requiere alta velocidad del tambor y gran flujo de aire.
+- La hierba y el heno son delicados: mantenga una alimentación constante para cuidar el motor.
+
+Si la carga del motor se pone ROJA, está sobrealimentando (reduzca la velocidad).
+
+Función de las palancas:
+- Tambor picador: intensidad del picado (mayor = mayor consumo de potencia).
+- Rodillos de alimentación: caudal de entrada (principal factor de carga del motor).
+- Acelerador de descarga: flujo de aire para la expulsión (demasiado alto = pérdidas).]]></es>
+            <br><![CDATA[As forrageiras são muito sensíveis à sobrecarga de alimentação.
+- A silagem densa de milho exige alta rotação do tambor e forte fluxo de ar.
+- O capim e o feno são delicados: mantenha a alimentação suave para não forçar o motor.
+
+Se a carga do motor ficar VERMELHA no HUD, reduza a velocidade imediatamente.
+
+O que cada controle faz:
+- Tambor picador: intensidade de corte (maior = mais potência exigida).
+- Rolos alimentadores: vazão de massa (principal causador de carga no motor).
+- Acelerador de descarga: fluxo de ar para ejeção (alto demais = perdas).]]></br>
+            <pl><![CDATA[Sieczkarnie są niezwykle wrażliwe na przeciążenie masą.
+- Gęsta kukurydza na kiszonkę wymaga wysokich obrotów bębna i silnego nadmuchu.
+- Trawa i siano są delikatniejsze — płynny przepływ chroni silnik przed zadławieniem.
+
+Jeśli obciążenie silnika na HUD staje się CZERWONE, zwolnij prędkość jazdy.
+
+Działanie suwaków:
+- Bęben tnący: intensywność rozdrabniania (wyższe obroty = większy pobór mocy).
+- Walce podające: ilość pobieranej masy (główny czynnik obciążenia silnika).
+- Dmuchawa wyrzutu: przepływ powietrza (zbyt wysoki = wywiewanie plonu).]]></pl>
+            <cz><![CDATA[Sklízecí řezačky jsou velmi citlivé na přehlcení materiálem.
+- Hustá kukuřice vyžaduje vysoké otáčky bubnu a silný proud vzduchu.
+- Tráva a seno jsou jemnější — plynulý přísun chrání motor před přetížením.
+
+Pokud zatížení motoru na HUD zčervená, snižte pojezdovou rychlost.
+
+Funkce ovládacích prvků:
+- Řezací buben: intenzita řezání (vyšší = vyšší odběr výkonu).
+- Vkládací válce: množství přiváděné hmoty (hlavní vliv na zatížení motoru).
+- Vymetací ventilátor: proud vzduchu pro vyhazování (příliš vysoký = ztráty).]]></cz>
             <uk><![CDATA[Форажні комбайни надзвичайно чутливі до перегодовування.
 - Кукурудзяний силос вимагає великих обертів барабана та сильного потоку повітря.
 - Трава та сіно делікатніші — подача має бути плавною.
@@ -4808,6 +5035,26 @@ What each lever does:
 - Барабан подрібнення: інтенсивність різання маси.
 - Живильні вальці: кількість маси (впливає на Engine Load).
 - Прискорювач (Вентилятор): повітря для викиду (надто сильний може видувати врожай).]]></uk>
+            <ru><![CDATA[Кормоуборочные комбайны крайне чувствительны к перегрузке массой.
+- Густой кукурузный силос требует высоких оборотов барабана и мощного обдува.
+- Трава и сено деликатнее — плавная подача защищает двигатель от перегрузки.
+
+Если нагрузка двигателя становится КРАСНОЙ на HUD, сбавьте скорость.
+
+Как работают регулировки:
+- Измельчающий барабан: интенсивность резки массы (выше = больше мощности).
+- Питающие вальцы: объем поступающей массы (главный фактор нагрузки двигателя).
+- Ускоритель выброса: поток воздуха (слишком сильный поток может выдувать массу).]]></ru>
+            <hu><![CDATA[A járvaszecskázók rendkívül érzékenyek a túlterhelésre.
+- A sűrű kukoricaszilázs magas dobfordulatszámot és erős légáramot igényel.
+- A fű és a széna kényesebb — az egyenletes behordás védi a motort.
+
+Ha a motorterhelés PIROSRA vált a HUD-on, csökkentse a haladási sebességet.
+
+A karok működése:
+- Szecskázódob: az aprítás intenzitása (magasabb = nagyobb teljesítményigény).
+- Behúzóhengerek: a behordott anyagmennyiség (a motorterhelés fő forrása).
+- Kifúvógyorsító: légáram a kidobáshoz (túl magas = terményveszteség).]]></hu>
         </text>
 
         <text name="rhm_help_calibration_root_intro_text">
@@ -4822,6 +5069,83 @@ What each lever does:
 - Cleaning Rollers: Control dirt removal without damaging the crop.
 - Elevator Belt: Controls the transport rate (throughput).
 - Selection Fan: Controls separation airflow.]]></en>
+            <de><![CDATA[Wurzelfrüchte stellen besondere Anforderungen an die Schmutzabscheidung.
+- Kartoffeln: Stoßempfindlich! Drehzahl der Reinigungswalzen niedrig halten.
+- Zwiebeln: Benötigen maximalen Luftstrom zum Entfernen der Schalen.
+- Spinat: Sehr empfindliche Blätter, Luftstrom drosseln, damit sie nicht verblasen werden.
+
+Treten ROTE Ernteverluste bei normaler Motorlast auf, prüfen Sie die Gebläsedrehzahl.
+
+Funktion der Hebel:
+- Reinigungswalzen: Schmutzabscheidung ohne Fruchtschäden.
+- Siebkette/Elevator: Fördermenge und Durchsatz.
+- Abscheidegebläse: Luftstrom zum Krautabblasen.]]></de>
+            <fr><![CDATA[Les tubercules et racines ont des exigences uniques de séparation de terre.
+- Pommes de terre : Très sensibles aux chocs ! Gardez les rouleaux lents.
+- Oignons : Nécessitent un flux d'air maximal pour ôter les pelures sèches.
+- Épinards : Feuilles délicates, réduisez l'air pour ne pas les envoler.
+
+Si les pertes sont ROUGES avec une charge moteur normale, ajustez la ventilation.
+
+Fonction des leviers :
+- Rouleaux nettoyeurs : Séparent la terre sans meurtrir le produit.
+- Tapis élévateur : Régule la vitesse d'acheminement vers la trémie.
+- Ventilateur de triage : Évacuation des fanes par flux d'air.]]></fr>
+            <it><![CDATA[I tuberi e gli ortaggi richiedono regole uniche per la separazione della terra.
+- Patate: Si ammaccano facilmente! Mantenere lenti i rulli di pulizia.
+- Cipolle: Richiedono il massimo flusso d'aria per staccare le bucce secche.
+- Spinaci: Foglie delicate, aria al minimo per non disperderle.
+
+Se le perdite sono ROSSE con carico motore normale, regola la velocità della ventola.
+
+Cosa controllano le levette:
+- Rulli di pulizia: Rimuovono la terra senza danneggiare il raccolto.
+- Nastro elevatore: Velocità di trasferimento nella tramoggia.
+- Ventola di separazione: Flusso d'aria per eliminare i residui fogliari.]]></it>
+            <es><![CDATA[Las raíces y tubérculos requieren un cuidado especial con la tierra.
+- Patatas: ¡Se dañan con facilidad! Mantenga los rodillos de limpieza lentos.
+- Cebollas: Requieren máximo flujo de aire para quitar la piel seca.
+- Espinacas: Hojas muy delicadas, reduzca el aire para evitar que salgan volando.
+
+Si ve pérdidas ROJAS con carga de motor normal, ajuste los ventiladores.
+
+Función de las palancas:
+- Rodillos limpiadores: Eliminan la tierra sin golpear el producto.
+- Cinta elevadora: Controla la velocidad de llenado de la tolva.
+- Ventilador de selección: Separa las hojas y restos vegetales.]]></es>
+            <br><![CDATA[As culturas de raízes exigem cuidados especiais na separação de terra.
+- Batatas: Machucam facilmente! Mantenha os rolos de limpeza em baixa rotação.
+- Cebolas: Precisam de fluxo de ar máximo para retirar as cascas secas.
+- Espinafre: Folhas delicadas, ar no mínimo para não serem sopradas fora.
+
+Se as perdas estiverem VERMELHAS com carga normal, ajuste os ventiladores.
+
+O que cada controle faz:
+- Rolos de limpeza: Limpam terra e torrões sem danificar o produto.
+- Esteira elevatória: Controla a velocidade de subida para o depósito.
+- Ventilador de triagem: Separa ramas e palhas pelo fluxo de ar.]]></br>
+            <pl><![CDATA[Okopowe i warzywa wymagają szczególnej dbałości przy odsiewaniu ziemi.
+- Ziemniaki: Łatwo ulegają obiciu! Rolki czyszczące powinny pracować powoli.
+- Cebula: Wymaga maksymalnego nadmuchu, aby usunąć suche łuski.
+- Szpinak: Bardzo delikatne liście, zmniejsz nadmuch, aby ich nie wywiać.
+
+Gdy straty są CZERWONE przy stabilnym silniku, wyreguluj wentylator.
+
+Działanie suwaków:
+- Rolki czyszczące: Oczyszczają z gleby bez uszkadzania bulw.
+- Taśma przenośnika: Kontroluje prędkość transportu do zbiornika.
+- Wentylator oddzielający: Przepływ powietrza do usuwania łęcin.]]></pl>
+            <cz><![CDATA[Okopaniny a kořenová zelenina vyžadují zvláštní péči při oddělování zeminy.
+- Brambory: Snadno se potlučou! Udržujte čisticí válce na nízkých otáčkách.
+- Cibule: Vyžaduje maximální proud vzduchu k odtržení suchých slupek.
+- Špenát: Velmi křehké listy, snižte proud vzduchu, aby neuletěly.
+
+Pokud jsou ztráty ČERVENÉ při normálním zatížení motoru, upravte ventilátory.
+
+Funkce ovládacích prvků:
+- Čisticí válce: Čistí hlínu bez poškození plodů.
+- Pás elevátoru: Řídí rychlost plnění zásobníku.
+- Třídicí ventilátor: Proud vzduchu k odfukování natě.]]></cz>
             <uk><![CDATA[У коренеплодів свої унікальні правила очищення:
 - Картопля: дуже легко б'ється! Очисні ролики мають бути повільними.
 - Цибуля: потребує найсильнішого обдуву, щоб відривати сухе лушпиння.
@@ -4833,6 +5157,28 @@ What each lever does:
 - Очисні ролики: очищають від бруду (без пошкоджень продукту).
 - Стрічка елеватора: швидкість завантаження в бункер (пропускна здатність).
 - Вентилятор: потік повітря для сепарації бадилля.]]></uk>
+            <ru><![CDATA[Корнеплоды имеют особые правила очистки от почвы.
+- Картофель: Легко бьется! Очистные ролики должны вращаться медленно.
+- Лук: Требует максимального обдува для отрыва сухой шелухи.
+- Шпинат: Сверхделикатные листья, воздух на минимум, чтобы не улетели.
+
+Если потери КРАСНЫЕ при нормальной нагрузке двигателя, проверьте обдув.
+
+Как работают регулировки:
+- Очистные ролики: Очищают от грязи без повреждения урожая.
+- Лента элеватора: Скорость подачи в бункер (пропускная способность).
+- Вентилятор: Поток воздуха для отделения ботвы.]]></ru>
+            <hu><![CDATA[A gyökérzöldségek egyedi kihívást jelentenek a föld leválasztásában.
+- Burgonya: Könnyen sérül! A tisztítóhengereket lassan járassa.
+- Hagyma: Maximális légáramot igényel a száraz héj eltávolításához.
+- Spenót: Kényes levelek, csökkentse a légáramot, hogy ne fújja ki őket.
+
+Ha a veszteség PIROS, miközben a terhelés normális, állítsa be a ventilátort.
+
+A karok működése:
+- Tisztítóhengerek: Földleválasztás a termény károsítása nélkül.
+- Felhordószalag: Szabályozza a tartályba juttatás sebességét.
+- Válogatóventilátor: Légáram a szármaradványok eltávolításához.]]></hu>
         </text>
         <text name="rhm_help_hud_sub3">
             <en>HUD Indicators</en>
@@ -4924,6 +5270,425 @@ What each lever does:
             <hu>Jelenlegi és Ajánlott sebesség</hu>
             <cz>Aktuální a Doporučená rychlost</cz>
             <uk>Поточна та рекомендована швидкість руху</uk>
+        </text>
+
+        <!-- Terminal Calibration Sections -->
+        <text name="rhm_ui_section_separation">
+            <en>Separation</en>
+            <de>Abscheidung</de>
+            <fr>Séparation</fr>
+            <it>Separazione</it>
+            <es>Separación</es>
+            <br>Separação</br>
+            <pl>Separacja</pl>
+            <cz>Separace</cz>
+            <uk>Сепарація</uk>
+            <ru>Сепарация</ru>
+            <hu>Leválasztás</hu>
+        </text>
+        <text name="rhm_ui_section_cleaning">
+            <en>Cleaning</en>
+            <de>Reinigung</de>
+            <fr>Nettoyage</fr>
+            <it>Pulizia</it>
+            <es>Limpieza</es>
+            <br>Limpeza</br>
+            <pl>Czyszczenie</pl>
+            <cz>Čištění</cz>
+            <uk>Очищення</uk>
+            <ru>Очистка</ru>
+            <hu>Tisztítás</hu>
+        </text>
+        <text name="rhm_ui_section_discharge">
+            <en>Discharge</en>
+            <de>Auswurf</de>
+            <fr>Éjection</fr>
+            <it>Scarico</it>
+            <es>Descarga</es>
+            <br>Descarga</br>
+            <pl>Rozładunek</pl>
+            <cz>Výhoz</cz>
+            <uk>Вивантаження</uk>
+            <ru>Выгрузка</ru>
+            <hu>Ürítés</hu>
+        </text>
+        <text name="rhm_ui_section_performance">
+            <en>Performance</en>
+            <de>Leistung</de>
+            <fr>Performance</fr>
+            <it>Prestazioni</it>
+            <es>Rendimiento</es>
+            <br>Desempenho</br>
+            <pl>Wydajność</pl>
+            <cz>Výkon</cz>
+            <uk>Продуктивність</uk>
+            <ru>Производительность</ru>
+            <hu>Teljesítmény</hu>
+        </text>
+
+        <!-- Tier Badges -->
+        <text name="rhm_ui_tier1_manual">
+            <en>TIER 1 - MANUAL</en>
+            <de>STUFE 1 - MANUELL</de>
+            <fr>TIER 1 - MANUEL</fr>
+            <it>LIVELLO 1 - MANUALE</it>
+            <es>NIVEL 1 - MANUAL</es>
+            <br>NÍVEL 1 - MANUAL</br>
+            <pl>POZIOM 1 - RĘCZNY</pl>
+            <cz>ÚROVEŇ 1 - RUČNÍ</cz>
+            <uk>РІВЕНЬ 1 - РУЧНИЙ</uk>
+            <ru>УРОВЕНЬ 1 - РУЧНОЙ</ru>
+            <hu>1. SZINT - KÉZI</hu>
+        </text>
+        <text name="rhm_ui_tier2_sensors">
+            <en>TIER 2 - SENSORS</en>
+            <de>STUFE 2 - SENSOREN</de>
+            <fr>TIER 2 - CAPTEURS</fr>
+            <it>LIVELLO 2 - SENSORI</it>
+            <es>NIVEL 2 - SENSORES</es>
+            <br>NÍVEL 2 - SENSORES</br>
+            <pl>POZIOM 2 - CZUJNIKI</pl>
+            <cz>ÚROVEŇ 2 - SNÍMAČE</cz>
+            <uk>РІВЕНЬ 2 - ДАТЧИКИ</uk>
+            <ru>УРОВЕНЬ 2 - ДАТЧИКИ</ru>
+            <hu>2. SZINT - SZENZOROK</hu>
+        </text>
+        <text name="rhm_ui_tier3_monitor">
+            <en>TIER 3 - MONITOR</en>
+            <de>STUFE 3 - MONITOR</de>
+            <fr>TIER 3 - ÉCRAN</fr>
+            <it>LIVELLO 3 - MONITOR</it>
+            <es>NIVEL 3 - MONITOR</es>
+            <br>NÍVEL 3 - MONITOR</br>
+            <pl>POZIOM 3 - MONITOR</pl>
+            <cz>ÚROVEŇ 3 - MONITOR</cz>
+            <uk>РІВЕНЬ 3 - МОНІТОР</uk>
+            <ru>УРОВЕНЬ 3 - МОНИТОР</ru>
+            <hu>3. SZINT - MONITOR</hu>
+        </text>
+        <text name="rhm_ui_tier4_opti">
+            <en>TIER 4 - AI OPTI</en>
+            <de>STUFE 4 - KI-OPTI</de>
+            <fr>TIER 4 - IA OPTI</fr>
+            <it>LIVELLO 4 - IA OPTI</it>
+            <es>NIVEL 4 - IA OPTI</es>
+            <br>NÍVEL 4 - IA OPTI</br>
+            <pl>POZIOM 4 - AI OPTI</pl>
+            <cz>ÚROVEŇ 4 - AI OPTI</cz>
+            <uk>РІВЕНЬ 4 - AI OPTI</uk>
+            <ru>УРОВЕНЬ 4 - AI OPTI</ru>
+            <hu>4. SZINT - MI OPTI</hu>
+        </text>
+
+        <!-- Telemetry Card Labels -->
+        <text name="rhm_ui_card_engine_load">
+            <en>ENGINE LOAD</en>
+            <de>MOTORLAST</de>
+            <fr>CHARGE MOTEUR</fr>
+            <it>CARICO MOTORE</it>
+            <es>CARGA MOTOR</es>
+            <br>CARGA DO MOTOR</br>
+            <pl>OBCIĄŻENIE SILNIKA</pl>
+            <cz>ZATÍŽENÍ MOTORU</cz>
+            <uk>НАВАНТАЖЕННЯ ДВИГУНА</uk>
+            <ru>НАГРУЗКА ДВИГАТЕЛЯ</ru>
+            <hu>MOTORTERHELÉS</hu>
+        </text>
+        <text name="rhm_ui_card_efficiency">
+            <en>EFFICIENCY</en>
+            <de>EFFIZIENZ</de>
+            <fr>EFFICACITÉ</fr>
+            <it>EFFICIENZA</it>
+            <es>EFICIENCIA</es>
+            <br>EFICIÊNCIA</br>
+            <pl>WYDAJNOŚĆ</pl>
+            <cz>EFEKTIVITA</cz>
+            <uk>ЕФЕКТИВНІСТЬ (ККД)</uk>
+            <ru>ЭФФЕКТИВНОСТЬ</ru>
+            <hu>HATÉKONYSÁG</hu>
+        </text>
+        <text name="rhm_ui_card_predicted_loss">
+            <en>PREDICTED LOSS</en>
+            <de>ERWARTETER VERLUST</de>
+            <fr>PERTE ESTIMÉE</fr>
+            <it>PERDITA PREVISTA</it>
+            <es>PÉRDIDA ESTIMADA</es>
+            <br>PERDA ESTIMADA</br>
+            <pl>PRZEWIDYWANA STRATA</pl>
+            <cz>ODHADOVANÁ ZTRÁTA</cz>
+            <uk>ОЧІКУВАНІ ВТРАТИ</uk>
+            <ru>ПРОГНОЗ ПОТЕРЬ</ru>
+            <hu>VÁRHATÓ VESZTESÉG</hu>
+        </text>
+
+        <!-- Terminal Buttons -->
+        <text name="rhm_ui_btn_ai_auto">
+            <en>AI AUTO-CALIB</en>
+            <de>KI AUTO-KALIB</de>
+            <fr>AUTO-CALIB IA</fr>
+            <it>AUTO-CALIB IA</it>
+            <es>AUTO-CALIB IA</es>
+            <br>AUTO-CALIB IA</br>
+            <pl>AUTO-KALIB AI</pl>
+            <cz>AUTO-KALIB AI</cz>
+            <uk>AI АВТО-КАЛІБР</uk>
+            <ru>АВТО-КАЛИБР AI</ru>
+            <hu>MI AUTO-KALIB</hu>
+        </text>
+        <text name="rhm_ui_btn_auto_locked">
+            <en>AUTO (LOCKED)</en>
+            <de>AUTO (GESPERRT)</de>
+            <fr>AUTO (VERROUILLÉ)</fr>
+            <it>AUTO (BLOCCATO)</it>
+            <es>AUTO (BLOQUEADO)</es>
+            <br>AUTO (BLOQUEADO)</br>
+            <pl>AUTO (ZABLOKOWANE)</pl>
+            <cz>AUTO (ZAMČENO)</cz>
+            <uk>AUTO (БЛОК)</uk>
+            <ru>AUTO (БЛОК)</ru>
+            <hu>AUTO (ZÁROLVA)</hu>
+        </text>
+        <text name="rhm_ui_btn_load_preset">
+            <en>LOAD PRESET</en>
+            <de>PROFIL LADEN</de>
+            <fr>CHARGER</fr>
+            <it>CARICA PROFILO</it>
+            <es>CARGAR PERFIL</es>
+            <br>CARREGAR PERFIL</br>
+            <pl>WCZYTAJ</pl>
+            <cz>NAČÍST</cz>
+            <uk>ЗАВАНТАЖИТИ</uk>
+            <ru>ЗАГРУЗИТЬ</ru>
+            <hu>BETÖLTÉS</hu>
+        </text>
+        <text name="rhm_ui_btn_save_profile">
+            <en>SAVE PROFILE</en>
+            <de>PROFIL SPEICHERN</de>
+            <fr>SAUVEGARDER</fr>
+            <it>SALVA PROFILO</it>
+            <es>GUARDAR PERFIL</es>
+            <br>SALVAR PERFIL</br>
+            <pl>ZAPISZ</pl>
+            <cz>ULOŽIT</cz>
+            <uk>ЗБЕРЕГТИ</uk>
+            <ru>СОХРАНИТЬ</ru>
+            <hu>MENTÉS</hu>
+        </text>
+        <text name="rhm_ui_btn_load_locked">
+            <en>LOAD (LOCKED)</en>
+            <de>LADEN (GESPERRT)</de>
+            <fr>CHARGER (VERR.)</fr>
+            <it>CARICA (BLOCC.)</it>
+            <es>CARGAR (BLOQ.)</es>
+            <br>CARREGAR (BLOQ.)</br>
+            <pl>WCZYTAJ (ZABLOK.)</pl>
+            <cz>NAČÍST (ZAMČ.)</cz>
+            <uk>ЗАВАНТ. (БЛОК)</uk>
+            <ru>ЗАГРУЗ. (БЛОК)</ru>
+            <hu>BETÖLTÉS (ZÁRVA)</hu>
+        </text>
+        <text name="rhm_ui_btn_save_locked">
+            <en>SAVE (LOCKED)</en>
+            <de>SPEICHERN (GESPERRT)</de>
+            <fr>SAUV. (VERR.)</fr>
+            <it>SALVA (BLOCC.)</it>
+            <es>GUARDAR (BLOQ.)</es>
+            <br>SALVAR (BLOQ.)</br>
+            <pl>ZAPISZ (ZABLOK.)</pl>
+            <cz>ULOŽIT (ZAMČ.)</cz>
+            <uk>ЗБЕРЕГТИ (БЛОК)</uk>
+            <ru>СОХРАН. (БЛОК)</ru>
+            <hu>MENTÉS (ZÁRVA)</hu>
+        </text>
+        <text name="rhm_ui_btn_reset_defaults">
+            <en>RESET TO FACTORY DEFAULTS</en>
+            <de>AUF WERKSEINSTELLUNGEN ZURÜCKSETZEN</de>
+            <fr>RÉINITIALISER AUX VALEURS D'USINE</fr>
+            <it>RIPRISTINA VALORI DI FABBRICA</it>
+            <es>RESTABLECER VALORES DE FÁBRICA</es>
+            <br>RESTAURAR PADRÕES DE FÁBRICA</br>
+            <pl>PRZYWRÓĆ USTAWIENIA FABRYCZNE</pl>
+            <cz>OBNOVIT TOVÁRNÍ NASTAVENÍ</cz>
+            <uk>СКИДАННЯ ДО ЗАВОДСЬКИХ НАЛАШТУВАНЬ</uk>
+            <ru>СБРОС К ЗАВОДСКИМ НАСТРОЙКАМ</ru>
+            <hu>GYÁRI BEÁLLÍTÁSOK VISSZAÁLLÍTÁSA</hu>
+        </text>
+
+        <!-- Slider Statuses -->
+        <text name="rhm_ui_status_optimal">
+            <en>OPTIMAL</en>
+            <de>OPTIMAL</de>
+            <fr>OPTIMAL</fr>
+            <it>OTTIMALE</it>
+            <es>ÓPTIMO</es>
+            <br>IDEAL</br>
+            <pl>OPTYMALNIE</pl>
+            <cz>OPTIMÁLNÍ</cz>
+            <uk>ОПТИМАЛЬНО</uk>
+            <ru>ОПТИМАЛЬНО</ru>
+            <hu>OPTIMÁLIS</hu>
+        </text>
+        <text name="rhm_ui_status_low">
+            <en>LOW</en>
+            <de>ZU NIEDRIG</de>
+            <fr>TROP BAS</fr>
+            <it>BASSO</it>
+            <es>BAJO</es>
+            <br>BAIXO</br>
+            <pl>ZA NISKO</pl>
+            <cz>NÍZKÉ</cz>
+            <uk>НИЗЬКО</uk>
+            <ru>НИЗКО</ru>
+            <hu>ALACSONY</hu>
+        </text>
+        <text name="rhm_ui_status_high">
+            <en>HIGH</en>
+            <de>ZU HOCH</de>
+            <fr>TROP HAUT</fr>
+            <it>ALTO</it>
+            <es>ALTO</es>
+            <br>ALTO</br>
+            <pl>ZA WYSOKO</pl>
+            <cz>VYSOKÉ</cz>
+            <uk>ВИСОКО</uk>
+            <ru>ВЫСОКО</ru>
+            <hu>MAGAS</hu>
+        </text>
+
+        <!-- Messages and Prompts -->
+        <text name="rhm_msg_req_tier4">
+            <en>Requires Opti-Harvest AI (Tier 4)</en>
+            <de>Erfordert Opti-Harvest KI (Stufe 4)</de>
+            <fr>Nécessite IA Opti-Harvest (Tier 4)</fr>
+            <it>Richiede IA Opti-Harvest (Livello 4)</it>
+            <es>Requiere IA Opti-Harvest (Nivel 4)</es>
+            <br>Requer IA Opti-Harvest (Nível 4)</br>
+            <pl>Wymaga AI Opti-Harvest (Poziom 4)</pl>
+            <cz>Vyžaduje AI Opti-Harvest (Úroveň 4)</cz>
+            <uk>Потрібен Opti-Harvest AI (Рівень 4)</uk>
+            <ru>Требуется Opti-Harvest AI (Уровень 4)</ru>
+            <hu>Opti-Harvest MI szükséges (4. Szint)</hu>
+        </text>
+        <text name="rhm_msg_req_tier3">
+            <en>Profiles require Telemetry Monitor (Tier 3)</en>
+            <de>Profile erfordern Telemetrie-Monitor (Stufe 3)</de>
+            <fr>Les profils nécessitent l'Écran de télémétrie (Tier 3)</fr>
+            <it>I profili richiedono il Monitor Telemetria (Livello 3)</it>
+            <es>Los perfiles requieren Monitor de Telemetría (Nivel 3)</es>
+            <br>Os perfis requerem Monitor de Telemetria (Nível 3)</br>
+            <pl>Profile wymagają Monitora Telemetrii (Poziom 3)</pl>
+            <cz>Profily vyžadují Monitor Telemetrie (Úroveň 3)</cz>
+            <uk>Для профілів потрібен Монітор Телеметрії (Рівень 3)</uk>
+            <ru>Для профилей требуется Монитор Телеметрии (Уровень 3)</ru>
+            <hu>A profilokhoz Telemetria Monitor szükséges (3. Szint)</hu>
+        </text>
+        <text name="rhm_msg_profile_saved">
+            <en>Saved Profile: %s</en>
+            <de>Profil gespeichert: %s</de>
+            <fr>Profil enregistré : %s</fr>
+            <it>Profilo salvato: %s</it>
+            <es>Perfil guardado: %s</es>
+            <br>Perfil salvo: %s</br>
+            <pl>Zapisano profil: %s</pl>
+            <cz>Profil uložen: %s</cz>
+            <uk>Збережено Профіль: %s</uk>
+            <ru>Профиль сохранён: %s</ru>
+            <hu>Profil elmentve: %s</hu>
+        </text>
+        <text name="rhm_msg_profile_loaded">
+            <en>Loaded Profile: %s</en>
+            <de>Profil geladen: %s</de>
+            <fr>Profil chargé : %s</fr>
+            <it>Profilo caricato: %s</it>
+            <es>Perfil cargado: %s</es>
+            <br>Perfil carregado: %s</br>
+            <pl>Wczytano profil: %s</pl>
+            <cz>Profil načten: %s</cz>
+            <uk>Завантажено Профіль: %s</uk>
+            <ru>Профиль загружен: %s</ru>
+            <hu>Profil betöltve: %s</hu>
+        </text>
+        <text name="rhm_msg_profile_not_found">
+            <en>No saved profile found for this crop</en>
+            <de>Kein gespeichertes Profil für diese Frucht gefunden</de>
+            <fr>Aucun profil enregistré pour cette culture</fr>
+            <it>Nessun profilo salvato per questa coltura</it>
+            <es>No se encontró ningún perfil para este cultivo</es>
+            <br>Nenhum perfil salvo encontrado para esta cultura</br>
+            <pl>Nie znaleziono zapisanego profilu dla tej uprawy</pl>
+            <cz>Pro tuto plodinu nebyl nalezen žádný profil</cz>
+            <uk>Для цієї культури немає збереженого профілю</uk>
+            <ru>Для этой культуры нет сохранённого профиля</ru>
+            <hu>Nincs mentett profil ehhez a növényhez</hu>
+        </text>
+        <text name="rhm_ui_combine_not_init">
+            <en>Combine not initialized</en>
+            <de>Mähdrescher nicht initialisiert</de>
+            <fr>Moissonneuse non initialisée</fr>
+            <it>Mietitrebbia non inizializzata</it>
+            <es>Cosechadora no inicializada</es>
+            <br>Colheitadeira não inicializada</br>
+            <pl>Kombajn niezainicjalizowany</pl>
+            <cz>Sklízeč není inicializován</cz>
+            <uk>Комбайн не ініціалізовано</uk>
+            <ru>Комбайн не инициализирован</ru>
+            <hu>A kombájn nincs inicializálva</hu>
+        </text>
+
+        <!-- Metric Units -->
+        <text name="rhm_unit_t_per_hour">
+            <en>t/h</en>
+            <de>t/h</de>
+            <fr>t/h</fr>
+            <it>t/h</it>
+            <es>t/h</es>
+            <br>t/h</br>
+            <pl>t/h</pl>
+            <cz>t/h</cz>
+            <uk>т/год</uk>
+            <ru>т/ч</ru>
+            <hu>t/h</hu>
+        </text>
+        <text name="rhm_unit_ha_per_hour">
+            <en>ha/h</en>
+            <de>ha/h</de>
+            <fr>ha/h</fr>
+            <it>ha/h</it>
+            <es>ha/h</es>
+            <br>ha/h</br>
+            <pl>ha/h</pl>
+            <cz>ha/h</cz>
+            <uk>га/год</uk>
+            <ru>га/ч</ru>
+            <hu>ha/h</hu>
+        </text>
+
+        <!-- Fallback standard keys -->
+        <text name="ui_off">
+            <en>Off</en>
+            <de>Aus</de>
+            <fr>Désactivé</fr>
+            <it>Disattivato</it>
+            <es>Desactivado</es>
+            <br>Desligado</br>
+            <pl>Wyłączone</pl>
+            <cz>Vypnuto</cz>
+            <uk>Вимк</uk>
+            <ru>Выкл</ru>
+            <hu>Ki</hu>
+        </text>
+        <text name="ui_on">
+            <en>On</en>
+            <de>Ein</de>
+            <fr>Activé</fr>
+            <it>Attivato</it>
+            <es>Activado</es>
+            <br>Ligado</br>
+            <pl>Włączone</pl>
+            <cz>Zapnuto</cz>
+            <uk>Увімк</uk>
+            <ru>Вкл</ru>
+            <hu>Be</hu>
         </text>
 </l10n>
 

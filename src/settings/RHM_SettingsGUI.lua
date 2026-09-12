@@ -335,8 +335,8 @@ function RHMSettingsGUI:consoleCommandCombineAuto()
         return "[X] You must be in a combine to use this command"
     end
 
-    if not g_realisticHarvestManager or not g_realisticHarvestManager.combineSettingsGUI then
-        return "[X] Combine RHMSettings GUI not initialized"
+    if not g_realisticHarvestManager then
+        return "[X] Realistic Harvest Manager not initialized"
     end
 
     local spec = vehicle.spec_rhm_Combine

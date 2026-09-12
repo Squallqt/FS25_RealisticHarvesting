@@ -40,6 +40,7 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "hudOffsetY",
     "hudPosX",
     "hudPosY",
+    "hudDocked",
     "unitSystem",
     "showSpeedometer",
     "enableOverloadSounds",

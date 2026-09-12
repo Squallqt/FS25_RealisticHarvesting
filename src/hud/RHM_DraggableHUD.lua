@@ -1,20 +1,18 @@
--- EN: Draggable on-screen HUD overlay for the Realistic Harvesting mod.
---     Displays live combine metrics: engine load, yield, productivity, crop loss, and speed.
---     Supports drag-and-drop repositioning (via mouse on the header), dynamic row sizing
---     based on user-selected visible metrics, and the "RHMSettings" button that opens the calibration GUI.
--- UA: Перетягуваний HUD-оверлей на екрані для мода Realistic Harvesting.
---     Відображає живі показники комбайна: навантаження двигуна, врожайність, продуктивність, втрати зерна, швидкість.
---     Підтримує перетягування для репозиціонування (через мишу по заголовку), динамічне змінення розміру рядків
---     залежно від вибраних метрик і кнопку "RHMSettings" яка відкриває GUI калібрування.
+-- EN: Precision Farming (PF) style minimalist on-screen HUD for Realistic Harvesting.
+--     Uses the authentic Precision Farming background texture (ui_elements.dds) with 3-part rounded capsule slices.
+--     Correctly tinted with dark obsidian glass color (0.028, 0.030, 0.036, 0.88).
+--     Docks directly beneath the Precision Farming shortcut box or F1 ControlsHelp menu.
+--     Dynamically tracks the F1 help menu toggle via g_gameSettings showHelpMenu.
+--     Supports interactive click-to-cycle metrics (t/h <-> ha/h, Loss <-> Speed, Moisture <-> Yield).
+-- UA: Мінімалістичний HUD у стилістиці Precision Farming (PF) для Realistic Harvesting.
+--     Використовує автентичну текстуру фону PF (ui_elements.dds) з 3-компонентними заокругленими кутами.
+--     Тонований у глибокий колір темного скла (0.028, 0.030, 0.036, 0.88), ідентичний до PF.
+--     Приліпає безпосередньо під смугу Precision Farming або меню довідки F1 (ControlsHelp).
+--     Динамічно відстежує відкриття/закриття F1 через g_gameSettings showHelpMenu.
+--     Підтримує інтерактивне перемикання показників кліком (т/ч <-> га/ч, Втрати <-> Швидкість, Волога <-> Урожайність).
+
 RHMDraggableHUD = {}
 RHMDraggableHUD.__index = RHMDraggableHUD
-
-RHMDraggableHUD.DRAG_DELAY_MS = 15
-RHMDraggableHUD.DRAG_LIMIT = 2
-
-local COLOR_LOAD_LOW = {1.0, 1.0, 1.0}
-local COLOR_LOAD_MID = {0.95, 0.80, 0.20}
-local COLOR_LOAD_HIGH = {1.0, 0.48, 0.10}
 
 function RHMDraggableHUD.new(modDirectory, settings)
     local self = setmetatable({}, RHMDraggableHUD)
@@ -31,24 +29,25 @@ function RHMDraggableHUD.new(modDirectory, settings)
         tonPerHour = 0,
         litersPerHour = 0,
         recommendedSpeed = 0,
-        moisture = 0
+        moisture = 0,
+        hectaresPerHour = 0
     }
 
-    self.width = 0.11
-    self.height = 0.18
-    self.headerHeight = 0.028
+    self.displayModes = {
+        cell1 = "load",
+        cell2 = "loss",
+        cell3 = "moisture",
+        cell4 = "tonPerHour"
+    }
+
     self.uiScale = 1.0
+    self.width = 0.172
+    self.height = 0.042
 
-    self.dragging = false
-    self.dragStartX = nil
-    self.dragOffsetX = nil
-    self.dragStartY = nil
-    self.dragOffsetY = nil
-    self.lastDragTimeStamp = nil
-
-    self.backgroundOverlay = nil
-    self.headerOverlay = nil
-    self.accentLineOverlay = nil
+    self.rectOverlay = nil
+    self.bgTopOverlay = nil
+    self.bgMidOverlay = nil
+    self.bgBotOverlay = nil
     self.icons = {}
 
     return self
@@ -60,46 +59,52 @@ function RHMDraggableHUD:load()
         self.uiScale = g_gameSettings:getValue("uiScale") or 1.0
     end
 
-    self.width = 0.10 * self.uiScale
-    self.height = 0.165 * self.uiScale
-    self.headerHeight = 0.022 * self.uiScale
+    self.height = 0.042 * self.uiScale
+    self.width  = 0.172 * self.uiScale
 
-    self.x, self.y = self:getPosition()
+    -- 1. Load authentic Precision Farming background texture & slices
+    self.uiElementsPath = self.modDirectory .. "textures/ui_elements.dds"
+    local texSize = {1024, 512}
 
+    -- Exact 3-part slices from PF ui_elements.xml:
+    -- shortcutBox_top:    uvs="7px 250px 330px 8px"
+    -- shortcutBox_middle: uvs="7px 270px 330px 8px"
+    -- shortcutBox_bottom: uvs="7px 292px 330px 8px"
+    local topUVs = GuiUtils.getUVs({7, 250, 330, 8}, texSize)
+    local midUVs = GuiUtils.getUVs({7, 270, 330, 8}, texSize)
+    local botUVs = GuiUtils.getUVs({7, 292, 330, 8}, texSize)
+
+    self.bgTopOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
+    if topUVs then self.bgTopOverlay:setUVs(topUVs) end
+
+    self.bgMidOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
+    if midUVs then self.bgMidOverlay:setUVs(midUVs) end
+
+    self.bgBotOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
+    if botUVs then self.bgBotOverlay:setUVs(botUVs) end
+
+    -- 2. Solid 1x1 overlay for dividers and underline indicators
     self.iconAtlasPath = self.modDirectory .. "textures/hud_icons.dds"
     self.bgUVs = GuiUtils.getUVs({388, 4, 56, 56}, {512, 64})
+    self.rectOverlay = Overlay.new(self.iconAtlasPath, 0, 0, 1, 1)
+    if self.bgUVs then
+        self.rectOverlay:setUVs(self.bgUVs)
+    end
 
-    -- EN: Courseplay Green header matching calibration GUI
-    -- UA: Зелена шапка Courseplay, ідентична до GUI калібрування
-    self.headerOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y + self.height, self.width, self.headerHeight)
-    self.headerOverlay:setUVs(self.bgUVs)
-    self.headerOverlay:setColor(0.223, 0.407, 0.004, 1.0) -- Exact Courseplay Green
-
-    -- EN: Header accent line separator matching calibration GUI
-    -- UA: Акцентна лінія-розділювач шапки, ідентична до GUI калібрування
-    self.accentLineOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y + self.height, self.width, 0.0015)
-    self.accentLineOverlay:setUVs(self.bgUVs)
-    self.accentLineOverlay:setColor(0.223, 0.407, 0.004, 1.0)
-
-    -- EN: Pure deep black glass background (80% opacity), identical to calibration GUI
-    -- UA: Глибокий чисто-чорний скляний фон (80% непрозорості), ідентичний до GUI калібрування
-    self.backgroundOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y, self.width, self.height)
-    self.backgroundOverlay:setUVs(self.bgUVs)
-    self.backgroundOverlay:setColor(0.0, 0.0, 0.0, 0.80)
+    self.x, self.y, self.width = self:getDockedPosition()
 
     self:loadIcons(self.uiScale)
 
-    rhm_log("RHM [UI]: RHM: RHMDraggableHUD loaded successfully")
+    rhm_log("RHM [UI]: RHMDraggableHUD (PF style) loaded successfully")
 end
 
 function RHMDraggableHUD:loadIcons(uiScale)
-    local iconHeight = 0.028 * self.uiScale
-    local iconWidth = iconHeight / g_screenAspectRatio
+    self.height = 0.042 * self.uiScale
+    self.width  = 0.172 * self.uiScale
 
-    -- EN: Single texture atlas with all HUD icons and background.
-    --     Atlas layout: 448x64, each icon 64x64. Background is the last one.
-    -- UA: Єдиний текстурний атлас з усіма HUD-іконками та фоном.
-    --     Розкладка: 448x64, кожна іконка 64x64. Фон - останній.
+    local iconHeight = 0.024 * self.uiScale
+    local iconWidth  = iconHeight / g_screenAspectRatio
+
     local atlasPath = self.iconAtlasPath or (self.modDirectory .. "textures/hud_icons.dds")
     local atlasSize = {512, 64}
     local iconPx = 64
@@ -110,22 +115,14 @@ function RHMDraggableHUD:loadIcons(uiScale)
         productivity = {128,   0, iconPx, iconPx},
         moisture     = {192,   0, iconPx, iconPx},
         loss         = {256,   0, iconPx, iconPx},
-        speed        = {320,   0, iconPx, iconPx},
-        settings     = {448,   0, iconPx, iconPx}
+        speed        = {320,   0, iconPx, iconPx}
     }
 
     for name, uvRect in pairs(iconDefs) do
         local icon = Overlay.new(atlasPath, 0, 0, iconWidth, iconHeight)
         icon:setUVs(GuiUtils.getUVs(uvRect, atlasSize))
-        icon:setColor(1, 1, 1, 0.80)
+        icon:setColor(1, 1, 1, 0.95)
         self.icons[name] = icon
-    end
-
-    -- EN: Reused each frame for the settings button background (avoid Overlay.new/delete per draw).
-    -- UA: Перевикористовується щокадру для фону кнопки налаштувань (без Overlay.new/delete на кожен draw).
-    self.settingsButtonBgOverlay = Overlay.new(atlasPath, 0, 0, 0.014 * self.uiScale, self.headerHeight)
-    if self.bgUVs then
-        self.settingsButtonBgOverlay:setUVs(self.bgUVs)
     end
 
     if self.settings.showLoad == nil then self.settings.showLoad = true end
@@ -134,32 +131,132 @@ function RHMDraggableHUD:loadIcons(uiScale)
     if self.settings.showCropLoss == nil then self.settings.showCropLoss = true end
     if self.settings.showProductivity == nil then self.settings.showProductivity = true end
     if self.settings.showMoisture == nil then self.settings.showMoisture = true end
+    self.settings.hudDocked = true
+end
+
+---EN: Computes the docked position directly beneath the Precision Farming shortcut box or F1 ControlsHelp menu.
+---UA: Обчислює позицію стикування безпосередньо під смугою Precision Farming або меню довідки F1 (ControlsHelp).
+function RHMDraggableHUD:getDockedPosition()
+    local uiScale = self.uiScale or 1.0
+    local defaultX = 0.016 * uiScale
+    local defaultW = 0.172 * uiScale
+    local pfH = 0.042 * uiScale
+    local spacing = 0.0030 * uiScale
+
+    -- 1. Reliable check whether F1 Help Menu is currently open in FS25
+    local isF1Open = false
+
+    -- Method A: Game Settings (the direct setting toggled by F1)
+    if g_gameSettings and g_gameSettings.getValue then
+        local v = g_gameSettings:getValue("showHelpMenu")
+        if v == true then
+            isF1Open = true
+        end
+    end
+
+    -- Method B: ControlsHelp helpList visibility fallback
+    local ch = g_currentMission and g_currentMission.hud and g_currentMission.hud.controlsHelp
+    if not isF1Open and ch then
+        if ch.helpList then
+            if type(ch.helpList.getVisible) == "function" then
+                local ok, res = pcall(ch.helpList.getVisible, ch.helpList)
+                if ok and res == true then isF1Open = true end
+            elseif ch.helpList.visible == true then
+                isF1Open = true
+            end
+        end
+        if not isF1Open and ch.isHelpOpen == true then
+            isF1Open = true
+        end
+    end
+
+    -- Method C: HUD showControlsHelp fallback
+    if not isF1Open and g_currentMission and g_currentMission.hud then
+        if type(g_currentMission.hud.getShowControlsHelp) == "function" then
+            local ok, res = pcall(g_currentMission.hud.getShowControlsHelp, g_currentMission.hud)
+            if ok and res == true then isF1Open = true end
+        elseif g_currentMission.hud.showControlsHelp == true then
+            isF1Open = true
+        end
+    end
+
+    -- 2. Check if vehicle has Precision Farming active
+    local hasPF = false
+    if self.vehicle then
+        if self.vehicle.spec_precisionFarmingStatistic ~= nil or self.vehicle.spec_extendedCombine ~= nil then
+            hasPF = true
+        end
+    end
+
+    local chX = (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
+    local chW = (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
+
+    if isF1Open then
+        -- ═════════════════════════════════════════════════════════════════════
+        -- F1 Help Menu is OPEN: Menu list extends downwards
+        -- ═════════════════════════════════════════════════════════════════════
+        local numItems = 0
+        if ch and ch.helpList and ch.helpList.items then
+            numItems = #ch.helpList.items
+        elseif ch and ch.helpList and ch.helpList.entries then
+            numItems = #ch.helpList.entries
+        elseif ch and ch.entries then
+            numItems = #ch.entries
+        else
+            numItems = 13
+        end
+
+        -- In FS25: Vehicle Schema bottom is at 0.878.
+        -- Header ("РАСШИРЕННОЕ УПРАВЛЕНИЕ") + mouse buttons row = ~0.062 * uiScale.
+        -- Help list starts at ~0.816 * uiScale.
+        -- Each help entry row takes ~0.0260 * uiScale.
+        local itemH = 0.0260 * uiScale
+        local listTopY = 0.816 * uiScale
+        local helpBottomY = math.max(0.18, listTopY - (numItems * itemH))
+
+        if hasPF then
+            -- PF sits directly below the last help item:
+            local pfBottomY = helpBottomY - spacing - pfH
+            -- Our HUD sits DIRECTLY UNDER PF:
+            local dockY = pfBottomY - self.height - spacing
+            return chX, dockY, chW
+        else
+            -- PF not active: Our HUD sits directly under the F1 menu
+            local dockY = helpBottomY - self.height - spacing
+            return chX, dockY, chW
+        end
+    else
+        -- ═════════════════════════════════════════════════════════════════════
+        -- F1 Help Menu is CLOSED: Only vehicle schema / top bar is visible
+        -- ═════════════════════════════════════════════════════════════════════
+        local schemaBottomY = 0.878
+        if ch then
+            local chY = (ch.getY and ch:getY()) or ch.y
+            if chY and chY > 0.80 and chY < 0.98 then
+                schemaBottomY = chY
+            end
+        end
+
+        if hasPF then
+            -- PF sits directly below the vehicle schema:
+            -- PF top = schemaBottomY - spacing (~0.875)
+            -- PF bottom = schemaBottomY - spacing - pfH (~0.833)
+            local pfBottomY = schemaBottomY - spacing - pfH
+            -- Our HUD sits DIRECTLY UNDER PF:
+            -- Our HUD top = pfBottomY - spacing (~0.830)
+            -- Our HUD bottom = pfBottomY - spacing - self.height (~0.788)
+            local dockY = pfBottomY - self.height - spacing
+            return chX, dockY, chW
+        else
+            -- PF not active: Our HUD sits directly under vehicle schema (~0.833)
+            local dockY = schemaBottomY - self.height - spacing
+            return chX, dockY, chW
+        end
+    end
 end
 
 function RHMDraggableHUD:getPosition()
-    local x = self.settings.hudPosX
-    local y = self.settings.hudPosY
-
-    if x and y then
-        if x >= -0.1 and x <= 1.1 and y >= -0.1 and y <= 1.1 then
-            x = math.max(0, math.min(1 - (self.width or 0), x))
-            y = math.max(0, math.min(1 - (self.height or 0), y))
-            return x, y
-        else
-            rhm_log(string.format("RHM [UI]: RHM: Saved HUD position (%.2f, %.2f) is off-screen. Resetting to default.", x, y))
-        end
-    end
-
-    if g_currentMission and g_currentMission.hud and g_currentMission.hud.speedMeter then
-        local speedMeter = g_currentMission.hud.speedMeter
-        if speedMeter.speedBg and speedMeter.speedBg.x and speedMeter.speedBg.x > 0.01 then
-            local offsetX = speedMeter:scalePixelToScreenWidth(-145)
-            local offsetY = speedMeter:scalePixelToScreenHeight(15)
-            return speedMeter.speedBg.x + offsetX, speedMeter.speedBg.y + offsetY
-        end
-    end
-
-    return 0.7, 0.05
+    return self:getDockedPosition()
 end
 
 function RHMDraggableHUD:setPosition(x, y)
@@ -179,6 +276,8 @@ function RHMDraggableHUD:setVehicle(vehicle)
         self.data.tonPerHour = 0
         self.data.litersPerHour = 0
         self.data.recommendedSpeed = 0
+        self.data.moisture = 0
+        self.data.hectaresPerHour = 0
     end
 end
 
@@ -196,16 +295,16 @@ function RHMDraggableHUD:update(dt)
     self.data.litersPerHour    = spec.data.litersPerHour or 0
     self.data.recommendedSpeed = spec.data.recommendedSpeed or 0
     self.data.moisture         = spec.data.moisture or 0
+    self.data.hectaresPerHour  = spec.data.hectaresPerHour or 0
     self.data.speed            = vehicle:getLastSpeed() or 0
+end
 
-    if self.dragging then
-        if g_inputBinding and g_inputBinding.getMousePosition then
-            local posX, posY = g_inputBinding:getMousePosition()
-            if posX and posY then
-                self:moveTo(posX - self.dragOffsetX, posY - self.dragOffsetY)
-            end
-        end
-    end
+function RHMDraggableHUD:drawRect(x, y, w, h, r, g, b, a)
+    if not self.rectOverlay then return end
+    self.rectOverlay:setPosition(x, y)
+    self.rectOverlay:setDimension(w, h)
+    self.rectOverlay:setColor(r, g, b, a or 1.0)
+    self.rectOverlay:render()
 end
 
 function RHMDraggableHUD:draw()
@@ -213,405 +312,346 @@ function RHMDraggableHUD:draw()
     if not self.settings.showHUD then return end
     if not self.vehicle then return end
 
-    if not self.backgroundOverlay then
+    if not self.bgTopOverlay then
         self:load()
     end
-    if not self.backgroundOverlay then return end
+    if not self.bgTopOverlay then return end
 
-    self:updateSize()
+    -- Update docked coordinates dynamically each frame to track F1 toggle & PF movement
+    local dockX, dockY, dockW = self:getDockedPosition()
+    self.x = dockX
+    self.y = dockY
+    self.width = dockW
 
-    -- EN: Pure deep black glass background (80% opacity) matching calibration GUI
-    self.backgroundOverlay:setPosition(self.x, self.y)
-    self.backgroundOverlay:setDimension(self.width, self.height)
-    self.backgroundOverlay:setColor(0.0, 0.0, 0.0, 0.80)
-    self.backgroundOverlay:render()
+    local x = self.x
+    local y = self.y
+    local w = self.width
+    local h = self.height
 
-    -- EN: Courseplay Green header banner matching calibration GUI
-    self.headerOverlay:setPosition(self.x, self.y + self.height)
-    self.headerOverlay:setDimension(self.width, self.headerHeight)
-    self.headerOverlay:setColor(0.223, 0.407, 0.004, 1.0)
-    self.headerOverlay:render()
+    -- ── Authentic Precision Farming Background ───────────────────────────────
+    -- Rendered via the 3 authentic PF slices from ui_elements.dds:
+    -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom (matching rounded caps)
+    -- Tinted with deep dark obsidian glass color (0.028, 0.030, 0.036, 0.88)
+    local capH = 0.0075 * self.uiScale
+    local midH = math.max(0.001, h - capH * 2)
+    local bgR, bgG, bgB, bgA = 0.028, 0.030, 0.036, 0.88
 
-    -- EN: Accent line separator matching calibration GUI
-    if self.accentLineOverlay then
-        self.accentLineOverlay:setPosition(self.x, self.y + self.height)
-        self.accentLineOverlay:setDimension(self.width, 0.0015)
-        self.accentLineOverlay:setColor(0.223, 0.407, 0.004, 1.0)
-        self.accentLineOverlay:render()
-    end
+    self.bgTopOverlay:setPosition(x, y + h - capH)
+    self.bgTopOverlay:setDimension(w, capH)
+    self.bgTopOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgTopOverlay:render()
 
+    self.bgMidOverlay:setPosition(x, y + capH)
+    self.bgMidOverlay:setDimension(w, midH)
+    self.bgMidOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgMidOverlay:render()
 
+    self.bgBotOverlay:setPosition(x, y)
+    self.bgBotOverlay:setDimension(w, capH)
+    self.bgBotOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgBotOverlay:render()
 
-    -- EN: White title text in header.
-    -- UA: Білий заголовок.
-    setTextBold(true)
-    setTextAlignment(RenderText.ALIGN_LEFT)
-    setTextColor(1.0, 1.0, 1.0, 1.0)
-    local titleTextSize = 0.012 * self.uiScale
-    local headerTextX = self.x + 0.005
-    local titleTextY = self.y + self.height + self.headerHeight * 0.35
-    renderText(headerTextX, titleTextY, titleTextSize, "Realistic Harvesting")
+    -- ── Build 4-Column PF-Style Stacked Cells ───────────────────────────────
+    local cells = self:buildActiveCells()
+    local numCells = #cells
+    if numCells == 0 then return end
 
-    setTextBold(false)
-    setTextAlignment(RenderText.ALIGN_CENTER)
+    local cellW = w / numCells
+    local borderW = 0.0006
 
-    local settingsTextSize = 0.013 * self.uiScale
-    local btnW = 0.014 * self.uiScale
-    local btnH = self.headerHeight
-    local btnX = self.x + self.width - btnW
-    local btnY = self.y + self.height
+    local iconH = 0.024 * self.uiScale
+    local iconW = iconH / g_screenAspectRatio
+    local numTextSize  = 0.0150 * self.uiScale
+    local unitTextSize = 0.0085 * self.uiScale
 
-    local settingsButtonArea = self.menuButtonArea or {}
-    settingsButtonArea.x = btnX
-    settingsButtonArea.y = btnY
-    settingsButtonArea.w = btnW
-    settingsButtonArea.h = btnH
-    self.menuButtonArea = settingsButtonArea
+    local currentX = x
+    for i, cell in ipairs(cells) do
+        local cellEndX = currentX + cellW
 
-    local mx, my = g_inputBinding:getMousePosition()
-    local isHovered = mx >= settingsButtonArea.x and mx <= settingsButtonArea.x + settingsButtonArea.w and
-                      my >= settingsButtonArea.y and my <= settingsButtonArea.y + settingsButtonArea.h
-
-    if self.settingsButtonBgOverlay then
-        self.settingsButtonBgOverlay:setPosition(btnX, btnY)
-        self.settingsButtonBgOverlay:setDimension(btnW, btnH)
-        if isHovered then
-            self.settingsButtonBgOverlay:setColor(1.0, 1.0, 1.0, 0.22)
-        else
-            self.settingsButtonBgOverlay:setColor(0.00, 0.00, 0.00, 0.35)
+        -- Thin vertical divider between cells (exact PF style)
+        if i < numCells then
+            self:drawRect(cellEndX - borderW, y + 0.007 * self.uiScale, borderW, h - 0.014 * self.uiScale, 1.0, 1.0, 1.0, 0.18)
         end
-        self.settingsButtonBgOverlay:render()
-    end
 
-    local iconSettings = self.icons.settings
-    if iconSettings then
-        local iconHeight = 0.013 * self.uiScale
-        local iconWidth  = iconHeight / g_screenAspectRatio
-        local iconX = btnX + (btnW - iconWidth) / 2
-        local iconY = btnY + (btnH - iconHeight) / 2
-        iconSettings:setPosition(iconX, iconY)
-        iconSettings:setDimension(iconWidth, iconHeight)
-        if isHovered then
-            iconSettings:setColor(1.0, 1.0, 1.0, 1.0)
-        else
-            iconSettings:setColor(0.85, 0.85, 0.85, 0.85)
+        -- Icon (vertically centered on the left of cell)
+        local icon = self.icons[cell.iconName]
+        local iconX = currentX + 0.0035 * self.uiScale
+        local iconY = y + (h - iconH) * 0.50
+        if icon then
+            icon:setPosition(iconX, iconY)
+            icon:setDimension(iconW, iconH)
+            icon:setColor(1.0, 1.0, 1.0, 0.95)
+            icon:render()
         end
-        iconSettings:render()
-    end
-    setTextBold(false)
 
-    self:drawContent()
+        -- Two-line stacked typography: number on top, unit on bottom (or centered if no unit)
+        local textX = iconX + iconW + 0.0030 * self.uiScale
+        local hasUnit = (cell.unitStr and cell.unitStr ~= "")
+        local topY = hasUnit and (y + h * 0.44) or (y + (h - numTextSize) * 0.54)
+        local botY = y + h * 0.13
+
+        setTextBold(true)
+        setTextAlignment(RenderText.ALIGN_LEFT)
+        if cell.color then
+            setTextColor(cell.color[1], cell.color[2], cell.color[3], cell.color[4] or 0.98)
+        else
+            setTextColor(0.98, 0.98, 0.98, 0.98)
+        end
+        renderText(textX, topY, numTextSize, cell.numStr)
+
+        if hasUnit then
+            setTextBold(false)
+            setTextColor(0.72, 0.74, 0.78, 0.90)
+            renderText(textX, botY, unitTextSize, cell.unitStr)
+        end
+
+        -- Dynamic Colored Underline Indicator (exact PF style: centered under text)
+        if cell.indicatorColor then
+            local indW = 0.020 * self.uiScale
+            local indX = textX
+            local indH = 0.0020 * self.uiScale
+            local indY = y + 0.0035 * self.uiScale
+            local c = cell.indicatorColor
+            self:drawRect(indX, indY, indW, indH, c[1], c[2], c[3], c[4] or 0.95)
+        end
+
+        currentX = cellEndX
+    end
+
     setTextBold(false)
     setTextColor(1, 1, 1, 1)
     setTextAlignment(RenderText.ALIGN_LEFT)
 end
 
-function RHMDraggableHUD:drawContent()
-    local textSize   = 0.016 * self.uiScale
-    local lineHeight = 0.030 * self.uiScale
-    local iconHeight = 0.022 * self.uiScale
-    local iconWidth  = iconHeight / g_screenAspectRatio
-    local padding    = 0.005 * self.uiScale
-
-    local iconX = self.x + padding
-    local textX = iconX + iconWidth + padding
-    local textY = self.y + self.height - self.headerHeight - (0.005 * self.uiScale)
-
-    setTextAlignment(RenderText.ALIGN_LEFT)
-    setTextBold(true)
-    setTextColor(0.91, 0.87, 0.78, 0.95)
-
+function RHMDraggableHUD:buildActiveCells()
+    local cells = {}
     local unitSystem = self.settings.unitSystem or 1
     local fruitType = nil
     if self.vehicle and self.vehicle.spec_combine then
         fruitType = self.vehicle.spec_combine.lastValidInputFruitType
     end
 
-    -- EN: Row 1 — Engine Load.
-    -- UA: Рядок 1 — Навантаження двигуна.
-    if self.settings.showLoad then
-        local loadColor = self:getLoadColor(self.data.load)
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "load",
-            string.format("%.0f%%", self.data.load), self.data.load, loadColor[1], loadColor[2], loadColor[3])
-        textY = textY - lineHeight
+    local machineType = nil
+    if self.vehicle and self.vehicle.spec_rhm_Combine then
+        machineType = self.vehicle.spec_rhm_Combine.machineType
     end
 
-    -- EN: Row 2 — Yield.
-    -- UA: Рядок 2 — Врожайність.
-    if self.settings.showYield then
+    local hasPF = false
+    if self.vehicle and (self.vehicle.spec_precisionFarmingStatistic ~= nil or self.vehicle.spec_extendedCombine ~= nil) then
+        hasPF = true
+    end
+
+    local function getL10n(key, fallback)
+        if g_i18n and g_i18n:hasText(key) then
+            return g_i18n:getText(key)
+        end
+        return fallback
+    end
+
+    -- 1. Engine Load Cell
+    if self.settings.showLoad then
+        local loadVal = self.data.load or 0
+        local loadColor, indColor = self:getLoadColors(loadVal)
+        table.insert(cells, {
+            iconName = "load",
+            numStr = string.format("%.0f%%", loadVal),
+            unitStr = "",
+            color = loadColor,
+            indicatorColor = indColor
+        })
+    end
+
+    -- 2. Crop Loss Cell (or Speed if toggled / forage / cotton)
+    local showLossMode = (self.displayModes.cell2 == "loss") and (machineType ~= "forage" and machineType ~= "cotton")
+    if showLossMode and self.settings.showCropLoss then
+        local lossVal = self.data.cropLoss or 0
+        local lossStr = (lossVal > 0.05) and string.format("%.1f%%", lossVal) or "0.0%"
+        local lossColor, indColor = self:getLossColors(lossVal)
+        table.insert(cells, {
+            iconName = "loss",
+            numStr = lossStr,
+            unitStr = "",
+            color = lossColor,
+            indicatorColor = indColor
+        })
+    else
+        local curSpeed = self.data.speed or 0
+        table.insert(cells, {
+            iconName = "speed",
+            numStr = string.format("%.1f", curSpeed),
+            unitStr = "km/h",
+            color = {0.98, 0.98, 0.98, 1.0}
+        })
+    end
+
+    -- 3. Moisture Cell (or Yield if toggled / moisture absent)
+    local showMoistMode = (self.displayModes.cell3 == "moisture") and (hasPF or (RHM_MoistureAdapter and RHM_MoistureAdapter.isActive))
+    if showMoistMode and self.settings.showMoisture then
+        local mVal = self.data.moisture or 0
+        local valStr = (mVal <= 0.1) and "--" or string.format("%.1f%%", mVal)
+        local mColor = {0.45, 0.80, 0.98, 1.0}
+        if mVal > 20 then
+            mColor = {0.95, 0.28, 0.28, 1.0}
+        elseif mVal > 14 then
+            mColor = {0.98, 0.75, 0.20, 1.0}
+        end
+        table.insert(cells, {
+            iconName = "moisture",
+            numStr = valStr,
+            unitStr = "",
+            color = mColor
+        })
+    else
         local yieldVal = self.data.yield or 0
-        local yieldStr
+        local valStr, suffixStr
         if RHM_UnitConverter then
             local val, suffix = RHM_UnitConverter.convertYield(yieldVal, unitSystem, fruitType)
-            yieldStr = string.format("%.1f %s", val, suffix)
+            valStr = string.format("%.1f", val)
+            suffixStr = suffix or "t/ha"
         else
-            yieldStr = string.format("%.1f t/ha", yieldVal)
+            valStr = string.format("%.1f", yieldVal)
+            suffixStr = "t/ha"
         end
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "yield", yieldStr, 0)
-        textY = textY - lineHeight
+        table.insert(cells, {
+            iconName = "yield",
+            numStr = valStr,
+            unitStr = suffixStr,
+            color = {0.98, 0.98, 0.98, 1.0}
+        })
     end
 
-    -- EN: Row 3 — Productivity.
-    -- UA: Рядок 3 — Продуктивність.
+    -- 4. Productivity Cell: Tons/hour (t/h) or Hectares/hour (ha/h)
     if self.settings.showProductivity then
-        local prodVal = self.data.tonPerHour or 0
-        local prodStr
-        if RHM_UnitConverter then
-            local val, suffix = RHM_UnitConverter.convertProductivity(prodVal, unitSystem, fruitType, self.data.litersPerHour)
-            prodStr = string.format("%.1f %s", val, suffix)
+        if self.displayModes.cell4 == "hectaresPerHour" then
+            local haVal = self.data.hectaresPerHour or 0
+            local valStr = (haVal <= 0.05 and (self.data.speed or 0) < 0.5) and "0.0" or string.format("%.1f", haVal)
+            local unitLabel = g_i18n:hasText("rhm_unit_ha_per_hour") and g_i18n:getText("rhm_unit_ha_per_hour") or "ha/h"
+            table.insert(cells, {
+                iconName = "yield",
+                numStr = valStr,
+                unitStr = unitLabel,
+                color = {0.98, 0.98, 0.98, 1.0}
+            })
         else
-            prodStr = string.format("%.1f t/h", prodVal)
-        end
-        if self.data.hectaresPerHour and self.data.hectaresPerHour > 0.05 then
-            prodStr = prodStr .. string.format(" (%.2f ha/h)", self.data.hectaresPerHour)
-        end
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "productivity", prodStr, 0)
-        textY = textY - lineHeight
-    end
-
-    -- EN: Row 3.5 — Moisture.
-    -- UA: Рядок 3.5 — Вологість (лише для Рівня Пакету 3+).
-    local packageLevel = 1
-    if self.vehicle and self.vehicle.spec_rhm_Combine then
-        packageLevel = self.vehicle.spec_rhm_Combine.packageLevel or 1
-    end
-    
-    if self.settings.showMoisture and RHM_MoistureAdapter and RHM_MoistureAdapter.isActive and packageLevel >= 3 then
-        local mVal = self.data.moisture or 0
-        local moistureStr = string.format("%.1f%%", mVal)
-        if mVal <= 0.1 then moistureStr = "N/A" end
-        
-        local r, g, b = 0.91, 0.87, 0.78
-        -- EN: Dark blue if optimal, yellow if damp, red if wet
-        if mVal > 20 then       r, g, b = 0.89, 0.29, 0.29
-        elseif mVal > 14 then   r, g, b = 0.91, 0.78, 0.25
-        elseif mVal > 0.1 then  r, g, b = 0.44, 0.72, 0.90
-        end
-
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "moisture", moistureStr, mVal, r, g, b)
-        textY = textY - lineHeight
-    end
-
-    -- EN: Row 4 — Crop Loss. Skipped entirely for forage harvesters (no grain losses on choppers).
-    -- UA: Рядок 4 — Втрати зерна. Пропускається для силосних комбайнів (немає втрат).
-    local machineType = nil
-    local packageLevel = 1
-    if self.vehicle and self.vehicle.spec_rhm_Combine then
-        machineType = self.vehicle.spec_rhm_Combine.machineType
-        packageLevel = self.vehicle.spec_rhm_Combine.packageLevel or 1
-    end
-    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" then
-        local lossVal = self.data.cropLoss or 0
-        local lossStr
-        if lossVal > 0.1 then
-            lossStr = string.format("-%.1f%%", lossVal)
-        elseif lossVal < -0.1 then
-            lossStr = string.format("+%.1f%%", math.abs(lossVal))
-        else
-            lossStr = "0%"
-        end
-
-        local r, g, b = 0.91, 0.87, 0.78
-        if lossVal > 4.0 then
-            local pulse = 0.70 + 0.30 * math.sin((g_time or 0) * 0.012)
-            r, g, b = 1.0 * pulse, 0.15 * pulse, 0.15 * pulse
-        elseif lossVal > 2.5 then
-            r, g, b = 1.0, 0.48, 0.10
-        elseif lossVal > 1.0 then
-            r, g, b = 0.95, 0.80, 0.20
-        elseif lossVal < -0.1 then
-            r, g, b = 0.24, 0.90, 0.55
-        else
-            r, g, b = 0.24, 0.72, 0.47
-        end
-
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "loss", lossStr, lossVal, r, g, b)
-        textY = textY - lineHeight
-    end
-
-    -- EN: Row 5 — Speed (current / recommended).
-    -- UA: Рядок 5 — Швидкість (поточна / рекомендована).
-    if self.settings.showSpeed then
-        local currentSpeed = self.data.speed
-        local recSpeed = self.data.recommendedSpeed or 0
-        local speedStr
-
-        if RHM_UnitConverter then
-            local cur, suf = RHM_UnitConverter.convertSpeed(currentSpeed, unitSystem)
-            local rec, _   = RHM_UnitConverter.convertSpeed(recSpeed, unitSystem)
-            if recSpeed > 0 then
-                speedStr = string.format("%.1f / %.1f %s", cur, rec, suf)
+            local prodVal = self.data.tonPerHour or 0
+            local valStr, suffixStr
+            if RHM_UnitConverter then
+                local val, suffix = RHM_UnitConverter.convertProductivity(prodVal, unitSystem, fruitType, self.data.litersPerHour)
+                valStr = (prodVal <= 0.05 and (self.data.speed or 0) < 0.5) and "0.0" or string.format("%.1f", val)
+                suffixStr = suffix or "t/h"
             else
-                speedStr = string.format("%.1f %s", cur, suf)
+                valStr = string.format("%.1f", prodVal)
+                suffixStr = "t/h"
             end
-        else
-            if recSpeed > 0 then
-                speedStr = string.format("%.1f / %.1f km/h", currentSpeed, recSpeed)
-            else
-                speedStr = string.format("%.1f km/h", currentSpeed)
-            end
+            local unitLabel = (suffixStr == "t/h" and g_i18n:hasText("rhm_unit_t_per_hour")) and g_i18n:getText("rhm_unit_t_per_hour") or suffixStr
+            table.insert(cells, {
+                iconName = "productivity",
+                numStr = valStr,
+                unitStr = unitLabel,
+                color = {0.98, 0.98, 0.98, 1.0}
+            })
         end
-
-        local r, g, b = 0.91, 0.87, 0.78
-        if recSpeed > 0 then
-            if currentSpeed > (recSpeed + 2) then   r, g, b = 0.89, 0.29, 0.29
-            elseif currentSpeed > recSpeed then     r, g, b = 0.91, 0.78, 0.25
-            end
-        end
-
-        self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "speed", speedStr, 0, r, g, b)
     end
+
+    return cells
 end
 
-function RHMDraggableHUD:updateSize()
-    -- EN: Detect machine type to exclude forage-specific suppressed rows from height.
-    -- UA: Визначаємо тип машини щоб прибрати зайве місце для silosних комбайнів.
-    local machineType = nil
-    local packageLevel = 1
-    if self.vehicle and self.vehicle.spec_rhm_Combine then
-        machineType = self.vehicle.spec_rhm_Combine.machineType
-        packageLevel = self.vehicle.spec_rhm_Combine.packageLevel or 1
-    end
-
-    local rowCount = 0
-    if self.settings.showLoad then rowCount = rowCount + 1 end
-    if self.settings.showYield then rowCount = rowCount + 1 end
-    if self.settings.showProductivity then rowCount = rowCount + 1 end
-    
-    if self.settings.showMoisture and RHM_MoistureAdapter and RHM_MoistureAdapter.isActive and packageLevel >= 3 then 
-        rowCount = rowCount + 1 
-    end
-    
-    -- EN: Crop Loss row is not shown for forage harvesters / Low packages.
-    -- UA: Рядок втрат не відображається для силосних та базових пакетів.
-    if self.settings.showCropLoss and machineType ~= "forage" and machineType ~= "cotton" then rowCount = rowCount + 1 end
-    if self.settings.showSpeed then rowCount = rowCount + 1 end
-
-    local lineHeight  = 0.028 * self.uiScale
-    local padding     = 0.010 * self.uiScale
-    local targetHeight = math.max(0.01 * self.uiScale, (rowCount * lineHeight) + padding)
-
-    if math.abs(self.height - targetHeight) > 0.0001 then
-        local heightDiff = self.height - targetHeight
-        self.y = self.y + heightDiff
-        self.height = targetHeight
-        self.settings.hudPosY = self.y
-    end
-end
-
-function RHMDraggableHUD:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, iconName, text, value, r, g, b)
-    local icon = self.icons[iconName]
-    if icon then
-        local iconY = textY + textSize / 2 - iconHeight / 2
-        icon:setPosition(iconX, iconY)
-        icon:setColor(1.0, 1.0, 1.0, 0.92)
-        icon:render()
-    end
-
-    if r and g and b then
-        setTextColor(r, g, b, 0.95)
-    else
-        setTextColor(1.0, 1.0, 1.0, 0.95)
-    end
-    renderText(textX, textY, textSize, text)
-end
-
--- EN: Dynamic stress color palette:
---     < 80%: Crisp clean neutral white
---     80% - 95%: Optimal harvest load (amber-yellow)
---     95% - 105%: High mechanical strain (deep amber-orange)
---     > 105%: Critical overload (pulsating red alert)
--- UA: Динамічна палітра навантаження:
---     < 80%: Чистий нейтральний білий
---     80% - 95%: Оптимальне робоче навантаження (бурштиново-жовтий)
---     95% - 105%: Високе механічне напруження (глибокий бурштиново-помаранчевий)
---     > 105%: Критичне перевантаження (пульсуючий червоний)
-function RHMDraggableHUD:getLoadColor(load)
+function RHMDraggableHUD:getLoadColors(load)
     if load >= 105 then
         local pulse = 0.70 + 0.30 * math.sin((g_time or 0) * 0.012)
-        return {1.0 * pulse, 0.15 * pulse, 0.15 * pulse}
+        local c = {1.0 * pulse, 0.18 * pulse, 0.18 * pulse, 1.0}
+        return c, c
     elseif load >= 95 then
-        return {1.0, 0.48, 0.10}
+        local c = {1.0, 0.50, 0.10, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, c
     elseif load >= 80 then
-        return {0.95, 0.80, 0.20}
+        local c = {0.95, 0.80, 0.20, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, c
     else
-        return COLOR_LOAD_LOW
+        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
     end
 end
 
-function RHMDraggableHUD:isMouseOverHeader(posX, posY)
+function RHMDraggableHUD:getLossColors(loss)
+    if loss > 3.0 then
+        local pulse = 0.70 + 0.30 * math.sin((g_time or 0) * 0.012)
+        local c = {1.0 * pulse, 0.18 * pulse, 0.18 * pulse, 1.0}
+        return c, c
+    elseif loss > 1.5 then
+        local c = {0.95, 0.80, 0.20, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, c
+    else
+        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
+    end
+end
+
+function RHMDraggableHUD:isMouseOver(posX, posY)
+    if not posX or not posY or not self.x or not self.y then return false end
     return posX >= self.x and posX <= (self.x + self.width) and
-           posY >= (self.y + self.height) and posY <= (self.y + self.height + self.headerHeight)
+           posY >= self.y and posY <= (self.y + self.height)
 end
 
 function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
-    if not self.settings.showHUD then return false end
+    if not isDown or button ~= 1 then return false end
+    if not self:isMouseOver(posX, posY) then return false end
 
-    if self.dragging then
-        if isUp and button == Input.MOUSE_BUTTON_LEFT then
-            self.dragging = false
-            rhm_log(string.format("RHM [UI]: RHM: Drag stopped at (%.3f, %.3f)", self.x, self.y))
-            if self.settings and self.settings.save then
-                self.settings:save()
-            end
-            return true
+    local cellW = self.width / 4
+    local clickedCol = math.floor((posX - self.x) / cellW) + 1
+
+    if clickedCol == 4 then
+        -- Toggle between tons/h and ha/h
+        if self.displayModes.cell4 == "tonPerHour" then
+            self.displayModes.cell4 = "hectaresPerHour"
         else
-            self:moveTo(posX - self.dragOffsetX, posY - self.dragOffsetY)
-            return true
+            self.displayModes.cell4 = "tonPerHour"
         end
-    end
-
-    if button ~= Input.MOUSE_BUTTON_LEFT then return false end
-
-    if self.menuButtonArea and isDown then
-        if posX >= self.menuButtonArea.x and posX <= (self.menuButtonArea.x + self.menuButtonArea.w) and
-           posY >= self.menuButtonArea.y and posY <= (self.menuButtonArea.y + self.menuButtonArea.h) then
-            if g_realisticHarvestManager then
-                g_realisticHarvestManager:toggleMenu(self.vehicle)
-                return true
-            end
+        return true
+    elseif clickedCol == 2 then
+        -- Toggle between grain loss (%) and current speed (km/h)
+        if self.displayModes.cell2 == "loss" then
+            self.displayModes.cell2 = "speed"
+        else
+            self.displayModes.cell2 = "loss"
         end
-    end
-
-    if isDown and self:isMouseOverHeader(posX, posY) then
-        if not self.dragging then
-            self.dragStartX  = posX
-            self.dragOffsetX = posX - self.x
-            self.dragStartY  = posY
-            self.dragOffsetY = posY - self.y
-            self.dragging = true
-            self.lastDragTimeStamp = g_time
-            rhm_log("RHM [UI]: RHM: Drag started")
-            return true
+        return true
+    elseif clickedCol == 3 then
+        -- Toggle between moisture (%) and yield (t/ha)
+        if self.displayModes.cell3 == "moisture" then
+            self.displayModes.cell3 = "yield"
+        else
+            self.displayModes.cell3 = "moisture"
         end
+        return true
     end
 
     return false
 end
 
-function RHMDraggableHUD:moveTo(x, y)
-    x = math.max(0, math.min(1 - self.width, x))
-    y = math.max(0, math.min(1 - (self.height + self.headerHeight), y))
-    self:setPosition(x, y)
-    self.settings.hudPosX = x
-    self.settings.hudPosY = y
-end
-
 function RHMDraggableHUD:delete()
-    if self.backgroundOverlay then self.backgroundOverlay:delete() end
-    if self.headerOverlay then self.headerOverlay:delete() end
-    if self.accentLineOverlay then self.accentLineOverlay:delete() end
-    if self.settingsButtonBgOverlay then
-        self.settingsButtonBgOverlay:delete()
-        self.settingsButtonBgOverlay = nil
+    if self.rectOverlay then
+        self.rectOverlay:delete()
+        self.rectOverlay = nil
+    end
+
+    if self.bgTopOverlay then
+        self.bgTopOverlay:delete()
+        self.bgTopOverlay = nil
+    end
+    if self.bgMidOverlay then
+        self.bgMidOverlay:delete()
+        self.bgMidOverlay = nil
+    end
+    if self.bgBotOverlay then
+        self.bgBotOverlay:delete()
+        self.bgBotOverlay = nil
     end
 
     for _, icon in pairs(self.icons) do
         if icon then icon:delete() end
     end
+    self.icons = {}
 
-    rhm_log("RHM [UI]: RHM: RHMDraggableHUD unloaded")
+    rhm_log("RHM [UI]: RHMDraggableHUD unloaded")
 end
 
 return RHMDraggableHUD
-

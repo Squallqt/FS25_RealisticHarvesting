@@ -47,8 +47,6 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     self.settingsGUI = RHMSettingsGUI.new()
     self.settingsGUI:registerConsoleCommands()
 
-    self.combineSettingsGUI = RHMCombineSettingsGUI.new()
-
     -- EN: Load saved settings from XML before creating HUD (HUD reads settings in its constructor).
     -- UA: Завантажуємо збережені налаштування з XML перед створенням HUD (HUD читає налаштування в конструкторі).
     self.settings:load()
