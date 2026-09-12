@@ -120,7 +120,22 @@ end
 -- UA: Повертає профіль для конкретної назви культури, або nil якщо профілю немає.
 function RHM_ProfileManager:getProfile(cropName)
     if not cropName then return nil end
-    return self.profiles[cropName]
+    local prof = self.profiles[cropName]
+    if prof then return prof end
+
+    local rawUpper = cropName:upper()
+    prof = self.profiles[rawUpper]
+    if prof then return prof end
+
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
+        local alias = RHM_CombineSettingsDatabase.cropAliases[cropName] or RHM_CombineSettingsDatabase.cropAliases[rawUpper]
+        if alias then
+            prof = self.profiles[alias] or self.profiles[alias:upper()]
+            if prof then return prof end
+        end
+    end
+
+    return nil
 end
 
 -- EN: Saves or overwrites a profile for a specific crop with the given settings.

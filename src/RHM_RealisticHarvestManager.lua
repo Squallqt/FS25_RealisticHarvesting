@@ -72,11 +72,6 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
         self.calibrationGUI = RHMCombineCalibrationGUI.new(modDirectory)
     end
 
-    if mission:getIsClient() and RHM_CropFactorTuning and RHM_CropFactorTuning.isEnabled and RHM_CropFactorTuning.isEnabled() then
-        self.cropFactorTuneGUI = RHM_CropFactorTuningGui.new(modDirectory)
-        RHM_CropFactorTuning.registerConsoleCommand()
-    end
-
     return self
 end
 
@@ -88,6 +83,28 @@ function RHM_RealisticHarvestManager:toggleMenu(vehicle)
     end
 end
 
+-- EN: Toggles the small telemetry HUD overlay visibility and saves setting.
+-- UA: Перемикає видимість малого телеметричного HUD та зберігає налаштування.
+function RHM_RealisticHarvestManager:toggleHUD()
+    if not self.settings then return end
+    self.settings.showHUD = not self.settings.showHUD
+    if self.settings.save then
+        self.settings:save()
+    end
+    local stateStr = self.settings.showHUD and "ON" or "OFF"
+    if g_i18n then
+        if self.settings.showHUD and g_i18n:hasText("ui_on") then
+            stateStr = g_i18n:getText("ui_on")
+        elseif not self.settings.showHUD and g_i18n:hasText("ui_off") then
+            stateStr = g_i18n:getText("ui_off")
+        end
+    end
+    local msg = string.format("RHM HUD: %s", stateStr)
+    if g_currentMission and g_currentMission.showBlinkingWarning then
+        g_currentMission:showBlinkingWarning(msg, 2000)
+    end
+end
+
 -- EN: Called after the mission finishes loading. Initializes HUD overlay assets (textures, positions).
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
@@ -96,28 +113,23 @@ function RHM_RealisticHarvestManager:onMissionLoaded()
     end
 end
 
--- EN: Recursively searches the vehicle hierarchy for the first vehicle with spec_rhm_Combine.
---     Used to find the combine when the player is controlling a tractor in a Nexat modular system.
--- UA: Рекурсивно шукає в ієрархії транспорту перший транспортний засіб з spec_rhm_Combine.
---     Використовується для пошуку комбайна коли гравець керує трактором у модульній системі Nexat.
-local function findCombineInHierarchy(vehicle, checkedVehicles)
-    if not vehicle then return nil end
+local SEARCH_CHECKED = {}
 
-    checkedVehicles = checkedVehicles or {}
-    if checkedVehicles[vehicle] then return nil end
-    checkedVehicles[vehicle] = true
+local function findCombineInHierarchyInternal(vehicle)
+    if not vehicle or SEARCH_CHECKED[vehicle] then return nil end
+    SEARCH_CHECKED[vehicle] = true
 
     if vehicle.spec_rhm_Combine then return vehicle end
 
     -- EN: Search up through parent (rootVehicle, attacherVehicle) and down through children.
     -- UA: Шукаємо вгору через батьків (rootVehicle, attacherVehicle) і вниз через дочірні.
-    if vehicle.rootVehicle and not checkedVehicles[vehicle.rootVehicle] then
-        local found = findCombineInHierarchy(vehicle.rootVehicle, checkedVehicles)
+    if vehicle.rootVehicle and not SEARCH_CHECKED[vehicle.rootVehicle] then
+        local found = findCombineInHierarchyInternal(vehicle.rootVehicle)
         if found then return found end
     end
 
-    if vehicle.attacherVehicle and not checkedVehicles[vehicle.attacherVehicle] then
-        local found = findCombineInHierarchy(vehicle.attacherVehicle, checkedVehicles)
+    if vehicle.attacherVehicle and not SEARCH_CHECKED[vehicle.attacherVehicle] then
+        local found = findCombineInHierarchyInternal(vehicle.attacherVehicle)
         if found then return found end
     end
 
@@ -125,8 +137,8 @@ local function findCombineInHierarchy(vehicle, checkedVehicles)
         local implements = vehicle:getAttachedImplements()
         if implements then
             for _, implement in ipairs(implements) do
-                if implement.object and not checkedVehicles[implement.object] then
-                    local found = findCombineInHierarchy(implement.object, checkedVehicles)
+                if implement.object and not SEARCH_CHECKED[implement.object] then
+                    local found = findCombineInHierarchyInternal(implement.object)
                     if found then return found end
                 end
             end
@@ -136,35 +148,40 @@ local function findCombineInHierarchy(vehicle, checkedVehicles)
     return nil
 end
 
+-- EN: Recursively searches the vehicle hierarchy for the first vehicle with spec_rhm_Combine.
+--     Reuses a module-level table to eliminate garbage collection overhead.
+-- UA: Рекурсивно шукає в ієрархії транспорту перший транспортний засіб з spec_rhm_Combine.
+--     Перевикористовує таблицю на рівні модуля для усунення навантаження на GC.
+local function findCombineInHierarchy(vehicle)
+    if not vehicle then return nil end
+    for k in pairs(SEARCH_CHECKED) do
+        SEARCH_CHECKED[k] = nil
+    end
+    return findCombineInHierarchyInternal(vehicle)
+end
+
 -- EN: Returns the vehicle currently controlled by the local player.
 --     Falls back through multiple methods to handle various FS25 versions/states.
 -- UA: Повертає транспортний засіб, яким зараз керує локальний гравець.
 --     Перебирає кілька методів для підтримки різних версій/станів FS25.
 function RHM_RealisticHarvestManager:getControlledVehicle()
-    local vehicle = g_currentMission.controlledVehicle
-    if vehicle then return vehicle end
-
-    if g_localPlayer and g_localPlayer:getCurrentVehicle() then
-        return g_localPlayer:getCurrentVehicle()
+    if g_localPlayer and g_localPlayer.getCurrentVehicle then
+        local v = g_localPlayer:getCurrentVehicle()
+        if v then return v end
     end
-
-    -- EN: Avoid scanning all vehicles every frame; cache last entered vehicle until it is no longer entered.
-    -- UA: Не обходимо всі транспорти щокадру; кешуємо останній «увійшов» поки гравець у ньому.
-    local cached = self._rhmEnteredVehicleCache
-    if cached and cached.getIsEntered and cached:getIsEntered() then
-        return cached
-    end
-
-    self._rhmEnteredVehicleCache = nil
-    if g_currentMission.vehicles then
-        for _, v in pairs(g_currentMission.vehicles) do
-            if v.getIsEntered and v:getIsEntered() then
-                self._rhmEnteredVehicleCache = v
-                return v
-            end
+    if g_currentMission then
+        if g_currentMission.getControlledVehicle then
+            local v = g_currentMission:getControlledVehicle()
+            if v then return v end
+        end
+        if g_currentMission.controlledVehicle then
+            return g_currentMission.controlledVehicle
+        end
+        if g_currentMission.player and g_currentMission.player.getCurrentVehicle then
+            local v = g_currentMission.player:getCurrentVehicle()
+            if v then return v end
         end
     end
-
     return nil
 end
 
@@ -175,16 +192,36 @@ end
 --     Шукає в ієрархії транспорту гравця специфікацію комбайна для відстеження живих даних.
 --     Оновлює HUD тільки коли знайдено і запущено комбайн.
 function RHM_RealisticHarvestManager:update(dt)
+    -- EN: Dedicated servers have no local client, HUD or UI. Skip client updates.
+    -- UA: Виділені сервери не мають локального клієнта, HUD або UI. Пропускаємо клієнтські оновлення.
+    if not self.mission:getIsClient() then
+        return
+    end
+
+    -- EN: If any game GUI (ESC pause menu, shop, map) is open, cleanly close our calibration GUI
+    -- UA: Якщо відкритий будь-який GUI гри (меню паузи ESC, магазин, карта), чисто закриваємо GUI калібрування
+    if g_gui and g_gui.getIsGuiVisible and g_gui:getIsGuiVisible() then
+        if self.calibrationGUI and self.calibrationGUI.isOpen then
+            self.calibrationGUI:close()
+        end
+        if self.isCursorVisible then
+            self.isCursorVisible = false
+            if g_inputBinding and g_inputBinding.setShowMouseCursor then
+                g_inputBinding:setShowMouseCursor(false)
+            end
+        end
+        return
+    end
+
     if self.calibrationGUI then
         self.calibrationGUI:update(dt)
     end
 
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:update(dt)
-    end
+    local controlledVehicle = self:getControlledVehicle()
+    self.lastControlledVehicle = controlledVehicle
 
     if self.hud then
-        local vehicle = self:getControlledVehicle()
+        local vehicle = controlledVehicle
         local combineVehicle = nil
 
         if vehicle then
@@ -193,8 +230,11 @@ function RHM_RealisticHarvestManager:update(dt)
             local searchRoot = vehicle.rootVehicle or vehicle
             local now = g_time
             local throttleMs = 250
+            
+            -- EN: Cache optimization: only search hierarchy if vehicle changed or timeout expired (works for both combines and non-combines)
+            -- UA: Оптимізація кешу: шукаємо ієрархію тільки якщо транспорт змінився або таймаут минув (працює як для комбайнів, так і для не-комбайнів)
             if vehicle == self._rhmHudVehicleRef and searchRoot == self._rhmHudSearchRootRef
-                and self.lastActiveCombine and (now - (self._rhmHudHierarchySearchTime or 0)) < throttleMs then
+                and (now - (self._rhmHudHierarchySearchTime or 0)) < throttleMs then
                 combineVehicle = self.lastActiveCombine
             else
                 combineVehicle = findCombineInHierarchy(searchRoot)
@@ -203,13 +243,15 @@ function RHM_RealisticHarvestManager:update(dt)
                 self._rhmHudSearchRootRef = searchRoot
             end
         else
+            -- EN: Clear cache when no vehicle controlled
+            -- UA: Очищаємо кеш коли немає контрольованого транспорту
             self._rhmHudVehicleRef = nil
             self._rhmHudSearchRootRef = nil
         end
 
         self.lastActiveCombine = combineVehicle
 
-        if combineVehicle and combineVehicle:getIsTurnedOn() then
+        if combineVehicle then
             self.hud:setVehicle(combineVehicle)
             self.hud:update(dt)
         else
@@ -225,14 +267,14 @@ end
 --     Пригнічує всі малювання коли відкрите будь-яке меню гри, коли HUD гри прихований,
 --     або коли гравець не в транспортному засобі.
 function RHM_RealisticHarvestManager:draw()
-    -- EN: Skip all drawing when any FS25 GUI screen is visible (e.g. ESC menu, map, settings).
-    -- UA: Пропускаємо все малювання коли відкритий будь-який GUI екран FS25 (меню ESC, карта, налаштування).
-    if g_gui:getIsGuiVisible() then
+    if not self.mission:getIsClient() then
         return
     end
 
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:draw()
+    -- EN: Skip all drawing when any FS25 GUI screen is visible (e.g. ESC menu, map, settings).
+    -- UA: Пропускаємо все малювання коли відкритий будь-який GUI екран FS25 (меню ESC, карта, налаштування).
+    if g_gui and g_gui.getIsGuiVisible and g_gui:getIsGuiVisible() then
+        return
     end
 
     -- EN: Calibration GUI is drawn above the HUD independently.
@@ -243,23 +285,24 @@ function RHM_RealisticHarvestManager:draw()
 
     -- EN: Respect third-party HUD hider mods by checking game HUD visibility.
     -- UA: Поважаємо сторонні моди приховування HUD, перевіряючи видимість HUD гри.
-    if g_currentMission and g_currentMission.hud and not g_currentMission.hud:getIsVisible() then
+    if g_currentMission and g_currentMission.hud and g_currentMission.hud.getIsVisible and not g_currentMission.hud:getIsVisible() then
         return
     end
 
     local combineVehicle = self.lastActiveCombine
+    if not (self.hud and combineVehicle) then
+        return
+    end
 
-    -- EN: Don't draw HUD if the player has exited the vehicle.
-    -- UA: Не малюємо HUD якщо гравець вийшов з транспортного засобу.
-    local playerVehicle = self:getControlledVehicle()
+    -- EN: Don't draw HUD if the player has exited the vehicle. Reuses cached vehicle from update() to avoid duplicate API calls.
+    -- UA: Не малюємо HUD якщо гравець вийшов з транспортного засобу. Перевикористовує кеш з update() без повторних викликів API.
+    local playerVehicle = self.lastControlledVehicle or self:getControlledVehicle()
     if not playerVehicle then
         return
     end
 
-    if self.hud and combineVehicle and combineVehicle:getIsTurnedOn() then
-        if self.settings and self.settings.showHUD then
-            self.hud:draw()
-        end
+    if self.settings and self.settings.showHUD then
+        self.hud:draw()
     end
 end
 
@@ -269,10 +312,6 @@ function RHM_RealisticHarvestManager:delete()
     if self.hud then
         self.hud:delete()
         self.hud = nil
-    end
-    if self.cropFactorTuneGUI then
-        self.cropFactorTuneGUI:delete()
-        self.cropFactorTuneGUI = nil
     end
     if self.calibrationGUI then
         self.calibrationGUI:delete()
@@ -288,10 +327,6 @@ function RHM_RealisticHarvestManager:mouseEvent(posX, posY, isDown, isUp, button
         return
     end
 
-    if self.cropFactorTuneGUI and self.cropFactorTuneGUI:mouseEvent(posX, posY, isDown, isUp, button) then
-        return true
-    end
-
     if self.calibrationGUI and self.calibrationGUI:mouseEvent(posX, posY, isDown, isUp, button) then
         return true
     end
@@ -303,31 +338,69 @@ function RHM_RealisticHarvestManager:mouseEvent(posX, posY, isDown, isUp, button
     return false
 end
 
--- EN: Toggles mouse cursor visibility for HUD drag interaction.
---     Disables camera rotation while cursor is visible.
--- UA: Перемикає видимість курсора миші для взаємодії з перетягуванням HUD.
---     Вимикає обертання камери поки курсор видимий.
+-- EN: Legacy cursor toggle stub — camera and cursor are now exclusively managed
+--     by the calibration GUI (Shift+K) to prevent conflicts with Courseplay and AutoDrive RMB.
+-- UA: Застарілий стаб перемикача курсора — камера та курсор тепер керуються виключно
+--     через GUI калібрування (Shift+K) для усунення конфліктів з правою кнопкою миші Courseplay та AutoDrive.
 function RHM_RealisticHarvestManager:toggleCursor()
-    if not self.hud then return end
-
-    self.isCursorVisible = not self.isCursorVisible
-    g_inputBinding:setShowMouseCursor(self.isCursorVisible)
-
-    local vehicle = self:getControlledVehicle()
-
-    if self.isCursorVisible then
-        if g_currentMission then
-            g_currentMission:showBlinkingWarning("RHM: HUD Cursor Enabled - Drag HUD to move", 3000)
-        end
-        if vehicle then
-            RHMInputUtil.setCameraRotation(vehicle, false, self.savedCameraRotatableInfo)
-        end
-    else
-        g_inputBinding:setShowMouseCursor(false)
-        if vehicle then
-            RHMInputUtil.setCameraRotation(vehicle, true, self.savedCameraRotatableInfo)
-        end
-    end
+    -- No-op: Cursor and camera are cleanly managed by Shift+K calibration GUI
 end
 
+-- EN: Key event handler. Allows pressing ESC to cleanly close calibration GUI.
+-- UA: Обробник подій клавіатури. Дозволяє клавішею ESC чисто закривати GUI калібрування.
+function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
+    if isDown and sym == Input.KEY_esc then
+        if self.calibrationGUI and self.calibrationGUI.isOpen then
+            self.calibrationGUI:close()
+            return true
+        end
+    end
+    return false
+end
 
+-- ============================================================================
+-- EN: PUBLIC API FOR THIRD-PARTY MODS (e.g. Advanced Damage System - ADS)
+-- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ (напр. Advanced Damage System - ADS)
+-- ============================================================================
+
+---EN: Returns current feed-rate engine load (0 to 100+ %) for a given vehicle or active combine.
+---UA: Повертає поточне навантаження двигуна від збирання (0 до 100+ %) для вказаного або активного комбайна.
+---@param vehicle table|nil Optional vehicle object. If nil, uses currently controlled vehicle.
+---@return number engineLoad Current load percentage (0.0 if not harvesting or not an RHM combine).
+function RHM_RealisticHarvestManager:getEngineLoad(vehicle)
+    local target = vehicle or self:getControlledVehicle()
+    if not target then return 0.0 end
+
+    local combine = findCombineInHierarchy(target.rootVehicle or target)
+    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        return combine.spec_rhm_Combine.loadCalculator:getEngineLoad() or 0.0
+    end
+    return 0.0
+end
+
+---EN: Checks if a vehicle is an active combine managed by Realistic Harvesting.
+---UA: Перевіряє чи є транспорт активним комбайном під керуванням Realistic Harvesting.
+---@param vehicle table|nil
+---@return boolean
+function RHM_RealisticHarvestManager:isRHMActive(vehicle)
+    local target = vehicle or self:getControlledVehicle()
+    if not target then return false end
+
+    local combine = findCombineInHierarchy(target.rootVehicle or target)
+    return (combine ~= nil and combine.spec_rhm_Combine ~= nil)
+end
+
+---EN: Returns live telemetry data table (load, moisture, cropLoss, tonPerHour, yield, etc.).
+---UA: Повертає таблицю живої телеметрії (навантаження, вологість, втрати, продуктивність, врожайність тощо).
+---@param vehicle table|nil
+---@return table|nil
+function RHM_RealisticHarvestManager:getVehicleData(vehicle)
+    local target = vehicle or self:getControlledVehicle()
+    if not target then return nil end
+
+    local combine = findCombineInHierarchy(target.rootVehicle or target)
+    if combine and combine.spec_rhm_Combine then
+        return combine.spec_rhm_Combine.data
+    end
+    return nil
+end

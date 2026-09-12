@@ -84,8 +84,7 @@ function RHMCombineSettingsGUI:printStatus()
     -- EN: Currently harvested crop.
     -- UA: Поточна культура, що збирається.
     if memory.currentCrop then
-        local cropData = RHM_CombineSettingsDatabase:getCropData(memory.currentCrop)
-        local cropName = cropData and cropData.nameEN or memory.currentCrop
+        local cropName = RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName and RHM_CombineSettingsDatabase:getCropDisplayName(memory.currentCrop) or memory.currentCrop
         rhm_log("RHM [UI]: " .. string.format("Current Crop: %s", cropName))
     else
         rhm_log("RHM [UI]: " .. "Current Crop: NONE (start harvesting to detect)")
@@ -111,7 +110,8 @@ function RHMCombineSettingsGUI:printStatus()
     -- EN: Evaluate settings against the current crop and show any loss penalties.
     -- UA: Оцінюємо налаштування для поточної культури і показуємо будь-які штрафи.
     if memory.currentCrop then
-        local penalty, warnings = memory:checkSettingsForCrop(memory.currentCrop)
+        local effPenalty, lossPenalty, warnings = memory:checkSettingsForCrop(memory.currentCrop, nil, true)
+        local penalty = math.max(effPenalty or 0, lossPenalty or 0)
 
         if penalty > 0 then
             rhm_log("RHM [UI]: " .. "======================================================")

@@ -266,18 +266,15 @@ end
 function RHMSettingsGUI:getCurrentCombine()
     local vehicle = nil
 
-    if g_currentMission and g_currentMission.controlledVehicle then
-        vehicle = g_currentMission.controlledVehicle
+    if g_realisticHarvestManager and g_realisticHarvestManager.getControlledVehicle then
+        vehicle = g_realisticHarvestManager:getControlledVehicle()
     elseif g_localPlayer and g_localPlayer.getCurrentVehicle then
         vehicle = g_localPlayer:getCurrentVehicle()
-    elseif g_currentMission and g_currentMission.vehicles then
-        -- EN: Iterate all mission vehicles as a last resort fallback.
-        -- UA: Перебираємо всі транспортні засоби місії як останній резервний варіант.
-        for _, v in pairs(g_currentMission.vehicles) do
-            if v.getIsEntered and v:getIsEntered() then
-                vehicle = v
-                break
-            end
+    elseif g_currentMission then
+        if g_currentMission.getControlledVehicle then
+            vehicle = g_currentMission:getControlledVehicle()
+        elseif g_currentMission.controlledVehicle then
+            vehicle = g_currentMission.controlledVehicle
         end
     end
 

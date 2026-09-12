@@ -14,11 +14,6 @@ function RHM_LoadCalculator.new(modDirectory)
     
     self.modDirectory = modDirectory or g_currentModDirectory
     
-    -- EN: Crop difficulty coefficients / UA: Коефіцієнти складності культур
-    self.CROP_FACTORS = {} -- By FruitType ID
-    self.CROP_FACTORS_FT = {} -- By FillType ID
-    self:loadDefaultCropFactors()
-    
     -- EN: average load calculation data / UA: Дані для розрахунку середнього навантаження
     self.totalDistance = 0
     self.totalArea = 0
@@ -43,6 +38,7 @@ function RHM_LoadCalculator.new(modDirectory)
     self.cropLoss = 0  -- EN: Current crop loss (%) / UA: Поточні втрати врожаю (%)
     self.tonPerHour = 0  -- EN: Yield in T/h / UA: Продуктивність в Т/год
     self.litersPerHour = 0  -- EN: Yield in L/h / UA: Продуктивність в Л/год
+    self.hectaresPerHour = 0 -- EN: Area rate in ha/h / UA: Продуктивність в га/год
     self.totalOutputMass = 0  -- EN: Total harvested mass / UA: Загальна маса зібраного врожаю
     
     -- EN: Yield counters accumulation / UA: Накопичення продуктивності
@@ -53,159 +49,660 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- EN: Load accumulator / UA: Накопичувач навантаження
     self.loadAccumulatedMass = 0 -- kg
+    self.harvestActiveTime = 0   -- EN: Duration of active harvesting (ms) / UA: Тривалість активного косіння (мс)
+    self.underloadTimer = 0      -- EN: Sustained underload confirmation timer (ms) / UA: Таймер підтвердження низького навантаження
+    self.idleHarvestTime = 0     -- EN: Time without crop flow (ms) / UA: Час без потоку культури
+    self.lastUpdateInterval = 300
     
     -- Combine RHMSettings System
     self.combineMemory = nil  -- EN: Will be set by rhm_Combine / UA: Буде встановлено з rhm_Combine
     self.currentCrop = nil    -- EN: Current crop for loss calc / UA: Поточна культура для розрахунку втрат
     
+    -- EN: Pre-allocated circular ring buffers for rolling metrics (zero runtime table allocations)
+    -- UA: Попередньо виділені кільцеві буфери для ковзних метрик (без виділення пам'яті в рантаймі)
+    local PROD_RING_SIZE = 180
+    self.prodRingSize = PROD_RING_SIZE
+    self.prodRingMass = {}
+    self.prodRingLiters = {}
+    self.prodRingTime = {}
+    self.prodRingArea = {}
+    for i = 1, PROD_RING_SIZE do
+        self.prodRingMass[i] = 0
+        self.prodRingLiters[i] = 0
+        self.prodRingTime[i] = 0
+        self.prodRingArea[i] = 0
+    end
+    self.prodRingHead = 1
+    self.prodSumMass = 0
+    self.prodSumLiters = 0
+    self.prodSumTime = 0
+    self.prodSumArea = 0
+
+    local YIELD_RING_SIZE = 180
+    self.yieldRingSize = YIELD_RING_SIZE
+    self.yieldRingMass = {}
+    self.yieldRingArea = {}
+    for i = 1, YIELD_RING_SIZE do
+        self.yieldRingMass[i] = 0
+        self.yieldRingArea[i] = 0
+    end
+    self.yieldRingHead = 1
+    self.yieldSumMass = 0
+    self.yieldSumArea = 0
+
     self.debug = false  -- EN: Kept for compatibility, unused / UA: Залишено для сумісності, не використовується
     rhm_log("RHM [RHM_LoadCalculator]: RHM: RHM_LoadCalculator initialized")
     
     return self
 end
 
----EN: Loads default crop difficulty factors / UA: Завантажує стандартні коефіцієнти складності культур
-function RHM_LoadCalculator:loadDefaultCropFactors()
-    -- EN: Target load factors for crops / UA: Цільові фактори навантаження для культур
-    -- EN: Lower factor = lighter crop = faster drive / UA: Менший фактор = легша культура = комбайн їде швидше
-    local factorMap = {
-        ["WHEAT"] = 0.814,
-        ["BARLEY"] = 0.869,
-        -- EN: Was 1.164 (heavier than wheat) but playtests: oats runs ~10 km/h ~60% load on ~507 hp / 10.8 m
-        --     while wheat ~5 km/h on ~547 hp / 10.7 m — oats must be LIGHTER than wheat in this model.
-        -- UA: Раніше 1.164 (важче пшениці), але за відчуттям у грі овес легший — знижено відносно пшениці.
-        ["OAT"] = 2.000,
-        ["MAIZE"] = 0.572,      -- EN: -50% / UA: -50%
-        ["CORN"] = 0.450,
-        ["MAIZE_FORAGE"] = 0.300,
-        ["MAIZE_SILAGE"] = 0.572,
-        ["SOYBEAN"] = 1.188,    -- EN: -20% / UA: -20%
-        ["SUNFLOWER"] = 2.324,
-        ["CANOLA"] = 1.438,
-        ["SORGHUM"] = 0.501,    -- EN: -20% / UA: -20%
-        
-        -- EN: Rice is a heavy crop / UA: Рис важка культура
-        ["RICE"] = 1.303,
-        ["RICE_LONG_GRAIN"] = 0.723,
-        
-        -- EN: Legumes / UA: Бобові
-        ["PEA"] = 1.312,        -- EN: -20% / UA: -20%
-        ["LENTIL"] = 1.152,
-        ["CHICKPEA"] = 1.152,
-        ["GREENBEAN"] = 3.500,  -- EN: -20% / UA: -20%
-        
-        -- EN: Root crops / UA: Коренеплоди
-        ["POTATO"] = 0.600,     -- EN: Lighter / UA: Полегшено
-        ["SUGARBEET"] = 0.920,  -- EN: +15% / UA: +15%
-        ["BEETROOT"] = 1.650,   -- EN: +15% / UA: +15%
-        ["CARROT"] = 0.323,     -- EN: -15% / UA: -15%
-        ["PARSNIP"] = 0.400,    -- EN: Lighter / UA: Полегшено
-        ["ONION"] = 0.600,      
-        ["SPINACH"] = 2.880,    
-        
-        -- EN: Grass & Silage / UA: Трава та силос
-        ["GRASS"] = 0.700,      -- EN: 1.5x Wheat / UA: 1.5x Пшениці
-        ["DRYGRASS"] = 0.700,
-        ["ALFALFA"] = 0.700,
-        ["CLOVER"] = 0.700,
-        ["MEADOW"] = 0.700,
-        ["ONION_DIRTY"] = 0.700, -- EN: Dirty onions (Root crop) / UA: Брудна цибуля
-        
-        -- EN: Other / Mod crops / UA: Інші культури
-        ["COTTON"] = 4.782,     -- EN: 2x heavier / UA: у 2 рази важча
-        ["SUGARCANE"] = 0.654,
-        ["POPLAR"] = 0.156,
-        ["OILSEED_RADISH"] = 0.391,
-        ["GRAPE"] = 0.391,
-        ["OLIVE"] = 0.391,
-        ["RYE"] = 0.814,
-        ["SPELT"] = 0.814,
-        ["TRITICALE"] = 0.461,
-        ["MILLET"] = 0.976,
-        ["MINT"] = 1.054,
-    }
+---EN: Resolves engine horsepower (HP) from vehicle motorized spec, configuration, or carrier tractor (NEXAT/towed).
+---UA: Визначає потужність двигуна (к.с.) зі специфікації, конфігурації техніки або тягового трактора (NEXAT/причіпні).
+function RHM_LoadCalculator:getEnginePowerHp(vehicle)
+    local motorConfigIndex = (vehicle.configurations and tonumber(vehicle.configurations.motor)) or 1
+    if vehicle._rhm_engineHp and vehicle._rhm_engineHpConfig == motorConfigIndex and vehicle._rhm_engineHp > 0 then
+        return vehicle._rhm_engineHp
+    end
 
-    -- EN: Dynamically mapping FruitType Enum
-    for key, value in pairs(FruitType) do
-        local mappedFactor = factorMap[key]
-        if not mappedFactor then
-            if key:find("_WINDROW") then
-                mappedFactor = factorMap[key:gsub("_WINDROW", "")]
-            elseif key:find("CUT_") then
-                mappedFactor = factorMap[key:gsub("CUT_", "")]
+    -- 1. Check motorized spec on vehicle or root/attacher carrier (for trailed harvesters, tractor setups, or NEXAT)
+    local motorObj = vehicle
+    if not (vehicle.spec_motorized and vehicle.spec_motorized.motor) then
+        local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+        if root and root.spec_motorized and root.spec_motorized.motor then
+            motorObj = root
+        else
+            local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+            if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+                motorObj = attacher
             end
-        end
-        if mappedFactor then
-            self.CROP_FACTORS[value] = mappedFactor
-        elseif type(value) == "number" and not key:find("NUM_") then
-            -- EN: Use Wheat as the base fallback for any unknown crops
-            -- UA: Використовуємо Пшеницю як базовий фолбек для невідомих культур
-            self.CROP_FACTORS[value] = factorMap["WHEAT"] or 0.8
         end
     end
 
-    -- EN: Also map FillType Enum (Critical for Pickups and Mod Crops)
-    -- UA: Також мапуємо FillType Enum (Критично для підбирачів та мод-культур)
-    if g_fillTypeManager then
-        for key, value in pairs(FillType) do
-            local mappedFactor = factorMap[key]
-            if not mappedFactor then
-                if key:find("_WINDROW") then
-                    mappedFactor = factorMap[key:gsub("_WINDROW", "")]
-                elseif key:find("CUT_") then
-                    mappedFactor = factorMap[key:gsub("CUT_", "")]
-                elseif key == "ONION_DIRTY" then
-                    mappedFactor = factorMap["ONION_DIRTY"] or factorMap["ONION"]
-                elseif key == "MEADOW" then
-                    mappedFactor = factorMap["GRASS"]
+    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == motorConfigIndex and motorObj._rhm_engineHp > 0 then
+        vehicle._rhm_engineHp = motorObj._rhm_engineHp
+        vehicle._rhm_engineHpConfig = motorConfigIndex
+        return motorObj._rhm_engineHp
+    end
+
+    local resolvedHp = nil
+
+    -- 1. Check VehicleMotor properties if runtime engine exposes them
+    if motorObj.spec_motorized and motorObj.spec_motorized.motor then
+        local motor = motorObj.spec_motorized.motor
+        if motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
+            resolvedHp = tonumber(motor.hp)
+        elseif motor.getPeakMotorPower then
+            local kw = motor:getPeakMotorPower()
+            if kw and tonumber(kw) and tonumber(kw) > 0 then
+                resolvedHp = tonumber(kw) * 1.35962
+            end
+        elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
+            resolvedHp = tonumber(motor.peakMotorPower) * 1.35962
+        elseif motor.motorPower and tonumber(motor.motorPower) and tonumber(motor.motorPower) > 0 then
+            resolvedHp = tonumber(motor.motorPower) * 1.35962
+        end
+    end
+
+    if not resolvedHp and motorObj.getMotor and type(motorObj.getMotor) == "function" then
+        local motor = motorObj:getMotor()
+        if motor and motor.getPeakMotorPower then
+            local kw = motor:getPeakMotorPower()
+            if kw and tonumber(kw) and tonumber(kw) > 0 then
+                resolvedHp = tonumber(kw) * 1.35962
+            end
+        end
+    end
+
+    -- 2. Inspect vehicle XML via XMLFile for exact motorConfiguration hp or storeData specs
+    if not resolvedHp and motorObj.configFileName then
+        local xmlFile = nil
+        local schema = (Vehicle and Vehicle.xmlSchema) or nil
+        if XMLFile and XMLFile.loadIfExists then
+            xmlFile = XMLFile.loadIfExists("RHM_EngineHpCheck", motorObj.configFileName, schema)
+        elseif loadXMLFile then
+            xmlFile = loadXMLFile("RHM_EngineHpCheck", motorObj.configFileName)
+        end
+
+        if xmlFile then
+            local hp = nil
+            if xmlFile.getInt then
+                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getInt("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
+                end
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getInt("vehicle.storeData.specs.power")
+                end
+            elseif xmlFile.getValue and XMLValueType then
+                hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1), XMLValueType.INT)
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getValue("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp", XMLValueType.INT)
+                end
+                if not hp or hp <= 0 then
+                    hp = xmlFile:getValue("vehicle.storeData.specs.power", XMLValueType.INT)
+                end
+            elseif getXMLInt then
+                hp = getXMLInt(xmlFile, string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                if not hp or hp <= 0 then
+                    hp = getXMLInt(xmlFile, "vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
+                end
+                if not hp or hp <= 0 then
+                    hp = getXMLInt(xmlFile, "vehicle.storeData.specs.power")
                 end
             end
-            if mappedFactor then
-                self.CROP_FACTORS_FT[value] = mappedFactor
+
+            if xmlFile.delete then
+                xmlFile:delete()
+            elseif delete then
+                delete(xmlFile)
+            end
+
+            if hp and tonumber(hp) and tonumber(hp) > 0 then
+                resolvedHp = tonumber(hp)
             end
         end
     end
 
-    -- EN: String-based exact crop factors (highest priority in calculateEngineLoad)
-    -- UA: Строкові точні фактори культур (найвищий пріоритет у розрахунку навантаження)
-    self.CROP_FACTORS_BY_NAME = {
-        ["WHEAT"] = 0.814,
-        ["BARLEY"] = 0.869,
-        ["OAT"] = 2.000,
-        ["CORN"] = 0.450,           -- Grain corn (slightly harder)
-        ["MAIZE_FORAGE"] = 0.300,   -- Silage corn (much lighter so 800+ HP choppers go fast)
-        ["SOYBEAN"] = 1.188,
-        ["SUNFLOWER"] = 2.324,
-        ["CANOLA"] = 1.438,
-        ["SORGHUM"] = 0.501,
-        ["RICE"] = 1.303,
-        ["RICE_LONG_GRAIN"] = 0.723,
-        
-        -- Legumes
-        ["PEA"] = 1.312,
-        ["LENTIL"] = 1.152,
-        ["CHICKPEA"] = 1.152,
-        ["GREENBEAN"] = 3.500,
-        
-        -- Roots
-        ["POTATO"] = 0.600,
-        ["SUGARBEET"] = 0.920,
-        ["BEETROOT"] = 1.650,
-        ["CARROT"] = 0.323,
-        ["PARSNIP"] = 0.400,
-        ["ONION"] = 0.600,
-        ["SPINACH"] = 4.000,
-        
-        -- Forage
-        ["GRASS"] = 1.221,
-        ["DRYGRASS"] = 1.100,
-        ["GRASS_WINDROW"] = 0.380,
-        ["DRYGRASS_WINDROW"] = 0.500,
-        
-        -- Other
-        ["COTTON"] = 4.782,
-        ["SUGARCANE"] = 0.654,
-    }
+    -- 3. Fallback to Store Item specs (instant table lookup)
+    if not resolvedHp and motorObj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+        local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
+        if storeItem and storeItem.specs and storeItem.specs.power then
+            local p = tonumber(storeItem.specs.power)
+            if p and p > 0 then
+                resolvedHp = p
+            end
+        end
+    end
+
+    -- 4. Check basePerfMass back-calculation if cached
+    if not resolvedHp and self.basePerfMass and self.basePerfMass > 0 then
+        resolvedHp = math.max(150, self.basePerfMass * 3.6 * 5.2)
+    end
+
+    resolvedHp = resolvedHp or 400
+    vehicle._rhm_engineHp = resolvedHp
+    vehicle._rhm_engineHpConfig = motorConfigIndex
+    motorObj._rhm_engineHp = resolvedHp
+    motorObj._rhm_engineHpConfig = motorConfigIndex
+
+    rhm_log(string.format("RHM [RHM_LoadCalculator]: Detected engine power for %s: %.0f HP (config #%d)", 
+        motorObj.getFullName and motorObj:getFullName() or "Harvester", resolvedHp, motorConfigIndex))
+
+    return resolvedHp
+end
+
+local HEADER_OBJECTS_TO_SCAN = {}
+local HEADER_SCANNED = {}
+
+local function addHeaderScanObj(obj)
+    if obj and not HEADER_SCANNED[obj] then
+        HEADER_SCANNED[obj] = true
+        table.insert(HEADER_OBJECTS_TO_SCAN, obj)
+    end
+end
+
+---EN: Resolves attached cutter power requirements (HP) and properties dynamically from FS25 XML/specs.
+---    Seamlessly supports standard combines, NEXAT modular systems, self-propelled harvesters with integrated
+---    cutters (e.g. potato/carrot/cotton), and multi-implement tractor trains (front topper + rear harvester).
+---UA: Динамічно визначає вимоги жатки до потужності (к.с.) та її властивості з XML/специфікацій FS25.
+---    Повністю підтримує стандартні комбайни, модульні системи NEXAT, самохідні комбайни з вбудованими жатками
+---    (картопля/морква/бавовна) та зв'язки знарядь на тракторі (передній гичкозрізувач + задній комбайн).
+function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
+    local headerHp = 0
+    local maxWorkingSpeed = nil
+    local isCutterActive = false
+    local isPickup = false
+    local isForageCutter = false
+    local cutterCount = 0
+
+    if not vehicle then
+        return headerHp, 10.0, isCutterActive, isPickup, isForageCutter, cutterCount
+    end
+
+    -- Find the motorized carrier / tractor if vehicle is attached (e.g. NEXAT, tractor with front/rear implements)
+    local motorCarrier = nil
+    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
+        motorCarrier = vehicle
+    else
+        local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+        if root and root.spec_motorized and root.spec_motorized.motor then
+            motorCarrier = root
+        else
+            local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+            if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+                motorCarrier = attacher
+            end
+        end
+    end
+
+    -- Collect all objects in the harvesting train (reusing pre-allocated tables to eliminate GC allocations):
+    for k in pairs(HEADER_SCANNED) do HEADER_SCANNED[k] = nil end
+    for i = #HEADER_OBJECTS_TO_SCAN, 1, -1 do HEADER_OBJECTS_TO_SCAN[i] = nil end
+
+    addHeaderScanObj(vehicle)
+
+    if vehicle.getAttachedImplements then
+        for _, implement in pairs(vehicle:getAttachedImplements()) do
+            addHeaderScanObj(implement.object)
+        end
+    end
+
+    if motorCarrier and motorCarrier ~= vehicle then
+        addHeaderScanObj(motorCarrier)
+        if motorCarrier.getAttachedImplements then
+            for _, implement in pairs(motorCarrier:getAttachedImplements()) do
+                addHeaderScanObj(implement.object)
+            end
+        end
+    end
+
+    -- Traverse collected equipment
+    for _, obj in ipairs(HEADER_OBJECTS_TO_SCAN) do
+        local isCutter = (obj.spec_cutter ~= nil or obj.spec_forageHarvesterCutter ~= nil 
+                       or obj.spec_forageCutter ~= nil or obj.spec_pickup ~= nil)
+
+        -- In trailed setups (e.g. Grimme Rootster on a tractor), the harvester implement itself consumes PTO power
+        local isTrailedHarvester = (obj ~= motorCarrier and obj.spec_combine ~= nil)
+
+        if isCutter or isTrailedHarvester then
+            cutterCount = cutterCount + 1
+
+            -- Check active state
+            if obj.getIsTurnedOn and obj:getIsTurnedOn() then
+                isCutterActive = true
+            elseif vehicle.getIsTurnedOn and vehicle:getIsTurnedOn() then
+                isCutterActive = true
+            elseif vehicle.spec_combine and vehicle.spec_combine.isThreshing then
+                isCutterActive = true
+            end
+
+            if obj.spec_forageHarvesterCutter ~= nil or obj.spec_forageCutter ~= nil then
+                isForageCutter = true
+            end
+            if obj.spec_pickup ~= nil then
+                isPickup = true
+            end
+
+            -- Working speed limit of the header/tool
+            -- CRITICAL FIX: NEVER call obj:getSpeedLimit(true) on the vehicle itself,
+            -- because vehicle:getSpeedLimit is hooked by RHM and returns our own dynamic speedLimit (locking it to 5 km/h)!
+            local limit = nil
+            if obj ~= vehicle then
+                if obj.spec_cutter and obj.spec_cutter.maxWorkingSpeed then
+                    limit = obj.spec_cutter.maxWorkingSpeed
+                elseif obj.speedLimit and obj.speedLimit > 0 and obj.speedLimit < 50 then
+                    limit = obj.speedLimit
+                elseif obj.getSpeedLimit then
+                    limit = obj:getSpeedLimit(true)
+                end
+            else
+                -- For self-propelled machines with integrated/built-in cutters (obj == vehicle):
+                -- Use the genuine vanilla working speed captured before RHM limiting,
+                -- or read directly from spec_cutter.maxWorkingSpeed or obj.speedLimit.
+                if self.vanillaWorkingSpeed and self.vanillaWorkingSpeed > 0 then
+                    limit = self.vanillaWorkingSpeed
+                elseif self.genuineSpeedLimit and self.genuineSpeedLimit > 0 then
+                    limit = self.genuineSpeedLimit
+                elseif obj.spec_cutter and obj.spec_cutter.maxWorkingSpeed then
+                    limit = obj.spec_cutter.maxWorkingSpeed
+                elseif obj.speedLimit and obj.speedLimit > 0 and obj.speedLimit < 50 then
+                    limit = obj.speedLimit
+                end
+            end
+
+            if limit and limit > 0 and limit < 50 then
+                if maxWorkingSpeed == nil then
+                    maxWorkingSpeed = limit
+                else
+                    maxWorkingSpeed = math.min(maxWorkingSpeed, limit)
+                end
+            end
+
+            -- Power consumption of the tool (HP)
+            local ptoHp = 0
+            if obj ~= motorCarrier then
+                -- A: Check spec_powerConsumer
+                if obj.spec_powerConsumer then
+                    local pc = obj.spec_powerConsumer
+                    local kw = pc.neededPtoPower or pc.neededMaxPtoPower or pc.neededMinPtoPower or pc.neededPower or 0
+                    if kw and kw > 0 then
+                        ptoHp = kw * 1.35962 -- kW to HP
+                    end
+                end
+                -- B: Check getNeededPtoPower / getNeededPower methods
+                if ptoHp == 0 then
+                    if obj.getNeededPtoPower then
+                        local kw = obj:getNeededPtoPower()
+                        if kw and kw > 0 then ptoHp = kw * 1.35962 end
+                    end
+                end
+                if ptoHp == 0 and obj.getNeededPower then
+                    local kw = obj:getNeededPower()
+                    if kw and kw > 0 then ptoHp = kw * 1.35962 end
+                end
+                -- C: Store item XML specs fallback
+                if ptoHp == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+                    local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+                    if item and item.specs and item.specs.neededPower then
+                        ptoHp = tonumber(item.specs.neededPower) or 0
+                    end
+                end
+            end
+
+            -- D: Enforce physical minimum power requirements based on working width and cutter type
+            local width = 0
+            if obj.getWorkingWidth then
+                local w = obj:getWorkingWidth()
+                if w and w > 0 then width = w end
+            end
+            if width == 0 and obj.spec_cutter and obj.spec_cutter.workingWidth then
+                width = obj.spec_cutter.workingWidth
+            end
+            if width == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+                local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+                if item and item.specs and item.specs.workingWidth then
+                    width = tonumber(item.specs.workingWidth) or width
+                end
+            end
+            if width == 0 then
+                width = 6.0
+            end
+
+            local minHpPerM = 7.5 -- Standard grain/draper cutter (7.5 HP/m - matches GIANTS neededMaxPtoPower)
+            if isForageCutter then
+                minHpPerM = 50.0 -- High-speed rotary forage cutter (Kemper/XCollect)
+            elseif isPickup then
+                minHpPerM = 15.0 -- Windrow pickup reel
+            elseif isTrailedHarvester then
+                minHpPerM = 25.0
+            end
+
+            local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+            local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+            if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+                local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+                if fruitTypeDesc and fruitTypeDesc.name then
+                    cropUpper = string.upper(fruitTypeDesc.name)
+                end
+            end
+
+            if cropUpper:find("CORN") or cropUpper:find("MAIZE") then
+                if not isForageCutter then
+                    minHpPerM = 18.0 -- Chopping corn header with stalk shredders
+                end
+            elseif cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH") then
+                minHpPerM = 28.0 -- Vegetable pod stripper / spinach cutter
+            elseif cropUpper:find("POTATO") or cropUpper:find("BEET") or cropUpper:find("CARROT") or cropUpper:find("PARSNIP")
+                or cropUpper:find("ONION") or cropUpper:find("GARLIC") then
+                minHpPerM = 22.0 -- Root intake & lifting knives / topper
+            end
+
+            ptoHp = math.max(ptoHp, width * minHpPerM)
+            headerHp = headerHp + ptoHp
+        end
+    end
+
+    -- If self-propelled machine with built-in cutter and no separate PTO consumer was registered:
+    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil) then
+        local width = 0
+        if vehicle.getWorkingWidth then
+            local w = vehicle:getWorkingWidth()
+            if w and w > 0 then width = w end
+        end
+        if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
+            width = vehicle.spec_cutter.workingWidth
+        end
+        if width == 0 and vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+            local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+            if item and item.specs and item.specs.workingWidth then
+                width = tonumber(item.specs.workingWidth) or width
+            end
+        end
+        if width == 0 then
+            width = 3.0
+        end
+        local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+        if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+            local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+            if fruitTypeDesc and fruitTypeDesc.name then
+                cropUpper = string.upper(fruitTypeDesc.name)
+            end
+        end
+        local isStripper = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
+        local hpPerMeter = isStripper and 28.0 or 22.0
+        headerHp = width * hpPerMeter
+    end
+
+    maxWorkingSpeed = maxWorkingSpeed or self.vanillaWorkingSpeed or (self.genuineSpeedLimit > 0 and self.genuineSpeedLimit) or 10.0
+    return headerHp, maxWorkingSpeed, isCutterActive, isPickup, isForageCutter, cutterCount
+end
+
+---EN: Dynamically calculates the physical specific processing energy (HP per t/h) based on FS25 crop traits.
+---UA: Динамічно розраховує питому енергію обмолоту/подрібнення (к.с. на т/год) на основі властивостей культури з FS25.
+function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex, machineType, isPickup, isForageCutter)
+    machineType = machineType or "grain"
+
+    local fruitTypeDesc = nil
+    if g_fruitTypeManager and fruitTypeIndex and fruitTypeIndex ~= 0 and fruitTypeIndex ~= FruitType.UNKNOWN then
+        fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+    end
+
+    local fillTypeDesc = nil
+    if g_fillTypeManager and fillTypeIndex and fillTypeIndex ~= 0 and fillTypeIndex ~= FillType.UNKNOWN then
+        fillTypeDesc = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+    end
+
+    local cropName = "UNKNOWN"
+    if fruitTypeDesc and fruitTypeDesc.name then
+        cropName = string.upper(fruitTypeDesc.name)
+    elseif fillTypeDesc and fillTypeDesc.name then
+        cropName = string.upper(fillTypeDesc.name)
+    elseif self.currentCrop then
+        cropName = string.upper(self.currentCrop)
+    end
+
+    -- Bulk density (kg/L)
+    local density = 0.75
+    if fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
+        density = fillTypeDesc.massPerLiter * 1000
+    end
+
+    -- Does this crop generate straw/windrows in the thresher?
+    local hasStraw = false
+    if fruitTypeDesc and fruitTypeDesc.hasWindrow ~= nil then
+        hasStraw = fruitTypeDesc.hasWindrow
+    else
+        hasStraw = (cropName == "WHEAT" or cropName == "BARLEY" or cropName == "OAT" or cropName == "OATS"
+                 or cropName == "RYE" or cropName == "SPELT" or cropName == "TRITICALE" or cropName:find("RICE"))
+    end
+
+    local baseESpec = 6.0
+
+    -- 1. FORAGE HARVESTERS (Chopping whole plant: corn silage, grass, poplar, etc.)
+    if machineType == "forage" or isForageCutter then
+        if cropName:find("POPLAR") or cropName:find("WOOD") then
+            baseESpec = 10.0 -- Poplar wood chipping: high-resistance wood cutting drum
+        elseif cropName:find("MAIZE") or cropName:find("CORN") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
+            baseESpec = 2.35 -- Whole corn silage: heavy biomass + corn cracker roller mills
+        elseif cropName:find("GRASS") or cropName:find("MEADOW") or cropName:find("ALFALFA") or cropName:find("LUCERNE") or cropName:find("CLOVER") then
+            if isPickup then
+                baseESpec = 1.8 -- Swath pickup: pre-mowed windrow, low cutter resistance
+            else
+                baseESpec = 3.4 -- Direct-cut standing fresh grass: tough elastic fibers + disc mower power
+            end
+        elseif cropName:find("STRAW") or cropName:find("HAY") or cropName:find("DRYGRASS") then
+            baseESpec = 1.8 -- Dry windrow pickup: ~1.8 HP per t/h
+        else
+            baseESpec = isPickup and 1.8 or 2.8 -- Universal forage fallback
+        end
+
+    -- 2. ROOT & SPECIALIZED VEGETABLE HARVESTERS (Lifting, cleaning, pod stripping, stalk cutting)
+    elseif machineType == "root" then
+        if cropName:find("SUGARCANE") or cropName:find("CANE") then
+            -- Sugarcane harvesters categorized as root vehicles in FS25
+            baseESpec = 4.8
+        elseif cropName:find("SPINACH") then
+            -- Spinach: dense wet leafy biomass, Oxbo cutter bar
+            baseESpec = 7.8
+        elseif (cropName:find("GREEN") and (cropName:find("BEAN") or cropName:find("PEA")))
+               or cropName:find("GREENBEANS") or cropName:find("GREENBEAN") then
+            -- Fresh green beans: pod stripping reel through massive bush mass
+            baseESpec = 14.5
+        elseif cropName:find("PEA") or cropName:find("BEAN") or cropName:find("LENTIL") or cropName:find("LUPIN") then
+            baseESpec = 14.0
+        elseif cropName:find("POTATO") then
+            -- Potatoes: heavy ridge lifting, soil separation sieves, haulm chopper
+            baseESpec = 2.55
+        elseif cropName:find("SUGARBEET") or cropName:find("BEET") then
+            -- Sugar beets: round shape, squeeze wheels, heavy turbine cleaning
+            baseESpec = 2.10
+        elseif cropName:find("BEETROOT") or cropName:find("RED BEET") or cropName:find("REDBEET") then
+            -- Red table beet: firm root, rubber pulling belts
+            baseESpec = 2.40
+        elseif cropName:find("CARROT") then
+            -- Carrots: deep taproots, pulling belts, haulm cutters
+            baseESpec = 1.65
+        elseif cropName:find("PARSNIP") or cropName:find("RUTABAGA") or cropName:find("TURNIP") then
+            -- Parsnips: tapered taproot, firm soil suction
+            baseESpec = 2.10
+        elseif cropName:find("ONION") then
+            baseESpec = 2.20
+        elseif cropName:find("GARLIC") then
+            baseESpec = 2.30
+        else
+            baseESpec = 2.10 -- Universal root fallback
+        end
+
+    -- 3. COTTON HARVESTERS (Fluffy, low density lint picking & baling)
+    elseif machineType == "cotton" or cropName:find("COTTON") then
+        baseESpec = 55.0 -- High-speed spindle drums + on-board round/square bale chamber hydraulic compaction
+
+    -- 4. SUGARCANE HARVESTERS
+    elseif cropName:find("SUGARCANE") or cropName:find("CANE") then
+        baseESpec = 4.8 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
+
+    -- 5. GRAPES & OLIVES (Specialized straddle harvesters)
+    elseif cropName:find("GRAPE") then
+        baseESpec = 3.8 -- Shaker rod frequency, sorting belts, destemmer
+    elseif cropName:find("OLIVE") then
+        baseESpec = 2.6 -- Olive shaker beaters, leaf blowers
+
+    -- 6. GRAIN COMBINE HARVESTERS (Grain tank stream processing)
+    else
+        if isPickup then
+            baseESpec = 2.2 -- Windrow pickup for grain combine
+        elseif cropName:find("CORN") or cropName:find("MAIZE") then
+            -- Corn for grain: cobs snapped on header, threshed in rotor
+            baseESpec = 4.4
+        elseif cropName:find("ONION") or cropName:find("GARLIC") then
+            baseESpec = 2.20 -- Trailed onion lifters running on tractor/grain spec
+        elseif cropName:find("SUNFLOWER") then
+            -- Sunflower: low density (0.35), massive head volume, stalk cutting
+            baseESpec = 19.0
+        elseif cropName:find("CANOLA") or cropName:find("RAPESEED") then
+            baseESpec = 11.0
+        elseif cropName:find("SOYBEAN") then
+            baseESpec = 11.5
+        elseif cropName:find("OAT") or cropName:find("OATS") then
+            -- Oat: light seeds (0.50 kg/L) with heavy tough fibrous straw
+            baseESpec = 12.5
+        elseif cropName:find("POPPY") then
+            baseESpec = 17.5
+        elseif cropName:find("LINSEED") or cropName:find("FLAX") then
+            baseESpec = 13.0
+        elseif cropName:find("MUSTARD") then
+            baseESpec = 12.2
+        elseif cropName:find("HEMP") then
+            baseESpec = 11.2
+        elseif cropName:find("LENTIL") then
+            baseESpec = 10.2
+        elseif cropName:find("CHICKPEA") then
+            baseESpec = 9.8
+        elseif cropName:find("BUCKWHEAT") then
+            baseESpec = 9.8
+        elseif cropName:find("SPELT") then
+            baseESpec = 7.8
+        elseif cropName:find("MILLET") then
+            baseESpec = 7.8
+        elseif cropName:find("RICE") then
+            if cropName:find("LONG") then
+                baseESpec = 6.0 -- Rice Long Grain (US)
+            else
+                baseESpec = 7.5 -- Asian Rice (higher silica straw resistance)
+            end
+        elseif cropName:find("RYE") then
+            baseESpec = 6.3
+        elseif cropName:find("TRITICALE") then
+            baseESpec = 6.4
+        elseif cropName:find("BARLEY") then
+            baseESpec = 6.2
+        elseif cropName:find("PEA") then
+            baseESpec = 6.0
+        elseif cropName:find("SORGHUM") then
+            baseESpec = 6.0
+        elseif cropName:find("WHEAT") then
+            baseESpec = 6.0
+        elseif hasStraw then
+            baseESpec = 6.0 -- Standard straw cereals
+        else
+            -- Universal dynamic fallback for unknown / modded crops based on physical density
+            if density < 0.50 then
+                baseESpec = 14.0 -- Very light seed with high biomass
+            elseif density < 0.70 then
+                baseESpec = 11.0 -- Medium density oilseeds/legumes
+            else
+                baseESpec = 6.0  -- Dense grain
+            end
+        end
+    end
+
+    -- DYNAMIC YIELD & BIOMASS ADAPTATION:
+    -- Resolves natural nominal crop yield baseline (t/ha) directly from FS25 engine data.
+    -- Dynamically scales processing energy based on the physical Harvest Index of local field yield.
+    local lpsqm = 0.85
+    if fruitTypeDesc then
+        if fruitTypeDesc.harvest and fruitTypeDesc.harvest.literPerSqm and fruitTypeDesc.harvest.literPerSqm > 0 then
+            lpsqm = fruitTypeDesc.harvest.literPerSqm
+        elseif fruitTypeDesc.literPerSqm and fruitTypeDesc.literPerSqm > 0 then
+            lpsqm = fruitTypeDesc.literPerSqm
+        elseif fruitTypeDesc.litersPerSqm and fruitTypeDesc.litersPerSqm > 0 then
+            lpsqm = fruitTypeDesc.litersPerSqm
+        end
+    end
+
+    -- Natural baseline yield in t/ha (average fertilized crop ~ 1.1x base literPerSqm)
+    local yRef = math.max(1.0, lpsqm * 10.0 * density * 1.10)
+
+    local actualYield = self.currentYield or 0
+    if actualYield < 0.5 then
+        actualYield = yRef
+    end
+
+    -- Agricultural Harvest Index curve:
+    -- In grain combines, grain-to-straw ratio improves at high yields (alpha = 0.70).
+    -- In root, vegetable, forage, and whole-crop harvesters, the entire mass is processed without straw dilution (alpha = 0.12).
+    local alpha = 0.70
+    local minFactor = 0.45
+    if machineType == "root" then
+        alpha = 0.12
+        minFactor = 0.75
+    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" then
+        alpha = 0.15
+        minFactor = 0.75
+    end
+
+    local yieldRatio = yRef / actualYield
+    local yieldFactor = math.pow(yieldRatio, alpha)
+    yieldFactor = math.max(minFactor, math.min(1.25, yieldFactor))
+
+    return baseESpec * yieldFactor
+end
+
+---EN: Backward compatibility stub for getCropFactor.
+---UA: Заглушка зворотної сумісності для getCropFactor.
+function RHM_LoadCalculator:getCropFactor(fruitTypeIndex, fillTypeIndex, machineType, isPickup, isForageCutter)
+    return 1.0
 end
 
 ---EN: Sets base performance mass / UA: Встановлює базову продуктивність (маса)
@@ -216,146 +713,84 @@ function RHM_LoadCalculator:setBasePerformance(basePerfMass)
         self.basePerfMass, self.basePerfMass * 3.6))
 end
 
----EN: Gets base performance from engine power / UA: Отримує базову продуктивність з потужності двигуна
+---EN: Calculates nominal base throughput capacity (kg/s) based on engine horsepower and machine type.
+---UA: Розраховує номінальну базову пропускну здатність (кг/с) на основі потужності двигуна та типу машини.
 function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
-    -- NEW LOGIC: Calculate throughput based on Horsepower
-    -- Approximation: 1 HP ~= 0.035 kg/s throughput for Grain
-    
-    local coef = 0.035  -- EN: Standard coefficient for grain / UA: Стандартний коефіцієнт для зерна
-    local power = 0
-    
-    local keyCategory = "vehicle.storeData.category"
-    local category = vehicle.xmlFile:getValue(keyCategory)
-    
-    if category == "forageHarvesters" or category == "forageHarvesterCutters" then
-        coef = 0.051  -- Forage harvesters: calibrated to JD 9900 (956hp) ~400 t/hr corn silage
-    elseif category == "beetVehicles" or category == "beetHarvesting" then
-        coef = 0.060  -- Beet harvesting
-    elseif category == "potatoVehicles" then
-        coef = 0.060  -- Potato harvesting
-    elseif category == "cottonVehicles" then
-        coef = 0.015  -- Cotton
-    elseif category == "vegetableVehicles" then
-        coef = 0.060  -- Vegetable harvesting
-    end
-    
-    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
-        power = vehicle.spec_motorized.motor.hp or 0
-    end
-    
-    -- SMART DETECTION: If category didn't match specific types
-    if math.abs(coef - 0.035) < 0.001 then
-        local isVegetable = false
-        
-        -- 1. Check FillTypes (if available)
-        if vehicle.getFillUnitFillTypes and vehicle.spec_fillUnit then
-            for _, fillUnit in ipairs(vehicle.spec_fillUnit.fillUnits) do
-                 if fillUnit.supportedFillTypes then
-                     for fillTypeIndex, _ in pairs(fillUnit.supportedFillTypes) do
-                        local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-                        if fillType and fillType.name then
-                            local name = string.upper(fillType.name)
-                            if name == "ONION" or name == "CARROT" or name == "BEETROOT" or name == "PARSNIP" then
-                                isVegetable = true
-                                break
-                            end
-                        end
-                     end
-                 end
-                 if isVegetable then break end
-            end
-        end
-        
-        -- 2. Check Vehicle Name / Filename
-        if not isVegetable then
-            local name = string.lower(vehicle:getFullName() or "")
-            local xml = string.lower(vehicle.configFileName or "")
-            
-            if name:find("onion") or name:find("carrot") or name:find("vegetable") or 
-               xml:find("onion") or xml:find("carrot") or xml:find("vegetable") or
-               name:find("ur%-%d+") or name:find("umr") or name:find("keiler") or 
-               xml:find("ur_") or xml:find("umr_") then
-                isVegetable = true
-            end
-        end
-        
-        if isVegetable then
-            coef = 0.080 -- EN: Standardized vegetable coefficient (increased for downhill capacity) / UA: Стандартизований коефіцієнт для овочів
+    local hp = self:getEnginePowerHp(vehicle)
+    local category = ""
+    if vehicle.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+        local item = g_storeManager:getItemByXMLFilename(vehicle.configFileName)
+        if item and item.categoryName then
+            category = tostring(item.categoryName):lower()
         end
     end
-    
-    -- NEXAT FIX (Module search)
-    if (not power or power == 0) then
-        local function findVehicleWithEngine(v)
-            if not v then return nil end
-            if v.spec_motorized and v.spec_motorized.motor and v.spec_motorized.motor.hp and v.spec_motorized.motor.hp > 0 then
-                return v
-            end
-            if v.getAttacherVehicle then
-                return findVehicleWithEngine(v:getAttacherVehicle())
-            end
-            if v.rootVehicle and v.rootVehicle ~= v then
-                 if v.rootVehicle.spec_motorized and v.rootVehicle.spec_motorized.motor and v.rootVehicle.spec_motorized.motor.hp > 0 then
-                    return v.rootVehicle
-                 end
-            end
-            return nil
-        end
-        local engineVeh = findVehicleWithEngine(vehicle)
-        if engineVeh then
-            power = engineVeh.spec_motorized.motor.hp or 0
+    if category == "" and vehicle.xmlFile then
+        local rawCat = vehicle.xmlFile:getValue("vehicle.storeData.category")
+        if type(rawCat) == "table" then
+            category = table.concat(rawCat, " "):lower()
+        elseif type(rawCat) == "string" then
+            category = rawCat:lower()
         end
     end
-    
-    if power == 0 then
-        local key, motorId = ConfigurationUtil.getXMLConfigurationKey(
-            vehicle.xmlFile, 
-            vehicle.configurations.motor, 
-            "vehicle.motorized.motorConfigurations.motorConfiguration", 
-            "vehicle.motorized", 
-            "motor"
-        )
-        local fallbackConfigKey = "vehicle.motorized.motorConfigurations.motorConfiguration(0)"
-        local fallbackOldKey = "vehicle"
-        
-        if SpecializationUtil.hasSpecialization(Motorized, vehicle.specializations) then
-            power = ConfigurationUtil.getConfigurationValue(
-                vehicle.xmlFile, key, "", "#hp", nil, fallbackConfigKey, fallbackOldKey
-            )
-        end
+
+    local rhmSpec = vehicle.spec_rhm_Combine
+    local machineType = (rhmSpec and rhmSpec.combineMemory and rhmSpec.combineMemory.machineType) or (rhmSpec and rhmSpec.machineType) or ""
+
+    local isForage = (machineType == "forage" or category:find("forage") ~= nil)
+    local isRoot = (machineType == "root" or category:find("beet") ~= nil or category:find("potato") ~= nil or category:find("vegetable") ~= nil)
+
+    -- Nominal throughput at 100% processing load (t/h)
+    local nominalTph = 0
+    if isForage then
+        nominalTph = hp / 2.1 -- ~2.1 HP per t/h
+    elseif isRoot then
+        nominalTph = hp / 0.75 -- ~0.75 HP per t/h
+    else
+        nominalTph = hp / 5.2 -- ~5.2 HP per t/h for grain
     end
-    
-    if power and tonumber(power) > 0 then
-        local basePerf = tonumber(power) * coef
-        rhm_log(string.format("RHM [RHM_LoadCalculator]: RHM DEBUG: BasePerf Mass computed for %s (cat: %s, coef: %.3f): %d hp -> %.2f kg/s (%.1f t/h)", 
-            vehicle:getFullName(), category or "unknown", coef, power, basePerf, basePerf * 3.6))
-        return basePerf
-    end
-    
-    -- NEXAT POWER FIX
-    if vehicle.configFileName and vehicle.configFileName:lower():find("nexat") then
-        local basePerf = 1100 * coef  
-        return basePerf
-    end
-    
-    return 10.0  -- Default ~36 t/h
+
+    local nominalKgPerSec = (nominalTph * 1000) / 3600
+    rhm_log(string.format("RHM [RHM_LoadCalculator]: Nominal base capacity for %s (%d HP): %.1f t/h (%.2f kg/s)", 
+        vehicle:getFullName(), hp, nominalTph, nominalKgPerSec))
+    return nominalKgPerSec
 end
 
 ---EN: Updates load calculation variables / UA: Оновлює дані для розрахунку навантаження
 function RHM_LoadCalculator:update(vehicle, dt, mass)
-    self.totalDistance = self.totalDistance + vehicle.lastMovedDistance
-    self.loadAccumulatedMass = (self.loadAccumulatedMass or 0) + mass
+    -- EN: Safety check for vehicle parameter
+    -- UA: Перевірка безпеки для параметра vehicle
+    if not vehicle then
+        return
+    end
     
-    -- INSTANT REACTION FIX:
-    -- EN: Only reset to 5 km/h if starting from idle (prevents reset loop during harvest)
-    -- UA: Після простою скидаємо до 5 км/год (запобігає циклу скидання під час роботи)
-    if mass > 0 and self.speedLimit >= (self.genuineSpeedLimit - 0.1) and self.genuineSpeedLimit > 0 
-       and (self.lastAvgMass or 0) < 0.1 then
-         self.speedLimit = 5.0
+    self.totalDistance = self.totalDistance + (vehicle.lastMovedDistance or 0)
+    self.loadAccumulatedMass = (self.loadAccumulatedMass or 0) + (mass or 0)
+    
+    local hasCropFlow = (mass and mass > 0) or ((self.currentAvgMass or 0) > 0.05)
+    if hasCropFlow then
+        self.harvestActiveTime = (self.harvestActiveTime or 0) + dt
+        self.idleHarvestTime = 0
+    else
+        self.idleHarvestTime = (self.idleHarvestTime or 0) + dt
+        if self.idleHarvestTime > 1500 then
+            -- Reset entry grace period after 1.5s of no crop intake (e.g. at field turns/headlands)
+            self.harvestActiveTime = 0
+            self.underloadTimer = 0
+        end
+    end
+
+    -- EN: Fast first reaction on entering crop from empty (300ms / 0.8m instead of 1500ms / 3m)
+    -- UA: Швидка перша реакція при заході в загонку (300мс / 0.8м замість 1500мс / 3м)
+    local targetInterval = self.avgTime
+    local targetDistance = self.distanceForMeasuring
+    if (self.harvestActiveTime or 0) < 1200 and (self.lastAvgMass or 0) < 0.1 then
+        targetInterval = 300
+        targetDistance = 0.8
     end
     
     self.currentTime = self.currentTime + dt
-    if self.currentTime > self.avgTime or self.totalDistance > self.distanceForMeasuring then
+    if self.currentTime > targetInterval or self.totalDistance > targetDistance then
+        self.lastUpdateInterval = self.currentTime
         self:updateSettingsImpact() -- EN: Recalculate settings penalty / UA: Перераховання штрафу налаштувань
         self:calculateEngineLoad(vehicle)
         self:calculateSpeedLimit(vehicle)
@@ -367,318 +802,351 @@ function RHM_LoadCalculator:update(vehicle, dt, mass)
     end
 end
 
----EN: Calculates Engine Load / UA: Розраховує навантаження на двигун
+---EN: Calculates Engine Load using the physical power-balance model: P_total = P_base + P_header(v) + P_process.
+---UA: Розраховує навантаження на двигун за фізичною моделлю балансу потужностей: P_total = P_base + P_header(v) + P_process.
 function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     if self.currentTime <= 0 then
         return
     end
     
-    -- EN: BASE CROP FACTOR / UA: БАЗОВИЙ КОЕФІЦІЄНТ КУЛЬТУРИ
-    -- EN: Priority: 1. Exact Name, 2. FruitType, 3. FillType, 4. Wheat fallback
     local spec_combine = vehicle.spec_combine
     local rhmSpec = vehicle.spec_rhm_Combine
     
-    local cropFactor = nil
-    
-    if self.currentCrop and self.CROP_FACTORS_BY_NAME and self.CROP_FACTORS_BY_NAME[self.currentCrop] then
-        cropFactor = self.CROP_FACTORS_BY_NAME[self.currentCrop]
-    end
-    
-    if not cropFactor then
-        cropFactor = self.CROP_FACTORS[spec_combine.lastValidInputFruitType]
-    end
-    
-    -- Fallback to FillType (especially for Pickups/Root Crops)
-    if not cropFactor and rhmSpec and rhmSpec.lastFillType then
-        cropFactor = self.CROP_FACTORS_FT[rhmSpec.lastFillType]
-    end
-    
-    -- Final fallback to Wheat
-    if not cropFactor then
-        cropFactor = self.CROP_FACTORS[FruitType.WHEAT] or 0.814
+    if not spec_combine then
+        rhm_log("RHM [RHM_LoadCalculator]: WARNING - vehicle.spec_combine is nil, using fallback values")
+        self.engineLoad = 0
+        return
     end
 
-    -- EN: --- RHM_CropFactorTuning hook (DEV) — remove with dev/RHM_CropFactorTuning.lua ---
-    -- UA: --- хук RHM_CropFactorTuning (DEV) ---
-    if RHM_CropFactorTuning and RHM_CropFactorTuning.isEnabled and RHM_CropFactorTuning.isEnabled() then
-        local tun = RHM_CropFactorTuning.getFactorOverride(self.currentCrop)
-        if tun ~= nil then
-            cropFactor = tun
-        end
+    -- Keep currentCrop synchronized from combine memory
+    if self.combineMemory and self.combineMemory.currentCrop then
+        self.currentCrop = self.combineMemory.currentCrop
     end
-    
-    -- EN: UNIVERSAL FORAGE SAFETY NET
-    -- UA: УНІВЕРСАЛЬНИЙ ЗАХИСТ ДЛЯ СИЛОСНИХ КОМБАЙНІВ
-    -- Якщо силосний комбайн косить нетипову культуру (наприклад, пшеницю мод-карти), яка не була розпізнана як MAIZE_FORAGE,
-    -- ми примусово знижуємо її жорсткість, бо різати на силос завжди легше, ніж молотити зерно.
+
     local machineType = (rhmSpec and rhmSpec.combineMemory) and rhmSpec.combineMemory.machineType or "grain"
-    if machineType == "forage" then
-        if self.currentCrop ~= "MAIZE_FORAGE" and self.currentCrop ~= "GRASS" and self.currentCrop ~= "GRASS_WINDROW" 
-           and self.currentCrop ~= "DRYGRASS" and self.currentCrop ~= "DRYGRASS_WINDROW" then
-            
-            -- Знижуємо коефіцієнт (робимо в ~2 рази легше)
-            cropFactor = cropFactor * 0.45
-        end
-    end
-    
-    -- EN: INPUT DETECTION (PICKUP / CUTTER / FORAGE)
-    local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(spec_combine.lastValidInputFruitType or 0)
-    local currentFruitTypeName = "UNKNOWN"
-    
-    if fruitTypeDesc then
-        currentFruitTypeName = string.upper(fruitTypeDesc.name)
-    elseif rhmSpec and rhmSpec.lastFillType then
-        -- Try to get name from fillType if fruitType is unknown
-        local fillTypeDesc = g_fillTypeManager:getFillTypeByIndex(rhmSpec.lastFillType)
-        if fillTypeDesc then
-            currentFruitTypeName = string.upper(fillTypeDesc.name)
-        end
-    end
-    local isPickup = false
-    local isForageCutter = false
-    
-    -- EN: ROBUST DETECTION (Check attached implements) / UA: НАДІЙНА ДЕТЕКЦІЯ
-    if vehicle.getAttachedImplements then
-        for _, implement in pairs(vehicle:getAttachedImplements()) do
-            local implObj = implement.object
-            if implObj then
-                local storeItem = g_storeManager:getItemByXMLFilename(implObj.configFileName)
-                local cat = storeItem and storeItem.categoryName or ""
-                
-                -- EN: Detect Forage Harvester Header / UA: Силосна жатка
-                if implObj.spec_forageHarvesterCutter ~= nil or implObj.spec_forageCutter ~= nil 
-                   or cat == "forageHarvesterCutters" then
-                    isForageCutter = true
-                end
 
-                -- EN: Detect WINDROW Pickup (not vegetable harvester!)
-                -- UA: Визначаємо підбірач валків (не овочевий комбайн!)
-                if implObj.spec_pickup ~= nil or cat == "pickups" or cat == "slasher" then
-                    
-                    -- EN: Check if this is a vegetable/root crop direct harvester
-                    -- UA: Перевіряємо чи це прямий збирач овочів/коренеплодів
-                    local isVegetableHarvester = false
-                    
-                    -- 1. Category check
-                    if cat == "vegetableVehicles" or cat == "onionHarvesters" 
-                       or cat == "rootCropHarvesters" then
-                        isVegetableHarvester = true
-                    end
-                    
-                    -- 2. FillType check
-                    if not isVegetableHarvester and implObj.spec_fillUnit then
-                        for _, fillUnit in ipairs(implObj.spec_fillUnit.fillUnits or {}) do
-                            if fillUnit.supportedFillTypes then
-                                for fillTypeIndex, _ in pairs(fillUnit.supportedFillTypes) do
-                                    local ft = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-                                    if ft and ft.name then
-                                        local ftName = string.upper(ft.name)
-                                        if ftName == "ONION" or ftName == "ONION_DIRTY"
-                                           or ftName == "CARROT" or ftName == "BEETROOT"
-                                           or ftName == "PARSNIP" or ftName == "POTATO" then
-                                            isVegetableHarvester = true
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                            if isVegetableHarvester then break end
-                        end
-                    end
-                    
-                    -- 3. Filename fallback
-                    if not isVegetableHarvester then
-                        local xml = string.lower(implObj.configFileName or "")
-                        if xml:find("onion") or xml:find("carrot") or xml:find("beetroot")
-                           or xml:find("parsnip") or xml:find("ur_") or xml:find("umr_")
-                           or xml:find("keiler") then
-                            isVegetableHarvester = true
-                        end
-                    end
-                    
-                    if not isVegetableHarvester then
-                        isPickup = true
-                    end
-                end
-                
-                if isPickup or isForageCutter then break end
-            end
-        end
-    end
-
-    -- EN: Fallback pickup detection: if input fruit type contains WINDROW or is UNKNOWN but area is processed
-    if not isPickup then
-        if currentFruitTypeName:find("WINDROW") or spec_combine.lastValidInputFruitType == 0 then
-            isPickup = true
-        end
-    end
-
-    -- EN: APPLY MULTIPLIERS / UA: ЗАСТОСУВАННЯ МНОЖНИКІВ
+    -- 1. HEADER INFO & POWER CONSUMPTION (PTO)
+    local headerHp, maxWorkingSpeed, isCutterActive, isPickup, isForageCutter, cutterCount = self:getAttachedHeaderInfo(vehicle)
+    self.headerHp = headerHp
+    self.maxWorkingSpeed = maxWorkingSpeed
+    self.isCutterActive = isCutterActive
     self.isPickup = isPickup
-    if isPickup then
-        local machineType = (rhmSpec and rhmSpec.combineMemory) and rhmSpec.combineMemory.machineType or "grain"
-        
-        -- EN: Pickups on Forage harvesters don't get artificial reduction! (They use GRASS_WINDROW base factor perfectly)
-        --     Only standard grain combines lifting swathes get a resistance reduction.
-        if machineType ~= "forage" then
-            -- EN: Root crops & Vegetables should NOT be easier when picked up (already high volume)
-            -- UA: Коренеплоди та овочі не повинні бути легшими при підбиранні
-            local isRootOrVeg = currentFruitTypeName:find("ONION") 
-                             or currentFruitTypeName:find("POTATO") 
-                             or currentFruitTypeName:find("CARROT")
-                             or currentFruitTypeName:find("PARSNIP")
-                             or currentFruitTypeName:find("BEETROOT")
-                             or currentFruitTypeName:find("SUGARBEET")
-                             or currentFruitTypeName:find("SPINACH")
-                             or currentFruitTypeName:find("GREENBEAN")
-                             
-            if not isRootOrVeg then
-                cropFactor = cropFactor * 0.45  -- EN: Standard windrows (Wheat, Barley, etc.) harder than before
-            end
+    self.isForageCutter = isForageCutter
+
+    -- Resolve fruit type and fill type for processing energy lookup
+    local inputFruitType = spec_combine.lastValidInputFruitType or 0
+    local outputFillType = (rhmSpec and rhmSpec.lastFillType) or 0
+
+    -- Fallback pickup detection: WINDROW or fruitType 0
+    if not isPickup then
+        local fruitTypeDesc = g_fruitTypeManager and g_fruitTypeManager:getFruitTypeByIndex(inputFruitType)
+        local fruitName = (fruitTypeDesc and fruitTypeDesc.name and string.upper(fruitTypeDesc.name)) or ""
+        if fruitName:find("WINDROW") or inputFruitType == 0 then
+            isPickup = true
+            self.isPickup = true
         end
     end
 
-    -- EN: Forage harvester + direct-cut grass (rotary header), NOT pickup: FS often reports high t/h at 12–15 km/h
-    --     but engine load stays ~50–60% and the vehicle sits on the speed ceiling. Dense windrow pickup at ~7 km/h
-    --     reaches ~80% load — same crop, different intake geometry. Bump resistance only for this mode so limits engage.
-    -- UA: Силосник прямим резом по траві: на 15 км/год низьке навантаження vs підбирання валка ~80% — множник лише тут.
-    if machineType == "forage" and isForageCutter and not isPickup then
-        if self.currentCrop == "GRASS" or self.currentCrop == "DRYGRASS" then
-            cropFactor = cropFactor * 2.25
-        end
-    end
+    -- 2. SPECIFIC PROCESSING ENERGY (HP per t/h)
+    local eSpec = self:getCropSpecificEnergy(inputFruitType, outputFillType, machineType, isPickup, isForageCutter)
+    self.lastSpecificEnergy = eSpec
 
-    -- EN: Forage cutter logic removed because MAIZE_FORAGE is now tuned explicitly in CROP_FACTORS_BY_NAME
-
-    if self.lastCropType ~= spec_combine.lastValidInputFruitType then
-        self.lastCropType = spec_combine.lastValidInputFruitType
+    if self.lastCropType ~= inputFruitType then
+        self.lastCropType = inputFruitType
         local mode = isPickup and "PICKUP" or (isForageCutter and "FORAGE_CUTTER" or "DIRECT_CUT")
-        rhm_log(string.format("RHM [RHM_LoadCalculator]: RHM DEBUG: [INPUT] %s (%s). Final Factor: %.3f", mode, currentFruitTypeName, cropFactor))
+        rhm_log(string.format("RHM [RHM_LoadCalculator]: RHM: [INPUT] %s (Fruit: %d, Fill: %d, E_spec: %.2f HP/(t/h), Header: %.1f HP)", 
+            mode, inputFruitType, outputFillType, eSpec, headerHp))
     end
-    
-    -- EN: MOISTURE FACTOR / UA: КОЕФІЦІЄНТ ВОЛОГОСТІ
+
+    -- 3. MOISTURE FACTOR
     local moistureFactor = 1.0
-    local rhmSpec = vehicle.spec_rhm_Combine
     if rhmSpec and rhmSpec.data and rhmSpec.data.moisture and rhmSpec.data.moisture > 0 then
         local currentMoisture = rhmSpec.data.moisture
         local moistureLimit = 14 -- Default general limit
         
-        if RHM_CombineSettingsDatabase and self.currentCrop and RHM_CombineSettingsDatabase.crops[self.currentCrop] then
-            local tName = RHM_CombineSettingsDatabase.crops[self.currentCrop].template
-            if RHM_CombineSettingsDatabase.templates and RHM_CombineSettingsDatabase.templates[tName] and RHM_CombineSettingsDatabase.templates[tName].moistureLimit then
-                moistureLimit = RHM_CombineSettingsDatabase.templates[tName].moistureLimit
+        if RHM_CombineSettingsDatabase and self.currentCrop then
+            local cropSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(self.currentCrop)
+            if cropSettings and cropSettings.moistureLimit then
+                moistureLimit = cropSettings.moistureLimit
             end
         end
         
-        local machineType = self.combineMemory and self.combineMemory.machineType or "grain"
         if machineType ~= "forage" and machineType ~= "root" then
             if currentMoisture > moistureLimit then
                 local diff = currentMoisture - moistureLimit
-                local penaltyPerPercent = 0.02 -- EN: 2% difficulty per 1% moisture over limit
+                local penaltyPerPercent = 0.02 -- 2% difficulty per 1% moisture over limit
                 if rhmSpec.packageLevel and rhmSpec.packageLevel >= 4 then
-                    penaltyPerPercent = 0.01 -- EN: Opti-Harvest reduces penalty by 50%
+                    penaltyPerPercent = 0.01 -- Opti-Harvest reduces penalty by 50%
                 end
-                
                 moistureFactor = 1.0 + (diff * penaltyPerPercent)
             end
         end
     end
 
-    -- EN: Calculate RAW average mass intake per second / UA: Розраховуємо RAW середню масу за секунду (кг/с)
-    -- EN: Uses accumulatedMass over the target distance/time / UA: Використовуємо accumulatedMass
-    local safeTime = math.max(100, self.currentTime) -- Protect against division by zero
-    local rawAvgMass = (self.loadAccumulatedMass or 0) * (1000 / safeTime) * cropFactor * moistureFactor
-    
-    -- ADAPTIVE SMOOTHING
-    local loadRatio = self.currentAvgMass / math.max(0.01, self.basePerfMass)
-    local smoothFactor = 0.3 + 0.4 * math.min(1.0, loadRatio)
-    smoothFactor = math.min(0.7, smoothFactor)  -- Max 70% smoothing
-    
-    local avgMass = rawAvgMass
-    if self.currentAvgMass > (0.5 * self.basePerfMass) then
-        avgMass = (1 - smoothFactor) * rawAvgMass + smoothFactor * self.currentAvgMass
+    -- 4. RAW THROUGHPUT RATE (kg/s and t/h)
+    local safeTime = math.max(100, self.currentTime)
+    local rawKgPerSec = (self.loadAccumulatedMass or 0) * (1000 / safeTime)
+    local rawTph = rawKgPerSec * 3.6
+
+    -- Adaptive smoothing for mass flow
+    -- Adaptive smoothing for mass flow
+    local smoothFactor = 0.40
+    local avgMass = rawKgPerSec
+    if self.currentAvgMass > 0 then
+        avgMass = (1 - smoothFactor) * rawKgPerSec + smoothFactor * self.currentAvgMass
+    else
+        -- Field entry: Feederhouse filling ramp (don't shock drum with 100% of raw mass on tick 1)
+        avgMass = rawKgPerSec * 0.40
     end
-    
+
+    -- Feederhouse transport delay: physical crop transit from cutter bar to threshing rotor takes ~2.0 seconds
+    if (self.harvestActiveTime or 0) < 2500 then
+        local entryRamp = math.min(1.0, 0.40 + 0.60 * ((self.harvestActiveTime or 0) / 2500.0))
+        avgMass = avgMass * entryRamp
+    end
+
     self.lastAvgMass = self.currentAvgMass
     self.currentAvgMass = avgMass
-    self.rawAvgMass = rawAvgMass  
-    
-    -- EN: Fetch power boost for load calculation / UA: Отримуємо power boost для розрахунку навантаження
+    self.rawAvgMass = rawKgPerSec
+
+    local avgTph = avgMass * 3.6
+
+    -- 5. AVAILABLE ENGINE HORSEPOWER
+    local engineHp = self:getEnginePowerHp(vehicle)
     local powerBoost = 0
     if g_realisticHarvestManager and g_realisticHarvestManager.settings then
         powerBoost = g_realisticHarvestManager.settings:getPowerBoost()
     end
-    
-    local maxAvgMass = (1 + 0.01 * powerBoost) * self.basePerfMass * (self.settingsEfficiency or 1.0)
-    
-    if maxAvgMass > 0 then
-        self.engineLoad = self.currentAvgMass / maxAvgMass
-    else
-        self.engineLoad = 0
+    local effectiveEngineHp = engineHp * (1 + 0.01 * powerBoost)
+
+    -- 6. POWER BREAKDOWN (P_base, P_header, P_process, P_soil)
+    local pBase = 0
+    local pHeader = 0
+    local pProcess = 0
+    local pSoil = 0
+
+    local isActivelyHarvesting = (avgTph > 0.05) or (rawTph > 0.05)
+
+    if isCutterActive or isActivelyHarvesting then
+        -- Base mechanical & driveline losses:
+        -- Modern grain / forage combines: ~8% (efficient hydrostatic & variable transmissions)
+        -- Heavy hydrostatic root harvesters (Dewulf, Grimme, Ropa, Holmer): ~10%
+        if machineType == "root" then
+            pBase = effectiveEngineHp * 0.10
+        else
+            pBase = effectiveEngineHp * 0.08
+        end
+
+        -- Header power consumption (scales with ground speed)
+        if headerHp > 0 then
+            local speedKmh = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+            local speedRatio = math.min(1.2, math.max(0.0, speedKmh / math.max(1.0, maxWorkingSpeed)))
+            pHeader = headerHp * (0.20 + 0.80 * speedRatio)
+        end
     end
+
+    if isActivelyHarvesting then
+        -- Crop processing power: Threshing/chopping/cleaning scaled by settings efficiency
+        local eff = math.max(0.25, self.settingsEfficiency or 1.0)
+        pProcess = (avgTph * eSpec * moistureFactor) / eff
+
+        -- Root harvesters: subsurface share soil cutting resistance (ножі-лемеші під землею)
+        -- Only for subterranean root crops (carrots, parsnips, potatoes, sugar beets, onions).
+        -- Surface vegetables (green beans, peas, spinach) do not cut underground!
+        local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
+        if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
+            local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
+            if fruitTypeDesc and fruitTypeDesc.name then
+                cropUpper = string.upper(fruitTypeDesc.name)
+            end
+        end
+
+        local isSurfaceCrop = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
+        if machineType == "root" and not isSurfaceCrop then
+            local width = 0
+            if vehicle.getWorkingWidth then
+                local w = vehicle:getWorkingWidth()
+                if w and w > 0 then width = w end
+            end
+            if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
+                width = vehicle.spec_cutter.workingWidth
+            elseif width == 0 and vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+                for cutter, _ in pairs(vehicle.spec_combine.attachedCutters) do
+                    if cutter.getWorkingWidth then
+                        local w = cutter:getWorkingWidth()
+                        if w and w > 0 then width = w break end
+                    end
+                    if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
+                        width = cutter.spec_cutter.workingWidth
+                        break
+                    end
+                end
+            end
+            if width == 0 then width = 3.0 end
+            pSoil = width * 7.0 -- ~7 HP per meter of cutting width in soil
+        end
+    end
+
+    local pTotal = 0
+    if isActivelyHarvesting then
+        pTotal = pBase + pHeader + pProcess + pSoil
+    elseif isCutterActive then
+        -- Running empty (cutter spinning, no crop intake)
+        pTotal = pBase + (pHeader * 0.25)
+    else
+        pTotal = 0
+    end
+
+    -- 7. RESULTING ENGINE LOAD
+    local loadRatio = pTotal / math.max(1.0, effectiveEngineHp)
+
+    -- Smooth engineLoad transitions
+    if not isActivelyHarvesting and not isCutterActive then
+        self.engineLoad = 0
+    elseif self.engineLoad == 0 then
+        self.engineLoad = math.min(0.60, loadRatio)
+    else
+        local loadSmoothing = 0.35
+        self.engineLoad = (1 - loadSmoothing) * loadRatio + loadSmoothing * self.engineLoad
+    end
+
+    -- Store diagnostic telemetry
+    self.lastPowerEngine = effectiveEngineHp
+    self.lastPowerBase = pBase
+    self.lastPowerHeader = pHeader
+    self.lastPowerProcess = pProcess
+    self.lastPowerSoil = pSoil
+    self.lastPowerTotal = pTotal
+    self.lastEffectiveHp = effectiveEngineHp
 end
 
----EN: Calculates Vehicle Speed Limit / UA: Розраховує обмеження швидкості
+---EN: Calculates Vehicle Speed Limit based on physical power load and target load.
+---UA: Розраховує обмеження швидкості на основі навантаження двигуна та цільового навантаження.
 function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
-    if self.currentAvgMass == 0 then
-        -- EN: If not harvesting, return to vanilla working speed / UA: Якщо не збираємо, повертаємось до ванільної робочої швидкості
-        local target = self.genuineSpeedLimit > 0 and self.genuineSpeedLimit or 10.0
+    -- EN: Reuse maxWorkingSpeed calculated in calculateEngineLoad to avoid duplicate hierarchy/XML scans.
+    -- UA: Перевикористовуємо maxWorkingSpeed з calculateEngineLoad без повторного сканування ієрархії/XML.
+    local maxWorkingSpeed = self.maxWorkingSpeed
+    if not maxWorkingSpeed then
+        local _, mws = self:getAttachedHeaderInfo(vehicle)
+        maxWorkingSpeed = mws or 10.0
+    end
+    local maxAllowedSpeed = self.genuineSpeedLimit
+    if maxAllowedSpeed and maxAllowedSpeed > 0 then
+        maxAllowedSpeed = math.min(maxAllowedSpeed, maxWorkingSpeed)
+    else
+        maxAllowedSpeed = maxWorkingSpeed
+    end
+
+    local minSpeed = 3.5
+
+    -- If not harvesting, smoothly maintain an intelligent approach/entry speed (5.5 - 6.5 km/h).
+    -- This prevents the combine from charging into the standing crop at 10-12 km/h and choking the cylinder!
+    if (self.currentAvgMass or 0) <= 0.01 and (self.tonPerHour or 0) <= 0.05 then
+        local target = self.lastHarvestingSpeed or 6.2
+        target = math.max(5.2, math.min(maxAllowedSpeed, target))
         if self.speedLimit > target then
             self.speedLimit = math.max(target, self.speedLimit - 0.5)
         elseif self.speedLimit < target then
             self.speedLimit = math.min(target, self.speedLimit + 0.5)
         end
+        self.underloadTimer = 0
         return
     end
-    
-    local powerBoost = 0
-    local targetLoad = 0.95
+
+    -- Target engine load from combine settings or default to 88%
+    local targetLoad = 0.88
     if self.combineMemory and self.combineMemory.currentSettings and self.combineMemory.currentSettings.targetEngineLoad then
         targetLoad = self.combineMemory.currentSettings.targetEngineLoad / 100.0
     end
-    
-    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
-        powerBoost = g_realisticHarvestManager.settings:getPowerBoost()
-    end
-    
-    local maxAvgMass = (1 + 0.01 * powerBoost) * self.basePerfMass * (self.settingsEfficiency or 1.0)
-    if maxAvgMass <= 0.01 then return end
-    
-    local loadRatio = self.currentAvgMass / maxAvgMass
 
-    -- EN: Calculate error between target and current load
-    -- UA: Розраховуємо різницю між цільовим і реальним навантаженням
-    local difference = targetLoad - loadRatio
-    
-    -- EN: Deadzone of +/- 2% to prevent micro-oscillations and jitter around the target
-    -- UA: Мертва зона +/- 2% щоб запобігти мікроколиванням навколо цілі
-    if math.abs(difference) < 0.02 then
-        difference = 0
-    end
-    
-    -- EN: Proportional adjustment: hard brake on overload, smooth acceleration on underload
-    -- UA: Пропорційне регулювання: швидке гальмування при перевантаженні, плавний розгін
-    local step = difference * 1.5
-    if difference < 0 then
-        step = difference * 4.0 -- EN: Panic brake / UA: Екстренне скидання швидкості при забиванні
-    end
-    
-    -- EN: Limit speed jump to avoid jittering
-    -- UA: Обмежуємо максимальний стрибок швидкості за один тік, щоб уникнути ривків
-    step = math.max(-2.5, math.min(0.8, step))
-    
-    self.speedLimit = self.speedLimit + step
+    -- Current vehicle physical speed (km/h)
+    local currentSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or self.speedLimit or 7.0
+    currentSpeed = math.max(0.5, currentSpeed)
 
-    -- EN: Clamp speed within safe bounds
-    -- UA: Обмеження швидкості: не менше 4 км/год і не більше оригінального ліміту гри.
-    --     ВАЖЛИВО: `genuineSpeedLimit` може залишатися -1, якщо гравець/круїзконтроль
-    --     не викликав `getSpeedLimit()` до моменту оновлення. Не допускаємо від’ємних лімітів.
-    local genuine = self.genuineSpeedLimit
-    if genuine and genuine > 0 then
-        self.speedLimit = math.max(math.min(genuine, 4.0), math.min(genuine, self.speedLimit))
+    -- Effective engine horsepower & target power capability
+    local effectiveHp = self.lastEffectiveHp or self:getEnginePowerHp(vehicle)
+    local targetPowerHp = effectiveHp * targetLoad
+
+    -- Fixed zero-speed power (transmission mechanical losses + subsurface soil friction + header baseline)
+    local pBase = self.lastPowerBase or (effectiveHp * 0.08)
+    local pSoil = self.lastPowerSoil or 0
+    local pHeaderFixed = (self.headerHp or headerHp or 0) * 0.20
+    local pFixed = pBase + pSoil + pHeaderFixed
+
+    -- Power available for speed-dependent work (header rotation + crop processing)
+    local pVariable = targetPowerHp - pFixed
+
+    local vEquilibrium = minSpeed
+    if pVariable > 0 then
+        -- Header dynamic slope: HP per (km/h)
+        local kHeader = ((self.headerHp or headerHp or 0) * 0.80) / math.max(1.0, maxWorkingSpeed)
+
+        -- Crop processing power slope: HP per (km/h)
+        local pProcess = self.lastPowerProcess or 0
+        local kCrop = pProcess / currentSpeed
+        if kCrop < 0.1 then
+            kCrop = 0.1
+        end
+
+        local kTotal = kHeader + kCrop
+        vEquilibrium = pVariable / kTotal
+    end
+
+    -- Clamp analytical target within physical bounds
+    vEquilibrium = math.max(minSpeed, math.min(maxAllowedSpeed, vEquilibrium))
+
+    -- ASYMMETRIC DUAL-LOOP CONTROLLER:
+    -- Check if we are in the initial entry phase of a new pass (< 2.5s)
+    local isEntry = (self.harvestActiveTime or 0) < 2500
+    local isSurge = not isEntry and (self.rawAvgMass or 0) > ((self.currentAvgMass or 0) * 1.15) and (self.rawAvgMass or 0) > 0.5
+
+    local currentLimit = self.speedLimit or maxAllowedSpeed
+
+    if isEntry then
+        -- GENTLE ROW ENTRY: Smoothly adjust speed towards equilibrium without hard jerking/slamming
+        self.underloadTimer = 0
+        local diff = vEquilibrium - currentLimit
+        local step = math.max(-1.2, math.min(0.5, diff * 0.45))
+        self.speedLimit = currentLimit + step
+    elseif isSurge or vEquilibrium < (currentLimit - 0.1) then
+        -- BRAKING / OVERLOAD / SURGE:
+        -- Reset underload confirmation timer immediately
+        self.underloadTimer = 0
+
+        -- Fast, decisive, smooth transition to target equilibrium (closes ~65% of the gap per cycle)
+        -- Decisively prevents engine choking without overshooting into turtle crawl
+        local diff = vEquilibrium - currentLimit
+        local step = math.max(-2.5, diff * 0.65)
+        self.speedLimit = currentLimit + step
+    elseif vEquilibrium > (currentLimit + 0.15) then
+        -- ACCELERATION / UNDERLOAD:
+        -- Accumulate confirmed underload time
+        local dtMs = self.lastUpdateInterval or 300
+        self.underloadTimer = (self.underloadTimer or 0) + dtMs
+
+        -- Confirmation window: only accelerate if light crop has been sustained for >= 2.0 seconds
+        if self.underloadTimer >= 2000 then
+            -- Lazy, dignified acceleration: small smooth step (+0.25 to +0.35 km/h per step)
+            local diff = vEquilibrium - currentLimit
+            local step = math.min(0.35, diff * 0.25)
+            self.speedLimit = currentLimit + step
+        end
     else
-        -- Upper bound unknown yet; at least prevent going negative / zero.
-        self.speedLimit = math.max(self.speedLimit, 4.0)
+        -- Stable deadzone within +/- 0.15 km/h: hold steady!
+        self.underloadTimer = 0
+    end
+
+    -- Remember stable harvesting speed for next row approach
+    if isActivelyHarvesting and vEquilibrium and vEquilibrium >= minSpeed then
+        self.lastHarvestingSpeed = vEquilibrium
+    end
+
+    -- Final physical clamp
+    if maxAllowedSpeed and maxAllowedSpeed > 0 then
+        self.speedLimit = math.max(minSpeed, math.min(maxAllowedSpeed, self.speedLimit))
+    else
+        self.speedLimit = math.max(minSpeed, self.speedLimit)
     end
 end
 
@@ -707,27 +1175,47 @@ function RHM_LoadCalculator:reset()
     self.currentAvgMass = 0
     self.engineLoad = 0
     self.cropLoss = 0
-    self.speedLimit = self.vanillaWorkingSpeed or (self.genuineSpeedLimit > 0 and self.genuineSpeedLimit or 15)
+    self.speedLimit = math.min(6.5, self.vanillaWorkingSpeed or 6.5)
+    self.lastHarvestingSpeed = nil
     self.productivityMass = 0
     self.productivityLiters = 0
     self.productivityTime = 0
     self.tonPerHour = 0
     self.litersPerHour = 0
+    self.hectaresPerHour = 0
     
-    self.prodBuffer = {}
-    self.prodStartIndex = 1
-    self.prodEndIndex = 0
-    self.currentBufferTime = 0
-    
-    self.yieldBuffer = {}
-    self.yieldStartIndex = 1
-    self.yieldEndIndex = 0
+    self.prodRingHead = 1
+    self.prodSumMass = 0
+    self.prodSumLiters = 0
+    self.prodSumTime = 0
+    self.prodSumArea = 0
+    if self.prodRingMass then
+        for i = 1, (self.prodRingSize or 180) do
+            self.prodRingMass[i] = 0
+            self.prodRingLiters[i] = 0
+            self.prodRingTime[i] = 0
+            self.prodRingArea[i] = 0
+        end
+    end
+
+    self.yieldRingHead = 1
+    self.yieldSumMass = 0
+    self.yieldSumArea = 0
+    if self.yieldRingMass then
+        for i = 1, (self.yieldRingSize or 180) do
+            self.yieldRingMass[i] = 0
+            self.yieldRingArea[i] = 0
+        end
+    end
     
     self.currentYield = 0
     self.instantYield = 0
+    self.harvestActiveTime = 0
+    self.underloadTimer = 0
+    self.idleHarvestTime = 0
 end
 
----EN: Calculates settings-related quality losses / UA: Розраховує втрати врожаю
+---EN: Calculates engine load based crop losses / UA: Розраховує втрати врожаю від перевантаження
 function RHM_LoadCalculator:calculateCropLoss()
     if not g_realisticHarvestManager or not g_realisticHarvestManager.settings then return 0 end
     if not g_realisticHarvestManager.settings.enableCropLoss then return 0 end
@@ -751,6 +1239,12 @@ function RHM_LoadCalculator:calculateCropLoss()
             rawLoss = rawLoss + ((self.engineLoad - 1.10) * 100)
         end
         
+        -- FIELD ENTRY LOSS DAMPENER:
+        -- When entering crop from empty, feederhouse and cleaning sieves are physically filling up.
+        -- Suppress overload losses during the initial 2.5 seconds of row entry while flow stabilizes.
+        local entryGrace = math.min(1.0, math.max(0.0, ((self.harvestActiveTime or 0) - 800) / 2000.0))
+        rawLoss = rawLoss * entryGrace
+        
         self.cropLoss = math.min(rawLoss * lossMultiplier, 50) 
     else
         self.cropLoss = 0
@@ -762,24 +1256,22 @@ end
 function RHM_LoadCalculator:updateSettingsImpact()
     self.settingsEfficiency = 1.0
     self.settingsLoss = 0
+    if self.combineMemory and self.combineMemory.currentCrop then
+        self.currentCrop = self.combineMemory.currentCrop
+    end
     if not self.combineMemory or not self.currentCrop then return end
     local effPenalty, lossPenalty, _ = self.combineMemory:checkSettingsForCrop(self.currentCrop)
     
-    if effPenalty < 0 then
-        self.settingsEfficiency = 1.0 + (math.abs(effPenalty) * 5.0 / 100.0)
-    else
-        self.settingsEfficiency = 1.0 - (effPenalty / 100.0)
-    end
+    local penalty = math.max(0.0, effPenalty or 0)
+    self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
     
     -- EN: Forage harvesters (silage choppers) produce no grain losses — all crop goes to tank/trailer.
     -- UA: Силосні комбайни не мають втрат зерна — весь врожай йде в бак/причеп.
     local machineType = self.combineMemory.machineType
     if machineType == "forage" then
         self.settingsLoss = 0
-    elseif lossPenalty < 0 then
-        self.settingsLoss = 0 
     else
-        self.settingsLoss = lossPenalty
+        self.settingsLoss = math.max(0.0, lossPenalty or 0)
     end
 end
 
@@ -789,6 +1281,12 @@ function RHM_LoadCalculator:calculateTotalCropLoss()
     if self.combineMemory and (self.combineMemory.machineType == "forage" or self.combineMemory.machineType == "cotton") then
         self.cropLoss = 0
         return 0
+    end
+    if self.combineMemory and self.combineMemory.currentCrop then
+        self.currentCrop = self.combineMemory.currentCrop
+    end
+    if not self.settingsLoss then
+        self:updateSettingsImpact()
     end
     local baseLoss = self:calculateCropLoss()
     local settingsAddedLoss = self.settingsLoss or 0
@@ -808,78 +1306,115 @@ function RHM_LoadCalculator:getLitersPerHour()
     return self.litersPerHour or 0
 end
 
----EN: Updates sliding window rolling averages for metric evaluations / UA: Оновлює ковзні середні продуктивності
-function RHM_LoadCalculator:updateProductivity(mass, liters, dt)
-    self.totalOutputMass = self.totalOutputMass + mass
+---EN: Returns calculated area rate in hectares per hour / UA: Повертає продуктивність у гектарах на годину
+function RHM_LoadCalculator:getHectaresPerHour()
+    return self.hectaresPerHour or 0
+end
+
+---EN: Updates sliding window rolling averages for metric evaluations (O(1) circular ring buffer)
+---UA: Оновлює ковзні середні продуктивності (O(1) кільцевий буфер без виділення пам'яті)
+function RHM_LoadCalculator:updateProductivity(mass, liters, dt, area)
+    self.totalOutputMass = self.totalOutputMass + (mass or 0)
     
-    self.prodBuffer = self.prodBuffer or {}
-    self.prodStartIndex = self.prodStartIndex or 1
-    self.prodEndIndex = self.prodEndIndex or 0
-    
-    self.prodEndIndex = self.prodEndIndex + 1
-    self.prodBuffer[self.prodEndIndex] = {m = mass, l = liters or 0, t = dt}
-    
-    self.currentBufferTime = (self.currentBufferTime or 0) + dt
-    while (self.prodEndIndex - self.prodStartIndex + 1) > 1 and self.currentBufferTime > 12000 do
-        local old = self.prodBuffer[self.prodStartIndex]
-        self.currentBufferTime = self.currentBufferTime - old.t
-        self.prodBuffer[self.prodStartIndex] = nil -- free memory
-        self.prodStartIndex = self.prodStartIndex + 1
+    if not self.prodRingMass then
+        self.prodRingSize = 180
+        self.prodRingMass = {}
+        self.prodRingLiters = {}
+        self.prodRingTime = {}
+        self.prodRingArea = {}
+        for i = 1, self.prodRingSize do
+            self.prodRingMass[i] = 0
+            self.prodRingLiters[i] = 0
+            self.prodRingTime[i] = 0
+            self.prodRingArea[i] = 0
+        end
+        self.prodRingHead = 1
+        self.prodSumMass = 0
+        self.prodSumLiters = 0
+        self.prodSumTime = 0
+        self.prodSumArea = 0
     end
-    
-    local sumMass = 0
-    local sumLiters = 0
-    local sumTime = 0
-    for i = self.prodStartIndex, self.prodEndIndex do
-        local v = self.prodBuffer[i]
-        sumMass = sumMass + v.m
-        sumLiters = sumLiters + v.l
-        sumTime = sumTime + v.t
-    end
-    
-    if sumTime > 100 then
-        local hours = sumTime / 3600000
-        local rawTonPerHour = (sumMass / 1000) / hours
-        self.litersPerHour = sumLiters / hours
+
+    local head = self.prodRingHead
+    local oldM = self.prodRingMass[head]
+    local oldL = self.prodRingLiters[head]
+    local oldT = self.prodRingTime[head]
+    local oldA = self.prodRingArea[head]
+
+    local m = mass or 0
+    local l = liters or 0
+    local t = dt or 0
+    local a = area or 0
+
+    self.prodSumMass = math.max(0, self.prodSumMass - oldM + m)
+    self.prodSumLiters = math.max(0, self.prodSumLiters - oldL + l)
+    self.prodSumTime = math.max(0, self.prodSumTime - oldT + t)
+    self.prodSumArea = math.max(0, self.prodSumArea - oldA + a)
+
+    self.prodRingMass[head] = m
+    self.prodRingLiters[head] = l
+    self.prodRingTime[head] = t
+    self.prodRingArea[head] = a
+
+    self.prodRingHead = (head % self.prodRingSize) + 1
+
+    if self.prodSumTime > 100 then
+        local hours = self.prodSumTime / 3600000
+        local rawTonPerHour = (self.prodSumMass / 1000) / hours
+        self.litersPerHour = self.prodSumLiters / hours
+        local rawHectaresPerHour = (self.prodSumArea / 10000) / hours
         local alpha = 0.05
         if self.tonPerHour == 0 then self.tonPerHour = rawTonPerHour end
         self.tonPerHour = self.tonPerHour * (1 - alpha) + rawTonPerHour * alpha
+
+        if self.hectaresPerHour == 0 then self.hectaresPerHour = rawHectaresPerHour end
+        self.hectaresPerHour = self.hectaresPerHour * (1 - alpha) + rawHectaresPerHour * alpha
     else
         self.tonPerHour = 0
         self.litersPerHour = 0
+        self.hectaresPerHour = 0
     end
 end
 
----EN: Processes complete physical output block calculations / UA: Виконує розрахунки врожайності
+---EN: Processes complete physical output block calculations (O(1) running sum, zero GC allocations)
+---UA: Виконує розрахунки врожайності (O(1) ковзна сума, нуль алокацій у GC)
 function RHM_LoadCalculator:updateProductivityAndYield(mass, liters, area, dt)
-    self:updateProductivity(mass, liters, dt)
-    if area <= 0.0001 and mass <= 0.001 then
+    self:updateProductivity(mass, liters, dt, area)
+    if (area or 0) <= 0.0001 and (mass or 0) <= 0.001 then
         self.currentYield = self.currentYield or 0
         return
     end
     
-    self.yieldBuffer = self.yieldBuffer or {}
-    self.yieldStartIndex = self.yieldStartIndex or 1
-    self.yieldEndIndex = self.yieldEndIndex or 0
-    
-    self.yieldEndIndex = self.yieldEndIndex + 1
-    self.yieldBuffer[self.yieldEndIndex] = {m = mass, a = area}
-    
-    if (self.yieldEndIndex - self.yieldStartIndex + 1) > 600 then 
-        self.yieldBuffer[self.yieldStartIndex] = nil
-        self.yieldStartIndex = self.yieldStartIndex + 1
+    if not self.yieldRingMass then
+        self.yieldRingSize = 180
+        self.yieldRingMass = {}
+        self.yieldRingArea = {}
+        for i = 1, self.yieldRingSize do
+            self.yieldRingMass[i] = 0
+            self.yieldRingArea[i] = 0
+        end
+        self.yieldRingHead = 1
+        self.yieldSumMass = 0
+        self.yieldSumArea = 0
     end
-    
-    local sumMass = 0
-    local sumArea = 0
-    for i = self.yieldStartIndex, self.yieldEndIndex do 
-        local v = self.yieldBuffer[i]
-        sumMass = sumMass + v.m
-        sumArea = sumArea + v.a 
-    end
-    
-    if sumArea > 0.1 then
-        local rawYield = (sumMass / sumArea) * 10
+
+    local head = self.yieldRingHead
+    local oldM = self.yieldRingMass[head]
+    local oldA = self.yieldRingArea[head]
+
+    local m = mass or 0
+    local a = area or 0
+
+    self.yieldSumMass = math.max(0, self.yieldSumMass - oldM + m)
+    self.yieldSumArea = math.max(0, self.yieldSumArea - oldA + a)
+
+    self.yieldRingMass[head] = m
+    self.yieldRingArea[head] = a
+
+    self.yieldRingHead = (head % self.yieldRingSize) + 1
+
+    if self.yieldSumArea > 0.1 then
+        local rawYield = (self.yieldSumMass / self.yieldSumArea) * 10
         local alpha = 0.03
         if not self.currentYield or self.currentYield == 0 then self.currentYield = rawYield end
         self.currentYield = self.currentYield * (1 - alpha) + rawYield * alpha
@@ -887,24 +1422,7 @@ function RHM_LoadCalculator:updateProductivityAndYield(mass, liters, area, dt)
 end
 
 function RHM_LoadCalculator:setRealTimeYield(yieldTha)
-    self.yieldBuffer = self.yieldBuffer or {}
-    self.yieldStartIndex = self.yieldStartIndex or 1
-    self.yieldEndIndex = self.yieldEndIndex or 0
-    
-    self.yieldEndIndex = self.yieldEndIndex + 1
-    self.yieldBuffer[self.yieldEndIndex] = yieldTha
-    
-    if (self.yieldEndIndex - self.yieldStartIndex + 1) > 20 then 
-        self.yieldBuffer[self.yieldStartIndex] = nil
-        self.yieldStartIndex = self.yieldStartIndex + 1
-    end
-    
-    local sum = 0
-    local count = self.yieldEndIndex - self.yieldStartIndex + 1
-    for i = self.yieldStartIndex, self.yieldEndIndex do 
-        sum = sum + self.yieldBuffer[i] 
-    end
-    self.currentYield = sum / count
+    self.currentYield = yieldTha or 0
 end
 
 ---EN: Returns formatted yield string / UA: Отримує форматований рядок врожайності

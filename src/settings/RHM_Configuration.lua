@@ -13,6 +13,7 @@ local function addNewStoreConfig(manager, superFunc, xmlFile, key, baseDir, cust
         if xmlFile:hasProperty("vehicle.combine") or
            xmlFile:hasProperty("vehicle.forageHarvester") or
            xmlFile:hasProperty("vehicle.cottonHarvester") or
+           xmlFile:hasProperty("vehicle.rootCropHarvester") or
            xmlFile:hasProperty("vehicle.rootCropHaarvester") then
             isCombine = true
         end

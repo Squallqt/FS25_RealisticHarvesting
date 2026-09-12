@@ -2,6 +2,42 @@
 
 ## Language: EN
 
+Changelog 1.5.2.0:
+- NEW: Dynamic Map Crop Extraction & Localization! The combine calibration menu (`Right Shift + K`) now exclusively displays crops present on the active map, sorted alphabetically and localized in the player's language (`ft.title`). Hardcoded static crop lists have been completely removed.
+- NEW: Instant Dynamic Physical Templates for Custom Map Crops! Any custom or modded crops introduced by a map are automatically classified by machine type (`grain`, `root`, `forage`, `cotton`) and assigned accurate physical separation and cleaning templates on the fly.
+- NEW: Multi-Tier AI Worker & Courseplay Auto-Tuning! When an AI worker or Courseplay operates the combine, settings are automatically calibrated according to the installed RHM Electronics Tier:
+  * Tier 1 (Standard): ±18% setting variance (simulates an inexperienced hired operator; higher loss and lower throughput).
+  * Tier 2 (Sensor Kit): ±10% setting variance.
+  * Tier 3 (Yield & Loss Monitor): ±4% setting variance.
+  * Tier 4 (Opti-Harvest AI): 0% variance (flawless factory settings) plus live continuous dynamic micro-trimming during the cut.
+  * Human drivers retain 100% manual control without any silent background changes.
+- FIXED: Savegame Persistence for Active Combine Settings! Fixed an issue with GIANTS XMLFile reading where active slider values, chosen crop, and target engine load would reset on savegame reload. All settings are now permanently preserved across career saves.
+- IMPROVED: Contract & Leasing Progression! Rented machinery on contracts correctly spawns in the baseline configuration (Tier 1), reinforcing economic motivation to invest in your own high-tier farm fleet.
+
+Changelog 1.5.1.0:
+- NEW: Physical Power-Balance Load Engine! Completely eradicated arbitrary static crop coefficients. Harvester engine load and speed regulation are now calculated through a true physical power-balance equation: P_total = P_base + P_header(v) + P_process.
+  * P_base: Mechanical driveline, straw chopper & threshing idle resistance (~10% of engine power).
+  * P_header(v): Dynamically queries PTO requirements directly from the attached header's spec_powerConsumer or store XML, scaling with ground speed. Over-sized headers naturally drag underpowered combines down to realistic field speeds.
+  * P_process: Crop processing power derived from specific processing energy (HP per t/h) based on physical crop traits (standing whole-crop forage chopping, direct grass, grain with straw, oilseeds, pulses, corn cobs, roots, and cotton).
+- NEW: 100% Dynamic Physics-Based Crop Settings! Replaced static hardcoded templates with an ASABE & FS25-compliant physical calculation engine. All crops (vanilla and modded) dynamically calculate optimal fan, rotor, sieves, and feeder values based on bulk density and seed geometry.
+- NEW: Live Environmental Adjustments! Combine calibration pins dynamically shift based on real-time field moisture and yield conditions.
+- NEW: Electronics Tier Rebalance & Factory Variance! All newly purchased combines now arrive with realistic factory mechanical tolerances (~50% ± 8% per parameter) instead of flat identical numbers.
+- NEW: Strict MANUAL Mode for Tiers 1, 2, and 3: Combines operate purely manually; auto-switch and optimal presets are completely blocked. Players must manually tune sliders or save custom profiles.
+- NEW: Interactive Opti-Harvest AI (Tier 4) Auto-Calibration: Harvesters no longer silently auto-tune settings behind the scenes. Operators harvest a few meters into a field to gather telemetry, then press AUTO in the Shift+K menu to run AI calibration tailored to live field moisture and yield, activating continuous dynamic auto-trimming.
+- FIXED: Multiplayer & Dedicated Server crop selection in Shift+K menu: added bidirectional network event synchronization (`CROP`), preventing selected crops from reverting to "NONE" / "no crop".
+- FIXED: Resolved camera rotation and zoom locking issues when opening/closing menus or activating HUD cursor (RMB).
+- FIXED: Cleanly reset global text rendering states after drawing draggable HUD to prevent leaking state to the base game HUD.
+- FIXED: FS25 compatibility issues with deprecated `g_currentMission.controlledVehicle` API
+- FIXED: Added multiple fallback methods for vehicle detection in FS25
+- FIXED: Added nil safety checks for critical game managers (g_fruitTypeManager, g_fillTypeManager, g_storeManager)
+- FIXED: Enhanced error handling in network synchronization and event processing
+- IMPROVED: Better string validation before pattern matching operations
+- IMPROVED: Optimized vehicle hierarchy search with cache validation
+- IMPROVED: Enhanced memory initialization with proper error handling
+- FIXED: Added safety checks for combine spec components during load calculation
+- FIXED: Grain tank loss deduction now dynamically resolves the active harvesting fillUnitIndex instead of hardcoded 1, ensuring losses properly deduct grain on vehicles where fuel or DEF occupies fillUnit 1
+- FIXED: Hand-held tool package and passive harvesters (without spec_turnOnVehicle) are no longer blocked from harvesting root crops by the thresher-on check
+
 Changelog 1.5.0.0:
 - NEW: "Moisture System" Mod Integration! Added dynamic engine load penalties and increased crop losses when harvesting in damp conditions.
 - NEW: Real-time moisture percentage readout integrated into the draggable HUD.
@@ -148,6 +184,16 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: DE
+
+Changelog 1.5.1.0:
+- BEHOBEN: FS25-Kompatibilitätsprobleme mit der veralteten `g_currentMission.controlledVehicle` API
+- BEHOBEN: Mehrere Fallback-Methoden für Fahrzeugerkennung in FS25 hinzugefügt
+- BEHOBEN: Nil-Sicherheitsprüfungen für kritische Spiel-Manager (g_fruitTypeManager, g_fillTypeManager, g_storeManager)
+- BEHOBEN: Verbesserte Fehlerbehandlung bei Netzwerksynchronisation und Ereignisverarbeitung
+- VERBESSERT: Bessere String-Validierung vor Mustervergleichsoperationen
+- VERBESSERT: Optimierung der Fahrzeughierarchie-Suche mit Cache-Validierung
+- VERBESSERT: Verbesserte Speicherinitialisierung mit ordnungsgemäßer Fehlerbehandlung
+- BEHOBEN: Sicherheitsprüfungen für Combine-Spec-Komponenten während der Lastberechnung hinzugefügt
 
 Changelog 1.5.0.0:
 - NEU: "Moisture System"-Mod-Integration! Dynamische Motorlaststrafen und erhöhte Ernteverluste bei der Ernte unter feuchten Bedingungen hinzugefügt.
@@ -1205,6 +1251,36 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: UK
+
+Зміни 1.5.2.0:
+- НОВЕ: Динамічне вилучення та локалізація культур карти! Меню калібрування комбайна (`Right Shift + K`) тепер відображає виключно ті культури, які наявні на поточній карті, відсортовані за алфавітом та локалізовані мовою гравця (`ft.title`). Статичні захардкоджені списки повністю усунуто.
+- НОВЕ: Миттєві фізичні шаблони для кастомних мод-культур! Будь-які нові або унікальні культури з карти автоматично класифікуються за типом машини (`grain`, `root`, `forage`, `cotton`) та отримують збалансовані фізичні шаблони налаштувань обмолоту й очищення на льоту.
+- НОВЕ: Багаторівневе автоналаштування для наймитів (AI Worker та Courseplay)! Коли комбайном керує наймит або Courseplay, налаштування автоматично калібруються відповідно до встановленого пакета електроніки комбайна:
+  * Tier 1 (Standard): ±18% розбіжності від ідеалу (імітація недосвідченого водія з підвищеними втратами).
+  * Tier 2 (Sensor Kit): ±10% розбіжності від ідеалу.
+  * Tier 3 (Yield & Loss Monitor): ±4% розбіжності від ідеалу.
+  * Tier 4 (Opti-Harvest AI): 0% розбіжності (ідеальні заводські налаштування) + живий авто-підріз налаштувань у реальному часі під час збирання.
+  * Для живого гравця керування залишається на 100% ручним без жодних прихованих змін.
+- ВИПРАВЛЕНО: Повне збереження налаштувань комбайна у Savegame! Усунуто баг зчитування `xmlFile:getValue()` у FS25, через який після перезавантаження збереження повзунки скидалися на дефолтні. Тепер положення повзунків, активна культура та цільове навантаження двигуна надійно відновлюються.
+- ПОКРАЩЕНО: Прогресія оренди та контрактів! Орендована під контракти техніка спавниться у базовій конфігурації (Tier 1), створюючи природну мотивацію заробляти та купувати власні комбайни з топовою електронікою.
+
+Зміни 1.5.1.0:
+- НОВЕ: Фізична модель балансу потужностей (Power-Balance Engine)! Повністю ліквідовано старі штучні коефіцієнти культур. Навантаження на двигун та регулювання швидкості тепер розраховуються з реального фізичного балансу потужностей: P_total = P_base + P_header(v) + P_process.
+  * P_base: Механічний опір трансмісії, приводу молотарки та подрібнювача на холостому ходу (~10% потужності двигуна).
+  * P_header(v): Динамічний запит вимог жатки до ВВП (PTO HP) безпосередньо з spec_powerConsumer та конфігурацій техніки в FS25, що масштабується зі швидкістю. Величезна важка жатка на слабкому комбайні тепер природно змушує його сповільнюватися.
+  * P_process: Потужність обмолоту та подрібнення розраховується на основі питомої енергії (к.с. на т/год) та фізичних властивостей культури (силосна кукурудза, трава, зернові з соломою, ріпак, соя, качани кукурудзи, коренеплоди, бавовна).
+- НОВЕ: 100% динамічні фізичні налаштування культур! Статичні захардкоджені шаблони повністю замінено фізичним розрахунковим модулем (стандарти ASABE та дані FS25). Усі культури (як стандартні, так і з модів) динамічно розраховують оптимальні значення вентилятора, ротора, решіт і похилої камери за насипною густиною та геометрією зерна.
+- НОВЕ: Живі поправки навколишнього середовища! Оптимальні позначки калібрування автоматично зміщуються залежно від поточної вологості та врожайності в полі.
+- НОВЕ: Ребаланс рівнів електроніки та заводські варіації! Усі щойно придбані комбайни тепер прибувають з реальними заводськими допусками та індивідуальними відхиленнями (~50% ± 8% для кожного параметра) замість однакових стерильних чисел.
+- НОВЕ: Суворий ручний режим для Тірів 1, 2 і 3: комбайни працюють виключно в MANUAL режимі; автоматичне виставлення оптимуму та режим AUTO заблоковані. Гравець власноруч налаштовує параметри та зберігає профілі.
+- НОВЕ: Інтерактивне автокалібрування Opti-Harvest AI (Тір 4): комбайни більше не виставляють налаштування потайки самі по собі. Гравець збирає перші кілька метрів культури для зчитування телеметрії (вологість, маса), після чого тисне кнопку AUTO в меню Shift+K для запуску AI-калібрування та активації динамічного авто-підлаштування на ходу.
+- ВИПРАВЛЕНО: Синхронізація вибору культури у мультиплеєрі та на виділеному сервері в меню Shift+K: додано двосторонню мережеву подію (`CROP`), що усунуло миттєве скидання вибору на "НЕМАЄ" / "no crop".
+- ВИПРАВЛЕНО: Усунуто зависання та блокування повороту/масштабування камери при відкритті/закритті меню або перемиканні курсору HUD (ПКМ).
+- ВИПРАВЛЕНО: Чисте скидання глобального стану рендерингу тексту після малювання HUD, щоб уникнути впливу на стандартний інтерфейс гри.
+- ВИПРАВЛЕНО: Проблеми сумісності з FS25 через застаріле API `g_currentMission.controlledVehicle`.
+- ВИПРАВЛЕНО: Додано надійні багаторівневі методи визначення керованого транспорту в FS25.
+- ВИПРАВЛЕНО: Додано перевірки на nil для критичних менеджерів гри (g_fruitTypeManager, g_fillTypeManager, g_storeManager).
+- ПОКРАЩЕНО: Оптимізовано пошук ієрархії транспорту з кешуванням для запобігання падінню FPS.
 
 Зміни 1.5.0.0:
 - НОВЕ: Інтеграція моду "Moisture System"! Додано динамічні штрафи до навантаження на двигун та підвищені втрати врожаю при збиранні у вологих умовах.

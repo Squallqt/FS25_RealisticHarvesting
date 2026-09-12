@@ -26,6 +26,7 @@ function RHM_SettingsSyncEvent.new(settings)
     self.enableSpeedLimit = settings.enableSpeedLimit
     self.enableCropLoss = settings.enableCropLoss
     self.enableIndependentLaunch = settings.enableIndependentLaunch
+    self.enableMoisture = settings.enableMoisture ~= false
 
     return self
 end
@@ -38,6 +39,7 @@ function RHM_SettingsSyncEvent:writeStream(streamId, connection)
     streamWriteBool(streamId, self.enableSpeedLimit)
     streamWriteBool(streamId, self.enableCropLoss)
     streamWriteBool(streamId, self.enableIndependentLaunch)
+    streamWriteBool(streamId, self.enableMoisture)
 end
 
 -- EN: Deserializes event data from the network stream and immediately executes the event logic.
@@ -48,6 +50,7 @@ function RHM_SettingsSyncEvent:readStream(streamId, connection)
     self.enableSpeedLimit = streamReadBool(streamId)
     self.enableCropLoss = streamReadBool(streamId)
     self.enableIndependentLaunch = streamReadBool(streamId)
+    self.enableMoisture = streamReadBool(streamId)
 
     self:run(connection)
 end
@@ -68,8 +71,8 @@ function RHM_SettingsSyncEvent:run(connection)
 
         local settings = g_realisticHarvestManager.settings
         if settings then
-            rhm_log(string.format("RHM [Network]: RHM: [Sync] Server APPLYING settings - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, IndLaunch: %s",
-                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch)))
+            rhm_log(string.format("RHM [Network]: RHM: [Sync] Server APPLYING settings - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, IndLaunch: %s, Moisture: %s",
+                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture)))
 
             -- EN: Apply the received split difficulty fields and feature flags.
             -- UA: Застосовуємо отримані розділені поля складності та прапорці функцій.
@@ -78,6 +81,7 @@ function RHM_SettingsSyncEvent:run(connection)
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch
+            settings.enableMoisture = self.enableMoisture
 
             -- EN: Persist updated settings to disk on the server WITHOUT broadcasting (direct manager call).
             -- UA: Зберігаємо оновлені налаштування на диск (прямий виклик менеджера без трансляції).
@@ -106,9 +110,10 @@ function RHM_SettingsSyncEvent:run(connection)
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch
+            settings.enableMoisture = self.enableMoisture
             
-            rhm_log(string.format("RHM [Network]: RHM: [Sync] Client received update - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, IndLaunch: %s",
-                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch)))
+            rhm_log(string.format("RHM [Network]: RHM: [Sync] Client received update - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, IndLaunch: %s, Moisture: %s",
+                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture)))
         end
     end
 end
