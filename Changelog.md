@@ -2,6 +2,16 @@
 
 ## Language: EN
 
+Changelog 1.5.3.0:
+- NEW: Dynamic Thresher Mechanical Strain Audio! Added realistic mechanical stress sounds that scale dynamically with combine engine load and ground speed (volume and pitch smoothly rise as threshing load climbs towards 100%+).
+- NEW: In-Cabin Overload & High-Loss Alarm Buzzer! Electronic audible alarm triggers when combine load reaches critical levels (98%+) or crop loss exceeds 4.0%.
+- NEW: Seamless 1st & 3rd Person Audio! Sounds are now fully audible both inside the cabin (1st person) and outside (3rd person) with intelligent camera-dependent volume boosting (+25%) to cut through exterior engine roar.
+- NEW: Dedicated Audio Settings Section in ESC Menu!
+  * Combine Load & Stress Sounds toggle [ON / OFF]
+  * Overload Alarm Buzzer toggle [ON / OFF]
+  * Master Sound Volume selector [50%, 75%, 100%, 125%, 150%]
+- IMPROVED: Dynamic Mechanical Stress Row Palette! HUD text rows for engine load and crop loss now dynamically shift color (crisp white -> optimal yellow -> high strain orange -> pulsating red critical alert).
+
 Changelog 1.5.2.0:
 - NEW: Dynamic Map Crop Extraction & Localization! The combine calibration menu (`Right Shift + K`) now exclusively displays crops present on the active map, sorted alphabetically and localized in the player's language (`ft.title`). Hardcoded static crop lists have been completely removed.
 - NEW: Instant Dynamic Physical Templates for Custom Map Crops! Any custom or modded crops introduced by a map are automatically classified by machine type (`grain`, `root`, `forage`, `cotton`) and assigned accurate physical separation and cleaning templates on the fly.
@@ -1251,6 +1261,17 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: UK
+
+Зміни 1.5.3.0:
+- НОВЕ: Динамічний звук механічного навантаження молотарки! Додано реалістичний звук гулу та напруження робочих органів, що плавно наростає при збільшенні навантаження комбайна та швидкості ходу (гучність і висота тону адаптуються при наближенні до 100%+).
+- НОВЕ: Електронний зумер перевантаження та втрат у кабіні! Звуковий сигнал тривоги активується, коли навантаження досягає критичних 98%+ або втрати перевищують 4.0%.
+- НОВЕ: Звук від 1-ї та 3-ї особи! Звуки тепер безперервно відтворюються як усередині кабіни, так і при перегляді ззовні від третьої особи з автоматичним підсиленням (+25%), щоб прорізати зовнішній рев двигуна.
+- НОВЕ: Окремий розділ налаштувань звуку в меню ESC:
+  * Вмикання/вимикання звуку навантаження молотарки [ВКЛ / ВИКЛ]
+  * Вмикання/вимикання зумера перевантаження [ВКЛ / ВИКЛ]
+  * Регулятор гучності звуків [50%, 75%, 100%, 125%, 150%]
+- ПОКРАЩЕНО: Єдиний візуальний стиль інтерфейсів! Малий HUD та велике вікно налаштувань (`Right Shift + K`) тепер мають 100% однаковий стиль: глибоке чорне скло (80% непрозорості), зелена шапка бренду Courseplay та акцентний розділювач.
+- ПОКРАЩЕНО: Динамічні кольори стресу в HUD! Рядки навантаження та втрат динамічно змінюють колір (білий -> оптимальний жовтий -> напружений помаранчевий -> пульсуючий червоний сигнал тривоги).
 
 Зміни 1.5.2.0:
 - НОВЕ: Динамічне вилучення та локалізація культур карти! Меню калібрування комбайна (`Right Shift + K`) тепер відображає виключно ті культури, які наявні на поточній карті, відсортовані за алфавітом та локалізовані мовою гравця (`ft.title`). Статичні захардкоджені списки повністю усунуто.

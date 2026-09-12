@@ -49,6 +49,9 @@ function RHMSettings.new(manager)
     self.showYield = true
     self.showSpeedometer = true
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
+    self.enableOverloadSounds = true    -- EN: Audio feedback for strain & overload / UA: Аудіо-зворотний зв'язок при перевантаженні
+    self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
+    self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
 
     -- EN: HUD visibility toggles (client-side, per-player).
     -- UA: Перемикачі видимості HUD (клієнтські, для кожного гравця).
@@ -218,6 +221,7 @@ function RHMSettings:resetToDefaults()
     self.showSpeedometer = true
     self.showLoadWarnings = true
     self.enableIndependentLaunch = true
+    self.enableOverloadSounds = true
     self.hudOffsetX = 0
     self.hudOffsetY = 350
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD

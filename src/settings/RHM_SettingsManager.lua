@@ -41,7 +41,10 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "hudPosX",
     "hudPosY",
     "unitSystem",
-    "showSpeedometer"
+    "showSpeedometer",
+    "enableOverloadSounds",
+    "enableAlarmSound",
+    "soundVolume"
 }
 
 -- EN: Default configuration values used as fallback when no saved file exists.
@@ -57,6 +60,9 @@ RHMSettingsManager.defaultConfig = {
     enableIndependentLaunch = true,
     enableMoisture = true,
     showMoisture = true,
+    enableOverloadSounds = true,
+    enableAlarmSound = true,
+    soundVolume = 1.0,
     hudOffsetX = 0,
     hudOffsetY = 350,
     unitSystem = 1
@@ -183,6 +189,8 @@ function RHMSettingsManager:loadClientSettings(settingsObject)
                     -- EN: HUD position stored as float (nil if not set = auto positioning).
                     -- UA: Позиція HUD зберігається як float (nil якщо не встановлено = автоматичне позиціонування).
                     settingsObject[key] = xml:getFloat(xmlKey)
+                elseif key == "soundVolume" then
+                    settingsObject[key] = xml:getFloat(xmlKey, self.defaultConfig[key] or 1.0)
                 else
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
                 end
@@ -275,6 +283,8 @@ function RHMSettingsManager:saveClientSettings(settingsObject)
                 if settingsObject[key] ~= nil then
                     xml:setFloat(xmlKey, settingsObject[key])
                 end
+            elseif key == "soundVolume" then
+                xml:setFloat(xmlKey, settingsObject[key] or 1.0)
             else
                 xml:setBool(xmlKey, settingsObject[key] or false)
             end

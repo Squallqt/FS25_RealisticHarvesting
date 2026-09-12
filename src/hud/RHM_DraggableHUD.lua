@@ -13,8 +13,8 @@ RHMDraggableHUD.DRAG_DELAY_MS = 15
 RHMDraggableHUD.DRAG_LIMIT = 2
 
 local COLOR_LOAD_LOW = {1.0, 1.0, 1.0}
-local COLOR_LOAD_MID = {0.91, 0.78, 0.25}
-local COLOR_LOAD_HIGH = {0.89, 0.29, 0.29}
+local COLOR_LOAD_MID = {0.95, 0.80, 0.20}
+local COLOR_LOAD_HIGH = {1.0, 0.48, 0.10}
 
 function RHMDraggableHUD.new(modDirectory, settings)
     local self = setmetatable({}, RHMDraggableHUD)
@@ -69,17 +69,20 @@ function RHMDraggableHUD:load()
     self.iconAtlasPath = self.modDirectory .. "textures/hud_icons.dds"
     self.bgUVs = GuiUtils.getUVs({388, 4, 56, 56}, {512, 64})
 
-    -- EN: Dark amber-tinted header strip replacing the old green one.
-    -- UA: Темна бурштинова смуга заголовку замість старої зеленої.
+    -- EN: Courseplay Green header matching calibration GUI
+    -- UA: Зелена шапка Courseplay, ідентична до GUI калібрування
     self.headerOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y + self.height, self.width, self.headerHeight)
     self.headerOverlay:setUVs(self.bgUVs)
     self.headerOverlay:setColor(0.223, 0.407, 0.004, 1.0) -- Exact Courseplay Green
 
-    -- Removed the thin amber accent line at the top of the header as requested.
-    self.accentLineOverlay = nil
+    -- EN: Header accent line separator matching calibration GUI
+    -- UA: Акцентна лінія-розділювач шапки, ідентична до GUI калібрування
+    self.accentLineOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y + self.height, self.width, 0.0015)
+    self.accentLineOverlay:setUVs(self.bgUVs)
+    self.accentLineOverlay:setColor(0.223, 0.407, 0.004, 1.0)
 
-    -- EN: Dark transparent background panel, as previously requested.
-    -- UA: Темна прозора фонова панель, як було запитано раніше.
+    -- EN: Pure deep black glass background (80% opacity), identical to calibration GUI
+    -- UA: Глибокий чисто-чорний скляний фон (80% непрозорості), ідентичний до GUI калібрування
     self.backgroundOverlay = Overlay.new(self.iconAtlasPath, self.x, self.y, self.width, self.height)
     self.backgroundOverlay:setUVs(self.bgUVs)
     self.backgroundOverlay:setColor(0.0, 0.0, 0.0, 0.80)
@@ -217,13 +220,25 @@ function RHMDraggableHUD:draw()
 
     self:updateSize()
 
+    -- EN: Pure deep black glass background (80% opacity) matching calibration GUI
     self.backgroundOverlay:setPosition(self.x, self.y)
-    self.headerOverlay:setPosition(self.x, self.y + self.height)
     self.backgroundOverlay:setDimension(self.width, self.height)
-    self.headerOverlay:setDimension(self.width, self.headerHeight)
-
+    self.backgroundOverlay:setColor(0.0, 0.0, 0.0, 0.80)
     self.backgroundOverlay:render()
+
+    -- EN: Courseplay Green header banner matching calibration GUI
+    self.headerOverlay:setPosition(self.x, self.y + self.height)
+    self.headerOverlay:setDimension(self.width, self.headerHeight)
+    self.headerOverlay:setColor(0.223, 0.407, 0.004, 1.0)
     self.headerOverlay:render()
+
+    -- EN: Accent line separator matching calibration GUI
+    if self.accentLineOverlay then
+        self.accentLineOverlay:setPosition(self.x, self.y + self.height)
+        self.accentLineOverlay:setDimension(self.width, 0.0015)
+        self.accentLineOverlay:setColor(0.223, 0.407, 0.004, 1.0)
+        self.accentLineOverlay:render()
+    end
 
 
 
@@ -397,10 +412,17 @@ function RHMDraggableHUD:drawContent()
         end
 
         local r, g, b = 0.91, 0.87, 0.78
-        if lossVal > 3.0 then       r, g, b = 0.89, 0.29, 0.29
-        elseif lossVal > 1.0 then   r, g, b = 0.91, 0.78, 0.25
-        elseif lossVal < -0.1 then  r, g, b = 0.24, 0.90, 0.55
-        else                        r, g, b = 0.24, 0.72, 0.47
+        if lossVal > 4.0 then
+            local pulse = 0.70 + 0.30 * math.sin((g_time or 0) * 0.012)
+            r, g, b = 1.0 * pulse, 0.15 * pulse, 0.15 * pulse
+        elseif lossVal > 2.5 then
+            r, g, b = 1.0, 0.48, 0.10
+        elseif lossVal > 1.0 then
+            r, g, b = 0.95, 0.80, 0.20
+        elseif lossVal < -0.1 then
+            r, g, b = 0.24, 0.90, 0.55
+        else
+            r, g, b = 0.24, 0.72, 0.47
         end
 
         self:drawRow(iconX, textX, textY, iconWidth, iconHeight, textSize, "loss", lossStr, lossVal, r, g, b)
@@ -494,15 +516,26 @@ function RHMDraggableHUD:drawRow(iconX, textX, textY, iconWidth, iconHeight, tex
     renderText(textX, textY, textSize, text)
 end
 
--- EN: Engine load → color: warm white < 60%, amber-yellow 60-85%, red > 85%.
--- UA: Навантаження двигуна → колір: тепло-білий < 60%, бурштиново-жовтий 60-85%, червоний > 85%.
+-- EN: Dynamic stress color palette:
+--     < 80%: Crisp clean neutral white
+--     80% - 95%: Optimal harvest load (amber-yellow)
+--     95% - 105%: High mechanical strain (deep amber-orange)
+--     > 105%: Critical overload (pulsating red alert)
+-- UA: Динамічна палітра навантаження:
+--     < 80%: Чистий нейтральний білий
+--     80% - 95%: Оптимальне робоче навантаження (бурштиново-жовтий)
+--     95% - 105%: Високе механічне напруження (глибокий бурштиново-помаранчевий)
+--     > 105%: Критичне перевантаження (пульсуючий червоний)
 function RHMDraggableHUD:getLoadColor(load)
-    if load < 60 then
-        return COLOR_LOAD_LOW
-    elseif load < 85 then
-        return COLOR_LOAD_MID
+    if load >= 105 then
+        local pulse = 0.70 + 0.30 * math.sin((g_time or 0) * 0.012)
+        return {1.0 * pulse, 0.15 * pulse, 0.15 * pulse}
+    elseif load >= 95 then
+        return {1.0, 0.48, 0.10}
+    elseif load >= 80 then
+        return {0.95, 0.80, 0.20}
     else
-        return COLOR_LOAD_HIGH
+        return COLOR_LOAD_LOW
     end
 end
 
@@ -567,6 +600,7 @@ end
 function RHMDraggableHUD:delete()
     if self.backgroundOverlay then self.backgroundOverlay:delete() end
     if self.headerOverlay then self.headerOverlay:delete() end
+    if self.accentLineOverlay then self.accentLineOverlay:delete() end
     if self.settingsButtonBgOverlay then
         self.settingsButtonBgOverlay:delete()
         self.settingsButtonBgOverlay = nil

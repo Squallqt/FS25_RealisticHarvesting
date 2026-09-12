@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<sounds>
+    <overloadAlarm file="sounds/alarm.ogg" innerRadius="15.0" outerRadius="80.0" loops="1">
+        <volume indoor="3.2" outdoor="3.0" />
+        <pitch indoor="1.0" outdoor="1.0" />
+        <lowpassGain indoor="1.0" outdoor="1.0" />
+        <lowpassCutoffFrequency indoor="20000.0" outdoor="20000.0" />
+    </overloadAlarm>
+    <thresherStrain file="sounds/strain.ogg" innerRadius="20.0" outerRadius="80.0" loops="0">
+        <volume indoor="2.8" outdoor="2.8" />
+        <pitch indoor="1.0" outdoor="1.0" />
+        <lowpassGain indoor="1.0" outdoor="1.0" />
+        <lowpassCutoffFrequency indoor="20000.0" outdoor="20000.0" />
+    </thresherStrain>
+</sounds>

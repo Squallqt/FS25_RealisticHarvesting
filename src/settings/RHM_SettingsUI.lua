@@ -260,6 +260,34 @@ function RHMSettingsUI.inject(settings)
         unitOptions, settings.unitSystem,
         function(val) settings.unitSystem = val; settings:save() end)
 
+    -- === SECTION: Audio / Звук ===
+    addSection(settingsPage, "rhm_section_audio", generalLayout)
+
+    RHMSettingsUI.overloadSoundsOption = addBinaryRow(settingsPage, generalLayout, "overload_sounds", "rhm_overload_sounds_short", "rhm_overload_sounds_long",
+        settings.enableOverloadSounds ~= false, function(val) settings.enableOverloadSounds = val; settings:save() end)
+
+    RHMSettingsUI.alarmSoundOption = addBinaryRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
+        settings.enableAlarmSound ~= false, function(val) settings.enableAlarmSound = val; settings:save() end)
+
+    local volumeOptions = {"50%", "75%", "100%", "125%", "150%"}
+    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
+    local currentVolIndex = 3
+    if settings.soundVolume then
+        for idx, val in ipairs(volumeValues) do
+            if math.abs(settings.soundVolume - val) < 0.12 then
+                currentVolIndex = idx
+                break
+            end
+        end
+    end
+
+    RHMSettingsUI.soundVolumeOption = addMultiRow(settingsPage, generalLayout, "sound_volume", "rhm_sound_volume_short", "rhm_sound_volume_long",
+        volumeOptions, currentVolIndex,
+        function(idx)
+            settings.soundVolume = volumeValues[idx] or 1.0
+            settings:save()
+        end)
+
     if settingsPage.gameSettingsLayout then
         settingsPage.gameSettingsLayout:invalidateLayout()
     end
@@ -299,8 +327,22 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.prodOption,        settings.showProductivity  and 2 or 1, false)
     setOpt(RHMSettingsUI.cropLossVisOption, settings.showCropLoss      and 2 or 1, false)
     setOpt(RHMSettingsUI.moistureVisOption, settings.showMoisture      and 2 or 1, false)
-    setOpt(RHMSettingsUI.loadWarnOption,    settings.showLoadWarnings  and 2 or 1, false)
-    setOpt(RHMSettingsUI.unitOption,        settings.unitSystem,                    false)
+    setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
+    setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
+
+    setOpt(RHMSettingsUI.overloadSoundsOption, (settings.enableOverloadSounds ~= false) and 2 or 1, false)
+    setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
+    local volIdx = 3
+    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
+    if settings.soundVolume then
+        for idx, val in ipairs(volumeValues) do
+            if math.abs(settings.soundVolume - val) < 0.12 then
+                volIdx = idx
+                break
+            end
+        end
+    end
+    setOpt(RHMSettingsUI.soundVolumeOption, volIdx, false)
 end
 
 -- EN: Adds a "Reset" footer button to the settings page (called on updateButtons).

@@ -128,6 +128,10 @@ function rhm_Combine.registerEventListeners(vehicleType)
     
     -- INPUT: Реєструємо події введення
     SpecializationUtil.registerEventListener(vehicleType, "onRegisterActionEvents", rhm_Combine)
+
+    -- LIFECYCLE: Видалення та вихід з техніки
+    SpecializationUtil.registerEventListener(vehicleType, "onDelete", rhm_Combine)
+    SpecializationUtil.registerEventListener(vehicleType, "onLeaveVehicle", rhm_Combine)
 end
 
 -- EN: Global hook for non-combine vehicles in a modular system (e.g. NEXAT main tractor).
@@ -421,6 +425,50 @@ function rhm_Combine:onLoad(savegame)
     
     -- TEST: Прапорець для показу тестового повідомлення
     spec.testMessageShown = false
+
+    -- AUDIO: Звуки перевантаження та навантаження молотарки (клієнт)
+    spec.samples = {}
+    spec._rhmAlarmTimer = 1500
+    spec._rhmStrainPlaying = false
+
+    if self.isClient then
+        local modDir = (g_realisticHarvestManager and g_realisticHarvestManager.modDirectory)
+                    or (g_currentModDirectory)
+                    or ""
+        local soundXmlPath = modDir .. "sounds/rhm_sounds.xml"
+        local xmlSoundFile = loadXMLFile("rhmSounds", soundXmlPath)
+        if xmlSoundFile ~= nil and xmlSoundFile ~= 0 then
+            local soundManager = g_soundManager
+            local audioGroup = AudioGroup.GUI or AudioGroup.VEHICLE
+
+            -- 1. Overload alarm buzzer (audible in both 1st and 3rd person)
+            if soundManager.loadSample2DFromXML then
+                spec.samples.overloadAlarm = soundManager:loadSample2DFromXML(xmlSoundFile, "sounds", "overloadAlarm", modDir, 1, audioGroup)
+            end
+            if spec.samples.overloadAlarm == nil then
+                local components = self.components or { { node = self.rootNode } }
+                spec.samples.overloadAlarm = soundManager:loadSampleFromXML(xmlSoundFile, "sounds", "overloadAlarm", modDir, components, 1, AudioGroup.VEHICLE, self.i3dMappings, self)
+            end
+
+            -- 2. Mechanical thresher strain sound (audible in both 1st and 3rd person)
+            if soundManager.loadSample2DFromXML then
+                spec.samples.thresherStrain = soundManager:loadSample2DFromXML(xmlSoundFile, "sounds", "thresherStrain", modDir, 0, audioGroup)
+            end
+            if spec.samples.thresherStrain == nil then
+                local components = self.components or { { node = self.rootNode } }
+                spec.samples.thresherStrain = soundManager:loadSampleFromXML(xmlSoundFile, "sounds", "thresherStrain", modDir, components, 0, AudioGroup.VEHICLE, self.i3dMappings, self)
+            end
+            delete(xmlSoundFile)
+
+            Logging.info("RHM [Sounds]: Initialized for %s (alarm=%s, strain=%s, group=%s)",
+                tostring(self:getFullName()),
+                tostring(spec.samples.overloadAlarm ~= nil),
+                tostring(spec.samples.thresherStrain ~= nil),
+                tostring(audioGroup))
+        else
+            Logging.warning("RHM [Sounds]: Could not open sound XML at: %s", tostring(soundXmlPath))
+        end
+    end
 
     -- EN: Restore saved combine settings from savegame if loading a saved game
     -- UA: Відновлюємо збережені налаштування комбайна з savegame при завантаженні збереження
@@ -1091,6 +1139,17 @@ function rhm_Combine:stopThreshing(superFunc)
         g_soundManager:stopSample(spec_combine.samples.start)
         g_soundManager:stopSample(spec_combine.samples.work)
         g_soundManager:playSample(spec_combine.samples.stop)
+
+        local spec_rhm = self.spec_rhm_Combine
+        if spec_rhm and spec_rhm.samples then
+            if spec_rhm.samples.thresherStrain and spec_rhm._rhmStrainPlaying then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.thresherStrain) end)
+                spec_rhm._rhmStrainPlaying = false
+            end
+            if spec_rhm.samples.overloadAlarm then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.overloadAlarm) end)
+            end
+        end
     end
     
     self:setCombineIsFilling(false, false, true)
@@ -1166,6 +1225,137 @@ function rhm_Combine:updateWarnings(dt)
     end
 end
 
+---Update audio feedback for engine/thresher load and crop loss (Client Side)
+function rhm_Combine:updateSounds(dt)
+    local spec = self.spec_rhm_Combine
+    if not spec or not spec.samples then
+        return
+    end
+
+    -- Check user settings
+    local soundsEnabled = true
+    local alarmEnabled = true
+    local soundVolMultiplier = 1.0
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        if g_realisticHarvestManager.settings.enableOverloadSounds == false then
+            soundsEnabled = false
+        end
+        if g_realisticHarvestManager.settings.enableAlarmSound == false then
+            alarmEnabled = false
+        end
+        if g_realisticHarvestManager.settings.soundVolume then
+            soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+        end
+    end
+
+    -- Check if player is entered in or controlling this vehicle (or rootVehicle in modular rigs)
+    local isPlayerEntered = (self.getIsEntered and self:getIsEntered())
+                         or (self.getIsControlled and self:getIsControlled())
+    if not isPlayerEntered and self.rootVehicle then
+        isPlayerEntered = (self.rootVehicle.getIsEntered and self.rootVehicle:getIsEntered())
+                       or (self.rootVehicle.getIsControlled and self.rootVehicle:getIsControlled())
+    end
+
+    local isTurnedOn = self:getIsTurnedOn()
+
+    -- If disabled, player not in vehicle, or combine turned off: stop active sounds
+    if not soundsEnabled or not isPlayerEntered or not isTurnedOn then
+        if spec.samples.thresherStrain and spec._rhmStrainPlaying then
+            pcall(function() g_soundManager:stopSample(spec.samples.thresherStrain) end)
+            spec._rhmStrainPlaying = false
+        end
+        if spec.samples.overloadAlarm then
+            pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
+        end
+        spec._rhmAlarmTimer = 1500
+        return
+    end
+
+    local load = (spec.data and spec.data.load) or 0
+    local loss = (spec.data and spec.data.cropLoss) or 0
+    local speed = (self.getLastSpeed and self:getLastSpeed()) or 0
+
+    -- 1. Thresher Mechanical Strain Loop
+    -- Active during harvesting whenever load is present (load >= 20% while moving, or load >= 35%)
+    local isHarvesting = (load >= 20 and speed > 0.5) or (load >= 35)
+    
+    if isHarvesting and spec.samples.thresherStrain then
+        if not spec._rhmStrainPlaying then
+            pcall(function() g_soundManager:playSample(spec.samples.thresherStrain) end)
+            spec._rhmStrainPlaying = true
+        end
+
+        -- Dynamic volume & pitch scaling:
+        -- Load 20% to 110%:
+        -- Volume scales from 0.45 to 1.90
+        -- Pitch scales from 0.90 to 1.15
+        local isCameraInside = true
+        if self.getActiveCamera then
+            local cam = self:getActiveCamera()
+            if cam and cam.isInside ~= nil then
+                isCameraInside = cam.isInside
+            end
+        end
+        local camVolBoost = isCameraInside and 1.0 or 1.25
+
+        local loadNorm = math.min(1.0, math.max(0.0, (load - 20) / 90))
+        local targetVol = (0.45 + (1.45 * loadNorm)) * soundVolMultiplier * camVolBoost
+        local targetPitch = 0.90 + (0.25 * loadNorm)
+
+        local strainSample = spec.samples.thresherStrain
+        if g_soundManager.setSampleVolume then
+            pcall(function() g_soundManager:setSampleVolume(strainSample, targetVol) end)
+        end
+        if strainSample.soundSample and type(setSampleVolume) == "function" then
+            pcall(function() setSampleVolume(strainSample.soundSample, targetVol) end)
+        end
+        if g_soundManager.setSamplePitch then
+            pcall(function() g_soundManager:setSamplePitch(strainSample, targetPitch) end)
+        end
+        if strainSample.soundSample and type(setSamplePitch) == "function" then
+            pcall(function() setSamplePitch(strainSample.soundSample, targetPitch) end)
+        end
+    else
+        -- Hysteresis: stop when load drops below 15% or combine stops moving
+        if spec._rhmStrainPlaying and (load < 15 or speed <= 0.2) then
+            if spec.samples.thresherStrain then
+                pcall(function() g_soundManager:stopSample(spec.samples.thresherStrain) end)
+            end
+            spec._rhmStrainPlaying = false
+        end
+    end
+
+    -- 2. Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0%)
+    if alarmEnabled and (load >= 98 or loss >= 4.0) and spec.samples.overloadAlarm then
+        spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
+        if spec._rhmAlarmTimer >= 2200 then
+            spec._rhmAlarmTimer = 0
+            
+            local alarmSample = spec.samples.overloadAlarm
+            local isCameraInside = true
+            if self.getActiveCamera then
+                local cam = self:getActiveCamera()
+                if cam and cam.isInside ~= nil then
+                    isCameraInside = cam.isInside
+                end
+            end
+            local camAlarmBoost = isCameraInside and 1.0 or 1.20
+            local alarmVol = 2.4 * soundVolMultiplier * camAlarmBoost
+
+            if g_soundManager.setSampleVolume then
+                pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+            end
+            if alarmSample.soundSample and type(setSampleVolume) == "function" then
+                pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+            end
+            
+            pcall(function() g_soundManager:playSample(alarmSample) end)
+        end
+    else
+        spec._rhmAlarmTimer = 1500
+    end
+end
+
 -- EN: Called on every game tick. Runs warning checks on client, load/yield/speed calculations on server.
 --     Server side: detects if thresher or cutter is off and resets HUD data accordingly.
 --     Passes harvested mass and area to RHM_LoadCalculator for physics-based engine load calculation.
@@ -1173,10 +1363,11 @@ end
 --     Серверна сторона: визначає якщо молотарка або жатка вимкнена і скидає дані HUD відповідно.
 --     Передає зібрану масу та площу до RHM_LoadCalculator для фізичного розрахунку навантаження двигуна.
 function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
-    -- EN: Client-side: update safety warnings only.
-    -- UA: Клієнтська сторона: лише оновлення попереджень безпеки.
+    -- EN: Client-side: update safety warnings and audio feedback.
+    -- UA: Клієнтська сторона: оновлення попереджень безпеки та звуків.
     if self.isClient then
         rhm_Combine.updateWarnings(self, dt)
+        rhm_Combine.updateSounds(self, dt)
     end
     
     if not self.isServer then
@@ -2086,10 +2277,21 @@ function rhm_Combine:actionToggleHUD(actionName, inputValue, callbackState, isAn
     end
 end
 
--- EN: Clean up cursor and camera states when leaving the vehicle.
--- UA: Очищаємо стани курсора та камери при виході з транспортного засобу.
+-- EN: Clean up cursor, camera states, and audio when leaving the vehicle.
+-- UA: Очищаємо стани курсора, камери та звуків при виході з транспортного засобу.
 function rhm_Combine:onLeaveVehicle(wasEntered)
     if self.isClient then
+        local spec_rhm = self.spec_rhm_Combine
+        if spec_rhm and spec_rhm.samples then
+            if spec_rhm.samples.thresherStrain and spec_rhm._rhmStrainPlaying then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.thresherStrain) end)
+                spec_rhm._rhmStrainPlaying = false
+            end
+            if spec_rhm.samples.overloadAlarm then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.overloadAlarm) end)
+            end
+        end
+
         if g_realisticHarvestManager then
             if g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
                 g_realisticHarvestManager.calibrationGUI:close()
@@ -2108,6 +2310,24 @@ function rhm_Combine:onLeaveVehicle(wasEntered)
         end
     end
 end
+
+-- EN: Clean up sound samples and resources when vehicle is deleted.
+-- UA: Очищення звукових семплів та ресурсів при видаленні комбайна.
+function rhm_Combine:onDelete()
+    local spec = self.spec_rhm_Combine
+    if spec and spec.samples then
+        if spec.samples.thresherStrain and spec._rhmStrainPlaying then
+            pcall(function() g_soundManager:stopSample(spec.samples.thresherStrain) end)
+            spec._rhmStrainPlaying = false
+        end
+        if spec.samples.overloadAlarm then
+            pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
+        end
+        pcall(function() g_soundManager:deleteSamples(spec.samples) end)
+        spec.samples = nil
+    end
+end
+
 
 
 

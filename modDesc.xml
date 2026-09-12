@@ -2,7 +2,7 @@
 <modDesc descVersion="111">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.5.2.0</version>
+    <version>1.5.3.0</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
@@ -781,7 +781,98 @@ Funkciók:
             <![CDATA[Villogó figyelmeztetések megjelenítése túlterhelés esetén (Magas/Kritikus)]]>
         </hu>
         </text>
-        
+
+        <text name="rhm_overload_sounds_short">
+            <en>Overload &amp; Strain Audio</en>
+            <de>Überlast- &amp; Belastungssound</de>
+            <fr>Sons de surcharge et contrainte</fr>
+            <pl>Dźwięki przeciążenia i naprężeń</pl>
+            <es>Sonido de sobrecarga y esfuerzo</es>
+            <it>Suoni di sovraccarico e sforzo</it>
+            <cz>Zvuky přetížení a namáhání</cz>
+            <uk>Звуки перевантаження та стресу</uk>
+            <ru>Звуки перегрузки и стресса</ru>
+            <hu>Túlterhelési és feszültségi hangok</hu>
+        </text>
+
+        <text name="rhm_overload_sounds_long">
+            <en><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></en>
+            <de><![CDATA[Realistische Kabinenalarme und Dreschwerkgeräusche bei Überlastung oder übermäßigen Ernteverlusten abspielen.]]></de>
+            <fr><![CDATA[Émettre une alarme de cabine et des bruits de batteur lorsque la moissonneuse est surchargée ou subit des pertes.]]></fr>
+            <pl><![CDATA[Odtwarzaj realistyczny alarm kabinowy i dźwięki obciążenia młocarni przy przeciążeniu kombajnu lub stratach ziarna.]]></pl>
+            <es><![CDATA[Reproducir alarmas de cabina y sonidos de esfuerzo de la trilladora cuando la cosechadora se sobrecarga o pierde grano.]]></es>
+            <it><![CDATA[Riproduci allarmi in cabina e suoni di sforzo del battitore quando la mietitrebbia è sovraccarica o subisce perdite.]]></it>
+            <cz><![CDATA[Přehrávat realistický alarm v kabině a zvuky namáhání mlátičky při přetížení kombajnu nebo ztrátách zrna.]]></cz>
+            <uk><![CDATA[Відтворювати реалістичний сигнал тривоги в кабіні та гул молотарки при перевантаженні або надмірних втратах урожаю.]]></uk>
+            <ru><![CDATA[Воспроизводить реалистичный сигнал тревоги в кабине и гул молотилки при перегрузке или чрезмерных потерях урожая.]]></ru>
+            <hu><![CDATA[Reális fülkeriasztás és cséplési feszültséghangok lejátszása túlterhelés vagy veszteség esetén.]]></hu>
+        </text>
+
+        <text name="rhm_section_audio">
+            <en>Realistic Harvesting - Audio</en>
+            <de>Realistische Ernte - Audio</de>
+            <fr>Récolte Réaliste - Audio</fr>
+            <pl>Realistyczne Zbiory - Dźwięk</pl>
+            <es>Cosecha Realista - Audio</es>
+            <it>Raccolta Realistica - Audio</it>
+            <cz>Realistická Sklizeň - Zvuk</cz>
+            <uk>Реалістичний Збір - Звук</uk>
+            <ru>Реалистичный Сбор - Звук</ru>
+            <hu>Reális Betakarítás - Hangok</hu>
+        </text>
+
+        <text name="rhm_alarm_sounds_short">
+            <en>Overload Alarm Buzzer</en>
+            <de>Überlast-Summer</de>
+            <fr>Avertisseur de surcharge</fr>
+            <pl>Brzęczyk przeciążenia</pl>
+            <es>Zumbador de sobrecarga</es>
+            <it>Cicalino di sovraccarico</it>
+            <cz>Bzučák přetížení</cz>
+            <uk>Сигнал тривоги перевантаження</uk>
+            <ru>Звуковой сигнал тревоги</ru>
+            <hu>Túlterhelési hangjelzés</hu>
+        </text>
+
+        <text name="rhm_alarm_sounds_long">
+            <en><![CDATA[Play an audible electronic buzzer in the cabin when combine load reaches critical levels (98%+) or crop loss exceeds 4%.]]></en>
+            <de><![CDATA[Elektronischen Summer in der Kabine abspielen, wenn die Last 98% erreicht oder Ernteverluste 4% überschreiten.]]></de>
+            <fr><![CDATA[Émettre un avertisseur sonore en cabine lorsque la charge atteint 98%+ ou que les pertes dépassent 4%.]]></fr>
+            <pl><![CDATA[Odtwarzaj brzęczyk w kabinie, gdy obciążenie osiągnie 98%+ lub straty ziarna przekroczą 4%.]]></pl>
+            <es><![CDATA[Reproducir un zumbador en la cabina cuando la carga alcance el 98%+ o las pérdidas superen el 4%.]]></es>
+            <it><![CDATA[Riproduci un cicalino in cabina quando il carico raggiunge il 98%+ o le perdite superano il 4%.]]></it>
+            <cz><![CDATA[Přehrávat bzučák v kabině, když zatížení dosáhne 98%+ nebo ztráty zrna překročí 4%.]]></cz>
+            <uk><![CDATA[Подавати звуковий сигнал зумера в кабіні при критичному навантаженні (98%+) або втратах понад 4%.]]></uk>
+            <ru><![CDATA[Подавать звуковой сигнал зуммера в кабине при критической нагрузке (98%+) или потерях более 4%.]]></ru>
+            <hu><![CDATA[Hangjelzés megszólaltatása a fülkében, ha a terhelés eléri a 98%+-ot vagy a veszteség meghaladja a 4%-ot.]]></hu>
+        </text>
+
+        <text name="rhm_sound_volume_short">
+            <en>Sound Volume</en>
+            <de>Lautstärke</de>
+            <fr>Volume sonore</fr>
+            <pl>Głośność dźwięków</pl>
+            <es>Volumen de sonido</es>
+            <it>Volume del suono</it>
+            <cz>Hlasitost zvuku</cz>
+            <uk>Гучність звуків</uk>
+            <ru>Громкость звуков</ru>
+            <hu>Hangerő</hu>
+        </text>
+
+        <text name="rhm_sound_volume_long">
+            <en><![CDATA[Adjust the volume of thresher strain and overload alarm sounds.]]></en>
+            <de><![CDATA[Lautstärke der Dreschwerk- und Alarmgeräusche anpassen.]]></de>
+            <fr><![CDATA[Ajuster le volume des sons de batteur et d'alarme de surcharge.]]></fr>
+            <pl><![CDATA[Dostosuj głośność dźwięków obciążenia młocarni i alarmów przeciążenia.]]></pl>
+            <es><![CDATA[Ajustar el volumen de los sonidos de esfuerzo y alarma de sobrecarga.]]></es>
+            <it><![CDATA[Regola il volume dei suoni di sforzo del battitore e dell'allarme di sovraccarico.]]></it>
+            <cz><![CDATA[Nastavte hlasitost zvuků namáhání mlátičky a alarmu přetížení.]]></cz>
+            <uk><![CDATA[Налаштування рівня гучності гулу молотарки та сигналів перевантаження.]]></uk>
+            <ru><![CDATA[Настройка громкости звуков гула молотилки и сигналов перегрузки.]]></ru>
+            <hu><![CDATA[Állítsa be a cséplési feszültséghangok és a riasztások hangerejét.]]></hu>
+        </text>
+
         <!-- ============================= -->
         <!-- CALIBRATION GUI STRINGS       -->
         <!-- ============================= -->
