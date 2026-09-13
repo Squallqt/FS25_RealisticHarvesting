@@ -245,20 +245,74 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         varianceRange = 0
     end
 
+    local keptCount = 0
+    local adjustedCount = 0
+
     for _, pName in ipairs(activeParams) do
         local optVal = optimalSettings[pName] and optimalSettings[pName].optimal or 50
-        local offset = (varianceRange > 0) and math.random(-varianceRange, varianceRange) or 0
-        self.currentSettings[pName] = math.max(0, math.min(100, math.floor(optVal + offset + 0.5)))
+        local curVal = self.currentSettings[pName]
+        local workerOffset = (varianceRange > 0) and math.random(-varianceRange, varianceRange) or 0
+        local workerVal = math.max(0, math.min(100, math.floor(optVal + workerOffset + 0.5)))
+
+        if curVal ~= nil then
+            local curError = math.abs(curVal - optVal)
+            local workerError = math.abs(workerVal - optVal)
+
+            -- EN: Smart AI Tuning: If player's existing manual setting is already closer to optimal
+            --     or already within the worker's tier variance tolerance, do NOT downgrade it!
+            -- UA: Розумне налаштування наймита: якщо поточне налаштування гравця вже ближче до оптимуму
+            --     або в межах допустимої похибки наймита, НЕ погіршуємо його!
+            local keepPlayerSetting = false
+            if pkgLevel >= 4 then
+                keepPlayerSetting = (curError == 0)
+            else
+                keepPlayerSetting = (curError <= workerError) or (curError <= varianceRange)
+            end
+
+            if keepPlayerSetting then
+                keptCount = keptCount + 1
+            else
+                self.currentSettings[pName] = workerVal
+                adjustedCount = adjustedCount + 1
+            end
+        else
+            self.currentSettings[pName] = workerVal
+            adjustedCount = adjustedCount + 1
+        end
+    end
+
+    local cropTitle = cropName
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
+        cropTitle = RHM_CombineSettingsDatabase:getCropTitle(cropName)
     end
 
     if pkgLevel >= 4 then
         self.mode = "AUTO"
         self.autoSwitchEnabled = true
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier 4 (Opti-Harvest AI) applied perfect settings for %s", cropName))
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier 4 (Opti-Harvest AI) applied perfect settings for %s (%d adjusted, %d retained)", cropName, adjustedCount, keptCount))
     else
         self.mode = "MANUAL"
         self.autoSwitchEnabled = false
-        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier %d applied helper tuning for %s (variance: ±%d%%)", pkgLevel, cropName, varianceRange))
+        if adjustedCount == 0 then
+            rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier %d kept player's manual settings for %s (all within ±%d%%)", pkgLevel, cropName, varianceRange))
+        else
+            rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Tier %d tuned %s (adjusted %d, kept %d within ±%d%%)", pkgLevel, cropName, adjustedCount, keptCount, varianceRange))
+        end
+    end
+
+    if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+        local msg = ""
+        if pkgLevel >= 4 then
+            local t4Text = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ui_btn_ai_auto")) and g_i18n:getText("rhm_ui_btn_ai_auto") or "Opti-Harvest AI"
+            msg = string.format("RHM [AI]: %s (%s)", t4Text, tostring(cropTitle))
+        elseif adjustedCount == 0 then
+            local retainedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_settings_retained")) and g_i18n:getText("rhm_ai_settings_retained") or "Manual Settings Retained"
+            msg = string.format("RHM [AI Tier %d]: %s (%s)", pkgLevel, retainedText, tostring(cropTitle))
+        else
+            local tunedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_auto_tuned")) and g_i18n:getText("rhm_ai_auto_tuned") or "Auto-Calibrated"
+            msg = string.format("RHM [AI Tier %d]: %s (%s)", pkgLevel, tunedText, tostring(cropTitle))
+        end
+        g_currentMission.hud:showInGameMessage("RHM", msg, -1)
     end
 
     self.currentCrop = cropName
@@ -502,6 +556,8 @@ function RHM_CombineMemory:setParameter(paramName, value)
         end
         self.currentSettings[paramName] = math.max(0, math.min(100, value))
         self.mode = "MANUAL" -- EN: Any manual change overrides AUTO mode / UA: Будь-яка ручна зміна скасовує AUTO режим
+        self.hasManualTuning = true
+        self.manualTunedCrop = self.currentCrop
         return true
     end
     return false

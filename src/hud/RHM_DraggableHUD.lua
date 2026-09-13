@@ -134,101 +134,169 @@ function RHMDraggableHUD:loadIcons(uiScale)
     self.settings.hudDocked = true
 end
 
+-- Frame tracking for dynamic HUD docking
+local rhm_currentDrawFrame = 0
+local rhm_hooksInitialized = false
+
+local function rhm_initHudHooks()
+    if rhm_hooksInitialized then return end
+    rhm_hooksInitialized = true
+
+    -- Prepend to FSBaseMission.draw to increment frame counter before any HUD elements draw
+    if FSBaseMission and FSBaseMission.draw then
+        FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, function(mission)
+            rhm_currentDrawFrame = rhm_currentDrawFrame + 1
+        end)
+    end
+
+    -- Hook Precision Farming combine HUD extension
+    if ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+        ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(self, superFunc, inputHelpDisplay, posX, posY)
+            local ret = superFunc(self, inputHelpDisplay, posX, posY)
+            self.rhm_lastBottomY = (self.backgroundBottom and self.backgroundBottom.y) or ret
+            self.rhm_lastBottomX = (self.backgroundBottom and self.backgroundBottom.x) or posX
+            self.rhm_lastWidth = self.displayWidth
+            self.rhm_lastDrawFrame = rhm_currentDrawFrame
+            return ret
+        end)
+    end
+
+    -- Hook InputHelpDisplay vehicle schema
+    if InputHelpDisplay and InputHelpDisplay.drawVehicleSchema then
+        InputHelpDisplay.drawVehicleSchema = Utils.overwrittenFunction(InputHelpDisplay.drawVehicleSchema, function(self, superFunc, posX, posY, isOnlySchema)
+            local retPosY, retCtrlPosY = superFunc(self, posX, posY, isOnlySchema)
+            self.rhm_lastSchemaBottomY = retPosY
+            self.rhm_lastSchemaFrame = rhm_currentDrawFrame
+            return retPosY, retCtrlPosY
+        end)
+    end
+
+    -- Hook InputHelpDisplay help elements
+    if InputHelpDisplay and InputHelpDisplay.drawInputHelpElement then
+        InputHelpDisplay.drawInputHelpElement = Utils.overwrittenFunction(InputHelpDisplay.drawInputHelpElement, function(self, superFunc, posX, posY, helpElement, ignoreComboButtons)
+            local retY = superFunc(self, posX, posY, helpElement, ignoreComboButtons)
+            self.rhm_lastHelpBottomY = retY
+            self.rhm_lastHelpFrame = rhm_currentDrawFrame
+            return retY
+        end)
+    end
+
+    -- Hook InputHelpDisplay extra text
+    if InputHelpDisplay and InputHelpDisplay.drawExtraText then
+        InputHelpDisplay.drawExtraText = Utils.overwrittenFunction(InputHelpDisplay.drawExtraText, function(self, superFunc, posX, posY, text)
+            local retY = superFunc(self, posX, posY, text)
+            self.rhm_lastHelpBottomY = retY
+            self.rhm_lastHelpFrame = rhm_currentDrawFrame
+            return retY
+        end)
+    end
+end
+
+-- Attempt immediate hook
+rhm_initHudHooks()
+
+local function getPfHudExtension(vehicle)
+    if not vehicle then return nil end
+    if vehicle.spec_extendedCombine and vehicle.spec_extendedCombine.hudExtension then
+        return vehicle.spec_extendedCombine.hudExtension
+    end
+    for k, v in pairs(vehicle) do
+        if type(k) == "string" and k:find("extendedCombine") and type(v) == "table" and v.hudExtension then
+            return v.hudExtension
+        end
+    end
+    return nil
+end
+
 ---EN: Computes the docked position directly beneath the Precision Farming shortcut box or F1 ControlsHelp menu.
 ---UA: Обчислює позицію стикування безпосередньо під смугою Precision Farming або меню довідки F1 (ControlsHelp).
 function RHMDraggableHUD:getDockedPosition()
+    rhm_initHudHooks()
+
     local uiScale = self.uiScale or 1.0
     local defaultX = 0.016 * uiScale
     local defaultW = 0.172 * uiScale
-    local pfH = 0.042 * uiScale
-    local spacing = 0.0030 * uiScale
 
-    -- 1. Reliable check whether F1 Help Menu is currently open in FS25
-    local isF1Open = false
-
-    -- Method A: Game Settings (the direct setting toggled by F1)
-    if g_gameSettings and g_gameSettings.getValue then
-        local v = g_gameSettings:getValue("showHelpMenu")
-        if v == true then
-            isF1Open = true
-        end
-    end
-
-    -- Method B: ControlsHelp helpList visibility fallback
     local ch = g_currentMission and g_currentMission.hud and g_currentMission.hud.controlsHelp
-    if not isF1Open and ch then
-        if ch.helpList then
-            if type(ch.helpList.getVisible) == "function" then
-                local ok, res = pcall(ch.helpList.getVisible, ch.helpList)
-                if ok and res == true then isF1Open = true end
-            elseif ch.helpList.visible == true then
-                isF1Open = true
-            end
-        end
-        if not isF1Open and ch.isHelpOpen == true then
-            isF1Open = true
-        end
-    end
-
-    -- Method C: HUD showControlsHelp fallback
-    if not isF1Open and g_currentMission and g_currentMission.hud then
-        if type(g_currentMission.hud.getShowControlsHelp) == "function" then
-            local ok, res = pcall(g_currentMission.hud.getShowControlsHelp, g_currentMission.hud)
-            if ok and res == true then isF1Open = true end
-        elseif g_currentMission.hud.showControlsHelp == true then
-            isF1Open = true
-        end
-    end
-
-    -- 2. Check if vehicle has Precision Farming active
-    local hasPF = false
-    if self.vehicle then
-        if self.vehicle.spec_precisionFarmingStatistic ~= nil or self.vehicle.spec_extendedCombine ~= nil then
-            hasPF = true
-        end
-    end
+    local spacing = (ch and ch.lineOffsetY) or (0.0030 * uiScale)
 
     local chX = (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
     local chW = (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
 
-    if isF1Open then
-        -- ═════════════════════════════════════════════════════════════════════
-        -- F1 Help Menu is OPEN: Menu list extends downwards
-        -- ═════════════════════════════════════════════════════════════════════
+    -- Lazy hook PF if it was loaded into the global scope after initialization
+    if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+        RHMDraggableHUD.pfHooked = true
+        ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(extSelf, superFunc, inputHelpDisplay, posX, posY)
+            local ret = superFunc(extSelf, inputHelpDisplay, posX, posY)
+            extSelf.rhm_lastBottomY = (extSelf.backgroundBottom and extSelf.backgroundBottom.y) or ret
+            extSelf.rhm_lastBottomX = (extSelf.backgroundBottom and extSelf.backgroundBottom.x) or posX
+            extSelf.rhm_lastWidth = extSelf.displayWidth
+            extSelf.rhm_lastDrawFrame = rhm_currentDrawFrame
+            return ret
+        end)
+    end
+
+    -- 1. Check Precision Farming HUD Extension on the active combine
+    local pfExt = getPfHudExtension(self.vehicle)
+    if pfExt then
+        -- Method A: Hook recorded draw in the current frame (real-time dynamic ground truth)
+        if pfExt.rhm_lastDrawFrame == rhm_currentDrawFrame and pfExt.rhm_lastBottomY then
+            local pfX = pfExt.rhm_lastBottomX or defaultX
+            local pfY = pfExt.rhm_lastBottomY
+            local pfW = pfExt.rhm_lastWidth or defaultW
+            local dockY = pfY - spacing - self.height
+            return pfX, dockY, pfW
+        end
+
+        -- Method B: Fallback check of backgroundBottom overlay position (if hook missed or initial render)
+        if pfExt.backgroundBottom and pfExt.backgroundBottom.y and pfExt.backgroundBottom.y > 0.05 and pfExt.backgroundBottom.y < 0.95 then
+            local pfX = pfExt.backgroundBottom.x or defaultX
+            local pfY = pfExt.backgroundBottom.y
+            local pfW = pfExt.displayWidth or defaultW
+            local dockY = pfY - spacing - self.height
+            return pfX, dockY, pfW
+        end
+    end
+
+    -- 2. Precision Farming is not active/drawing: Check F1 Help Menu elements
+    local isF1Open = false
+    if g_gameSettings and g_gameSettings.getValue then
+        isF1Open = (g_gameSettings:getValue("showHelpMenu") == true)
+    end
+
+    if isF1Open and ch then
+        -- F1 Help Menu is OPEN:
+        -- Hook recorded bottom of the lowest help entry drawn this frame:
+        if ch.rhm_lastHelpFrame == rhm_currentDrawFrame and ch.rhm_lastHelpBottomY then
+            local dockY = ch.rhm_lastHelpBottomY - spacing - self.height
+            return chX, dockY, chW
+        end
+
+        -- Fallback if hook hasn't run yet
         local numItems = 0
-        if ch and ch.helpList and ch.helpList.items then
+        if ch.helpList and ch.helpList.items then
             numItems = #ch.helpList.items
-        elseif ch and ch.helpList and ch.helpList.entries then
+        elseif ch.helpList and ch.helpList.entries then
             numItems = #ch.helpList.entries
-        elseif ch and ch.entries then
+        elseif ch.entries then
             numItems = #ch.entries
         else
             numItems = 13
         end
-
-        -- In FS25: Vehicle Schema bottom is at 0.878.
-        -- Header ("РАСШИРЕННОЕ УПРАВЛЕНИЕ") + mouse buttons row = ~0.062 * uiScale.
-        -- Help list starts at ~0.816 * uiScale.
-        -- Each help entry row takes ~0.0260 * uiScale.
         local itemH = 0.0260 * uiScale
         local listTopY = 0.816 * uiScale
         local helpBottomY = math.max(0.18, listTopY - (numItems * itemH))
-
-        if hasPF then
-            -- PF sits directly below the last help item:
-            local pfBottomY = helpBottomY - spacing - pfH
-            -- Our HUD sits DIRECTLY UNDER PF:
-            local dockY = pfBottomY - self.height - spacing
-            return chX, dockY, chW
-        else
-            -- PF not active: Our HUD sits directly under the F1 menu
-            local dockY = helpBottomY - self.height - spacing
+        local dockY = helpBottomY - self.height - spacing
+        return chX, dockY, chW
+    else
+        -- F1 Help Menu is CLOSED:
+        -- Hook recorded bottom of vehicle schema drawn this frame:
+        if ch and ch.rhm_lastSchemaFrame == rhm_currentDrawFrame and ch.rhm_lastSchemaBottomY then
+            local dockY = ch.rhm_lastSchemaBottomY - spacing - self.height
             return chX, dockY, chW
         end
-    else
-        -- ═════════════════════════════════════════════════════════════════════
-        -- F1 Help Menu is CLOSED: Only vehicle schema / top bar is visible
-        -- ═════════════════════════════════════════════════════════════════════
+
+        -- Fallback if hook hasn't run yet
         local schemaBottomY = 0.878
         if ch then
             local chY = (ch.getY and ch:getY()) or ch.y
@@ -236,22 +304,8 @@ function RHMDraggableHUD:getDockedPosition()
                 schemaBottomY = chY
             end
         end
-
-        if hasPF then
-            -- PF sits directly below the vehicle schema:
-            -- PF top = schemaBottomY - spacing (~0.875)
-            -- PF bottom = schemaBottomY - spacing - pfH (~0.833)
-            local pfBottomY = schemaBottomY - spacing - pfH
-            -- Our HUD sits DIRECTLY UNDER PF:
-            -- Our HUD top = pfBottomY - spacing (~0.830)
-            -- Our HUD bottom = pfBottomY - spacing - self.height (~0.788)
-            local dockY = pfBottomY - self.height - spacing
-            return chX, dockY, chW
-        else
-            -- PF not active: Our HUD sits directly under vehicle schema (~0.833)
-            local dockY = schemaBottomY - self.height - spacing
-            return chX, dockY, chW
-        end
+        local dockY = schemaBottomY - self.height - spacing
+        return chX, dockY, chW
     end
 end
 
@@ -294,6 +348,7 @@ function RHMDraggableHUD:update(dt)
     self.data.tonPerHour       = spec.data.tonPerHour or 0
     self.data.litersPerHour    = spec.data.litersPerHour or 0
     self.data.recommendedSpeed = spec.data.recommendedSpeed or 0
+    self.data.targetSpeed      = spec.data.targetSpeed or spec.data.recommendedSpeed or 0
     self.data.moisture         = spec.data.moisture or 0
     self.data.hectaresPerHour  = spec.data.hectaresPerHour or 0
     self.data.speed            = vehicle:getLastSpeed() or 0
@@ -476,10 +531,15 @@ function RHMDraggableHUD:buildActiveCells()
         })
     else
         local curSpeed = self.data.speed or 0
+        local targetSpeed = (self.data.recommendedSpeed and self.data.recommendedSpeed > 0) and self.data.recommendedSpeed or (self.data.targetSpeed or 0)
+        local unitText = "km/h"
+        if targetSpeed and targetSpeed > 0.5 then
+            unitText = string.format("/ %.1f km/h", targetSpeed)
+        end
         table.insert(cells, {
             iconName = "speed",
             numStr = string.format("%.1f", curSpeed),
-            unitStr = "km/h",
+            unitStr = unitText,
             color = {0.98, 0.98, 0.98, 1.0}
         })
     end
