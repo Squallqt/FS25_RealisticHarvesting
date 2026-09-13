@@ -753,30 +753,65 @@ function rhm_Combine:addCutterArea(superFunc, ...)
             --     ("GRASS_WINDROW" з фактором 0.380). НЕ перезаписуємо.
         end
         
+        -- EN: HOPPER GROUND TRUTH:
+        --     In FS25, a combine hopper can only hold ONE fill type at a time.
+        --     If the hopper already contains grain (e.g. > 50 L of Sorghum), that is the authoritative
+        --     crop being harvested. A momentary brush of a wide header against weeds or an adjacent field
+        --     (e.g. brushing Field 28 Flax while harvesting Field 26 Sorghum) must NEVER override the active crop.
+        -- UA: БЕЗУМОВНА ІСТИНА БУНКЕРА:
+        --     У FS25 бункер комбайна може містити лише один тип врожаю.
+        --     Якщо в бункері вже є зерно (> 50 л), це авторитетна культура збирання.
+        --     Випадковий дотик краю широкої жатки до бур'янів чи сусіднього поля
+        --     НІКОЛИ не повинен підміняти активну культуру.
+        local fillUnitIndex = (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
+        local tankFillType = self:getFillUnitFillType(fillUnitIndex)
+        local tankFillLevel = self:getFillUnitFillLevel(fillUnitIndex) or 0
+        if (tankFillType == nil or tankFillType == FillType.UNKNOWN) and self.getFillUnitLastValidFillType then
+            tankFillType = self:getFillUnitLastValidFillType(fillUnitIndex)
+        end
+
+        local tankCropName = nil
+        if tankFillLevel > 50 and tankFillType and tankFillType ~= FillType.UNKNOWN then
+            tankCropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+        end
+
+        if tankCropName then
+            cropName = tankCropName
+        end
+
         if cropName then
             -- EN: Update current crop in RHM_LoadCalculator.
             -- UA: Оновлюємо поточну культуру в RHM_LoadCalculator.
             spec.loadCalculator.currentCrop = cropName
+            spec._lastHarvestTime = g_currentMission.time
             
             -- EN: Detect crop change with 2-second debounce to avoid thrash when header
             --     partially overlaps two crop types and flips between them each tick.
             -- UA: Визначаємо зміну культури з 2-секундним захистом від дребезгу щоб уникнути
             --     переключення коли жатка частково перекриває два типи культур і перемикає між ними кожен тік.
             if cropName ~= spec.combineMemory.currentCrop then
-                -- DEBOUNCE: чекаємо 2 секунди перед перемикання
-                -- Без цього жатка може детектувати різні культури кожен тік і створювати петлю
-                local now = g_currentMission.time
-                spec._lastCropSwitchTime = spec._lastCropSwitchTime or 0
-                
-                if spec._pendingCrop ~= cropName then
-                    -- EN: New crop candidate detected / UA: Виявлено нового кандидата
-                    spec._pendingCrop = cropName
-                    spec._lastCropSwitchTime = now
-                elseif (now - spec._lastCropSwitchTime) >= 2000 then
-                    -- EN: Confirmed after 2 seconds / UA: Підтверджено після 2 секунд
+                if tankCropName then
+                    -- EN: Hopper has grain -> instant authoritative switch without debounce delay!
+                    -- UA: У бункері є зерно -> миттєве авторитетне перемикання без затримки дребезгу!
                     spec._pendingCrop = nil
-                    rhm_log(string.format("RHM [Combine]: RHM: [CROP] Detected crop: %s", cropName))
-                    rhm_Combine.onCropTypeChanged(self, cropName)
+                    rhm_log(string.format("RHM [Combine]: RHM: [CROP] Hopper contains %d L of %s -> instant sync active crop", math.floor(tankFillLevel), tankCropName))
+                    rhm_Combine.onCropTypeChanged(self, tankCropName)
+                else
+                    -- EN: Empty hopper (or forage machine) -> 2-second debounce to prevent bouncing at borders
+                    -- UA: Порожній бункер (або силосний комбайн) -> 2-секундний захист від перемикань на межах
+                    local now = g_currentMission.time
+                    spec._lastCropSwitchTime = spec._lastCropSwitchTime or 0
+                    
+                    if spec._pendingCrop ~= cropName then
+                        -- EN: New crop candidate detected / UA: Виявлено нового кандидата
+                        spec._pendingCrop = cropName
+                        spec._lastCropSwitchTime = now
+                    elseif (now - spec._lastCropSwitchTime) >= 2000 then
+                        -- EN: Confirmed after 2 seconds / UA: Підтверджено після 2 секунд
+                        spec._pendingCrop = nil
+                        rhm_log(string.format("RHM [Combine]: RHM: [CROP] Detected crop: %s", cropName))
+                        rhm_Combine.onCropTypeChanged(self, cropName)
+                    end
                 end
             else
                 -- EN: Same crop, cancel any staged switch.
@@ -785,9 +820,13 @@ function rhm_Combine:addCutterArea(superFunc, ...)
             end
         end
     else
-        -- EN: No crop coming through (not harvesting) — clear staged crop.
-        -- UA: Не надходить культура (не збираємо) — очищаємо плановану культуру.
-        spec._pendingCrop = nil
+        -- EN: Only reset pending crop if harvesting has completely stopped for > 1500 ms.
+        --     Do NOT reset on a single empty slice or micro-gap between plants!
+        -- UA: Скидаємо плановану культуру тільки якщо збирання повністю припинилося на > 1500 мс.
+        --     НЕ скидаємо на окремому порожньому зрізі чи мікро-паузі між стеблами!
+        if g_currentMission and spec._lastHarvestTime and (g_currentMission.time - spec._lastHarvestTime > 1500) then
+            spec._pendingCrop = nil
+        end
     end
     
     -- DEBUG: Uncomment to see values in console
@@ -1593,6 +1632,28 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Автоналаштування коли керує наймит або Courseplay.
     --     Застосовується один раз при старті або зміні культури, зберігаючи повністю ручне керування для гравця.
     if self.isServer and cutterIsTurnedOn then
+        -- EN: Hopper sanity check: if the hopper contains grain of a different crop type than currentCrop,
+        --     synchronize currentCrop immediately to ensure settings match what is in the tank.
+        -- UA: Перевірка бункера: якщо в бункері вже є зерно іншого типу ніж currentCrop,
+        --     негайно синхронізуємо currentCrop, щоб налаштування відповідали зерну в бункері.
+        if spec.combineMemory then
+            local fillUnitIndex = (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
+            local tankFillLevel = self:getFillUnitFillLevel(fillUnitIndex) or 0
+            if tankFillLevel > 50 then
+                local tankFillType = self:getFillUnitFillType(fillUnitIndex)
+                if (tankFillType == nil or tankFillType == FillType.UNKNOWN) and self.getFillUnitLastValidFillType then
+                    tankFillType = self:getFillUnitLastValidFillType(fillUnitIndex)
+                end
+                if tankFillType and tankFillType ~= FillType.UNKNOWN then
+                    local tankCrop = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+                    if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
+                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
+                        rhm_Combine.onCropTypeChanged(self, tankCrop)
+                    end
+                end
+            end
+        end
+
         local isAi = rhm_Combine.isAiWorkerActive(self)
         if isAi then
             local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop

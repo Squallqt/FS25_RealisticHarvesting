@@ -573,17 +573,19 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
         return nil
     end
 
-    -- 2. Extract string key from FillType index
+    -- 2. Extract string key from FillType index (query engine fillTypeManager first)
     local fillTypeKey = nil
-    for k, v in pairs(FillType) do
-        if v == fillType then
-            fillTypeKey = k
-            break
-        end
+    if g_fillTypeManager and g_fillTypeManager.getFillTypeNameByIndex then
+        fillTypeKey = g_fillTypeManager:getFillTypeNameByIndex(fillType)
     end
 
-    if not fillTypeKey and g_fillTypeManager and g_fillTypeManager.getFillTypeNameByIndex then
-        fillTypeKey = g_fillTypeManager:getFillTypeNameByIndex(fillType)
+    if not fillTypeKey then
+        for k, v in pairs(FillType) do
+            if v == fillType then
+                fillTypeKey = k
+                break
+            end
+        end
     end
 
     if not fillTypeKey then
@@ -1000,7 +1002,7 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                 resolvedTitle = resolvedTitle or (fruit.title and fruit.title ~= "" and fruit.title) or nameUpper
 
                 if self.crops[nameUpper] then
-                    if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
+                    if fruit.fillTypeIndex then
                         self.crops[nameUpper].fillType = fruit.fillTypeIndex
                     end
                     if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
@@ -1031,7 +1033,7 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                 -- Also link alias if defined in self.cropAliases (e.g. FLAX <-> LINSEED, MAIZE <-> CORN)
                 local alias = self.cropAliases and self.cropAliases[nameUpper]
                 if alias and self.crops[alias] then
-                    if not self.crops[alias].fillType and fruit.fillTypeIndex then
+                    if fruit.fillTypeIndex then
                         self.crops[alias].fillType = fruit.fillTypeIndex
                     end
                     if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
