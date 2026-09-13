@@ -1029,6 +1029,16 @@ end
 ---EN: Calculates Vehicle Speed Limit based on physical power load and target load.
 ---UA: Розраховує обмеження швидкості на основі навантаження двигуна та цільового навантаження.
 function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
+    -- EN: Never calculate harvesting speed limit if vehicle is reversing
+    -- UA: Ніколи не розраховуємо ліміт швидкості якщо техніка рухається назад
+    if vehicle and (
+        (vehicle.getIsDrivingBackward and vehicle:getIsDrivingBackward()) or
+        (vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0) or
+        (vehicle.movingDirection and vehicle.movingDirection < 0)
+    ) then
+        return
+    end
+
     -- EN: Reuse maxWorkingSpeed calculated in calculateEngineLoad to avoid duplicate hierarchy/XML scans.
     -- UA: Перевикористовуємо maxWorkingSpeed з calculateEngineLoad без повторного сканування ієрархії/XML.
     local maxWorkingSpeed = self.maxWorkingSpeed
@@ -1109,17 +1119,25 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
     vEquilibrium = math.max(minSpeed, math.min(maxAllowedSpeed, vEquilibrium))
 
     -- ASYMMETRIC DUAL-LOOP CONTROLLER:
-    -- Check if we are in the initial entry phase of a new pass (< 2.5s)
-    local isEntry = (self.harvestActiveTime or 0) < 2500
+    -- Check if we are in the initial entry phase of a new pass (< 2.8s)
+    local isEntry = (self.harvestActiveTime or 0) < 2800
     local isSurge = not isEntry and (self.rawAvgMass or 0) > ((self.currentAvgMass or 0) * 1.15) and (self.rawAvgMass or 0) > 0.5
 
     local currentLimit = self.speedLimit or maxAllowedSpeed
 
     if isEntry then
-        -- GENTLE ROW ENTRY: Smoothly adjust speed towards equilibrium without hard jerking/slamming (tau = 1.2s)
+        -- GENTLE ROW ENTRY:
+        -- While entering standing crop, the feederhouse and drum are still filling up (~2.5s - 3.0s).
+        -- The measured engine load during this filling phase is artificially low.
+        -- NEVER accelerate above the approach speed during entry!
+        -- ONLY allow smooth braking if the crop is unexpectedly dense/heavy and starts overloading.
         self.underloadTimer = 0
-        local blend = 1.0 - math.exp(-dtSec / 1.2)
-        self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
+        if vEquilibrium < (currentLimit - 0.15) then
+            local blend = 1.0 - math.exp(-dtSec / 0.6)
+            self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
+        else
+            -- Hold the remembered approach/average speed steady — no surging into crop!
+        end
     elseif isSurge or vEquilibrium < (currentLimit - 0.1) then
         -- BRAKING / OVERLOAD / SURGE:
         -- Reset underload confirmation timer immediately
@@ -1146,18 +1164,24 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         self.underloadTimer = 0
     end
 
-    -- Remember stable harvesting speed for next row approach
-    -- Only record after entry phase is complete (> 2.5s) to avoid recording temporary entry surges/underloads
-    if self.isActivelyHarvesting and not isEntry and vEquilibrium and vEquilibrium >= minSpeed then
-        if not self.lastHarvestingSpeed then
-            self.lastHarvestingSpeed = vEquilibrium
-        else
-            self.lastHarvestingSpeed = self.lastHarvestingSpeed * 0.85 + vEquilibrium * 0.15
-        end
-        local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
-        if activeCrop then
-            self.cropHarvestingSpeeds = self.cropHarvestingSpeeds or {}
-            self.cropHarvestingSpeeds[activeCrop] = self.lastHarvestingSpeed
+    -- Rolling average of steady-state harvesting speed:
+    -- Only samples when genuinely under crop load, filtering out edge slowdowns and stops
+    if self.isActivelyHarvesting and not isEntry and (self.engineLoad or 0) >= 0.40 and (self.currentAvgMass or 0) >= 0.2 then
+        local actualSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or currentSpeed
+        if actualSpeed >= minSpeed and actualSpeed <= maxAllowedSpeed then
+            local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+            if activeCrop then
+                self.cropHarvestingSpeeds = self.cropHarvestingSpeeds or {}
+                local prevAvg = self.cropHarvestingSpeeds[activeCrop] or self.lastHarvestingSpeed
+                if not prevAvg or prevAvg < minSpeed then
+                    self.cropHarvestingSpeeds[activeCrop] = actualSpeed
+                else
+                    -- Smooth exponential moving average across ~6-7 seconds of steady harvesting
+                    local blend = 1.0 - math.exp(-dtSec / 6.0)
+                    self.cropHarvestingSpeeds[activeCrop] = prevAvg + (actualSpeed - prevAvg) * blend
+                end
+                self.lastHarvestingSpeed = self.cropHarvestingSpeeds[activeCrop]
+            end
         end
     end
 

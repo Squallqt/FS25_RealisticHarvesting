@@ -192,6 +192,12 @@ function RHMCombineCalibrationGUI:open(vehicle)
     end
 
     self.isOpen = true
+
+    -- Notify compatibility layer (IC, Headtracking) to suspend conflicting overlays and exclusive action events
+    if RHM_ModCompatibility and RHM_ModCompatibility.onCalibrationGUIOpened then
+        RHM_ModCompatibility.onCalibrationGUIOpened()
+    end
+
     g_inputBinding:setShowMouseCursor(true)
     self.isCursorActive = true
 
@@ -280,6 +286,11 @@ function RHMCombineCalibrationGUI:close()
     self.isCursorActive = false
     self.draggingSlider = nil
 
+    -- Notify compatibility layer that calibration GUI has closed
+    if RHM_ModCompatibility and RHM_ModCompatibility.onCalibrationGUIClosed then
+        RHM_ModCompatibility.onCalibrationGUIClosed()
+    end
+
     local vehicle = self.controllerVehicle or (g_realisticHarvestManager and g_realisticHarvestManager:getControlledVehicle()) or self.activeVehicle
     local camTarget = (vehicle and vehicle.spec_enterable and vehicle)
                    or (self.activeVehicle and self.activeVehicle.spec_enterable and self.activeVehicle)
@@ -289,6 +300,9 @@ function RHMCombineCalibrationGUI:close()
         otherModOwnsCursor = true
     end
     if AutoDrive and AutoDrive.isEditorModeEnabled and AutoDrive:isEditorModeEnabled() then
+        otherModOwnsCursor = true
+    end
+    if VehicleMouseCursor and VehicleMouseCursor._cursorOwned then
         otherModOwnsCursor = true
     end
 
@@ -1222,6 +1236,12 @@ function RHMCombineCalibrationGUI:mouseEvent(posX, posY, isDown, isUp, button)
     end
 
     if insideGUI then
+        return true
+    end
+
+    -- While modal calibration GUI is open, consume all mouse button presses/releases
+    -- so clicks outside the tablet never trigger vehicle tools, IC actions, or camera jumps.
+    if isDown or isUp then
         return true
     end
 end

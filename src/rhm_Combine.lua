@@ -918,6 +918,49 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     end
 end
 
+---EN: Checks if vehicle is driving or maneuvering in reverse. Harvesters NEVER harvest in reverse.
+---UA: Перевіряє чи комбайн рухається або маневрує назад. Комбайни НІКОЛИ не збирають врожай заднім ходом.
+function rhm_Combine.getIsVehicleReversing(vehicle)
+    if not vehicle then
+        return false
+    end
+    
+    -- 1. Official Drivable query (reverser direction * moving direction)
+    if vehicle.getIsDrivingBackward and vehicle:getIsDrivingBackward() then
+        return true
+    end
+    if vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0 then
+        return true
+    end
+    
+    -- 2. Physical chassis moving direction (< 0 is reverse)
+    if vehicle.movingDirection and vehicle.movingDirection < 0 then
+        return true
+    end
+    
+    -- 3. Hydrostatic / mechanical motor transmission direction
+    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
+        local motor = vehicle.spec_motorized.motor
+        if motor.currentDirection and motor.currentDirection < 0 then
+            return true
+        end
+    end
+    
+    -- 4. User driving inputs (shuttle reverser / pedal / S key)
+    local spec_drivable = vehicle.spec_drivable
+    if spec_drivable then
+        local revDir = spec_drivable.reverserDirection or 1
+        local axis = spec_drivable.axisForward or 0
+        if revDir < 0 and axis > 0.05 then
+            return true
+        elseif revDir > 0 and axis < -0.05 then
+            return true
+        end
+    end
+    
+    return false
+end
+
 -- EN: Override for getSpeedLimit. Returns a dynamically calculated speed cap from RHM_LoadCalculator
 --     that maintains ~90% engine load target. Disabled on clients (uses synced recommendedSpeed).
 --     Respects the Arcade difficulty mode (no speed limiting), the enableSpeedLimit setting,
@@ -942,6 +985,15 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- EN: Skip speed limiting if the thresher is off.
     -- UA: Пропускаємо обмеження швидкості якщо молотарка вимкнена.
     if not self:getIsTurnedOn() then
+        spec.isSpeedLimitActive = false
+        return limit, doCheckSpeedLimit
+    end
+    
+    -- EN: If driving in reverse, harvesters NEVER harvest. Return vanilla limit immediately.
+    --     Prevents transmission oscillation and jerking while backing up.
+    -- UA: При русі заднім ходом комбайн НІКОЛИ не косить. Одразу повертаємо ванільний ліміт.
+    --     Запобігає смиканню та розгойдуванню трансмісії при їзді назад.
+    if rhm_Combine.getIsVehicleReversing(self) then
         spec.isSpeedLimitActive = false
         return limit, doCheckSpeedLimit
     end
@@ -1385,12 +1437,21 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         return
     end
     
+    -- EN: Check if driving in reverse. Harvesters NEVER harvest while reversing.
+    -- UA: Перевірка руху заднім ходом. Комбайни НІКОЛИ не збирають врожай заднім ходом.
+    local isReversing = rhm_Combine.getIsVehicleReversing(self)
+    
     -- EN: Check if combine thresher is on and driving forward; reset load if not.
     -- UA: Перевіряємо чи молотарка увімкнена і рухається вперед; скидаємо навантаження якщо ні.
-    if not self:getIsTurnedOn() or self.movingDirection == -1 then
-        -- EN: Thresher off or reversing — reset load calculation.
-        -- UA: Молотарка вимкнена або рухається назад — скидаємо розрахунок навантаження.
-        spec._rhmLastMotorSpeedLimit = nil
+    if not self:getIsTurnedOn() or isReversing then
+        -- EN: Thresher off or reversing — release motor limit and reset load calculation.
+        -- UA: Молотарка вимкнена або рухається назад — відпускаємо ліміт мотора і скидаємо навантаження.
+        if spec._rhmLastMotorSpeedLimit ~= nil then
+            if self.spec_motorized and self.spec_motorized.motor then
+                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            end
+            spec._rhmLastMotorSpeedLimit = nil
+        end
         spec.loadCalculator:reset()
         if spec.data then
             spec.data.load = 0
@@ -1400,6 +1461,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.yield = 0
             spec.data.moisture = 0
             spec.data.recommendedSpeed = 0
+            spec.data.targetSpeed = spec.loadCalculator:getSpeedLimit() or 0
         end
         spec.isSpeedLimitActive = false
         self:raiseDirtyFlags(spec.dataDirtyFlag)
@@ -1437,9 +1499,14 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     end
     
     if not cutterIsTurnedOn then
-        -- EN: Cutter not working — reset indicators so they don't stay visible.
-        -- UA: Жатка не працює — скидаємо індикатори щоб вони не висіли.
-        spec._rhmLastMotorSpeedLimit = nil
+        -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
+        -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
+        if spec._rhmLastMotorSpeedLimit ~= nil then
+            if self.spec_motorized and self.spec_motorized.motor then
+                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            end
+            spec._rhmLastMotorSpeedLimit = nil
+        end
         spec.loadCalculator:reset() 
         if spec.data then
             spec.data.load = 0 
@@ -1674,7 +1741,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- Enforce the dynamic cap directly on the motor for both:
     --  - AI vehicles
     --  - player-controlled vehicles (so in-cab cruise reacts to load)
-    if self.isServer and cutterIsTurnedOn then
+    if self.isServer and cutterIsTurnedOn and not isReversing then
         local isAI = rhm_Combine.isAiWorkerActive(self)
         local isPlayerControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
 

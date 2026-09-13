@@ -1,0 +1,123 @@
+-- ============================================================================
+-- RHM_ModCompatibility.lua
+-- Realistic Harvesting Mod - Third-Party Mod Compatibility Layer (FS25)
+-- ============================================================================
+-- Handles runtime compatibility and event mediation with:
+-- 1. FS25_interactiveControl (Interactive Control / IC by VertexDezign)
+-- 2. FS25_headTrackICextension (Headtracking MouseControl for IC by DerElky)
+-- ============================================================================
+
+RHM_ModCompatibility = {}
+RHM_ModCompatibility.isInitialized = false
+RHM_ModCompatibility.isICHooked = false
+RHM_ModCompatibility.isVMCHooked = false
+
+function RHM_ModCompatibility.init()
+    if RHM_ModCompatibility.isInitialized then
+        return
+    end
+
+    RHM_ModCompatibility.hookInteractiveControl()
+    RHM_ModCompatibility.hookVehicleMouseCursor()
+
+    RHM_ModCompatibility.isInitialized = true
+    rhm_log("RHM [Compat]: Compatibility layer initialized.")
+end
+
+--- Hook Interactive Control (FS25_interactiveControl)
+function RHM_ModCompatibility.hookInteractiveControl()
+    if RHM_ModCompatibility.isICHooked then
+        return
+    end
+
+    if InteractiveControl ~= nil then
+        if type(InteractiveControl.isIndoorActive) == "function" then
+            InteractiveControl.isIndoorActive = Utils.overwrittenFunction(
+                InteractiveControl.isIndoorActive,
+                function(self, superFunc)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return false
+                    end
+                    return superFunc(self)
+                end
+            )
+        end
+
+        if type(InteractiveControl.isInteractiveControlActivated) == "function" then
+            InteractiveControl.isInteractiveControlActivated = Utils.overwrittenFunction(
+                InteractiveControl.isInteractiveControlActivated,
+                function(self, superFunc)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return false
+                    end
+                    return superFunc(self)
+                end
+            )
+        end
+
+        if type(InteractiveControl.updateInteractiveController) == "function" then
+            InteractiveControl.updateInteractiveController = Utils.overwrittenFunction(
+                InteractiveControl.updateInteractiveController,
+                function(self, superFunc, isIndoor, isOutdoor, hasInput)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return superFunc(self, false, false, false)
+                    end
+                    return superFunc(self, isIndoor, isOutdoor, hasInput)
+                end
+            )
+        end
+
+        RHM_ModCompatibility.isICHooked = true
+        rhm_log("RHM [Compat]: Successfully hooked FS25_interactiveControl.")
+    end
+end
+
+--- Hook Headtracking MouseControl for IC (FS25_headTrackICextension)
+function RHM_ModCompatibility.hookVehicleMouseCursor()
+    if RHM_ModCompatibility.isVMCHooked then
+        return
+    end
+
+    if VMC_CursorOverlayGui ~= nil and type(VMC_CursorOverlayGui.open) == "function" then
+        VMC_CursorOverlayGui.open = Utils.overwrittenFunction(
+            VMC_CursorOverlayGui.open,
+            function(self, superFunc, vehicle)
+                if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                    return false
+                end
+                return superFunc(self, vehicle)
+            end
+        )
+        RHM_ModCompatibility.isVMCHooked = true
+        rhm_log("RHM [Compat]: Successfully hooked FS25_headTrackICextension (VMC_CursorOverlayGui).")
+    end
+end
+
+--- Called immediately when RHM Calibration GUI opens
+function RHM_ModCompatibility.onCalibrationGUIOpened()
+    -- Ensure hooks are in place (in case third-party mods loaded late)
+    RHM_ModCompatibility.hookInteractiveControl()
+    RHM_ModCompatibility.hookVehicleMouseCursor()
+
+    -- 1. If IC manager is active, clear active controller and unregister exclusive click action event
+    if g_currentMission and g_currentMission.interactiveControl then
+        if type(g_currentMission.interactiveControl.setActiveInteractiveController) == "function" then
+            g_currentMission.interactiveControl:setActiveInteractiveController(nil)
+        end
+    end
+
+    -- 2. If VehicleMouseCursor is active, close its fullscreen cursor overlay and drop ownership
+    if VehicleMouseCursor ~= nil then
+        if VehicleMouseCursor._cursorGui ~= nil and VehicleMouseCursor._cursorGui.isOpen then
+            VehicleMouseCursor._cursorGui:close()
+        end
+        VehicleMouseCursor._cursorOwned = false
+    end
+end
+
+--- Called immediately when RHM Calibration GUI closes
+function RHM_ModCompatibility.onCalibrationGUIClosed()
+    -- State resumes automatically on the next frame as calibrationGUI.isOpen is now false.
+end
+
+return RHM_ModCompatibility

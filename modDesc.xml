@@ -5665,33 +5665,6 @@ A karok működése:
             <hu>ha/h</hu>
         </text>
 
-        <!-- Fallback standard keys -->
-        <text name="ui_off">
-            <en>Off</en>
-            <de>Aus</de>
-            <fr>Désactivé</fr>
-            <it>Disattivato</it>
-            <es>Desactivado</es>
-            <br>Desligado</br>
-            <pl>Wyłączone</pl>
-            <cz>Vypnuto</cz>
-            <uk>Вимк</uk>
-            <ru>Выкл</ru>
-            <hu>Ki</hu>
-        </text>
-        <text name="ui_on">
-            <en>On</en>
-            <de>Ein</de>
-            <fr>Activé</fr>
-            <it>Attivato</it>
-            <es>Activado</es>
-            <br>Ligado</br>
-            <pl>Włączone</pl>
-            <cz>Zapnuto</cz>
-            <uk>Увімк</uk>
-            <ru>Вкл</ru>
-            <hu>Be</hu>
-        </text>
 </l10n>
 
     <helpLines>
