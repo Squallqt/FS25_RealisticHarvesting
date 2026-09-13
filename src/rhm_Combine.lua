@@ -297,55 +297,73 @@ function rhm_Combine:onLoad(savegame)
     local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
     local category = storeItem and storeItem.categoryName or ""
 
-    if category == "beetVehicles" or category == "beetHarvesting" 
-       or category == "potatoVehicles" or category == "potatoHarvesting"
-       or category == "vegetableVehicles" or category == "sugarCaneVehicles" then
-        machineType = "root"
-    elseif category == "forageHarvesters" then
+    if category == "combines" or category == "combineVehicles" or category == "harvesters" then
+        -- Grain combine harvesters: always grain, regardless of custom hopper fill types
+        machineType = "grain"
+    elseif category == "forageHarvesters" or category == "forageHarvesting" then
         machineType = "forage"
-    elseif category == "cottonVehicles" then
+    elseif category == "cottonVehicles" or category == "cottonHarvesting" then
         machineType = "cotton"
+    elseif category == "beetVehicles" or category == "beetHarvesting" 
+       or category == "potatoVehicles" or category == "potatoHarvesting"
+       or category == "vegetableVehicles" or category == "vegetableHarvesting"
+       or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
+        machineType = "root"
     else
-        -- EN: 2. Check Supported FillTypes on Hopper / FillUnits
-        -- UA: 2. Перевіряємо підтримувані типи в бункері
-        local isRoot = false
-        local isCotton = false
-        local fillUnits = self:getFillUnits()
-        if fillUnits then
-            for _, fillUnit in ipairs(fillUnits) do
-                if fillUnit.supportedFillTypes then
-                    for ftIndex, _ in pairs(fillUnit.supportedFillTypes) do
-                        local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
-                        if ft and ft.name then
-                            local name = string.upper(ft.name)
-                            if name:find("POTATO") or name:find("BEET") or name:find("CARROT")
-                               or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
-                               or name:find("SPINACH") or (name:find("BEAN") and not name:find("SOYBEAN"))
-                               or name:find("SUGARCANE") then
-                                isRoot = true
-                                break
-                            elseif name == "COTTON" then
-                                isCotton = true
+        -- EN: 2. Fallback for unclassified / mod vehicles without standard store category
+        -- UA: 2. Запасна перевірка для модової техніки без стандартної категорії магазину
+        local hasGrainStraw = sc and sc.strawEffects and #sc.strawEffects > 0
+        local isForageSpec = SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations) or self.spec_forageHarvester ~= nil
+        local isFruitPrep = self.spec_fruitPreparer ~= nil
+
+        if isForageSpec then
+            machineType = "forage"
+        elseif isFruitPrep then
+            machineType = "root"
+        elseif hasGrainStraw then
+            machineType = "grain"
+        else
+            -- Check hopper/tank supported fill types
+            local hasGrainFill = false
+            local hasRootFill = false
+            local hasCottonFill = false
+            local fillUnits = self:getFillUnits()
+            if fillUnits then
+                for _, fillUnit in ipairs(fillUnits) do
+                    if fillUnit.supportedFillTypes then
+                        for ftIndex, isSupp in pairs(fillUnit.supportedFillTypes) do
+                            if isSupp then
+                                local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
+                                if ft and ft.name then
+                                    local name = string.upper(ft.name)
+                                    if name == "WHEAT" or name == "BARLEY" or name == "OAT" or name == "CANOLA"
+                                       or name == "SUNFLOWER" or name == "SOYBEAN" or name == "MAIZE" or name == "SORGHUM"
+                                       or name == "RYE" or name == "TRITICALE" or name == "BUCKWHEAT" or name == "MILLET" then
+                                        hasGrainFill = true
+                                        break
+                                    elseif name:find("POTATO") or name:find("BEET") or name:find("CARROT")
+                                       or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
+                                       or name:find("SPINACH") or name:find("GREENBEAN") or name:find("GREEN_BEAN")
+                                       or name:find("SUGARCANE") or name:find("CABBAGE") then
+                                        hasRootFill = true
+                                    elseif name == "COTTON" then
+                                        hasCottonFill = true
+                                    end
+                                end
                             end
                         end
                     end
+                    if hasGrainFill then break end
                 end
-                if isRoot or isCotton then break end
             end
-        end
 
-        if isRoot or self.spec_fruitPreparer ~= nil then
-            machineType = "root"
-        elseif isCotton then
-            machineType = "cotton"
-        elseif SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations) then
-            machineType = "forage"
-        elseif sc then
-            local hasStrawEffects = sc.strawEffects and #sc.strawEffects > 0
-            if hasStrawEffects then
+            if hasGrainFill then
                 machineType = "grain"
-            elseif sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil and not isRoot then
-                -- Only fallback to forage if not already verified as root/vegetable
+            elseif hasCottonFill and not hasRootFill then
+                machineType = "cotton"
+            elseif hasRootFill then
+                machineType = "root"
+            elseif sc and sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil then
                 machineType = "forage"
             else
                 machineType = "grain"

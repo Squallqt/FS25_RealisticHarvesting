@@ -95,6 +95,12 @@ RHM_CombineSettingsDatabase.cropAliases = {
     ["RICELONGGRAIN"]   = "RICE_LONG_GRAIN",
     ["RICE_LONGGRAIN"]  = "RICE_LONG_GRAIN",
     ["ONION_DIRTY"]     = "ONION",
+    ["BEANS"]           = "BEAN",
+    ["BEAN"]            = "BEANS",
+    ["FABABEAN"]        = "BEANS",
+    ["FIELD_BEAN"]      = "BEANS",
+    ["PEAS"]            = "PEA",
+    ["PEA"]             = "PEAS",
 }
 
 RHM_CombineSettingsDatabase.crops = {
@@ -121,6 +127,8 @@ RHM_CombineSettingsDatabase.crops = {
     ["PEA"]      = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.PEA) },
     ["LENTIL"]   = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.LENTIL) },
     ["CHICKPEA"] = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.CHICKPEA) },
+    ["BEANS"]    = { machineType = "grain", group = "legume", fillType = safeFillType(FillType and FillType.BEANS) },
+    ["BEAN"]     = { machineType = "grain", group = "legume", fillType = safeFillType(FillType and FillType.BEAN) },
 
     -- Додаткові зернові (Mod crops)
     ["RYE"]       = { machineType = "grain", group = "grain", fillType = nil },
@@ -206,6 +214,7 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
             CORN = 0.76, MAIZE = 0.76, SOYBEAN = 0.75, SORGHUM = 0.72,
             RICE = 0.58, RICE_LONG_GRAIN = 0.58,
             PEA = 0.75, LENTIL = 0.75, CHICKPEA = 0.75,
+            BEANS = 0.76, BEAN = 0.76, FABABEAN = 0.78,
             RYE = 0.72, SPELT = 0.53, TRITICALE = 0.70,
             MILLET = 0.65, BUCKWHEAT = 0.60,
             LINSEED = 0.45, FLAX = 0.45, MUSTARD = 0.45, POPPY = 0.40,
@@ -220,7 +229,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
         hasStraw = fruitTypeDesc.hasWindrow
     elseif cropName == "WHEAT" or cropName == "BARLEY" or cropName == "OAT" or cropName == "OATS"
         or cropName == "RYE" or cropName == "SPELT" or cropName == "TRITICALE"
-        or cropName == "RICE" or cropName == "RICE_LONG_GRAIN" then
+        or cropName == "RICE" or cropName == "RICE_LONG_GRAIN"
+        or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
         hasStraw = true
     end
 
@@ -336,7 +346,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
             fanOpt = 61
         elseif cropName == "CORN" or cropName == "MAIZE" then
             fanOpt = 67
-        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA"
+            or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
             fanOpt = 55
         end
 
@@ -369,7 +380,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
         elseif cropName == "SOYBEAN" then
             -- Brittle embryo: gentle rotor (39%), medium-wide concave (38%)
             rotorOpt = 39; concaveOpt = 38; upperOpt = 55; lowerOpt = 36; feederOpt = 36; moistLimit = 13
-        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA"
+            or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
             -- Large pulses: slow drum (30%), wide concave (45%)
             rotorOpt = 30; concaveOpt = 45; upperOpt = 55; lowerOpt = 35; feederOpt = 30; moistLimit = 14
         elseif cropName == "SORGHUM" then
@@ -965,8 +977,26 @@ function RHM_CombineSettingsDatabase:initMapCrops()
     self._mapCropsInitialized = true
     local validMapCrops = {}
 
+    -- Build lookup sets of fruit indices by category if available
+    local grainFruitIndices = {}
+    local forageFruitIndices = {}
+    if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeIndicesByCategoryNames then
+        local grainIndices = g_fruitTypeManager:getFruitTypeIndicesByCategoryNames("GRAINHEADER MAIZECUTTER")
+        if grainIndices then
+            for _, idx in ipairs(grainIndices) do
+                grainFruitIndices[idx] = true
+            end
+        end
+        local forageIndices = g_fruitTypeManager:getFruitTypeIndicesByCategoryNames("DIRECTCUTTER MOWER")
+        if forageIndices then
+            for _, idx in ipairs(forageIndices) do
+                forageFruitIndices[idx] = true
+            end
+        end
+    end
+
     -- Helper to classify machine type for unknown/mod crops
-    local function detectMachineType(nameUpper)
+    local function detectMachineType(nameUpper, fruit)
         if nameUpper == "COTTON" then
             return "cotton"
         elseif nameUpper:find("GRAPE") then
@@ -975,25 +1005,40 @@ function RHM_CombineSettingsDatabase:initMapCrops()
             return "olive"
         elseif nameUpper:find("WEED") or nameUpper:find("OILSEEDRADISH") or nameUpper:find("STONE") then
             return nil -- Not harvestable by standard combines
-        elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
-            or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
-            or nameUpper:find("SPINACH") or (nameUpper:find("BEAN") and not nameUpper:find("SOYBEAN"))
-            or nameUpper:find("SUGARCANE") then
-            return "root"
-        elseif nameUpper:find("GRASS") or nameUpper:find("ALFALFA") or nameUpper:find("CLOVER")
+        elseif nameUpper:find("GREENRYE") or nameUpper:find("GREEN_RYE") or nameUpper:find("SILAGEMAIZE")
+            or nameUpper:find("GRASS") or nameUpper:find("ALFALFA") or nameUpper:find("CLOVER")
             or nameUpper:find("SILAGE") or nameUpper:find("CHAFF") or nameUpper:find("FORAGE")
             or nameUpper:find("LUCERNE") or nameUpper:find("POPLAR") or nameUpper:find("MEADOW") then
             return "forage"
-        else
+        elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
+            or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
+            or nameUpper:find("SPINACH") or nameUpper:find("GREENBEAN") or nameUpper:find("GREEN_BEAN")
+            or nameUpper:find("STRINGBEAN") or nameUpper:find("CABBAGE") or nameUpper:find("SUGARCANE") then
+            return "root"
+        end
+
+        -- Check engine categories if available
+        if fruit and fruit.index then
+            if grainFruitIndices[fruit.index] then
+                return "grain"
+            elseif forageFruitIndices[fruit.index] and not grainFruitIndices[fruit.index] then
+                return "forage"
+            end
+        end
+
+        -- Straw producing crops are threshable grain crops
+        if fruit and fruit.hasWindrow then
             return "grain"
         end
+
+        return "grain"
     end
 
     for _, fruit in pairs(mapFruitTypes) do
         local rawName = fruit.name
         if rawName and rawName ~= "" then
             local nameUpper = rawName:upper()
-            local mType = detectMachineType(nameUpper)
+            local mType = detectMachineType(nameUpper, fruit)
 
             if mType ~= nil then
                 validMapCrops[nameUpper] = true
