@@ -19,6 +19,7 @@ RHMSettingsManager.XMLTAG = "realisticHarvestManager"
 RHMSettingsManager.SERVER_SETTINGS = {
     "difficultyMotor",
     "difficultyLoss",
+    "aiHelperTuning",
     "enableSpeedLimit",
     "enableCropLoss",
     "enableIndependentLaunch",
@@ -43,7 +44,6 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "hudDocked",
     "unitSystem",
     "showSpeedometer",
-    "enableOverloadSounds",
     "enableAlarmSound",
     "soundVolume"
 }
@@ -53,6 +53,7 @@ RHMSettingsManager.CLIENT_SETTINGS = {
 RHMSettingsManager.defaultConfig = {
     difficultyMotor = 2,
     difficultyLoss = 2,
+    aiHelperTuning = 1,
     showHUD = true,
     showYield = true,
     showSpeedometer = true,
@@ -61,7 +62,6 @@ RHMSettingsManager.defaultConfig = {
     enableIndependentLaunch = true,
     enableMoisture = true,
     showMoisture = true,
-    enableOverloadSounds = true,
     enableAlarmSound = true,
     soundVolume = 1.0,
     hudOffsetX = 0,
@@ -135,7 +135,7 @@ function RHMSettingsManager:loadServerSettings(settingsObject)
         if xml then
             for _, key in ipairs(self.SERVER_SETTINGS) do
                 local xmlKey = self.XMLTAG.."."..key
-                if key == "difficultyMotor" or key == "difficultyLoss" or key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
+                if key == "difficultyMotor" or key == "difficultyLoss" or key == "aiHelperTuning" or key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
                     settingsObject[key] = xml:getInt(xmlKey, self.defaultConfig[key])
                 else
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
@@ -243,7 +243,7 @@ function RHMSettingsManager:saveServerSettings(settingsObject)
     if xml then
         for _, key in ipairs(self.SERVER_SETTINGS) do
             local xmlKey = self.XMLTAG.."."..key
-            if key == "difficultyMotor" or key == "difficultyLoss" then
+            if key == "difficultyMotor" or key == "difficultyLoss" or key == "aiHelperTuning" then
                 xml:setInt(xmlKey, settingsObject[key])
             else
                 xml:setBool(xmlKey, settingsObject[key])

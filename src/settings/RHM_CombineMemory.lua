@@ -35,6 +35,12 @@ function RHM_CombineMemory.new(combine, machineType)
 
     self.currentYieldCalibration = 1.0
 
+    -- EN: Track calibration status per-combine and per-crop to protect player settings from AI helpers
+    -- UA: Відстеження статусу калібрування на рівні машини та культур для захисту налаштувань від наймитів
+    self.isCalibrated = false
+    self.calibratedCrops = {}
+    self.hasManualTuning = false
+
     -- EN: Default mode is always MANUAL for all combines. AUTO calibration is user-triggered on Tier 4.
     -- UA: Режим за замовчуванням завжди MANUAL для всіх комбайнів. AUTO калібрування запускається гравцем на Тір 4.
     self.mode = "MANUAL"
@@ -52,6 +58,11 @@ function RHM_CombineMemory:saveCurrentProfile(cropName)
     local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
     if pm then
         pm:saveProfile(cropName, self.currentSettings)
+        self.isCalibrated = true
+        if cropName and cropName ~= "" then
+            self.calibratedCrops = self.calibratedCrops or {}
+            self.calibratedCrops[cropName] = true
+        end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Profile saved globally: %s", cropName))
         return true
     end
@@ -111,6 +122,11 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
 
         self.mode = "AUTO"
         self.autoSwitchEnabled = true
+        self.isCalibrated = true
+        if cropName and cropName ~= "" then
+            self.calibratedCrops = self.calibratedCrops or {}
+            self.calibratedCrops[cropName] = true
+        end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Opti-Harvest AI auto settings applied for: %s", cropName))
     else
         -- EN: MANUAL / RESET mode: set all active params to neutral 50% position.
@@ -122,6 +138,11 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
 
         self.mode = "MANUAL"
         self.autoSwitchEnabled = false
+        self.isCalibrated = false
+        self.hasManualTuning = false
+        if cropName and cropName ~= "" and self.calibratedCrops then
+            self.calibratedCrops[cropName] = nil
+        end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Neutral settings (50%%) applied for: %s", cropName))
     end
 
@@ -146,6 +167,58 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     end
     if not cropName then
         return false
+    end
+
+    local aiTuningMode = 1 -- 1 = Keep Player Settings, 2 = Always Auto-Tune, 3 = Disabled
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        aiTuningMode = g_realisticHarvestManager.settings.aiHelperTuning or 1
+    end
+
+    if aiTuningMode == 3 then
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] AI Helper Tuning disabled in settings - skipping tuning for %s", tostring(cropName)))
+        return true
+    end
+
+    local isAlreadyCalibrated = false
+    if self.isCalibrated then
+        isAlreadyCalibrated = true
+    end
+    if cropName and self.calibratedCrops and self.calibratedCrops[cropName] then
+        isAlreadyCalibrated = true
+    end
+    if self.hasManualTuning and (not self.manualTunedCrop or self.manualTunedCrop == cropName) then
+        isAlreadyCalibrated = true
+    end
+    if self.combine and self.combine._rhmSettingsLoadedFromSavegame and (self.currentCrop == cropName or not cropName or self.currentCrop == "") then
+        isAlreadyCalibrated = true
+    end
+
+    -- EN: If player settings are prioritized and machine is already calibrated, keep settings untouched!
+    -- UA: Якщо налаштування гравця в пріоритеті і комбайн уже відкалібрований, зберігаємо налаштування без змін!
+    if aiTuningMode == 1 and isAlreadyCalibrated then
+        self.currentCrop = cropName
+        self.isCalibrated = true
+        self.calibratedCrops = self.calibratedCrops or {}
+        self.calibratedCrops[cropName] = true
+
+        if self.combine and self.combine.spec_rhm_Combine and self.combine.spec_rhm_Combine.loadCalculator then
+            self.combine.spec_rhm_Combine.loadCalculator.currentCrop = cropName
+        end
+
+        local cropTitle = cropName
+        if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
+            cropTitle = RHM_CombineSettingsDatabase:getCropTitle(cropName)
+        end
+
+        rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Kept player's calibrated settings for %s (no overwrite)", cropName))
+
+        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+            local retainedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_settings_retained")) and g_i18n:getText("rhm_ai_settings_retained") or "Manual Settings Retained"
+            local msg = string.format("RHM [AI]: %s (%s)", retainedText, tostring(cropTitle))
+            g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+        end
+
+        return true
     end
 
     local pkgLevel = 1
@@ -176,6 +249,10 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
             self.mode = "MANUAL"
             self.autoSwitchEnabled = false
         end
+
+        self.isCalibrated = true
+        self.calibratedCrops = self.calibratedCrops or {}
+        self.calibratedCrops[cropName] = true
 
         self.currentCrop = cropName
         if self.combine and self.combine.spec_rhm_Combine and self.combine.spec_rhm_Combine.loadCalculator then
@@ -315,6 +392,10 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         g_currentMission.hud:showInGameMessage("RHM", msg, -1)
     end
 
+    self.isCalibrated = true
+    self.calibratedCrops = self.calibratedCrops or {}
+    self.calibratedCrops[cropName] = true
+
     self.currentCrop = cropName
     if self.combine and self.combine.spec_rhm_Combine and self.combine.spec_rhm_Combine.loadCalculator then
         self.combine.spec_rhm_Combine.loadCalculator.currentCrop = cropName
@@ -355,6 +436,11 @@ function RHM_CombineMemory:requestAutoSettings()
     end
 
     if g_client and self.combine then
+        self.isCalibrated = true
+        if self.currentCrop and self.currentCrop ~= "" then
+            self.calibratedCrops = self.calibratedCrops or {}
+            self.calibratedCrops[self.currentCrop] = true
+        end
         local event = RHM_CombineSettingsEvent.new(self.combine, "AUTO_SET", 1)
         if not g_server then
             g_client:getServerConnection():sendEvent(event)
@@ -424,6 +510,11 @@ function RHM_CombineMemory:loadUserPreset()
             self.currentSettings.targetEngineLoad = profile.targetEngineLoad or 88
             self.mode = "MANUAL"
             self.autoSwitchEnabled = false
+            self.isCalibrated = true
+            if self.currentCrop and self.currentCrop ~= "" then
+                self.calibratedCrops = self.calibratedCrops or {}
+                self.calibratedCrops[self.currentCrop] = true
+            end
         end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Global profile applied for %s", self.currentCrop))
         return true
@@ -558,6 +649,11 @@ function RHM_CombineMemory:setParameter(paramName, value)
         self.mode = "MANUAL" -- EN: Any manual change overrides AUTO mode / UA: Будь-яка ручна зміна скасовує AUTO режим
         self.hasManualTuning = true
         self.manualTunedCrop = self.currentCrop
+        self.isCalibrated = true
+        if self.currentCrop and self.currentCrop ~= "" then
+            self.calibratedCrops = self.calibratedCrops or {}
+            self.calibratedCrops[self.currentCrop] = true
+        end
         return true
     end
     return false
@@ -682,6 +778,11 @@ function RHM_CombineMemory:switchCrop(newCropName)
     end
 
     self.currentCrop = newCropName
+    if self.calibratedCrops and self.calibratedCrops[newCropName] then
+        self.isCalibrated = true
+    else
+        self.isCalibrated = false
+    end
 
     -- EN: Switching crop always drops to MANUAL mode so Tier 4 requires explicit re-calibration.
     -- UA: Зміна культури завжди переводить у режим MANUAL, тому для Тір 4 потрібне явне повторне калібрування.

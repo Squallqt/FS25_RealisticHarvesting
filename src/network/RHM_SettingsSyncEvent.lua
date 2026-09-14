@@ -23,6 +23,7 @@ function RHM_SettingsSyncEvent.new(settings)
     -- UA: Копіюємо серверні налаштування, які потрібно синхронізувати (використовуються роздільні поля складності).
     self.difficultyMotor = settings.difficultyMotor or 2
     self.difficultyLoss = settings.difficultyLoss or 2
+    self.aiHelperTuning = settings.aiHelperTuning or 1
     self.enableSpeedLimit = settings.enableSpeedLimit
     self.enableCropLoss = settings.enableCropLoss
     self.enableIndependentLaunch = settings.enableIndependentLaunch
@@ -36,6 +37,7 @@ end
 function RHM_SettingsSyncEvent:writeStream(streamId, connection)
     streamWriteUInt8(streamId, self.difficultyMotor)
     streamWriteUInt8(streamId, self.difficultyLoss)
+    streamWriteUInt8(streamId, self.aiHelperTuning)
     streamWriteBool(streamId, self.enableSpeedLimit)
     streamWriteBool(streamId, self.enableCropLoss)
     streamWriteBool(streamId, self.enableIndependentLaunch)
@@ -47,6 +49,7 @@ end
 function RHM_SettingsSyncEvent:readStream(streamId, connection)
     self.difficultyMotor = streamReadUInt8(streamId)
     self.difficultyLoss = streamReadUInt8(streamId)
+    self.aiHelperTuning = streamReadUInt8(streamId)
     self.enableSpeedLimit = streamReadBool(streamId)
     self.enableCropLoss = streamReadBool(streamId)
     self.enableIndependentLaunch = streamReadBool(streamId)
@@ -78,6 +81,7 @@ function RHM_SettingsSyncEvent:run(connection)
             -- UA: Застосовуємо отримані розділені поля складності та прапорці функцій.
             settings.difficultyMotor = self.difficultyMotor
             settings.difficultyLoss = self.difficultyLoss
+            settings.aiHelperTuning = self.aiHelperTuning
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch
@@ -107,6 +111,7 @@ function RHM_SettingsSyncEvent:run(connection)
             -- UA: Застосовуємо роздільні поля складності, отримані від сервера.
             settings.difficultyMotor = self.difficultyMotor
             settings.difficultyLoss = self.difficultyLoss
+            settings.aiHelperTuning = self.aiHelperTuning
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch

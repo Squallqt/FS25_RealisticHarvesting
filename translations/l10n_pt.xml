@@ -1,0 +1,523 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="rhm_section_simulation" text="Realistic Harvesting - Simulação"/>
+        <text name="rhm_section_visuals" text="Realistic Harvesting - HUD e Visualização"/>
+        <text name="input_RHM_OPEN_MENU" text="Menu Colheitadeira"/>
+        <text name="input_RHM_TOGGLE_HUD" text="Alternar HUD de colheita"/>
+        <text name="rhm_hud_load" text="CARGA"/>
+        <text name="rhm_hud_loss" text="PERDA"/>
+        <text name="rhm_hud_moist" text="UMID"/>
+        <text name="rhm_ai_settings_retained" text="Configurações manuais mantidas"/>
+        <text name="rhm_ai_auto_tuned" text="Calibrado automaticamente"/>
+        <text name="rhm_difficulty" text="Dificuldade"/>
+        <text name="rhm_difficulty_motor" text="Potência do motor"/>
+        <text name="rhm_difficulty_motor_short" text="Motor"/>
+        <text name="rhm_difficulty_motor_long" text="Determina a reserva de potência extra do motor. Arcade = +100%, Normal = +35%, Realista = 0%."/>
+        <text name="rhm_difficulty_loss" text="Perda de colheita"/>
+        <text name="rhm_difficulty_loss_short" text="Perda"/>
+        <text name="rhm_difficulty_loss_long" text="Determina a gravidade da perda."/>
+        <text name="rhm_diff_1" text="Arcade"/>
+        <text name="rhm_difficulty_long" text="Arcade: Limites altos (+100%). Normal: Física balanceada (+35%). Realista: Simulação pura (0%)."/>
+        <text name="rhm_diff_2" text="Normal"/>
+        <text name="rhm_diff_3" text="Realista"/>
+        <text name="rhm_show_yield" text="Mostrar monitor de rendimento"/>
+        <text name="rhm_show_yield_short" text="Mostrar rendimento"/>
+        <text name="rhm_show_yield_long" text="Exibir rendimento em tempo real no HUD (t/ha ou bu/ac)"/>
+        <text name="rhm_yield_label" text="Rendimento"/>
+        <text name="rhm_hud_short" text="Mostrar HUD"/>
+        <text name="rhm_hud_long" text="Exibir informações de colheita"/>
+        <text name="rhm_speedlimit_short" text="Limitador de velocidade"/>
+        <text name="rhm_speedlimit_long"><![CDATA[
+            Limitar automaticamente a velocidade da colheitadeira com base na carga do motor
+        ]]></text>
+        <text name="rhm_croploss_short" text="Habilitar perda de colheita"/>
+        <text name="rhm_croploss_long" text="Calcular perda de colheita quando sobrecarregado"/>
+        <text name="rhm_show_speed_short" text="Mostrar velocidade"/>
+        <text name="rhm_show_speed_long" text="Mostrar velocidade atual e recomendada no HUD"/>
+        <text name="rhm_show_load_short" text="Mostrar carga do motor"/>
+        <text name="rhm_show_load_long" text="Mostrar porcentagem de carga do motor no HUD"/>
+        <text name="rhm_show_productivity_short" text="Mostrar produtividade"/>
+        <text name="rhm_show_productivity_long" text="Mostrar rendimento (t/h) no HUD"/>
+        <text name="rhm_show_croploss_short" text="Mostrar perda"/>
+        <text name="rhm_show_moisture_short" text="Mostrar umidade"/>
+        <text name="rhm_show_moisture_long" text="Mostrar porcentagem de umidade no HUD"/>
+        <text name="rhm_moisture_enable_short" text="Penalidade de umidade"/>
+        <text name="rhm_moisture_enable_long"><![CDATA[
+            Aplicar penalidade de carga com base na umidade (Requer Moisture System Mod)
+            ]]></text>
+        <text name="rhm_ui_title_main" text="Calibração Colheitadeira"/>
+        <text name="rhm_ui_page_settings" text="Configurações"/>
+        <text name="rhm_ui_page_profiles" text="Perfis"/>
+        <text name="rhm_ui_current_crop" text="Cultura Atual"/>
+        <text name="rhm_ui_load" text="Carga do Motor"/>
+        <text name="rhm_ui_loss" text="Perda"/>
+        <text name="rhm_ui_fan_speed" text="Velocidade Ventoinha"/>
+        <text name="rhm_ui_rotor_speed" text="Velocidade Rotor"/>
+        <text name="rhm_ui_upper_sieve" text="Peneira Superior"/>
+        <text name="rhm_ui_lower_sieve" text="Peneira Inferior"/>
+        <text name="rhm_ui_feeder_speed" text="Folga do côncavo"/>
+        <text name="rhm_ui_mode_auto" text="AUTO"/>
+        <text name="rhm_ui_mode_manual" text="MANUAL"/>
+        <text name="rhm_ui_btn_reset" text="RESTAURAR"/>
+        <text name="rhm_ui_profile_create" text="NOVO PERFIL"/>
+        <text name="rhm_ui_profile_save" text="SALVAR"/>
+        <text name="rhm_ui_profile_load" text="CARREGAR"/>
+        <text name="rhm_ui_profile_delete" text="EXCLUIR"/>
+        <text name="rhm_ui_profile_name_placeholder" text="Nome do perfil..."/>
+        <text name="rhm_hud_yield_label" text="REND"/>
+        <text name="rhm_hud_load_label" text="CARGA"/>
+        <text name="rhm_hud_loss_label" text="PERDA"/>
+        <text name="rhm_loss_level_low" text="BAIXO"/>
+        <text name="rhm_loss_level_med" text="MÉDIO"/>
+        <text name="rhm_loss_level_high" text="ALTO"/>
+        <text name="rhm_show_croploss_long" text="Mostrar porcentagem de perda no HUD"/>
+        <text name="rhm_show_load_warn_short" text="Mostrar Avisos de Carga"/>
+        <text name="rhm_show_load_warn_long" text="Exibe avisos intermitentes quando a colheitadeira estiver sobrecarregada (Alta/Crítica)"/>
+        <text name="rhm_overload_sounds_short" text="Áudio de Sobrecarga e Esforço"/>
+        <text name="rhm_overload_sounds_long" text="Toca alarme na cabine quando a máquina estiver sobrecarregada ou exceder os limites de perda."/>
+        <text name="rhm_section_audio" text="Realistic Harvesting - Áudio"/>
+        <text name="rhm_alarm_sounds_short" text="Alarme Sonoro de Sobrecarga"/>
+        <text name="rhm_alarm_sounds_long" text="Toca um alarme sonoro na cabine com carga crítica (98%+) ou perdas elevadas (&gt;4%)."/>
+        <text name="rhm_sound_volume_short" text="Volume dos Sons"/>
+        <text name="rhm_sound_volume_long" text="Ajusta o volume do alarme sonoro de sobrecarga na cabine."/>
+        <text name="rhm_target_load" text="Carga Alvo"/>
+        <text name="rhm_gui_title" text="Configurações da Colheitadeira"/>
+        <text name="rhm_gui_crop" text="Cultura:"/>
+        <text name="rhm_gui_none" text="NENHUMA"/>
+        <text name="rhm_gui_btn_auto" text="AUTO"/>
+        <text name="rhm_gui_btn_load_preset" text="Carregar Predefinição"/>
+        <text name="rhm_gui_btn_save" text="Salvar Perfil"/>
+        <text name="rhm_gui_btn_reset" text="Restaurar Padrão"/>
+        <text name="rhm_gui_engine_load" text="Carga do Motor: %.0f%%"/>
+        <text name="rhm_gui_loss" text="Perda: %.1f%%"/>
+        <text name="rhm_gui_preview_loss" text="Prévia de Perda: %.1f%%"/>
+        <text name="rhm_gui_close_hint" text="RShift+K para Fechar"/>
+        <text name="rhm_gui_no_combine" text="Nenhuma Colheitadeira Selecionada"/>
+        <text name="rhm_gui_not_init" text="Colheitadeira Não Inicializada"/>
+        <text name="rhm_ui_drum_speed" text="Velocidade do Tambor"/>
+        <text name="rhm_ui_roller_speed" text="Velocidade dos Rolos"/>
+        <text name="rhm_ui_picker_speed" text="Velocidade do Recolhedor"/>
+        <text name="rhm_ui_forage_fan" text="Velocidade do Soprador"/>
+        <text name="rhm_ui_forage_drum" text="Tambor Picador"/>
+        <text name="rhm_ui_forage_feeder" text="Rolos Alimentadores"/>
+        <text name="rhm_ui_root_roller" text="Rolos de Limpeza"/>
+        <text name="rhm_ui_root_feeder" text="Esteira Elevadora"/>
+        <text name="rhm_units_short" text="Unidades"/>
+        <text name="rhm_units_long" text="Escolha o sistema de medição (velocidade, massa, área)"/>
+        <text name="rhm_unit_metric" text="Métrico (km/h, t/h, ha)"/>
+        <text name="rhm_unit_imperial" text="Imperial (mph, ton/h, ac)"/>
+        <text name="rhm_unit_bushels" text="Imperial com bushels (mph, bu/h, ac)"/>
+        <text name="rhm_reset" text="Restaurar configurações RH"/>
+        <text name="rhm_loss_low" text="BAIXO"/>
+        <text name="rhm_loss_med" text="MÉDIO"/>
+        <text name="rhm_loss_high" text="ALTO"/>
+        <text name="rhm_warning_turn_on_combine" text="Ligue a debulhadora primeiro!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Ligue a plataforma!"/>
+        <text name="rhm_warn_overload_high" text="Colheitadeira sobrecarregada! Reduza a velocidade."/>
+        <text name="rhm_warn_overload_critical" text="COLHEITADEIRA CRITICAMENTE SOBRECARREGADA! Perdas graves!"/>
+        <text name="rhm_configuration_title" text="Eletrônica RHM"/>
+        <text name="rhm_package_standard" text="Standard"/>
+        <text name="rhm_package_sensor" text="Kit de Sensores"/>
+        <text name="rhm_package_yield" text="Monitor de Rendto. e Perdas"/>
+        <text name="rhm_package_opti" text="Opti-Harvest AI"/>
+        <text name="rhm_msg_req_level_4" text="Requer pacote Opti-Harvest AI (Nível 4)."/>
+        <text name="rhm_msg_auto_need_crop" text="Opti-Harvest AI: Colha alguns metros para iniciar a autocalibração!"/>
+        <text name="rhm_msg_auto_calibrated" text="Opti-Harvest AI: Calibração automática concluída com sucesso para %s!"/>
+        <text name="rhm_help_title"><![CDATA[
+            Guia de Colheita Realista
+        ]]></text>
+        <text name="rhm_help_overview_title"><![CDATA[
+            1. Visão geral da física de processamento
+        ]]></text>
+        <text name="rhm_help_category"><![CDATA[
+            Realistic Harvesting
+        ]]></text>
+        <text name="rhm_help_overview_1"><![CDATA[
+            O mod Realistic Harvesting apresenta um modelo de física complexo. 
+O desempenho da sua colheitadeira depende agora do volume real da cultura (fluxo de massa).
+Cada tipo de cultura tem a sua própria resistência e peso.
+        ]]></text>
+        <text name="rhm_help_overview_2"><![CDATA[A melhor eficiência ocorre quando a carga do motor permanece em torno de 95-100%.
+
+Se você andar rápido demais, o motor sobrecarrega: as perdas aumentam drasticamente e a máquina trabalha no limite.
+Se andar devagar demais, desperdiça combustível e tempo.
+
+Fluxo de trabalho prático:
+1) Comece a colheita com uma largura de corte proporcional à densidade da lavoura.
+2) Observe o HUD: a velocidade recomendada é calculada dinamicamente com base na carga alvo.
+3) Se as perdas ficarem VERMELHAS: diminua a velocidade ou estreite a faixa de corte.
+4) Se a carga estiver VERDE mas as perdas VERMELHAS: abra o menu de calibração (Shift Direito + K) e ajuste o ventilador e as peneiras para esta cultura.]]></text>
+        <text name="rhm_help_calibration_title"><![CDATA[
+            3. Dominar a calibração
+        ]]></text>
+        <text name="rhm_help_calibration_1"><![CDATA[
+            Acesse o Menu de Calibração (RShift + K) para ajustar sua máquina. o ROTOR separa o grão da palha.
+
+A VENTOINHA sopra a palha miúda.
+
+As PENEIRAS filtram impurezas.
+
+Encontrar o ponto ideal entre uma amostra limpa e perda zero é a chave.
+        ]]></text>
+        <text name="rhm_help_calibration_2"><![CDATA[
+            Cada cultura tem as suas faixas ideais.
+
+Use os indicadores coloridos (requer Kit de Sensores) para guiar os seus ajustes.
+
+Um relatório de colheita detalhado será gerado após o campo, mostrando como sua calibração afetou a renda final.
+        ]]></text>
+        <text name="rhm_help_upgrades_title"><![CDATA[
+            7. Melhorias Profissionais
+        ]]></text>
+        <text name="rhm_help_upgrades_1"><![CDATA[
+            Eletrônica padrão de fábrica. Fornece dados essenciais do HUD. Opera estritamente no modo MANUAL com tolerâncias de fábrica (~50% ± 8%).
+        ]]></text>
+        <text name="rhm_help_upgrades_2"><![CDATA[
+            Adiciona sensores de perda profissionais. Libera indicadores coloridos em tempo real (Verde/Amarelo/Vermelho).
+        ]]></text>
+        <text name="rhm_help_upgrades_3"><![CDATA[
+            Telemetria avançada. Libera métricas de impacto e eficiência ao vivo no menu de calibração (RShift + K).
+        ]]></text>
+        <text name="rhm_help_upgrades_4"><![CDATA[
+            A melhoria definitiva. Libera o Opti-Harvest AI: colha alguns metros no campo e pressione AUTO no menu de calibração (RShift + K) para uma calibração instantânea com ajuste dinâmico contínuo.
+        ]]></text>
+        <text name="rhm_help_hud_2_1"><![CDATA[
+            Clique direito para ativar o cursor e arrastar o HUD.
+        ]]></text>
+        <text name="rhm_help_hud_2_2"><![CDATA[
+            Cada métrica pode ser mostrada/ocultada em ESC > Configurações.
+        ]]></text>
+        <text name="rhm_help_hud_2_3"><![CDATA[
+            Você pode alternar entre os sistemas de medição:
+- Métrico (t/ha)
+- Imperial (bu/ac)
+- Alqueires
+        ]]></text>
+        <text name="rhm_help_hud_2_4"><![CDATA[
+            A posição é salva por jogador.
+        ]]></text>
+        <text name="rhm_help_hud_title"><![CDATA[
+            2. HUD — Exibição na tela
+        ]]></text>
+        <text name="rhm_help_hud_1_1"><![CDATA[
+            O painel HUD aparece automaticamente.
+        ]]></text>
+        <text name="rhm_help_hud_1_2"><![CDATA[
+            Exibe 5 métricas ao vivo:
+- Carga do motor (%)
+- Produtividade (t/h)
+- Rendimento (t/ha)
+- Velocidade atual e recomendada, Perdas (BAIXO/MÉDIO/ALTO).
+        ]]></text>
+        <text name="rhm_help_hud_1"><![CDATA[
+            O painel HUD aparece automaticamente. Exibe 5 métricas :
+- Carga do motor (%)
+- Produtividade (t/h)
+- Rendimento (t/ha)
+- Velocidade
+- Perdas (BAIXO/MÉDIO/ALTO)
+
+Verde = OK
+Amarelo = atenção
+Vermelho = perdas.
+        ]]></text>
+        <text name="rhm_help_hud_1_3"><![CDATA[
+            Verde = OK,
+Amarelo = atenção,
+Vermelho = perdas.
+        ]]></text>
+        <text name="rhm_help_hud_2"><![CDATA[
+            Clique direito para ativar o cursor e arrastar o HUD.
+
+Cada métrica pode ser mostrada/ocultada em ESC > Configurações.
+
+Escolha seu sistema:
+- Métrico (t/ha)
+- Imperial (bu/ac)
+- Alqueires (Bushels)
+
+A posição é salva por jogador.
+        ]]></text>
+        <text name="rhm_help_special_title"><![CDATA[
+            4. Máquinas especiais
+        ]]></text>
+        <text name="rhm_help_special_1"><![CDATA[
+            As COLHEITADEIRAS DE FORRAGEM têm 3 parâmetros:
+- Acelerador (Blower Speed)
+- Tambor triturador (Chopping Drum)
+- e Rolos de alimentação (Feed Rolls).
+
+Processam grama, feno, alfafa, trevo e silagem de milho.
+
+A silagem exige velocidade máxima.
+
+A grama é mais delicada — reduza a velocidade do tambor.
+        ]]></text>
+        <text name="rhm_help_special_2"><![CDATA[
+            As COLHEITADEIRAS DE RAÍZES:
+- Ventilador (Fan Speed)
+- Rolos de limpeza (Cleaning Rollers)
+- Correia elevadora (Elevator Web).
+
+Cada raiz tem valores ÚNICOS!
+
+Batatas precisam de rolos suaves.
+
+Cebolas precisam de forte fluxo de ar.
+
+Espinafre precisa de ar mínimo.
+
+As COLHEITADEIRAS DE ALGODÃO têm Ventilador (Fan Speed)
+- Velocidade do colhedor (Picker Speed)
+- e Alimentador (Feeder Speed) — o algodão é extremamente leve.
+        ]]></text>
+        <text name="rhm_help_loss_title"><![CDATA[
+            5. Perdas de colheita — Causas e prevenção
+        ]]></text>
+        <text name="rhm_help_loss_sub1"><![CDATA[Fonte 1: Sobrecarga e velocidade]]></text>
+        <text name="rhm_help_loss_1"><![CDATA[
+            As perdas vêm de DUAS fontes independentes.
+
+FONTE 1 — SOBRECARGA (Velocidade):
+- Acima de 95% de carga, as perdas começam.
+
+Quanto mais rápido, mais perde.
+
+Solução:
+- reduza velocidade.
+
+FONTE 2 — MÁ CALIBRAÇÃO:
+- Ventilador, rotor ou peneiras incorretos adicionam penalidade.
+
+Use a Prévia de Perdas no menu (RShift+K).
+        ]]></text>
+        <text name="rhm_help_loss_sub2"><![CDATA[Fonte 2: Ajustes de calibração incorretos]]></text>
+        <text name="rhm_help_loss_2"><![CDATA[
+            A física da calibração se divide em duas mecânicas.
+
+Os componentes de EFICIÊNCIA (Rotor, Alimentador) afetam a velocidade.
+
+Ajustes perfeitos dão +5% de Bônus de Velocidade.
+
+Os componentes de LIMPEZA (Ventilador, Peneiras) afetam a separação.
+
+Ajustes perfeitos garantem 0% de Perda Adicional.
+
+BÔNUS:
+- A perfeição dá um Escudo Anti-Sobrecarga.
+        ]]></text>
+        <text name="rhm_help_difficulty_title"><![CDATA[
+            6. Configurações de dificuldade
+        ]]></text>
+        <text name="rhm_help_difficulty_1"><![CDATA[
+            ESC > Configurações > Realistic Harvesting.
+
+POTÊNCIA DO MOTOR controla a capacidade:
+- Arcade (200%)
+- Normal (120%)
+- Realista (100%).
+
+SEVERIDADE DAS PERDAS controla a intensidade:
+- Arcade (50%)
+- Normal (padrão)
+- Realista (200%).
+        ]]></text>
+        <text name="rhm_help_difficulty_2"><![CDATA[
+            Opções adicionais:
+- Limitador de Velocidade (ON/OFF)
+- Sistema de Perdas (ON/OFF)
+- Início Independente.
+
+No MULTIJOGADOR, as configurações do servidor são compartilhadas (apenas admin).
+
+As configurações do cliente (HUD, unidades) são pessoais.
+
+Tudo é salvo.
+        ]]></text>
+        <text name="rhm_help_overview_sub1"><![CDATA[
+            Mecânica central
+        ]]></text>
+        <text name="rhm_help_overview_sub2"><![CDATA[
+            Eficiência e Carga
+        ]]></text>
+        <text name="rhm_help_hud_sub1"><![CDATA[
+            Métricas ao Vivo
+        ]]></text>
+        <text name="rhm_help_hud_sub2"><![CDATA[
+            Personalização
+        ]]></text>
+        <text name="rhm_help_calibration_sub1"><![CDATA[
+            Componentes Internos
+        ]]></text>
+        <text name="rhm_help_calibration_sub2"><![CDATA[
+            Relatório de Colheita
+        ]]></text>
+        <text name="rhm_help_special_sub1"><![CDATA[
+            Colheitadeiras de Forragem
+        ]]></text>
+        <text name="rhm_help_special_sub2"><![CDATA[
+            Raízes &amp; Algodão
+        ]]></text>
+        <text name="rhm_help_croploss_sub1"><![CDATA[
+            Fontes de Perda
+        ]]></text>
+        <text name="rhm_help_croploss_sub2"><![CDATA[
+            Penalidades de Calibração
+        ]]></text>
+        <text name="rhm_help_difficulty_sub1"><![CDATA[
+            Dificuldade do Jogo
+        ]]></text>
+        <text name="rhm_help_difficulty_sub2"><![CDATA[
+            Configurações Adicionais
+        ]]></text>
+        <text name="rhm_help_upgrades_sub1"><![CDATA[
+            Nível 1: Equipamento Padrão
+        ]]></text>
+        <text name="rhm_help_upgrades_sub2"><![CDATA[
+            Nível 2: Kit de Sensores
+        ]]></text>
+        <text name="rhm_help_upgrades_sub3"><![CDATA[
+            Nível 3: Monitor de Rendimento
+        ]]></text>
+        <text name="rhm_help_upgrades_sub4"><![CDATA[
+            IA Opti-Harvest
+        ]]></text>
+        <text name="rhm_ui_speed_eff"><![CDATA[Ef. Velocidade]]></text>
+        <text name="rhm_help_moisture_title" text="8. Sistema de Umidade"/>
+        <text name="rhm_help_moisture_sub1" text="Integração"/>
+        <text name="rhm_help_moisture_1" text="Realistic Harvesting suporta o mod Moisture System. A umidade afeta dinamicamente a carga do motor e a velocidade."/>
+        <text name="rhm_help_moisture_sub2" text="Colheita Úmida"/>
+        <text name="rhm_help_moisture_2" text="A colheita de culturas úmidas aumenta a pressão na colheitadeira. Os níveis de umidade são visíveis no HUD."/>
+        <text name="rhm_help_calibration_main_sub"><![CDATA[Conceito Geral]]></text>
+        <text name="rhm_help_calibration_main_text"><![CDATA[O desempenho da colheitadeira depende diretamente da calibração correta.
+Abra o terminal de calibração a qualquer momento com (Shift Direito + K).
+
+Cada cultura possui parâmetros ideais. O jogo calcula o fluxo de massa e o converte em carga do motor. Uma calibração inadequada gera perdas severas de grãos.
+
+Modos de operação:
+- Níveis 1–3: Estritamente MANUAL. Ajuste os controles deslizantes e salve perfis pelo botão SALVAR.
+- Nível 4 (Opti-Harvest AI): Desbloqueia o botão AUTO. Colha alguns metros para registrar telemetria e pressione AUTO para calibração instantânea por IA.
+
+Seções de componentes:
+- Separação (Rotor / Alimentador): controla a intensidade da trilha e a vazão.
+- Limpeza (Ventilador / Peneiras): garante a limpeza dos grãos e previne perdas.]]></text>
+        <text name="rhm_help_calibration_rotor_sub"><![CDATA[Colheitadeira]]></text>
+        <text name="rhm_help_calibration_rotor_text"><![CDATA[Ajustes ideais (Trigo):
+RPM do Rotor: ~710 RPM.
+Alimentador: ~550 RPM.
+Vel. do Ventilador: ~810 RPM.
+Peneira superior: ~14 mm.
+Peneira inferior: ~8 mm.
+Nota: Milho precisa de ~360 RPM Rotor e ~18 mm Peneira sup.]]></text>
+        <text name="rhm_help_calibration_rotor_long"><![CDATA[Controla a intensidade de debulha. Velocidades ideais:
+Trigo: ~700 RPM.
+Cevada: ~770 RPM.
+Aveia: ~720 RPM.
+Arroz: ~550 RPM.
+Canola: ~500 RPM.
+Soja: ~550 RPM.
+Milho: ~360 RPM.
+Girassol: ~320 RPM.
+Ervilhas: ~340 RPM.
+Milho e legumes precisam de RPM BAIXA.]]></text>
+        <text name="rhm_help_calibration_fan_sub"><![CDATA[Ventilador de Seleção]]></text>
+        <text name="rhm_help_calibration_fan_text"><![CDATA[O ventilador separa a palha leve do grão.]]></text>
+        <text name="rhm_help_calibration_fan_long"><![CDATA[Sopra a palha. Velocidades ideais do ventilador:
+Milho: ~900 RPM.
+Soja/Ervilha: ~850-875 RPM.
+Trigo/Cevada: ~800 RPM.
+Arroz: ~775 RPM.
+Aveia/Girassol: ~700 RPM.
+Canola: ~650 RPM.
+Sementes leves voam em alta velocidade — manter BAIXO.]]></text>
+        <text name="rhm_help_calibration_sieve_sub"><![CDATA[Espaço das Peneiras]]></text>
+        <text name="rhm_help_calibration_sieve_text"><![CDATA[Peneiras muito fechadas causam perdas enormes.]]></text>
+        <text name="rhm_help_calibration_sieve_long"><![CDATA[Folga das peneiras sup. / inf. por cultura:
+Trigo / Cevada / Arroz: 14 mm / 8 mm.
+Aveia: 10 mm / 6 mm.
+Canola: 12 mm / 6 mm.
+Soja / Ervilha: 15 mm / 10 mm.
+Milho / Girassol: 18 mm / 11-12 mm.
+Folga incorreta entope as peneiras — até 25% de perda.]]></text>
+        <text name="rhm_help_cropsettings_title" text="Guia de configurações de culturas"/>
+        <text name="rhm_help_cropsettings_grain_sub" text="Colheitadeiras de grãos"/>
+        <text name="rhm_help_cropsettings_grain_text"><![CDATA[Faixas ideais para colheitadeiras de grãos:
+• Cereais (Trigo, Cevada, Arroz): Rotor 600-850 RPM, Ventilador 700-850 RPM, Peneiras 14mm / 8mm.
+• Oleaginosas (Canola, Girassol): Rotor 300-500 RPM, Ventilador 600-700 RPM, Peneiras 12mm / 6mm. (Cuidado: sementes leves sopram para fora)
+• Milho: Rotor 300-400 RPM, Ventilador 850-950 RPM, Peneiras 18mm / 12mm. (Rotor lento, fluxo de ar alto)
+• Leguminosas: Rotor 300-500 RPM, Ventilador 800-950 RPM, Peneiras 15mm / 10mm. (Trilha delicada)]]></text>
+        <text name="rhm_help_cropsettings_forage_sub" text="Forrageiras"/>
+        <text name="rhm_help_cropsettings_forage_text"><![CDATA[• Silagem de milho: Tambor 1100-1160 RPM, Ventilador 1150-1290 RPM, Alimentador 400-480 RPM.
+• Grama / Feno: Tambor 700-900 RPM, Ventilador 800-1000 RPM, Alimentador 300-450 RPM.
+* Dica: Se a perda estiver VERMELHA com carga estável, o fluxo de ar está expulsando a cultura. Reduza o ventilador.]]></text>
+        <text name="rhm_help_cropsettings_root_sub" text="Colhedoras de raízes e vegetais"/>
+        <text name="rhm_help_cropsettings_root_text"><![CDATA[• Pesados (Batata, Beterraba): Rolos ~400 RPM, Ventilador ~400-500 RPM, Elevador ~800 RPM.
+• Leves (Cenoura, Pastinaca): Rolos ~250 RPM, Ventilador ~300 RPM, Elevador ~900 RPM.
+• Cebola: Rolos ~300 RPM, Ventilador ~900-1100 RPM, Elevador ~600 RPM.
+• Espinafre: Rolos ~150 RPM, Ventilador ~100-200 RPM, Elevador ~700 RPM.
+* Dica: Os rolos limpam sem machucar. O ventilador remove ramas e cascas. O elevador controla a vazão de entrada.]]></text>
+        <text name="rhm_help_calibration_forage_intro_text"><![CDATA[As forrageiras são muito sensíveis à sobrecarga de alimentação.
+- A silagem densa de milho exige alta rotação do tambor e forte fluxo de ar.
+- O capim e o feno são delicados: mantenha a alimentação suave para não forçar o motor.
+
+Se a carga do motor ficar VERMELHA no HUD, reduza a velocidade imediatamente.
+
+O que cada controle faz:
+- Tambor picador: intensidade de corte (maior = mais potência exigida).
+- Rolos alimentadores: vazão de massa (principal causador de carga no motor).
+- Acelerador de descarga: fluxo de ar para ejeção (alto demais = perdas).]]></text>
+        <text name="rhm_help_calibration_root_intro_text"><![CDATA[As culturas de raízes exigem cuidados especiais na separação de terra.
+- Batatas: Machucam facilmente! Mantenha os rolos de limpeza em baixa rotação.
+- Cebolas: Precisam de fluxo de ar máximo para retirar as cascas secas.
+- Espinafre: Folhas delicadas, ar no mínimo para não serem sopradas fora.
+
+Se as perdas estiverem VERMELHAS com carga normal, ajuste os ventiladores.
+
+O que cada controle faz:
+- Rolos de limpeza: Limpam terra e torrões sem danificar o produto.
+- Esteira elevatória: Controla a velocidade de subida para o depósito.
+- Ventilador de triagem: Separa ramas e palhas pelo fluxo de ar.]]></text>
+        <text name="rhm_help_hud_sub3" text="Indicadores HUD"/>
+        <text name="rhm_help_hud_3_load" text="Carga do Motor (esforço dos componentes de colheita)"/>
+        <text name="rhm_help_hud_3_yield" text="Rendimento (densidade de cultura na área atual)"/>
+        <text name="rhm_help_hud_3_productivity" text="Produtividade (volume de colheita processado por hora)"/>
+        <text name="rhm_help_hud_3_moisture" text="Umidade (ativo apenas com o mod Moisture System)"/>
+        <text name="rhm_help_hud_3_loss" text="Perdas de Colheita (quantidade de grãos jogados fora)"/>
+        <text name="rhm_help_hud_3_speed" text="Velocidade Atual e Recomendada"/>
+        <text name="rhm_ui_section_separation" text="SEPARAÇÃO"/>
+        <text name="rhm_ui_section_cleaning" text="LIMPEZA"/>
+        <text name="rhm_ui_section_discharge" text="DESCARGA"/>
+        <text name="rhm_ui_section_performance" text="DESEMPENHO"/>
+        <text name="rhm_ui_tier1_manual" text="NÍVEL 1 - MANUAL"/>
+        <text name="rhm_ui_tier2_sensors" text="NÍVEL 2 - SENSORES"/>
+        <text name="rhm_ui_tier3_monitor" text="NÍVEL 3 - MONITOR"/>
+        <text name="rhm_ui_tier4_opti" text="NÍVEL 4 - IA OPTI"/>
+        <text name="rhm_ui_card_engine_load" text="CARGA DO MOTOR"/>
+        <text name="rhm_ui_card_efficiency" text="EFICIÊNCIA"/>
+        <text name="rhm_ui_card_predicted_loss" text="PERDA ESTIMADA"/>
+        <text name="rhm_ui_btn_ai_auto" text="AUTO-CALIB IA"/>
+        <text name="rhm_ui_btn_auto_locked" text="AUTO (BLOQUEADO)"/>
+        <text name="rhm_ui_btn_load_preset" text="CARREGAR PERFIL"/>
+        <text name="rhm_ui_btn_save_profile" text="SALVAR PERFIL"/>
+        <text name="rhm_ui_btn_load_locked" text="CARREGAR (BLOQ.)"/>
+        <text name="rhm_ui_btn_save_locked" text="SALVAR (BLOQ.)"/>
+        <text name="rhm_ui_btn_reset_defaults" text="RESTAURAR PADRÕES DE FÁBRICA"/>
+        <text name="rhm_ui_status_optimal" text="IDEAL"/>
+        <text name="rhm_ui_status_low" text="BAIXO"/>
+        <text name="rhm_ui_status_high" text="ALTO"/>
+        <text name="rhm_msg_req_tier4" text="Requer IA Opti-Harvest (Nível 4)"/>
+        <text name="rhm_msg_req_tier3" text="Os perfis requerem Monitor de Telemetria (Nível 3)"/>
+        <text name="rhm_msg_profile_saved" text="Perfil salvo: %s"/>
+        <text name="rhm_msg_profile_loaded" text="Perfil carregado: %s"/>
+        <text name="rhm_msg_profile_not_found" text="Nenhum perfil salvo encontrado para esta cultura"/>
+        <text name="rhm_ui_combine_not_init" text="Colheitadeira não inicializada"/>
+        <text name="rhm_unit_t_per_hour" text="t/h"/>
+        <text name="rhm_unit_ha_per_hour" text="ha/h"/>
+        <text name="rhm_setting_ai_tuning" text="Ajuste por ajudantes IA"/>
+        <text name="rhm_setting_ai_tuning_long" text="Controla como trabalhadores e Courseplay tratam a calibração da colheitadeira. 'Manter minhas configurações' preserva estritamente seus ajustes e perfis carregados. 'Sempre autoajustar' recalcula pelo nível eletrônico. 'Desactivado' impede alterações pelos ajudantes."/>
+        <text name="rhm_setting_ai_tuning_keep" text="Manter configurações"/>
+        <text name="rhm_setting_ai_tuning_auto" text="Sempre autoajustar"/>
+        <text name="rhm_setting_ai_tuning_disabled" text="Desactivado"/>
+    </texts>
+</l10n>

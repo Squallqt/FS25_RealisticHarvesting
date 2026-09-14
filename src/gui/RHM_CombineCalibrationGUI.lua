@@ -693,7 +693,7 @@ function RHMCombineCalibrationGUI:draw()
             setTextAlignment(RenderText.ALIGN_LEFT)
             setTextColor(unpack(ui.colors.text))
             local sLabel = g_i18n:hasText(section.label) and g_i18n:getText(section.label) or section.key
-            renderText(x + ui.margin + 0.006, cy + 0.006, ui.sectionSize, string.upper(sLabel))
+            renderText(x + ui.margin + 0.006, cy + 0.006, ui.sectionSize, sLabel)
 
             for _, p in ipairs(activeParams) do
                 if PARAM_SECTION_MAP[p] == section.key and not drawnParams[p] then
@@ -717,7 +717,7 @@ function RHMCombineCalibrationGUI:draw()
     setTextAlignment(RenderText.ALIGN_LEFT)
     setTextColor(unpack(ui.colors.text))
     local perfLabel = g_i18n:hasText("rhm_ui_section_performance") and g_i18n:getText("rhm_ui_section_performance") or "PERFORMANCE"
-    renderText(x + ui.margin + 0.006, cy + 0.006, ui.sectionSize, string.upper(perfLabel))
+    renderText(x + ui.margin + 0.006, cy + 0.006, ui.sectionSize, perfLabel)
 
     for _, p in ipairs(activeParams) do
         if not drawnParams[p] then

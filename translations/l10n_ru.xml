@@ -1,0 +1,530 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="rhm_section_simulation" text="Realistic Harvesting - Симуляция"/>
+        <text name="rhm_section_visuals" text="Realistic Harvesting - HUD и Отображение"/>
+        <text name="input_RHM_OPEN_MENU" text="Меню Настроек Жатвы"/>
+        <text name="input_RHM_TOGGLE_HUD" text="Переключить HUD жатвы"/>
+        <text name="rhm_hud_load" text="НАГРУЗ"/>
+        <text name="rhm_hud_loss" text="ПОТЕРИ"/>
+        <text name="rhm_hud_moist" text="ВЛАГА"/>
+        <text name="rhm_ai_settings_retained" text="Ручные настройки сохранены"/>
+        <text name="rhm_ai_auto_tuned" text="Авто-калибровано"/>
+        <text name="rhm_difficulty" text="Сложность"/>
+        <text name="rhm_difficulty_motor" text="Мощность двигателя"/>
+        <text name="rhm_difficulty_motor_short" text="Мотор"/>
+        <text name="rhm_difficulty_motor_long" text="Определяет дополнительную мощность двигателя. Аркада = +100%, Норма = +35%, Реализм = 0%."/>
+        <text name="rhm_difficulty_loss" text="Потеря урожая"/>
+        <text name="rhm_difficulty_loss_short" text="Потеря"/>
+        <text name="rhm_difficulty_loss_long" text="Определяет строгость потерь."/>
+        <text name="rhm_diff_1" text="Аркада"/>
+        <text name="rhm_difficulty_long" text="Аркада: высокие лимиты (+100%). Норма: сбалансированная физика (+35%). Реализм: чистая симуляция (0%)."/>
+        <text name="rhm_diff_2" text="Обычная"/>
+        <text name="rhm_diff_3" text="Реалистичная"/>
+        <text name="rhm_show_yield" text="Монитор урожайности"/>
+        <text name="rhm_show_yield_short" text="Показывать урожайность"/>
+        <text name="rhm_show_yield_long"><![CDATA[
+            Отображать урожайность в реальном времени в HUD (т/га або бу/акр)
+        ]]></text>
+        <text name="rhm_yield_label" text="Урожайность"/>
+        <text name="rhm_hud_short" text="Показывать HUD"/>
+        <text name="rhm_hud_long" text="Отображать информацию о сборе"/>
+        <text name="rhm_speedlimit_short" text="Ограничитель скорости"/>
+        <text name="rhm_speedlimit_long"><![CDATA[
+            Автоматически ограничивать скорость комбайна в зависимости от нагрузки
+        ]]></text>
+        <text name="rhm_croploss_short" text="Включить потери"/>
+        <text name="rhm_croploss_long" text="Рассчитывать потери урожая при перегрузке комбайна"/>
+        <text name="rhm_show_speed_short" text="Показывать скорость"/>
+        <text name="rhm_show_speed_long" text="Показывать текущую и рекомендуемую скорость в HUD"/>
+        <text name="rhm_show_load_short" text="Показывать нагрузку"/>
+        <text name="rhm_show_load_long" text="Отображать процент нагрузки двигателя в HUD"/>
+        <text name="rhm_show_productivity_short" text="Показывать производительность"/>
+        <text name="rhm_show_productivity_long" text="Отображать пропускную способность (т/ч) в HUD"/>
+        <text name="rhm_show_croploss_short" text="Показывать потери"/>
+        <text name="rhm_show_moisture_short" text="Показывать влажность"/>
+        <text name="rhm_show_moisture_long" text="Отображать процент влажности культуры в HUD"/>
+        <text name="rhm_moisture_enable_short" text="Штраф влажности"/>
+        <text name="rhm_moisture_enable_long"><![CDATA[
+            Применять штраф нагрузки в зависимости от влажности (Требует Moisture System)
+            ]]></text>
+        <text name="rhm_ui_title_main" text="Калибровка Комбайна"/>
+        <text name="rhm_ui_page_settings" text="Настройки"/>
+        <text name="rhm_ui_page_profiles" text="Профили"/>
+        <text name="rhm_ui_current_crop" text="Текущая Культура"/>
+        <text name="rhm_ui_load" text="Нагрузка"/>
+        <text name="rhm_ui_loss" text="Потери"/>
+        <text name="rhm_ui_fan_speed" text="Обороты Вентилятора"/>
+        <text name="rhm_ui_rotor_speed" text="Обороты Ротора"/>
+        <text name="rhm_ui_upper_sieve" text="Верхнее Решето"/>
+        <text name="rhm_ui_lower_sieve" text="Нижнее Решето"/>
+        <text name="rhm_ui_feeder_speed" text="Зазор подбарабанья"/>
+        <text name="rhm_ui_mode_auto" text="АВТО"/>
+        <text name="rhm_ui_mode_manual" text="РУЧНОЙ"/>
+        <text name="rhm_ui_btn_reset" text="СБРОС"/>
+        <text name="rhm_ui_profile_create" text="НОВЫЙ ПРОФИЛЬ"/>
+        <text name="rhm_ui_profile_save" text="СОХРАНИТЬ"/>
+        <text name="rhm_ui_profile_load" text="ЗАГРУЗИТЬ"/>
+        <text name="rhm_ui_profile_delete" text="УДАЛИТЬ"/>
+        <text name="rhm_ui_profile_name_placeholder" text="Имя профиля..."/>
+        <text name="rhm_hud_yield_label" text="УРОЖАЙ"/>
+        <text name="rhm_hud_load_label" text="НАГР"/>
+        <text name="rhm_hud_loss_label" text="ПОТЕРИ"/>
+        <text name="rhm_loss_level_low" text="МАЛЫЕ"/>
+        <text name="rhm_loss_level_med" text="СРЕД"/>
+        <text name="rhm_loss_level_high" text="БОЛЬШ"/>
+        <text name="rhm_show_croploss_long" text="Отображать процент потерь урожая в HUD"/>
+        <text name="rhm_show_load_warn_short" text="Показывать предупреждения о нагрузке"/>
+        <text name="rhm_show_load_warn_long"><![CDATA[
+            Отображать мигающие предупреждения при перегрузке (Высокая/Критическая)
+        ]]></text>
+        <text name="rhm_overload_sounds_short" text="Звуки перегрузки и стресса"/>
+        <text name="rhm_overload_sounds_long"><![CDATA[Воспроизводить реалистичный сигнал тревоги в кабине и гул молотилки при перегрузке или чрезмерных потерях урожая.]]></text>
+        <text name="rhm_section_audio" text="Realistic Harvesting - Звук"/>
+        <text name="rhm_alarm_sounds_short" text="Звуковой сигнал тревоги"/>
+        <text name="rhm_alarm_sounds_long" text="Включает звуковой электронный зуммер в кабине при критической нагрузке (98%+) или потерях (&gt;4%)."/>
+        <text name="rhm_sound_volume_short" text="Громкость звуков"/>
+        <text name="rhm_sound_volume_long" text="Регулирует громкость сигнала тревоги (зуммера) в кабине при перегрузке."/>
+        <text name="rhm_target_load" text="Целевая Нагрузка"/>
+        <text name="rhm_gui_title" text="Настройки Комбайна"/>
+        <text name="rhm_gui_crop" text="Культура:"/>
+        <text name="rhm_gui_none" text="НЕТ"/>
+        <text name="rhm_gui_btn_auto" text="АВТО"/>
+        <text name="rhm_gui_btn_load_preset" text="Загрузить профиль"/>
+        <text name="rhm_gui_btn_save" text="Сохранить профиль"/>
+        <text name="rhm_gui_btn_reset" text="Сбросить"/>
+        <text name="rhm_gui_engine_load" text="Нагрузка двиг.: %.0f%%"/>
+        <text name="rhm_gui_loss" text="Потери: %.1f%%"/>
+        <text name="rhm_gui_preview_loss" text="Прогноз потерь: %.1f%%"/>
+        <text name="rhm_gui_close_hint" text="RShift+K чтобы закрыть"/>
+        <text name="rhm_gui_no_combine" text="Комбайн не выбран"/>
+        <text name="rhm_gui_not_init" text="Комбайн не инициализирован"/>
+        <text name="rhm_ui_drum_speed" text="Скорость барабана"/>
+        <text name="rhm_ui_roller_speed" text="Очистительные вальцы"/>
+        <text name="rhm_ui_picker_speed" text="Обороты шпинделей"/>
+        <text name="rhm_ui_forage_fan" text="Обороты ускорителя"/>
+        <text name="rhm_ui_forage_drum" text="Измельчающий барабан"/>
+        <text name="rhm_ui_forage_feeder" text="Питающие вальцы"/>
+        <text name="rhm_ui_root_roller" text="Очистительные вальцы"/>
+        <text name="rhm_ui_root_feeder" text="Транспортер"/>
+        <text name="rhm_units_short" text="Единицы"/>
+        <text name="rhm_units_long" text="Выберите систему измерения (скорость, масса, площадь)"/>
+        <text name="rhm_unit_metric" text="Метрические (км/ч, т/ч, га)"/>
+        <text name="rhm_unit_imperial" text="Имперские (mph, ton/h, ac)"/>
+        <text name="rhm_unit_bushels" text="Имперские с бушелями (mph, bu/h, ac)"/>
+        <text name="rhm_reset" text="Сбросить настройки RH"/>
+        <text name="rhm_loss_low" text="НИЗКИЕ"/>
+        <text name="rhm_loss_med" text="СРЕДНИЕ"/>
+        <text name="rhm_loss_high" text="ВЫСОКИЕ"/>
+        <text name="rhm_warning_turn_on_combine" text="Включите сначала комбайн!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Включите жатку!"/>
+        <text name="rhm_warn_overload_high" text="Комбайн перегружен! Снизьте скорость."/>
+        <text name="rhm_warn_overload_critical" text="КОМБАЙН КРИТИЧЕСКИ ПЕРЕГРУЖЕН! Серьёзные потери урожая!"/>
+        <text name="rhm_configuration_title" text="Электроника RHM"/>
+        <text name="rhm_package_standard" text="Базовый"/>
+        <text name="rhm_package_sensor" text="Набор Датчиков"/>
+        <text name="rhm_package_yield" text="Монитор Урожая и Потерь"/>
+        <text name="rhm_package_opti" text="Система Опти-Гарвест AI"/>
+        <text name="rhm_msg_req_level_4" text="Требуется пакет Опти-Гарвест AI (Уровень 4) в магазине."/>
+        <text name="rhm_msg_auto_need_crop" text="Opti-Harvest AI: Начните уборку культуры (проедьте пару метров) для запуска калибровки!"/>
+        <text name="rhm_msg_auto_calibrated" text="Opti-Harvest AI: Автокалибровка успешно выполнена для %s!"/>
+        <text name="rhm_help_title"><![CDATA[
+            Руководство по реалистичной уборке
+        ]]></text>
+        <text name="rhm_help_overview_title"><![CDATA[
+            1. Обзор физики обработки зерна
+        ]]></text>
+        <text name="rhm_help_category"><![CDATA[
+            Realistic Harvesting
+        ]]></text>
+        <text name="rhm_help_overview_1"><![CDATA[
+            Мод Realistic Harvesting вводит сложную физическую модель обработки зерна.
+На производительность вашего комбайна теперь влияет фактический объем урожая.
+Каждая культура имеет свое сопротивление и вес.
+        ]]></text>
+        <text name="rhm_help_overview_2"><![CDATA[Наилучшая эффективность достигается, когда нагрузка двигателя держится в пределах 95-100%.
+
+Слишком быстрая езда перегружает двигатель: растут потери урожая, а комбайн работает на пределе возможностей.
+Слишком медленная езда приводит к перерасходу топлива и потере времени.
+
+Практический алгоритм работы:
+1) Начинайте уборку с шириной захвата жатки, подходящей под плотность культуры.
+2) Следите за HUD: рекомендуемая скорость динамически рассчитывается от целевой нагрузки.
+3) Если потери стали КРАСНЫМИ: сбавьте скорость или уменьшите ширину захвата.
+4) Если нагрузка ЗЕЛЕНАЯ, а потери КРАСНЫЕ: откройте меню калибровки (Right Shift + K) и настройте обороты вентилятора и зазоры решет для этой культуры.]]></text>
+        <text name="rhm_help_calibration_title"><![CDATA[
+            3. Мастерство калибровки
+        ]]></text>
+        <text name="rhm_help_calibration_1"><![CDATA[
+            Меню калибровки (RShift + K) позволяет тонко настроить машину.
+
+РОТОР отделяет зерно от соломы.
+
+ВЕНТИЛЯТОР выдувает полову.
+
+РЕШЕТА фильтруют примеси — поиск баланса между чистым бункером и отсутствием потерь невероятно важен.
+        ]]></text>
+        <text name="rhm_help_calibration_2"><![CDATA[
+            Для каждой культуры есть свои оптимальные диапазоны.
+
+Используйте цветовые индикаторы для настройки точно в цель.
+
+После уборки поля будет сформирован отчет, показывающий влияние ваших настроек на итоговый доход.
+        ]]></text>
+        <text name="rhm_help_upgrades_title"><![CDATA[
+            7. Профессиональные улучшения
+        ]]></text>
+        <text name="rhm_help_upgrades_1"><![CDATA[
+            Стандартное заводское оборудование. Обеспечивает основные данные HUD. Работает строго в ручном режиме (MANUAL) с заводскими допусками при покупке (~50% ± 8%).
+        ]]></text>
+        <text name="rhm_help_upgrades_2"><![CDATA[
+            Добавляет профессиональные датчики потерь. Открывает цветовые индикаторы (Зелёный/Жёлтый/Красный).
+        ]]></text>
+        <text name="rhm_help_upgrades_3"><![CDATA[
+            Продвинутая телеметрия. Показывает влияние настроек и эффективность в меню калибровки (RShift + K).
+        ]]></text>
+        <text name="rhm_help_upgrades_4"><![CDATA[
+            Лучшее улучшение. Открывает систему Opti-Harvest AI: проедьте пару метров по полю, затем нажмите кнопку AUTO в меню калибровки (RShift + K) для мгновенной AI-калибровки под влажность и массу с динамической подстройкой на ходу.
+        ]]></text>
+        <text name="rhm_help_hud_2_1"><![CDATA[
+            Правый клик включает курсор — перетащите панель куда угодно.
+        ]]></text>
+        <text name="rhm_help_hud_2_2"><![CDATA[
+            Каждую метрику можно скрыть через ESC > Настройки > Realistic Harvesting.
+        ]]></text>
+        <text name="rhm_help_hud_2_3"><![CDATA[
+            Вы можете переключаться между единицами измерения:
+- Метрические (т/га, км/ч)
+- Имперские (бу/акр, миль/ч)
+- Бушельные системы
+        ]]></text>
+        <text name="rhm_help_hud_2_4"><![CDATA[
+            Позиция сохраняется для каждого игрока.
+        ]]></text>
+        <text name="rhm_help_hud_title"><![CDATA[
+            2. HUD — Экранные показатели
+        ]]></text>
+        <text name="rhm_help_hud_1_1"><![CDATA[
+            Панель HUD появляется автоматически при входе в комбайн.
+        ]]></text>
+        <text name="rhm_help_hud_1_2"><![CDATA[
+            Показывает 5 метрик в реальном времени:
+- Нагрузка двигателя (%) — интенсивность работы
+- Производительность (т/ч или л/ч) — скорость уборки
+- Урожайность (т/га) — густота культуры на поле
+- Скорость и Рекомендуемая скорость
+- Потери урожая (НИЗКИЕ/СРЕДНИЕ/ВЫСОКИЕ)
+        ]]></text>
+        <text name="rhm_help_hud_1"><![CDATA[
+            Панель HUD появляется автоматически при входе в комбайн.
+Она отображает 5 основных показателей:
+- Нагрузка двигателя (%)
+- Производительность (т/ч)
+- Урожайность (т/га)
+- Скорость
+- Потери (НИЗКИЕ/СРЕДНИЕ/ВЫСОКИЕ)
+
+Зелёный = норма
+Жёлтый = внимание
+Красный = потери зерна.
+        ]]></text>
+        <text name="rhm_help_hud_1_3"><![CDATA[
+            Зелёный = норма
+
+Жёлтый = внимание
+
+Красный = потери зерна.
+        ]]></text>
+        <text name="rhm_help_hud_2"><![CDATA[
+            Правый клик включает курсор — перетащите панель куда угодно.
+
+Каждую метрику можно скрыть через ESC > Настройки > Realistic Harvesting.
+
+Выбор системы измерения:
+- Метрическая (т/га)
+- Имперская (бу/акр)
+- Бушельная система
+
+Позиция сохраняется для каждого игрока.
+        ]]></text>
+        <text name="rhm_help_special_title"><![CDATA[
+            4. Спецтехника
+        ]]></text>
+        <text name="rhm_help_special_1"><![CDATA[
+            КОРМОУБОРОЧНЫЕ КОМБАЙНЫ имеют 3 параметра:
+- Ускоритель (Blower Speed)
+- Измельчающий барабан (Chopping Drum)
+- Питающие вальцы (Feed Rolls).
+
+Они обрабатывают траву, сено, люцерну, клевер и кукурузный силос.
+
+Силос из кукурузы требует максимальной скорости барабана.
+
+Трава нежнее — снижайте обороты.
+        ]]></text>
+        <text name="rhm_help_special_2"><![CDATA[
+            КОРНЕУБОРОЧНЫЕ МАШИНЫ (картофель, свекла, лук, морковь, шпинат):
+- Fan Speed (обороты вентилятора)
+- Cleaning Rollers (очистные вальцы)
+- Elevator Web (транспортер)
+
+У каждой культуры УНИКАЛЬНЫЕ оптимальные значения:
+- Картофель требует нежных вальцов (легко повреждается).
+- Лук — сильного обдува (для отделения кожуры).
+- Шпинат — минимум воздуха (листья разлетаются).
+
+ХЛОПКОУБОРОЧНЫЕ МАШИНЫ:
+- Шпиндели (Picker Speed)
+- Подача (Feeder Speed)
+- Хлопок чрезвычайно легкий, поэтому точная калибровка критична.
+        ]]></text>
+        <text name="rhm_help_loss_title"><![CDATA[
+            5. Потери урожая — Причины и профилактика
+        ]]></text>
+        <text name="rhm_help_loss_sub1"><![CDATA[Источник 1: Перегрузка и скорость]]></text>
+        <text name="rhm_help_loss_1"><![CDATA[
+            Потери идут из ДВУХ независимых источников.
+
+ИСТОЧНИК 1 — ПЕРЕГРУЗКА (Скорость):
+- Когда нагрузка превышает 95%, зерно начинает теряться.
+
+Чем быстрее — тем больше потери.
+
+Решение:
+- замедлиться, использовать узкую жатку или мощнее комбайн.
+
+ИСТОЧНИК 2 — ПЛОХАЯ КАЛИБРОВКА (Настройки):
+- Неправильные вентилятор, ротор или решёта дают штрафные потери сверху.
+
+Используйте «Предпросмотр потерь» в меню (RShift+K).
+        ]]></text>
+        <text name="rhm_help_loss_sub2"><![CDATA[Источник 2: Плохая калибровка]]></text>
+        <text name="rhm_help_loss_2"><![CDATA[
+            Физика калибровки делится на две механики.
+
+Компоненты ЭФФЕКТИВНОСТИ (Ротор, Подача) влияют на скорость обработки — при плохих настройках двигатель перегружается, круиз-контроль замедляет.
+
+Идеальная настройка даёт +5% Бонуса к Скорости.
+
+Компоненты ОЧИСТКИ (Вентилятор, Решёта) влияют на сепарацию зерна — слишком сильный воздух выдувает зерно.
+
+Идеал = 0% Добавленных Потерь.
+
+БОНУС:
+- Идеал эффективности даёт Щит от Перегрузки.
+        ]]></text>
+        <text name="rhm_help_difficulty_title"><![CDATA[
+            6. Настройки сложности и конфигурация
+        ]]></text>
+        <text name="rhm_help_difficulty_1"><![CDATA[
+            ESC > Настройки > Realistic Harvesting.
+
+МОЩНОСТЬ ДВИГАТЕЛЯ управляет вместимостью:
+- Аркада (200% — почти невозможно перегрузить)
+- Нормальный (120%)
+- Реалистичный (100% — реальные характеристики).
+
+ЖЁСТКОСТЬ ПОТЕРЬ управляет штрафами:
+- Аркада (50%)
+- Нормальный (стандарт)
+- Реалистичный (200% — очень строго).
+        ]]></text>
+        <text name="rhm_help_difficulty_2"><![CDATA[
+            Дополнительные переключатели:
+- Ограничитель скорости (ВКЛ/ВЫКЛ) — автоматически снижает скорость при перегрузке
+- Система потерь (ВКЛ/ВЫКЛ) — полностью включает/отключает симуляцию потерь
+- Независимый запуск — позволяет включить молотилку без опускания жатки.
+
+В МУЛЬТИПЛЕЕРЕ серверные настройки (сложность) общие для всех, изменяет только админ.
+
+Клиентские (HUD, единицы) — индивидуальные.
+
+Всё сохраняется между сессиями.
+        ]]></text>
+        <text name="rhm_help_overview_sub1"><![CDATA[
+            Основная механика
+        ]]></text>
+        <text name="rhm_help_overview_sub2"><![CDATA[
+            Эффективность и Нагрузка
+        ]]></text>
+        <text name="rhm_help_hud_sub1"><![CDATA[
+            Текущие показатели
+        ]]></text>
+        <text name="rhm_help_hud_sub2"><![CDATA[
+            Настройки интерфейса
+        ]]></text>
+        <text name="rhm_help_calibration_sub1"><![CDATA[
+            Внутренние узлы
+        ]]></text>
+        <text name="rhm_help_calibration_sub2"><![CDATA[
+            Отчет об уборке
+        ]]></text>
+        <text name="rhm_help_special_sub1"><![CDATA[
+            Кормоуборочные комбайны
+        ]]></text>
+        <text name="rhm_help_special_sub2"><![CDATA[
+            Корнеплоды и Хлопок
+        ]]></text>
+        <text name="rhm_help_croploss_sub1"><![CDATA[
+            Источники потерь
+        ]]></text>
+        <text name="rhm_help_croploss_sub2"><![CDATA[
+            Штрафы за калибровку
+        ]]></text>
+        <text name="rhm_help_difficulty_sub1"><![CDATA[
+            Сложность игры
+        ]]></text>
+        <text name="rhm_help_difficulty_sub2"><![CDATA[
+            Активные модули
+        ]]></text>
+        <text name="rhm_help_upgrades_sub1"><![CDATA[
+            Уровень 1: Базовая электроника
+        ]]></text>
+        <text name="rhm_help_upgrades_sub2"><![CDATA[
+            Уровень 2: Набор датчиков
+        ]]></text>
+        <text name="rhm_help_upgrades_sub3"><![CDATA[
+            Уровень 3: Монитор урожайности
+        ]]></text>
+        <text name="rhm_help_upgrades_sub4"><![CDATA[
+            Уровень 4: Opti-Harvest AI
+        ]]></text>
+        <text name="rhm_ui_speed_eff"><![CDATA[Эффект. скор.]]></text>
+        <text name="rhm_help_moisture_title" text="8. Система Влажности"/>
+        <text name="rhm_help_moisture_sub1" text="Интеграция"/>
+        <text name="rhm_help_moisture_1" text="Realistic Harvesting поддерживает мод Moisture System. Влажность культуры динамически влияет на нагрузку двигателя и скорость."/>
+        <text name="rhm_help_moisture_sub2" text="Влажные Культуры"/>
+        <text name="rhm_help_moisture_2" text="Уборка влажных культур значительно увеличивает нагрузку на комбайн. Уровень влажности отображается в HUD."/>
+        <text name="rhm_help_calibration_main_sub"><![CDATA[Общий принцип]]></text>
+        <text name="rhm_help_calibration_main_text"><![CDATA[Производительность комбайна напрямую зависит от правильной калибровки.
+Открыть сенсорный терминал калибровки можно в любой момент комбинацией (Right Shift + K).
+
+Для каждой культуры заданы оптимальные параметры. Игра рассчитывает поток массы и преобразует его в нагрузку двигателя. Сбитая калибровка приводит к большим потерям урожая.
+
+Режимы работы:
+- Уровни 1–3: Полностью РУЧНАЯ настройка. Вы настраиваете ползунки вручную и сохраняете профили кнопкой СОХРАНИТЬ.
+- Уровень 4 (Opti-Harvest AI): Разблокирует кнопку AUTO. Проедьте несколько метров по полю для сбора телеметрии и нажмите AUTO для мгновенной автокалибровки.
+
+Секции компонентов:
+- Сепарация (Ротор / Наклонная камера): управляет интенсивностью обмолота и пропускной способностью.
+- Очистка (Вентилятор / Решета): отвечает за чистоту зерна и предотвращает потери.]]></text>
+        <text name="rhm_help_calibration_rotor_sub"><![CDATA[Зерновой комбайн]]></text>
+        <text name="rhm_help_calibration_rotor_text"><![CDATA[Оптимальные настройки (Пшеница):
+Обороты ротора: ~710 RPM.
+Наклонная камера: ~550 RPM.
+Обороты вентилятора: ~810 RPM.
+Верхнее решето: ~14 mm.
+Нижнее решето: ~8 mm.
+Прим.: Кукурудзе нужно ~360 RPM ротора и ~18 mm решета.]]></text>
+        <text name="rhm_help_calibration_rotor_long"><![CDATA[Управляет обмолотом. Оптимальные обороты:
+Пшеница: ~700 RPM.
+Ячмень: ~770 RPM.
+Овёс: ~720 RPM.
+Рис: ~550 RPM.
+Рапс: ~500 RPM.
+Соя: ~550 RPM.
+Кукуруза: ~360 RPM.
+Подсолнух: ~320 RPM.
+Горох: ~340 RPM.
+Кукурузе нужны НИЗКИЕ обороты — иначе зерно трескается.]]></text>
+        <text name="rhm_help_calibration_fan_sub"><![CDATA[Вентилятор очистки]]></text>
+        <text name="rhm_help_calibration_fan_text"><![CDATA[Вентилятор отделяет легкую полову от тяжелого зерна. 
+Неверный баланс — основная причина потерь.]]></text>
+        <text name="rhm_help_calibration_fan_long"><![CDATA[Выдувает полову. Оптимальные обороты вентилятора:
+Кукуруза: ~900 RPM.
+Соя/Горох: ~850-875 RPM.
+Пшеница/Ячмень: ~800 RPM.
+Рис: ~775 RPM.
+Овёс/Подсолнух: ~700 RPM.
+Рапс: ~650 RPM.
+Мелкие семена (рапс, овёс) вылетают на высоких оборотах — держать НИЗКО.]]></text>
+        <text name="rhm_help_calibration_sieve_sub"><![CDATA[Зазоры решет]]></text>
+        <text name="rhm_help_calibration_sieve_text"><![CDATA[Сильно зажатые решета задушат комбайн и вызовут колоссальные потери.]]></text>
+        <text name="rhm_help_calibration_sieve_long"><![CDATA[Зазоры верхнего / нижнего решета по культурам:
+Пшеница / Ячмень / Рис: 14 мм / 8 мм.
+Овёс: 10 мм / 6 мм.
+Рапс: 12 мм / 6 мм.
+Соя / Горох: 15 мм / 10 мм.
+Кукуруза / Подсолнух: 18 мм / 11-12 мм.
+Неверный зазор «задушит» решёта — до 25% потерь.]]></text>
+        <text name="rhm_help_cropsettings_title" text="Справочник настроек культур"/>
+        <text name="rhm_help_cropsettings_grain_sub" text="Зерноуборочные комбайны"/>
+        <text name="rhm_help_cropsettings_grain_text"><![CDATA[Оптимальные диапазоны для зерноуборочных комбайнов:
+• Зерновые (Пшеница, Ячмень, Рис): Ротор 600-850 об/мин, Вентил. 700-850 об/мин, Решета 14мм / 8мм.
+• Масличные (Рапс, Подсолнечник): Ротор 300-500 об/мин, Вентил. 600-700 об/мин, Решета 12мм / 6мм. (Осторожно: легкие семена выдуваются)
+• Кукуруза: Ротор 300-400 об/мин, Вентил. 850-950 об/мин, Решета 18мм / 12мм. (Низкие обороты, сильный обдув)
+• Бобовые: Ротор 300-500 об/мин, Вентил. 800-950 об/мин, Решета 15мм / 10мм. (Деликатный обмолот)]]></text>
+        <text name="rhm_help_cropsettings_forage_sub" text="Кормоуборочные комбайны (Силос)"/>
+        <text name="rhm_help_cropsettings_forage_text"><![CDATA[• Кукурузный силос: Барабан 1100-1160 об/мин, Вентил. 1150-1290 об/мин, Подача 400-480 об/мин.
+• Трава / Сено: Барабан 700-900 об/мин, Вентил. 800-1000 об/мин, Подача 300-450 об/мин.
+* Подсказка: Барабан - резка, Подача - объем. Если потери КРАСНЫЕ при нормальной нагрузке, уменьшите обороты вентилятора.]]></text>
+        <text name="rhm_help_cropsettings_root_sub" text="Корнеуборочные комбайны и овощеуборщики"/>
+        <text name="rhm_help_cropsettings_root_text"><![CDATA[• Тяжелые (Картофель, Свекла): Ролики ~400 об/мин, Вентил. ~400-500 об/мин, Элеватор ~800 об/мин.
+• Легкие (Морковь, Пастернак): Ролики ~250 об/мин, Вентил. ~300 об/мин, Элеватор ~900 об/мин.
+• Лук: Ролики ~300 об/мин, Вентил. ~900-1100 об/мин, Элеватор ~600 об/мин.
+• Шпинат: Ролики ~150 об/мин, Вентил. ~100-200 об/мин, Элеватор ~700 об/мин.
+* Подсказка: Ролики очищают грязь (не завышайте для картофеля!). Вентилятор отрывает ботву (максимум для лука, минимум для шпината). Элеватор задает скорость подачи.]]></text>
+        <text name="rhm_help_calibration_forage_intro_text"><![CDATA[Кормоуборочные комбайны крайне чувствительны к перегрузке массой.
+- Густой кукурузный силос требует высоких оборотов барабана и мощного обдува.
+- Трава и сено деликатнее — плавная подача защищает двигатель от перегрузки.
+
+Если нагрузка двигателя становится КРАСНОЙ на HUD, сбавьте скорость.
+
+Как работают регулировки:
+- Измельчающий барабан: интенсивность резки массы (выше = больше мощности).
+- Питающие вальцы: объем поступающей массы (главный фактор нагрузки двигателя).
+- Ускоритель выброса: поток воздуха (слишком сильный поток может выдувать массу).]]></text>
+        <text name="rhm_help_calibration_root_intro_text"><![CDATA[Корнеплоды имеют особые правила очистки от почвы.
+- Картофель: Легко бьется! Очистные ролики должны вращаться медленно.
+- Лук: Требует максимального обдува для отрыва сухой шелухи.
+- Шпинат: Сверхделикатные листья, воздух на минимум, чтобы не улетели.
+
+Если потери КРАСНЫЕ при нормальной нагрузке двигателя, проверьте обдув.
+
+Как работают регулировки:
+- Очистные ролики: Очищают от грязи без повреждения урожая.
+- Лента элеватора: Скорость подачи в бункер (пропускная способность).
+- Вентилятор: Поток воздуха для отделения ботвы.]]></text>
+        <text name="rhm_help_hud_sub3" text="Индикаторы HUD"/>
+        <text name="rhm_help_hud_3_load" text="Нагрузка двигателя (как тяжело работают компоненты)"/>
+        <text name="rhm_help_hud_3_yield" text="Урожайность (густота культуры на текущем участке)"/>
+        <text name="rhm_help_hud_3_productivity" text="Производительность (объем урожая в час)"/>
+        <text name="rhm_help_hud_3_moisture" text="Влажность (активно только с модом Moisture System)"/>
+        <text name="rhm_help_hud_3_loss" text="Потери урожая (количество выбрасываемого зерна)"/>
+        <text name="rhm_help_hud_3_speed" text="Текущая и Рекомендованная скорость"/>
+        <text name="rhm_ui_section_separation" text="СЕПАРАЦИЯ"/>
+        <text name="rhm_ui_section_cleaning" text="ОЧИСТКА"/>
+        <text name="rhm_ui_section_discharge" text="ВЫГРУЗКА"/>
+        <text name="rhm_ui_section_performance" text="ПРОИЗВОДИТЕЛЬНОСТЬ"/>
+        <text name="rhm_ui_tier1_manual" text="УРОВЕНЬ 1 - РУЧНОЙ"/>
+        <text name="rhm_ui_tier2_sensors" text="УРОВЕНЬ 2 - ДАТЧИКИ"/>
+        <text name="rhm_ui_tier3_monitor" text="УРОВЕНЬ 3 - МОНИТОР"/>
+        <text name="rhm_ui_tier4_opti" text="УРОВЕНЬ 4 - AI OPTI"/>
+        <text name="rhm_ui_card_engine_load" text="НАГРУЗКА ДВИГАТЕЛЯ"/>
+        <text name="rhm_ui_card_efficiency" text="ЭФФЕКТИВНОСТЬ"/>
+        <text name="rhm_ui_card_predicted_loss" text="ПРОГНОЗ ПОТЕРЬ"/>
+        <text name="rhm_ui_btn_ai_auto" text="АВТО-КАЛИБР AI"/>
+        <text name="rhm_ui_btn_auto_locked" text="AUTO (БЛОК)"/>
+        <text name="rhm_ui_btn_load_preset" text="ЗАГРУЗИТЬ"/>
+        <text name="rhm_ui_btn_save_profile" text="СОХРАНИТЬ"/>
+        <text name="rhm_ui_btn_load_locked" text="ЗАГРУЗ. (БЛОК)"/>
+        <text name="rhm_ui_btn_save_locked" text="СОХРАН. (БЛОК)"/>
+        <text name="rhm_ui_btn_reset_defaults" text="СБРОС К ЗАВОДСКИМ НАСТРОЙКАМ"/>
+        <text name="rhm_ui_status_optimal" text="ОПТИМАЛЬНО"/>
+        <text name="rhm_ui_status_low" text="НИЗКО"/>
+        <text name="rhm_ui_status_high" text="ВЫСОКО"/>
+        <text name="rhm_msg_req_tier4" text="Требуется Opti-Harvest AI (Уровень 4)"/>
+        <text name="rhm_msg_req_tier3" text="Для профилей требуется Монитор Телеметрии (Уровень 3)"/>
+        <text name="rhm_msg_profile_saved" text="Профиль сохранён: %s"/>
+        <text name="rhm_msg_profile_loaded" text="Профиль загружен: %s"/>
+        <text name="rhm_msg_profile_not_found" text="Для этой культуры нет сохранённого профиля"/>
+        <text name="rhm_ui_combine_not_init" text="Комбайн не инициализирован"/>
+        <text name="rhm_unit_t_per_hour" text="т/ч"/>
+        <text name="rhm_unit_ha_per_hour" text="га/ч"/>
+        <text name="rhm_setting_ai_tuning" text="Настройка помощниками"/>
+        <text name="rhm_setting_ai_tuning_long" text="Определяет, как наёмники и Courseplay работают с калибровкой комбайна. 'Сохранять настройки' строго сохраняет ручные параметры игрока и профили. 'Всегда авто-настройка' пересчитывает значения по уровню электроники. 'Отключено' запрещает помощникам менять настройки."/>
+        <text name="rhm_setting_ai_tuning_keep" text="Сохранять мои"/>
+        <text name="rhm_setting_ai_tuning_auto" text="Всегда авто-настройка"/>
+        <text name="rhm_setting_ai_tuning_disabled" text="Отключено"/>
+    </texts>
+</l10n>

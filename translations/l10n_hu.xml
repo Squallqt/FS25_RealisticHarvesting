@@ -1,0 +1,529 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="rhm_section_simulation" text="Realistic Harvesting - Szimuláció"/>
+        <text name="rhm_section_visuals" text="Realistic Harvesting - HUD és Megjelenítés"/>
+        <text name="input_RHM_OPEN_MENU" text="Kombájn Menü"/>
+        <text name="input_RHM_TOGGLE_HUD" text="Betakarítási HUD ki/be"/>
+        <text name="rhm_hud_load" text="TERHELÉS"/>
+        <text name="rhm_hud_loss" text="VESZT"/>
+        <text name="rhm_hud_moist" text="NEDV"/>
+        <text name="rhm_ai_settings_retained" text="Kézi beállítások megtartva"/>
+        <text name="rhm_ai_auto_tuned" text="Automatikusan kalibrálva"/>
+        <text name="rhm_difficulty" text="Nehézség"/>
+        <text name="rhm_difficulty_motor" text="Motorteljesítmény"/>
+        <text name="rhm_difficulty_motor_short" text="Motor"/>
+        <text name="rhm_difficulty_motor_long" text="Meghatározza a plusz motorteljesítményt. Arcade = +100%, Normál = +35%, Realisztikus = 0%."/>
+        <text name="rhm_difficulty_loss" text="Termésveszteség"/>
+        <text name="rhm_difficulty_loss_short" text="Veszteség"/>
+        <text name="rhm_difficulty_loss_long" text="Meghatározza a veszteség súlyosságát."/>
+        <text name="rhm_diff_1" text="Árkád"/>
+        <text name="rhm_difficulty_long" text="Arcade: Magas határok (+100%). Normál: Kiegyensúlyozott fizika (+35%). Realisztikus: Tiszta szimuláció (0%)."/>
+        <text name="rhm_diff_2" text="Normál"/>
+        <text name="rhm_diff_3" text="Realisztikus"/>
+        <text name="rhm_show_yield" text="Hozammonitor megjelenítése"/>
+        <text name="rhm_show_yield_short" text="Hozam megjelenítése"/>
+        <text name="rhm_show_yield_long" text="Valós idejű hozam megjelenítése a HUD-on (t/ha vagy bu/ac)"/>
+        <text name="rhm_yield_label" text="Hozam"/>
+        <text name="rhm_hud_short" text="HUD megjelenítése"/>
+        <text name="rhm_hud_long" text="Betakarítási információk megjelenítése"/>
+        <text name="rhm_speedlimit_short" text="Sebességkorlátozó"/>
+        <text name="rhm_speedlimit_long"><![CDATA[
+            A kombájn sebességének automatikus korlátozása a motor terhelése alapján
+        ]]></text>
+        <text name="rhm_croploss_short" text="Termésveszteség bekapcsolása"/>
+        <text name="rhm_croploss_long" text="Túlterhelés esetén termésveszteség számítása"/>
+        <text name="rhm_show_speed_short" text="Sebesség megjelenítése"/>
+        <text name="rhm_show_speed_long" text="Jelenlegi és ajánlott sebesség megjelenítése a HUD-on"/>
+        <text name="rhm_show_load_short" text="Terhelés megjelenítése"/>
+        <text name="rhm_show_load_long" text="Motor terhelésének százalékos megjelenítése a HUD-on"/>
+        <text name="rhm_show_productivity_short" text="Produktivitás megjelenítése"/>
+        <text name="rhm_show_productivity_long" text="Átbocsátás (t/h) megjelenítése a HUD-on"/>
+        <text name="rhm_show_croploss_short" text="Veszteség megjelenítése"/>
+        <text name="rhm_show_moisture_short" text="Nedvesség mutatása"/>
+        <text name="rhm_show_moisture_long" text="Termés nedvességtartalmának megjelenítése a HUD-on"/>
+        <text name="rhm_moisture_enable_short" text="Nedvesség büntetés"/>
+        <text name="rhm_moisture_enable_long"><![CDATA[
+            Terhelés-büntetés alkalmazása a nedvesség alapján (Moisture System szükséges)
+            ]]></text>
+        <text name="rhm_ui_title_main" text="Kombájn Kalibrálás"/>
+        <text name="rhm_ui_page_settings" text="Beállítások"/>
+        <text name="rhm_ui_page_profiles" text="Profilok"/>
+        <text name="rhm_ui_current_crop" text="Jelenlegi Termény"/>
+        <text name="rhm_ui_load" text="Motor Terhelés"/>
+        <text name="rhm_ui_loss" text="Veszteség"/>
+        <text name="rhm_ui_fan_speed" text="Ventilátor Fordulat"/>
+        <text name="rhm_ui_rotor_speed" text="Rotor Fordulat"/>
+        <text name="rhm_ui_upper_sieve" text="Felső Rosta"/>
+        <text name="rhm_ui_lower_sieve" text="Alsó Rosta"/>
+        <text name="rhm_ui_feeder_speed" text="Dobkosár hézag"/>
+        <text name="rhm_ui_mode_auto" text="AUTO"/>
+        <text name="rhm_ui_mode_manual" text="KÉZI"/>
+        <text name="rhm_ui_btn_reset" text="VISSZAÁLLÍTÁS"/>
+        <text name="rhm_ui_profile_create" text="ÚJ PROFIL"/>
+        <text name="rhm_ui_profile_save" text="MENTÉS"/>
+        <text name="rhm_ui_profile_load" text="BETÖLTÉS"/>
+        <text name="rhm_ui_profile_delete" text="TÖRLÉS"/>
+        <text name="rhm_ui_profile_name_placeholder" text="Profil neve..."/>
+        <text name="rhm_hud_yield_label" text="HOZAM"/>
+        <text name="rhm_hud_load_label" text="TERH"/>
+        <text name="rhm_hud_loss_label" text="VESZT"/>
+        <text name="rhm_loss_level_low" text="ALACS"/>
+        <text name="rhm_loss_level_med" text="KÖZEP"/>
+        <text name="rhm_loss_level_high" text="MAGAS"/>
+        <text name="rhm_show_croploss_long" text="Termésveszteség százalékos megjelenítése a HUD-on"/>
+        <text name="rhm_show_load_warn_short" text="Terhelés figyelmeztetések megjelenítése"/>
+        <text name="rhm_show_load_warn_long"><![CDATA[
+            Villogó figyelmeztetések megjelenítése túlterhelés esetén (Magas/Kritikus)
+        ]]></text>
+        <text name="rhm_overload_sounds_short" text="Túlterhelési és feszültségi hangok"/>
+        <text name="rhm_overload_sounds_long"><![CDATA[Reális fülkeriasztás és cséplési feszültséghangok lejátszása túlterhelés vagy veszteség esetén.]]></text>
+        <text name="rhm_section_audio" text="Realistic Harvesting - Hangok"/>
+        <text name="rhm_alarm_sounds_short" text="Túlterhelési hangjelzés"/>
+        <text name="rhm_alarm_sounds_long" text="Megszólaltat egy elektronikus berregőt a fülkében kritikus terhelésnél (98%+) vagy magas veszteségnél (&gt;4%)."/>
+        <text name="rhm_sound_volume_short" text="Hangerő"/>
+        <text name="rhm_sound_volume_long" text="Beállítja a fülkében lévő túlterhelési hangjelzés (berregő) hangerejét."/>
+        <text name="rhm_target_load" text="Cél Motorterhelés"/>
+        <text name="rhm_gui_title" text="Kombájn Beállítások"/>
+        <text name="rhm_gui_crop" text="Növény:"/>
+        <text name="rhm_gui_none" text="NINCS"/>
+        <text name="rhm_gui_btn_auto" text="AUTO"/>
+        <text name="rhm_gui_btn_load_preset" text="Profil betöltése"/>
+        <text name="rhm_gui_btn_save" text="Profil mentése"/>
+        <text name="rhm_gui_btn_reset" text="Alaphelyzetbe"/>
+        <text name="rhm_gui_engine_load" text="Motorterhelés: %.0f%%"/>
+        <text name="rhm_gui_loss" text="Veszteség: %.1f%%"/>
+        <text name="rhm_gui_preview_loss" text="Becsült veszteség: %.1f%%"/>
+        <text name="rhm_gui_close_hint" text="RShift+K a bezáráshoz"/>
+        <text name="rhm_gui_no_combine" text="Nincs kombájn kiválasztva"/>
+        <text name="rhm_gui_not_init" text="Kombájn nincs inicializálva"/>
+        <text name="rhm_ui_drum_speed" text="Dobsebesség"/>
+        <text name="rhm_ui_roller_speed" text="Hengersebessége"/>
+        <text name="rhm_ui_picker_speed" text="Felszedő sebessége"/>
+        <text name="rhm_ui_forage_fan" text="Gyorsító"/>
+        <text name="rhm_ui_forage_drum" text="Szecskázó dob"/>
+        <text name="rhm_ui_forage_feeder" text="Behúzóhengerek"/>
+        <text name="rhm_ui_root_roller" text="Tisztítóhengerek"/>
+        <text name="rhm_ui_root_feeder" text="Felhordószalag"/>
+        <text name="rhm_units_short" text="Mértékegységek"/>
+        <text name="rhm_units_long" text="Mérési rendszer kiválasztása (sebesség, tömeg, terület)"/>
+        <text name="rhm_unit_metric" text="Metrikus (km/h, t/h, ha)"/>
+        <text name="rhm_unit_imperial" text="Angolszász (mph, tonna/óra, ac)"/>
+        <text name="rhm_unit_bushels" text="Angolszász bushellel (mph, bu/óra, ac)"/>
+        <text name="rhm_reset" text="RH beállítások visszaállítása"/>
+        <text name="rhm_loss_low" text="ALACSONY"/>
+        <text name="rhm_loss_med" text="KÖZEPES"/>
+        <text name="rhm_loss_high" text="MAGAS"/>
+        <text name="rhm_warning_turn_on_combine" text="Először a cséplőt kapcsold be!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Kapcsold be a vágóasztalt!"/>
+        <text name="rhm_warn_overload_high" text="A kombájn túlterhelt! Csökkentse a sebességet."/>
+        <text name="rhm_warn_overload_critical" text="A KOMBÁJN KRITIKUSAN TÚLTERHELT! Súlyos termésveszteség!"/>
+        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_package_standard" text="Standard"/>
+        <text name="rhm_package_sensor" text="Sensor Kit"/>
+        <text name="rhm_package_yield" text="Hozam és Veszteség Monitor"/>
+        <text name="rhm_package_opti" text="Opti-Harvest AI"/>
+        <text name="rhm_msg_req_level_4" text="Opti-Harvest AI csomag szükséges (4. szint)."/>
+        <text name="rhm_msg_auto_need_crop" text="Opti-Harvest AI: Vágj le pár métert az automatikus kalibráció indításához!"/>
+        <text name="rhm_msg_auto_calibrated" text="Opti-Harvest AI: Sikeresen kalibrálva a következőhöz: %s!"/>
+        <text name="rhm_help_title"><![CDATA[
+            Realisztikus Betakarítási Útmutató
+        ]]></text>
+        <text name="rhm_help_overview_title"><![CDATA[
+            1. Feldolgozási fizika áttekintése
+        ]]></text>
+        <text name="rhm_help_category"><![CDATA[
+            Realistic Harvesting
+        ]]></text>
+        <text name="rhm_help_overview_1"><![CDATA[
+            A Realistic Harvesting mod összetett fizikai modellt vezet be.
+A kombájn teljesítménye mostantól a tényleges termésmennyiségtől (tömegáram) függ.
+Minden terménytípusnak saját ellenállása és súlya van.
+        ]]></text>
+        <text name="rhm_help_overview_2"><![CDATA[A legnagyobb hatékonyság akkor érhető el, ha a motorterhelés 95% és 100% között mozog.
+
+Túl gyors haladásnál a motor túlterhelődik: a szemveszteség meredeken nő, a kombájn a határain dolgozik.
+Túl lassú haladásnál üzemanyagot és értékes időt pazarol.
+
+Gyakorlati teendők:
+1) Kezdje a betakarítást a terménysűrűségnek megfelelő vágószélességgel.
+2) Figyelje a HUD-ot: az ajánlott sebesség dinamikusan számolódik a célterhelésből.
+3) Ha a veszteségek PIROSRA váltanak: lassítson vagy csökkentse a vágásszélességet.
+4) Ha a terhelés ZÖLD, de a veszteség PIROS: nyissa meg a kalibrációt (Jobb Shift + K), és finomhangolja a ventilátort és a rostákat.]]></text>
+        <text name="rhm_help_calibration_title"><![CDATA[
+            3. A kalibrálás elsajátítása
+        ]]></text>
+        <text name="rhm_help_calibration_1"><![CDATA[
+            Nyisd meg a kalibrálási menüt (RShift + K) a gép finomhangolásához.
+
+A ROTOR elválasztja a szemet a szalmától.
+
+A VENTILÁTOR kifújja a pelyvát.
+
+A ROSTÁK kiszűrik a szennyeződéseket
+- a tiszta minta és a nulla veszteség közötti egyensúly megtalálása a kulcs.
+        ]]></text>
+        <text name="rhm_help_calibration_2"><![CDATA[
+            Minden terménynek megvannak az optimális tartományai.
+
+Használd a színkódolt állapotjelzőket (Szenzor Kit szükséges) a beállításhoz.
+
+A betakarítás után jelentés készül, amely megmutatja, hogyan befolyásolták a beállítások a bevételt.
+        ]]></text>
+        <text name="rhm_help_upgrades_title"><![CDATA[
+            7. Professzionális fejlesztések
+        ]]></text>
+        <text name="rhm_help_upgrades_1"><![CDATA[
+            Alapfelszereltségű gyári elektronika. Alapvető HUD adatokat szolgáltat. Szigorúan MANUAL módban működik, vásárláskor gyári tűrésekkel (~50% ± 8%).
+        ]]></text>
+        <text name="rhm_help_upgrades_2"><![CDATA[
+            Professzionális veszteségérzékelők. Valós idejű, színkódolt jelzőket (Zöld/Sárga/Piros) biztosít.
+        ]]></text>
+        <text name="rhm_help_upgrades_3"><![CDATA[
+            Fejlett telemetria. Élő teljesítmény- és hatékonysági mutatókat jelenít meg a kalibrálási menüben (RShift + K).
+        ]]></text>
+        <text name="rhm_help_upgrades_4"><![CDATA[
+            A végső fejlesztés. Feloldja az Opti-Harvest AI rendszert: vágj pár métert a mezőn, majd nyomd meg az AUTO gombot a Kalibrációs Menüben (RShift + K) az azonnali AI kalibrációhoz és folyamatos dinamikus finomhangoláshoz.
+        ]]></text>
+        <text name="rhm_help_hud_2_1"><![CDATA[
+            Jobb klikkel aktiváld a kurzort és húzd a HUD-ot bárhová.
+        ]]></text>
+        <text name="rhm_help_hud_2_2"><![CDATA[
+            Minden mutató elrejthető az ESC
+- Beállítások menüben.
+        ]]></text>
+        <text name="rhm_help_hud_2_3"><![CDATA[
+            Váltani lehet a mérési rendszerek között:
+- Metrikus (t/ha)
+- Angolszász (bu/ac)
+- Véka rendszer
+        ]]></text>
+        <text name="rhm_help_hud_2_4"><![CDATA[
+            A pozíció játékosonként mentődik.
+        ]]></text>
+        <text name="rhm_help_hud_title"><![CDATA[
+            2. HUD — Képernyőkijelző
+        ]]></text>
+        <text name="rhm_help_hud_1_1"><![CDATA[
+            A HUD panel automatikusan megjelenik.
+        ]]></text>
+        <text name="rhm_help_hud_1_2"><![CDATA[
+            5 élő mutatót jelenít meg:
+- Motorterhelés (%)
+- Termelékenység (t/h)
+- Hozam (t/ha)
+- Aktuális és ajánlott sebesség, Veszteség (ALACSONY/KÖZEPES/MAGAS).
+        ]]></text>
+        <text name="rhm_help_hud_1"><![CDATA[
+            A HUD automatikusan megjelenik. 5 mutatót jelenít meg :
+- Motorterhelés (%)
+- Termelékenység (t/h)
+- Hozam (t/ha)
+- Sebesség
+- Veszteség (ALACSONY/KÖZEPES/MAGAS)
+
+Zöld = OK
+Sárga = figyelem
+Piros = veszteség.
+        ]]></text>
+        <text name="rhm_help_hud_1_3"><![CDATA[
+            Zöld = OK
+Sárga = figyelem
+Piros = veszteség.
+        ]]></text>
+        <text name="rhm_help_hud_2"><![CDATA[
+            Jobb klikkel aktiváld a kurzort és húzd a HUD-ot bárhová.
+
+Minden mutató elrejthető az ESC
+- Beállítások menüben.
+
+Választható rendszerek:
+- Metrikus (t/ha)
+- Angolszász (bu/ac)
+- Véka (Bushel)
+
+A pozíció játékosonként mentődik.
+        ]]></text>
+        <text name="rhm_help_special_title"><![CDATA[
+            4. Speciális gépek
+        ]]></text>
+        <text name="rhm_help_special_1"><![CDATA[
+            A SZECSKÁZÓK 3 paraméterrel rendelkeznek:
+- Gyorsító (Blower Speed)
+- Szecskázó dob (Chopping Drum)
+- és Behúzóhengerek (Feed Rolls).
+
+Feldolgozzák a füvet, szénát, lucernát, lóherét és kukoricaszilázst.
+
+A kukoricaszilázs maximális sebességet igényel.
+
+A fű kényesebb — csökkentsd a dob sebességét.
+        ]]></text>
+        <text name="rhm_help_special_2"><![CDATA[
+            GYÖKÉRZÖLDSÉG-BETAKARÍTÓK:
+- Ventilátor (Fan Speed)
+- Tisztítóhengerek (Cleaning Rollers)
+- Felhordószalag (Elevator Web)
+
+Minden gyökérzöldségnek EGYEDI optimális értékei vannak!
+
+A burgonya kíméletes görgőket igényel.
+
+A hagyma erős légáramot.
+
+A spenót minimális levegőt.
+
+GYAPOTBETAKARÍTÓK:
+- Ventilátor (Fan Speed)
+- Felszedő sebessége (Picker Speed)
+- Adagoló (Feeder Speed) — a gyapot rendkívül könnyű.
+        ]]></text>
+        <text name="rhm_help_loss_title"><![CDATA[
+            5. Termésveszteség — Okok és megelőzés
+        ]]></text>
+        <text name="rhm_help_loss_sub1"><![CDATA[1. forrás: Túlterhelés és sebesség]]></text>
+        <text name="rhm_help_loss_1"><![CDATA[
+            A veszteségek KÉT független forrásból származnak.
+
+FORRÁS 1 — TÚLTERHELÉS (Sebesség):
+- 95% fölötti motorterhelésnél a veszteségek megkezdődnek.
+
+Megoldás:
+- lassíts.
+
+FORRÁS 2 — ROSSZ KALIBRÁLÁS:
+- Rossz ventilátor, rotor vagy rosta beállítások büntetést adnak.
+
+Használd a Veszteség Előnézetet a menüben (RShift+K).
+        ]]></text>
+        <text name="rhm_help_loss_sub2"><![CDATA[2. forrás: Rossz kalibrálási beállítások]]></text>
+        <text name="rhm_help_loss_2"><![CDATA[
+            A kalibrálás fizikája két mechanikára oszlik.
+
+A HATÉKONYSÁGI komponensek (Rotor, Adagoló) a sebességet befolyásolják.
+
+Tökéletes beállítások +5% Sebesség Bónuszt adnak.
+
+A TISZTÍTÁSI komponensek (Ventilátor, Rosták) a szeparálást befolyásolják.
+
+Tökéletes beállítások 0% Hozzáadott Veszteséget garantálnak.
+
+BÓNUSZ:
+- A tökéletesség Túlterhelés Pajzsot ad.
+        ]]></text>
+        <text name="rhm_help_difficulty_title"><![CDATA[
+            6. Nehézségi beállítások és konfiguráció
+        ]]></text>
+        <text name="rhm_help_difficulty_1"><![CDATA[
+            ESC
+- Beállítások
+- Realistic Harvesting.
+
+MOTORTELJESÍTMÉNY szabályozza a kapacitást:
+- Arcade (200%)
+- Normál (120%)
+- Realisztikus (100%).
+
+VESZTESÉG SÚLYOSSÁGA szabályozza a büntetés intenzitását:
+- Arcade (50%)
+- Normál (standard)
+- Realisztikus (200%).
+        ]]></text>
+        <text name="rhm_help_difficulty_2"><![CDATA[
+            További kapcsolók:
+- Sebességkorlátozó (BE/KI)
+- Veszteségrendszer (BE/KI)
+- Független Indítás.
+
+TÖBBJÁTÉKOS módban a szerver beállítások (nehézség) közösek és csak admin változtathatja.
+
+A kliens beállítások (HUD, mértékegységek) személyesek.
+
+Minden mentődik.
+        ]]></text>
+        <text name="rhm_help_overview_sub1"><![CDATA[
+            Alapvető mechanika
+        ]]></text>
+        <text name="rhm_help_overview_sub2"><![CDATA[
+            Hatékonyság és Terhelés
+        ]]></text>
+        <text name="rhm_help_hud_sub1"><![CDATA[
+            Élő Mutatók
+        ]]></text>
+        <text name="rhm_help_hud_sub2"><![CDATA[
+            Testreszabás
+        ]]></text>
+        <text name="rhm_help_calibration_sub1"><![CDATA[
+            Belső Alkatrészek
+        ]]></text>
+        <text name="rhm_help_calibration_sub2"><![CDATA[
+            Betakarítási Jelentés
+        ]]></text>
+        <text name="rhm_help_special_sub1"><![CDATA[
+            Szecskázók
+        ]]></text>
+        <text name="rhm_help_special_sub2"><![CDATA[
+            Gyökérzöldség és Gyapot
+        ]]></text>
+        <text name="rhm_help_croploss_sub1"><![CDATA[
+            Veszteség Forrásai
+        ]]></text>
+        <text name="rhm_help_croploss_sub2"><![CDATA[
+            Kalibrálási Büntetések
+        ]]></text>
+        <text name="rhm_help_difficulty_sub1"><![CDATA[
+            Játék Nehézsége
+        ]]></text>
+        <text name="rhm_help_difficulty_sub2"><![CDATA[
+            További Beállítások
+        ]]></text>
+        <text name="rhm_help_upgrades_sub1"><![CDATA[
+            1. szint: Alapfelszereltség
+        ]]></text>
+        <text name="rhm_help_upgrades_sub2"><![CDATA[
+            2. szint: Szenzor-készlet
+        ]]></text>
+        <text name="rhm_help_upgrades_sub3"><![CDATA[
+            3. szint: Hozammonitor
+        ]]></text>
+        <text name="rhm_help_upgrades_sub4"><![CDATA[
+            4. szint: Opti-Harvest AI
+        ]]></text>
+        <text name="rhm_ui_speed_eff"><![CDATA[Sebesség hat.]]></text>
+        <text name="rhm_help_moisture_title" text="8. Nedvesség Rendszer"/>
+        <text name="rhm_help_moisture_sub1" text="Integráció"/>
+        <text name="rhm_help_moisture_1" text="A Realistic Harvesting támogatja a Moisture System modot. A termés nedvességtartalma dinamikusan befolyásolja a motor terhelését és a sebességet."/>
+        <text name="rhm_help_moisture_sub2" text="Nedves Termés"/>
+        <text name="rhm_help_moisture_2" text="A nedves termések betakarítása jelentősen megnöveli a kombájn terhelését. A nedvességszint a HUD-on látható."/>
+        <text name="rhm_help_calibration_main_sub"><![CDATA[Általános Koncepció]]></text>
+        <text name="rhm_help_calibration_main_text"><![CDATA[A kombájn teljesítménye közvetlenül a helyes kalibrációtól függ.
+Nyissa meg az érintőképernyős kalibrációs terminált a (Jobb Shift + K) billentyűvel.
+
+Minden növényhez optimális célértékek tartoznak. A játék a tömegáramot motorterheléssé alakítja. A helytelen kalibráció súlyos szemveszteséget okoz.
+
+Üzemmódok:
+- 1–3. szint: Teljesen KÉZI vezérlés. Állítsa be a csúszkákat és mentse el profiljait a MENTÉS gombbal.
+- 4. szint (Opti-Harvest MI): Feloldja az AUTO gombot. Vágjon néhány métert a telemetria gyűjtéséhez, majd nyomja meg az AUTO gombot az azonnali MI-kalibrációhoz.
+
+Rendszerek:
+- Szétválasztás (Rotor / Behordó): a cséplési intenzitást és a kapacitást szabályozza.
+- Tisztítás (Ventilátor / Rosták): a szemtisztaságot biztosítja és megelőzi a veszteséget.]]></text>
+        <text name="rhm_help_calibration_rotor_sub"><![CDATA[Gabonakombinát]]></text>
+        <text name="rhm_help_calibration_rotor_text"><![CDATA[Optimális beállítások (Búza):
+Rotor fordulatszám: ~710 RPM.
+Ferdefelhordó: ~550 RPM.
+Ventilátor fordulatszám: ~810 RPM.
+Felső rosta: ~14 mm.
+Alsó rosta: ~8 mm.
+Megjegyzés: Kukoricához ~360 RPM Rotor és ~18 mm felső rosta kell.]]></text>
+        <text name="rhm_help_calibration_rotor_long"><![CDATA[Szabályozza a cséplés intenzitását. Optimális fordulatszámok:
+Búza: ~700 RPM.
+Árpa: ~770 RPM.
+Zab: ~720 RPM.
+Rizs: ~550 RPM.
+Repce: ~500 RPM.
+Szója: ~550 RPM.
+Kukorica: ~360 RPM.
+Napraforgó: ~320 RPM.
+Borsó: ~340 RPM.
+Kukoricához ALACSONY fordulat kell.]]></text>
+        <text name="rhm_help_calibration_fan_sub"><![CDATA[Tisztító ventilátor]]></text>
+        <text name="rhm_help_calibration_fan_text"><![CDATA[A ventilátor elválasztja a pelyvát a magtól.]]></text>
+        <text name="rhm_help_calibration_fan_long"><![CDATA[Kifújja a pelyvát. Optimális ventilátor-fordulatszámok:
+Kukorica: ~900 RPM.
+Szója/Borsó: ~850-875 RPM.
+Búza/Árpa: ~800 RPM.
+Rizs: ~775 RPM.
+Zab/Napraforgó: ~700 RPM.
+Repce: ~650 RPM.
+Könnyű magvak kiszállnak magas értéknél — tartsd ALACSONYAN.]]></text>
+        <text name="rhm_help_calibration_sieve_sub"><![CDATA[Rosta távolság]]></text>
+        <text name="rhm_help_calibration_sieve_text"><![CDATA[A túl szoros rosták hatalmas veszteségeket okoznak.]]></text>
+        <text name="rhm_help_calibration_sieve_long"><![CDATA[Felső / alsó rosta hézag terményenként:
+Búza / Árpa / Rizs: 14 mm / 8 mm.
+Zab: 10 mm / 6 mm.
+Repce: 12 mm / 6 mm.
+Szója / Borsó: 15 mm / 10 mm.
+Kukorica / Napraforgó: 18 mm / 11-12 mm.
+Rossz hézag eltömíti a rostát — akár 25% veszteség.]]></text>
+        <text name="rhm_help_cropsettings_title" text="Terménybeállítási útmutató"/>
+        <text name="rhm_help_cropsettings_grain_sub" text="Gabonakombájnok"/>
+        <text name="rhm_help_cropsettings_grain_text"><![CDATA[Optimális célértékek gabonakombájnokhoz:
+• Gabonafélék (Búza, Árpa, Rizs): Rotor 600-850 ford./perc, Ventilátor 700-850 ford./perc, Rosták 14mm / 8mm.
+• Olajos magvak (Repce, Napraforgó): Rotor 300-500 ford./perc, Ventilátor 600-700 ford./perc, Rosták 12mm / 6mm. (Figyelem: a könnyű magvak kifújódhatnak)
+• Kukorica: Rotor 300-400 ford./perc, Ventilátor 850-950 ford./perc, Rosták 18mm / 12mm. (Lassú rotor, erős légáram)
+• Hüvelyesek: Rotor 300-500 ford./perc, Ventilátor 800-950 ford./perc, Rosták 15mm / 10mm. (Kíméletes cséplés)]]></text>
+        <text name="rhm_help_cropsettings_forage_sub" text="Járvaszecskázók"/>
+        <text name="rhm_help_cropsettings_forage_text"><![CDATA[• Kukoricaszilázs: Dob 1100-1160 ford./perc, Ventilátor 1150-1290 ford./perc, Behúzó 400-480 ford./perc.
+• Fű / Széna: Dob 700-900 ford./perc, Ventilátor 800-1000 ford./perc, Behúzó 300-450 ford./perc.
+* Tipp: Ha a veszteség PIROS, de a terhelés stabil, a légáram kifújja a terményt. Csökkentse a ventilátor fordulatszámát.]]></text>
+        <text name="rhm_help_cropsettings_root_sub" text="Gyökérzöldség-betakarítók"/>
+        <text name="rhm_help_cropsettings_root_text"><![CDATA[• Nehéz (Burgonya, Cukorrépa): Hengerek ~400 ford./perc, Ventilátor ~400-500 ford./perc, Felhordó ~800 ford./perc.
+• Könnyű (Sárgarépa, Paszternák): Hengerek ~250 ford./perc, Ventilátor ~300 ford./perc, Felhordó ~900 ford./perc.
+• Hagyma: Hengerek ~300 ford./perc, Ventilátor ~900-1100 ford./perc, Felhordó ~600 ford./perc.
+• Spenót: Hengerek ~150 ford./perc, Ventilátor ~100-200 ford./perc, Felhordó ~700 ford./perc.
+* Tipp: A hengerek tisztítanak (a burgonyát ne zúzzuk össze). A ventilátor fújja le a szárat. A felhordó szabályozza a behordást.]]></text>
+        <text name="rhm_help_calibration_forage_intro_text"><![CDATA[A járvaszecskázók rendkívül érzékenyek a túlterhelésre.
+- A sűrű kukoricaszilázs magas dobfordulatszámot és erős légáramot igényel.
+- A fű és a széna kényesebb — az egyenletes behordás védi a motort.
+
+Ha a motorterhelés PIROSRA vált a HUD-on, csökkentse a haladási sebességet.
+
+A karok működése:
+- Szecskázódob: az aprítás intenzitása (magasabb = nagyobb teljesítményigény).
+- Behúzóhengerek: a behordott anyagmennyiség (a motorterhelés fő forrása).
+- Kifúvógyorsító: légáram a kidobáshoz (túl magas = terményveszteség).]]></text>
+        <text name="rhm_help_calibration_root_intro_text"><![CDATA[A gyökérzöldségek egyedi kihívást jelentenek a föld leválasztásában.
+- Burgonya: Könnyen sérül! A tisztítóhengereket lassan járassa.
+- Hagyma: Maximális légáramot igényel a száraz héj eltávolításához.
+- Spenót: Kényes levelek, csökkentse a légáramot, hogy ne fújja ki őket.
+
+Ha a veszteség PIROS, miközben a terhelés normális, állítsa be a ventilátort.
+
+A karok működése:
+- Tisztítóhengerek: Földleválasztás a termény károsítása nélkül.
+- Felhordószalag: Szabályozza a tartályba juttatás sebességét.
+- Válogatóventilátor: Légáram a szármaradványok eltávolításához.]]></text>
+        <text name="rhm_help_hud_sub3" text="HUD Mutatók"/>
+        <text name="rhm_help_hud_3_load" text="Motorterhelés (mennyire dolgoznak a betakarító elemek)"/>
+        <text name="rhm_help_hud_3_yield" text="Hozam (terméssűrűség az adott területen)"/>
+        <text name="rhm_help_hud_3_productivity" text="Termelékenység (óránként feldolgozott termésmennyiség)"/>
+        <text name="rhm_help_hud_3_moisture" text="Nedvességszint (csak a Moisture System móddal aktív)"/>
+        <text name="rhm_help_hud_3_loss" text="Termésveszteség (a gép által kidobott mag mennyisége)"/>
+        <text name="rhm_help_hud_3_speed" text="Jelenlegi és Ajánlott sebesség"/>
+        <text name="rhm_ui_section_separation" text="Leválasztás"/>
+        <text name="rhm_ui_section_cleaning" text="Tisztítás"/>
+        <text name="rhm_ui_section_discharge" text="Ürítés"/>
+        <text name="rhm_ui_section_performance" text="Teljesítmény"/>
+        <text name="rhm_ui_tier1_manual" text="1. SZINT - KÉZI"/>
+        <text name="rhm_ui_tier2_sensors" text="2. SZINT - SZENZOROK"/>
+        <text name="rhm_ui_tier3_monitor" text="3. SZINT - MONITOR"/>
+        <text name="rhm_ui_tier4_opti" text="4. SZINT - MI OPTI"/>
+        <text name="rhm_ui_card_engine_load" text="MOTORTERHELÉS"/>
+        <text name="rhm_ui_card_efficiency" text="HATÉKONYSÁG"/>
+        <text name="rhm_ui_card_predicted_loss" text="VÁRHATÓ VESZTESÉG"/>
+        <text name="rhm_ui_btn_ai_auto" text="MI AUTO-KALIB"/>
+        <text name="rhm_ui_btn_auto_locked" text="AUTO (ZÁROLVA)"/>
+        <text name="rhm_ui_btn_load_preset" text="BETÖLTÉS"/>
+        <text name="rhm_ui_btn_save_profile" text="MENTÉS"/>
+        <text name="rhm_ui_btn_load_locked" text="BETÖLTÉS (ZÁRVA)"/>
+        <text name="rhm_ui_btn_save_locked" text="MENTÉS (ZÁRVA)"/>
+        <text name="rhm_ui_btn_reset_defaults" text="GYÁRI BEÁLLÍTÁSOK VISSZAÁLLÍTÁSA"/>
+        <text name="rhm_ui_status_optimal" text="OPTIMÁLIS"/>
+        <text name="rhm_ui_status_low" text="ALACSONY"/>
+        <text name="rhm_ui_status_high" text="MAGAS"/>
+        <text name="rhm_msg_req_tier4" text="Opti-Harvest MI szükséges (4. Szint)"/>
+        <text name="rhm_msg_req_tier3" text="A profilokhoz Telemetria Monitor szükséges (3. Szint)"/>
+        <text name="rhm_msg_profile_saved" text="Profil elmentve: %s"/>
+        <text name="rhm_msg_profile_loaded" text="Profil betöltve: %s"/>
+        <text name="rhm_msg_profile_not_found" text="Nincs mentett profil ehhez a növényhez"/>
+        <text name="rhm_ui_combine_not_init" text="A kombájn nincs inicializálva"/>
+        <text name="rhm_unit_t_per_hour" text="t/h"/>
+        <text name="rhm_unit_ha_per_hour" text="ha/h"/>
+        <text name="rhm_setting_ai_tuning" text="Segéd beállítások"/>
+        <text name="rhm_setting_ai_tuning_long" text="Meghatározza, hogyan kezeli a munkás és a Courseplay a kombájn kalibrálását. 'Beállítások megtartása' szigorúan megtartja a kézi beállításaidat. 'Mindig automatikus' az elektronikai szint alapján számol. 'Letiltva' megakadályozza a módosítást."/>
+        <text name="rhm_setting_ai_tuning_keep" text="Beállítások megtartása"/>
+        <text name="rhm_setting_ai_tuning_auto" text="Mindig automatikus"/>
+        <text name="rhm_setting_ai_tuning_disabled" text="Letiltva"/>
+    </texts>
+</l10n>

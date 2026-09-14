@@ -208,6 +208,24 @@ function RHMSettingsUI.inject(settings)
     if cropLossOpt and cropLossOpt.setDisabled then cropLossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.cropLossOption = cropLossOpt
 
+    local aiTuningOptions = {
+        g_i18n:hasText("rhm_setting_ai_tuning_keep") and g_i18n:getText("rhm_setting_ai_tuning_keep") or "Keep Player Settings",
+        g_i18n:hasText("rhm_setting_ai_tuning_auto") and g_i18n:getText("rhm_setting_ai_tuning_auto") or "Always Auto-Tune",
+        g_i18n:hasText("rhm_setting_ai_tuning_disabled") and g_i18n:getText("rhm_setting_ai_tuning_disabled") or "Disabled",
+    }
+
+    local aiTuningOpt = addMultiRow(settingsPage, gameLayout, "ai_tuning", "rhm_setting_ai_tuning", "rhm_setting_ai_tuning_long",
+        aiTuningOptions, settings.aiHelperTuning or 1,
+        function(val)
+            if not settings:canChangeServerSettings() then return end
+            settings.aiHelperTuning = val; settings:save()
+            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
+                RHM_SettingsSync:sendToClients(settings)
+            end
+        end)
+    if aiTuningOpt and aiTuningOpt.setDisabled then aiTuningOpt:setDisabled(not isAdmin) end
+    RHMSettingsUI.aiTuningOption = aiTuningOpt
+
     if RHM_MoistureAdapter and RHM_MoistureAdapter.isActive then
         local moistureEnableOpt = addBinaryRow(settingsPage, gameLayout, "moisture_enable", "rhm_moisture_enable_short", "rhm_moisture_enable_long",
             settings.enableMoisture,
@@ -263,9 +281,6 @@ function RHMSettingsUI.inject(settings)
     -- === SECTION: Audio / Звук ===
     addSection(settingsPage, "rhm_section_audio", generalLayout)
 
-    RHMSettingsUI.overloadSoundsOption = addBinaryRow(settingsPage, generalLayout, "overload_sounds", "rhm_overload_sounds_short", "rhm_overload_sounds_long",
-        settings.enableOverloadSounds ~= false, function(val) settings.enableOverloadSounds = val; settings:save() end)
-
     RHMSettingsUI.alarmSoundOption = addBinaryRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
         settings.enableAlarmSound ~= false, function(val) settings.enableAlarmSound = val; settings:save() end)
 
@@ -318,6 +333,7 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.difficultyLossOption,  settings.difficultyLoss,  not isAdmin)
     setOpt(RHMSettingsUI.speedLimitOption,      settings.enableSpeedLimit and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.cropLossOption,        settings.enableCropLoss   and 2 or 1, not isAdmin)
+    setOpt(RHMSettingsUI.aiTuningOption,        settings.aiHelperTuning or 1,        not isAdmin)
     setOpt(RHMSettingsUI.moistureEnableOption,  settings.enableMoisture   and 2 or 1, not isAdmin)
 
     setOpt(RHMSettingsUI.hudOption,         settings.showHUD           and 2 or 1, false)
@@ -330,7 +346,6 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
     setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
 
-    setOpt(RHMSettingsUI.overloadSoundsOption, (settings.enableOverloadSounds ~= false) and 2 or 1, false)
     setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
     local volIdx = 3
     local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}

@@ -1344,13 +1344,9 @@ function rhm_Combine:updateSounds(dt)
     end
 
     -- Check user settings
-    local soundsEnabled = true
     local alarmEnabled = true
     local soundVolMultiplier = 1.0
     if g_realisticHarvestManager and g_realisticHarvestManager.settings then
-        if g_realisticHarvestManager.settings.enableOverloadSounds == false then
-            soundsEnabled = false
-        end
         if g_realisticHarvestManager.settings.enableAlarmSound == false then
             alarmEnabled = false
         end
@@ -1369,8 +1365,8 @@ function rhm_Combine:updateSounds(dt)
 
     local isTurnedOn = self:getIsTurnedOn()
 
-    -- If disabled, player not in vehicle, or combine turned off: stop active sounds
-    if not soundsEnabled or not isPlayerEntered or not isTurnedOn then
+    -- If alarm disabled, player not in vehicle, or combine turned off: stop active sounds
+    if not alarmEnabled or not isPlayerEntered or not isTurnedOn then
         if spec.samples.overloadAlarm then
             pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
         end
@@ -1699,9 +1695,14 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 end
             end
         else
-            -- EN: Player is manually driving - reset tracking so AI will re-tune next time it takes over.
-            -- UA: Гравець керує вручну - скидаємо трекінг, щоб наймит налаштувався знову при перехопленні.
-            spec._lastAiTunedCrop = nil
+            -- EN: Player is manually driving. Only reset tracking if the crop changed or combine is uncalibrated,
+            --     so that already configured combine settings are not repeatedly re-evaluated.
+            -- UA: Гравець керує вручну. Скидаємо трекінг тільки якщо змінилася культура або комбайн не налаштований,
+            --     щоб уже налаштовані параметри не смикалися даремно.
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if spec._lastAiTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
+                spec._lastAiTunedCrop = nil
+            end
         end
     end
 
@@ -1719,14 +1720,22 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
                 if currentCrop and currentCrop ~= "" and spec._lastAiClientTunedCrop ~= currentCrop then
                     spec._lastAiClientTunedCrop = currentCrop
-                    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
-                    if pm and pm:getProfile(currentCrop) then
-                        spec.combineMemory:loadUserPreset()
+                    -- EN: Only auto-send saved profile if combine is NOT already calibrated by player
+                    -- UA: Автоматично надсилаємо збережений профіль тільки якщо комбайн ЩЕ НЕ налаштований гравцем
+                    local isCalib = spec.combineMemory and (spec.combineMemory.isCalibrated or (spec.combineMemory.calibratedCrops and spec.combineMemory.calibratedCrops[currentCrop]))
+                    if not isCalib then
+                        local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
+                        if pm and pm:getProfile(currentCrop) then
+                            spec.combineMemory:loadUserPreset()
+                        end
                     end
                 end
             end
         else
-            spec._lastAiClientTunedCrop = nil
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if spec._lastAiClientTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
+                spec._lastAiClientTunedCrop = nil
+            end
         end
     end
 
@@ -1917,6 +1926,21 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     safeSet(cur .. "#feeder",     settings.feeder or 50)
     safeSet(cur .. "#targetEngineLoad", settings.targetEngineLoad or 95)
     
+    local isCalib = mem.isCalibrated == true or mem.hasManualTuning == true or (mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true)
+    safeSet(cur .. "#isCalibrated", isCalib)
+
+    local calibList = {}
+    if mem.calibratedCrops then
+        for crop, flag in pairs(mem.calibratedCrops) do
+            if flag then
+                table.insert(calibList, crop)
+            end
+        end
+    end
+    if #calibList > 0 then
+        safeSet(cur .. "#calibratedCrops", table.concat(calibList, " "))
+    end
+    
     rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
         self:getName() or "?",
         tostring(mem.currentCrop),
@@ -2047,6 +2071,24 @@ function rhm_Combine:loadFromSavegame(savegame)
         if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
         if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
         if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+    end
+
+    local isCalibrated = readBool(cur .. "#isCalibrated", true)
+    spec.combineMemory.isCalibrated = isCalibrated
+    spec.combineMemory.hasManualTuning = isCalibrated
+    spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+
+    if savedCrop and savedCrop ~= "" then
+        spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
+        spec._lastAiTunedCrop = savedCrop
+        spec._lastAiClientTunedCrop = savedCrop
+    end
+
+    local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
+    if savedCalibCropsStr and savedCalibCropsStr ~= "" then
+        for crop in string.gmatch(savedCalibCropsStr, "%S+") do
+            spec.combineMemory.calibratedCrops[crop] = true
+        end
     end
 
     self._rhmSettingsLoadedFromSavegame = true

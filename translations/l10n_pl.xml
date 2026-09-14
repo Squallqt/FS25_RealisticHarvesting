@@ -1,0 +1,526 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="rhm_section_simulation" text="Realistic Harvesting - Symulacja"/>
+        <text name="rhm_section_visuals" text="Realistic Harvesting - HUD i Wyświetlanie"/>
+        <text name="input_RHM_OPEN_MENU" text="Menu Kombajnu"/>
+        <text name="input_RHM_TOGGLE_HUD" text="Przełącz HUD żniw"/>
+        <text name="rhm_hud_load" text="OBCIĄŻ"/>
+        <text name="rhm_hud_loss" text="STRATY"/>
+        <text name="rhm_hud_moist" text="WILG"/>
+        <text name="rhm_ai_settings_retained" text="Zachowano ręczne ustawienia"/>
+        <text name="rhm_ai_auto_tuned" text="Automatycznie skalibrowany"/>
+        <text name="rhm_difficulty" text="Trudność"/>
+        <text name="rhm_difficulty_motor" text="Moc silnika"/>
+        <text name="rhm_difficulty_motor_short" text="Silnik"/>
+        <text name="rhm_difficulty_motor_long" text="Określa dostępny zapas mocy silnika. Zręcznościowy = +100%, Normalny = +35%, Realistyczny = 0%."/>
+        <text name="rhm_difficulty_loss" text="Strata plonów"/>
+        <text name="rhm_difficulty_loss_short" text="Strata"/>
+        <text name="rhm_difficulty_loss_long" text="Określa dotkliwość strat."/>
+        <text name="rhm_diff_1" text="Zręcznościowy"/>
+        <text name="rhm_difficulty_long" text="Arkada: wysokie limity (+100%). Normalna: zbalansowana fizyka (+35%). Realistyczna: czysta symulacja (0%)."/>
+        <text name="rhm_diff_2" text="Normalna"/>
+        <text name="rhm_diff_3" text="Realistyczna"/>
+        <text name="rhm_show_yield" text="Pokaż monitor plonów"/>
+        <text name="rhm_show_yield_short" text="Pokaż plon"/>
+        <text name="rhm_show_yield_long" text="Wyświetlaj plon w czasie rzeczywistym w HUD (t/ha lub bu/ac)"/>
+        <text name="rhm_yield_label" text="Plon"/>
+        <text name="rhm_hud_short" text="Pokaż HUD"/>
+        <text name="rhm_hud_long" text="Wyświetl informacje o żniwach"/>
+        <text name="rhm_speedlimit_short" text="Ogranicznik prędkości"/>
+        <text name="rhm_speedlimit_long"><![CDATA[
+            Automatycznie ogranicz prędkość kombajnu w zależności od obciążenia silnika
+        ]]></text>
+        <text name="rhm_croploss_short" text="Włącz straty plonów"/>
+        <text name="rhm_croploss_long" text="Oblicz straty plonów przy przeciążeniu"/>
+        <text name="rhm_show_speed_short" text="Pokaż prędkość"/>
+        <text name="rhm_show_speed_long" text="Pokaż aktualną i zalecaną prędkość w HUD"/>
+        <text name="rhm_show_load_short" text="Pokaż obciążenie"/>
+        <text name="rhm_show_load_long" text="Wyświetl procent obciążenia silnika w HUD"/>
+        <text name="rhm_show_productivity_short" text="Pokaż produktywność"/>
+        <text name="rhm_show_productivity_long" text="Wyświetl przepustowość (t/h) w HUD"/>
+        <text name="rhm_show_croploss_short" text="Pokaż straty"/>
+        <text name="rhm_show_moisture_short" text="Pokaż wilgotność"/>
+        <text name="rhm_show_moisture_long" text="Wyświetlaj procent wilgotności plonów w HUD"/>
+        <text name="rhm_moisture_enable_short" text="Kara za wilgotność"/>
+        <text name="rhm_moisture_enable_long"><![CDATA[
+            Zastosuj karę obciążenia w zależności od wilgotności (Wymaga Moisture System)
+            ]]></text>
+        <text name="rhm_ui_title_main" text="Kalibracja Kombajnu"/>
+        <text name="rhm_ui_page_settings" text="Ustawienia"/>
+        <text name="rhm_ui_page_profiles" text="Profile"/>
+        <text name="rhm_ui_current_crop" text="Obecna Uprawa"/>
+        <text name="rhm_ui_load" text="Obciążenie Silnika"/>
+        <text name="rhm_ui_loss" text="Strata"/>
+        <text name="rhm_ui_fan_speed" text="Obroty Wentylatora"/>
+        <text name="rhm_ui_rotor_speed" text="Obroty Rotora"/>
+        <text name="rhm_ui_upper_sieve" text="Sito Górne"/>
+        <text name="rhm_ui_lower_sieve" text="Sito Dolne"/>
+        <text name="rhm_ui_feeder_speed" text="Szczelina klepiska"/>
+        <text name="rhm_ui_mode_auto" text="AUTO"/>
+        <text name="rhm_ui_mode_manual" text="RĘCZNY"/>
+        <text name="rhm_ui_btn_reset" text="DOMYŚLNE"/>
+        <text name="rhm_ui_profile_create" text="NOWY PROFIL"/>
+        <text name="rhm_ui_profile_save" text="ZAPISZ"/>
+        <text name="rhm_ui_profile_load" text="WCZYTAJ"/>
+        <text name="rhm_ui_profile_delete" text="USUŃ"/>
+        <text name="rhm_ui_profile_name_placeholder" text="Nazwa profilu..."/>
+        <text name="rhm_hud_yield_label" text="PLON"/>
+        <text name="rhm_hud_load_label" text="OBC"/>
+        <text name="rhm_hud_loss_label" text="STRATA"/>
+        <text name="rhm_loss_level_low" text="NISKA"/>
+        <text name="rhm_loss_level_med" text="ŚRED"/>
+        <text name="rhm_loss_level_high" text="WYS"/>
+        <text name="rhm_show_croploss_long" text="Wyświetl procent strat w HUD"/>
+        <text name="rhm_show_load_warn_short" text="Pokaż ostrzeżenia o obciążeniu"/>
+        <text name="rhm_show_load_warn_long"><![CDATA[
+            Wyświetlaj migające ostrzeżenia o przeciążeniu (Wysokim/Krytycznym)
+        ]]></text>
+        <text name="rhm_overload_sounds_short" text="Dźwięki przeciążenia i naprężeń"/>
+        <text name="rhm_overload_sounds_long"><![CDATA[Odtwarzaj realistyczny alarm kabinowy i dźwięki obciążenia młocarni przy przeciążeniu kombajnu lub stratach ziarna.]]></text>
+        <text name="rhm_section_audio" text="Realistic Harvesting - Dźwięk"/>
+        <text name="rhm_alarm_sounds_short" text="Brzęczyk przeciążenia"/>
+        <text name="rhm_alarm_sounds_long" text="Włącza elektroniczny brzęczyk w kabinie przy krytycznym obciążeniu (98%+) lub wysokich stratach (&gt;4%)."/>
+        <text name="rhm_sound_volume_short" text="Głośność dźwięków"/>
+        <text name="rhm_sound_volume_long" text="Reguluje głośność brzęczyka alarmu przeciążenia w kabinie."/>
+        <text name="rhm_target_load" text="Docelowe obciążenie"/>
+        <text name="rhm_gui_title" text="Ustawienia Kombajnu"/>
+        <text name="rhm_gui_crop" text="Kultura:"/>
+        <text name="rhm_gui_none" text="BRAK"/>
+        <text name="rhm_gui_btn_auto" text="AUTO"/>
+        <text name="rhm_gui_btn_load_preset" text="Wczytaj profil"/>
+        <text name="rhm_gui_btn_save" text="Zapisz profil"/>
+        <text name="rhm_gui_btn_reset" text="Resetuj"/>
+        <text name="rhm_gui_engine_load" text="Obciążenie silnika: %.0f%%"/>
+        <text name="rhm_gui_loss" text="Strata: %.1f%%"/>
+        <text name="rhm_gui_preview_loss" text="Szac. strata: %.1f%%"/>
+        <text name="rhm_gui_close_hint" text="RShift+K aby zamknąć"/>
+        <text name="rhm_gui_no_combine" text="Brak kombajnu"/>
+        <text name="rhm_gui_not_init" text="Kombajn nie zainicjowany"/>
+        <text name="rhm_ui_drum_speed" text="Prędkość bębna"/>
+        <text name="rhm_ui_roller_speed" text="Prędkość walca"/>
+        <text name="rhm_ui_picker_speed" text="Prędkość zbieracza"/>
+        <text name="rhm_ui_forage_fan" text="Przyspieszacz"/>
+        <text name="rhm_ui_forage_drum" text="Bęben tnący"/>
+        <text name="rhm_ui_forage_feeder" text="Walce wciągające"/>
+        <text name="rhm_ui_root_roller" text="Rolki czyszczące"/>
+        <text name="rhm_ui_root_feeder" text="Taśma odsiewająca"/>
+        <text name="rhm_units_short" text="Jednostki"/>
+        <text name="rhm_units_long" text="Wybierz system pomiarowy (prędkość, masa, powierzchnia)"/>
+        <text name="rhm_unit_metric" text="Metryczny (km/h, t/h, ha)"/>
+        <text name="rhm_unit_imperial" text="Imperialny (mph, ton/h, ac)"/>
+        <text name="rhm_unit_bushels" text="Imperialny z buszelami (mph, bu/h, ac)"/>
+        <text name="rhm_reset" text="Resetuj ustawienia RH"/>
+        <text name="rhm_loss_low" text="NISKIE"/>
+        <text name="rhm_loss_med" text="ŚREDNIE"/>
+        <text name="rhm_loss_high" text="WYSOKIE"/>
+        <text name="rhm_warning_turn_on_combine" text="Włącz najpierw młocarnię!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Włącz heder!"/>
+        <text name="rhm_warn_overload_high" text="Kombajn przeciążony! Zmniejsz prędkość."/>
+        <text name="rhm_warn_overload_critical" text="KOMBAJN KRYTYCZNIE PRZECIĄŻONY! Poważne straty!"/>
+        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_package_standard" text="Standard"/>
+        <text name="rhm_package_sensor" text="Zestaw Czujników"/>
+        <text name="rhm_package_yield" text="Monitor Plonu i Strat"/>
+        <text name="rhm_package_opti" text="Opti-Harvest AI"/>
+        <text name="rhm_msg_req_level_4" text="Wymaga pakietu Opti-Harvest AI (Poziom 4)."/>
+        <text name="rhm_msg_auto_need_crop" text="Opti-Harvest AI: Skoś kilka metrów uprawy, aby rozpocząć autokalibrację!"/>
+        <text name="rhm_msg_auto_calibrated" text="Opti-Harvest AI: Pomyślnie skalibrowano dla %s!"/>
+        <text name="rhm_help_title"><![CDATA[
+            Poradnik Realistycznych Zbiorów
+        ]]></text>
+        <text name="rhm_help_overview_title"><![CDATA[
+            1. Przegląd fizyki przetwarzania
+        ]]></text>
+        <text name="rhm_help_category"><![CDATA[
+            Realistic Harvesting
+        ]]></text>
+        <text name="rhm_help_overview_1"><![CDATA[
+            Mod Realistic Harvesting wprowadza złożony model fizyki przetwarzania ziarna.
+Wydajność kombajnu zależy teraz od rzeczywistej objętości uprawy (przepływu masy).
+Każdy rodzaj uprawy ma własną wagę i złożoność.
+        ]]></text>
+        <text name="rhm_help_overview_2"><![CDATA[Najlepsza wydajność występuje, gdy obciążenie silnika utrzymuje się w granicach 95-100%.
+
+Zbyt szybka jazda przeciąża silnik: straty plonów gwałtownie rosną, a maszyna pracuje na granicy możliwości.
+Zbyt wolna jazda to marnowanie paliwa i cennego czasu.
+
+Praktyczny schemat pracy:
+1) Rozpocznij zbiór z odpowiednią szerokością roboczą dostosowaną do gęstości łanu.
+2) Obserwuj HUD: zalecana prędkość jest dynamicznie wyliczana na podstawie docelowego obciążenia.
+3) Jeśli straty zaświecą się na CZERWONO — zwolnij lub zmniejsz szerokość koszenia.
+4) Jeśli obciążenie jest ZIELONE, ale straty są CZERWONE — otwórz menu kalibracji (Prawy Shift + K) i dostosuj wentylator oraz sita dla danej uprawy.]]></text>
+        <text name="rhm_help_calibration_title"><![CDATA[
+            3. Opanowanie kalibracji
+        ]]></text>
+        <text name="rhm_help_calibration_1"><![CDATA[
+            Dostęp do menu kalibracji (RShift + K) pozwala dostroić maszynę.
+
+ROTOR oddziela ziarno od słomy.
+
+WENTYLATOR wydmuchuje plewy.
+
+SITA filtrują zanieczyszczenia
+- znalezienie idealnego balansu między czystym ziarnem a zerowymi stratami jest kluczem do zysku.
+        ]]></text>
+        <text name="rhm_help_calibration_2"><![CDATA[
+            Każda uprawa ma optymalne zakresy.
+
+Użyj kolorowych wskaźników (wymagany Zestaw Czujników), aby ułatwić regulację.
+
+Po żniwach zostanie wygenerowany raport, pokazujący jak kalibracja wpłynęła na plon i zyski.
+        ]]></text>
+        <text name="rhm_help_upgrades_title"><![CDATA[
+            7. Profesjonalne ulepszenia
+        ]]></text>
+        <text name="rhm_help_upgrades_1"><![CDATA[
+            Standardowa elektronika fabryczna. Zapewnia kluczowe dane HUD. Działa ściśle w trybie MANUAL z fabrycznymi tolerancjami przy zakupie (~50% ± 8%).
+        ]]></text>
+        <text name="rhm_help_upgrades_2"><![CDATA[
+            Dodaje profesjonalne czujniki strat. Odblokowuje kolorowe wskaźniki strat w czasie rzeczywistym.
+        ]]></text>
+        <text name="rhm_help_upgrades_3"><![CDATA[
+            Zaawansowana telemetria. Odblokowuje statystyki wydajności i efektywności w menu kalibracji (RShift + K).
+        ]]></text>
+        <text name="rhm_help_upgrades_4"><![CDATA[
+            Najwyższe ulepszenie. Odblokowuje Opti-Harvest AI: skoś kilka metrów na polu, a następnie naciśnij AUTO w menu kalibracji (RShift + K), aby uruchomić natychmiastową kalibrację AI z ciągłym dynamicznym dostrajaniem.
+        ]]></text>
+        <text name="rhm_help_hud_2_1"><![CDATA[
+            Kliknij prawym przyciskiem, aby włączyć kursor i przeciągnij HUD.
+        ]]></text>
+        <text name="rhm_help_hud_2_2"><![CDATA[
+            Każdy wskaźnik można ukryć w ESC > Ustawienia > Realistic Harvesting.
+        ]]></text>
+        <text name="rhm_help_hud_2_3"><![CDATA[
+            Możesz przełączać się między systemami pomiarowymi:
+- Metrycznym (t/ha)
+- Imperialnym (bu/ac)
+- Buszele
+        ]]></text>
+        <text name="rhm_help_hud_2_4"><![CDATA[
+            Pozycja jest zapisywana dla każdego gracza.
+        ]]></text>
+        <text name="rhm_help_hud_title"><![CDATA[
+            2. HUD — Wyświetlacz na ekranie
+        ]]></text>
+        <text name="rhm_help_hud_1_1"><![CDATA[
+            Panel HUD pojawia się automatycznie.
+        ]]></text>
+        <text name="rhm_help_hud_1_2"><![CDATA[
+            Pokazuje 5 wskaźników na żywo:
+- Obciążenie silnika (%)
+- Produktywność (t/h)
+- Plon (t/ha)
+- Prędkość aktualna i zalecana, Straty (NISKIE/ŚREDNIE/WYSOKIE).
+        ]]></text>
+        <text name="rhm_help_hud_1"><![CDATA[
+            Panel HUD pojawia się automatycznie. Pokazuje 5 wskaźników :
+- Obciążenie silnika (%)
+- Produktywność (t/h)
+- Plon (t/ha)
+- Prędkość
+- Straty (NISKIE/ŚREDNIE/WYSOKIE)
+
+Zielony = OK
+Żółty = uwaga
+Czerwony = straty.
+        ]]></text>
+        <text name="rhm_help_hud_1_3"><![CDATA[
+            Zielony = OK,
+Żółty = uwaga,
+Czerwony = straty.
+        ]]></text>
+        <text name="rhm_help_hud_2"><![CDATA[
+            Kliknij prawym przyciskiem, aby włączyć kursor i przeciągnij HUD.
+
+Każdy wskaźnik można ukryć w ESC > Ustawienia > Realistic Harvesting.
+
+Wybierz system:
+- Metryczny (t/ha)
+- Imperialny (bu/ac)
+- Buszele
+
+Pozycja jest zapisywana dla każdego gracza.
+        ]]></text>
+        <text name="rhm_help_special_title"><![CDATA[
+            4. Maszyny specjalne
+        ]]></text>
+        <text name="rhm_help_special_1"><![CDATA[
+            SIECZKARNIE mają 3 parametry:
+- Przyspieszacz (Blower Speed)
+- Bęben tnący (Chopping Drum)
+- i Walce wciągające (Feed Rolls).
+
+Przetwarzają trawę, siano, lucernę, koniczynę i kiszonkę z kukurydzy.
+
+Kiszonka wymaga najwyższej prędkości.
+
+Trawa jest delikatniejsza — zmniejsz prędkość bębna.
+        ]]></text>
+        <text name="rhm_help_special_2"><![CDATA[
+            KOMBAJNY KORZENIOWE:
+- Wentylator (Fan Speed)
+- Rolki czyszczące (Cleaning Rollers)
+- Taśma odsiewająca (Elevator Web)
+
+Każda roślina ma UNIKALNE optymalne wartości!
+
+Ziemniaki wymagają delikatnych walców.
+
+Cebula wymaga silnego strumienia powietrza.
+
+Szpinak wymaga minimum dmuchania.
+
+ZBIERAKI BAWEŁNY mają Wentylator (Fan Speed)
+- Prędkość zbieracza (Picker Speed)
+- i Podajnik (Feeder Speed) — bawełna jest niezwykle lekka.
+        ]]></text>
+        <text name="rhm_help_loss_title"><![CDATA[
+            5. Straty plonów — Przyczyny i zapobieganie
+        ]]></text>
+        <text name="rhm_help_loss_sub1"><![CDATA[Źródło 1: Przeciążenie i prędkość]]></text>
+        <text name="rhm_help_loss_1"><![CDATA[
+            Straty pochodzą z DWÓCH niezależnych źródeł.
+
+ŹRÓDŁO 1 — PRZECIĄŻENIE (Prędkość):
+- Powyżej 95% obciążenia silnika straty się zaczynają.
+
+Im szybciej jedziesz, tym więcej tracisz.
+
+Rozwiązanie:
+- zwolnij.
+
+ŹRÓDŁO 2 — ZŁA KALIBRACJA:
+- Złe ustawienia wentylatora, rotora lub sit dodają karę.
+
+Użyj Podglądu Strat w menu (RShift+K).
+        ]]></text>
+        <text name="rhm_help_loss_sub2"><![CDATA[Źródło 2: Złe ustawienia kalibracji]]></text>
+        <text name="rhm_help_loss_2"><![CDATA[
+            Fizyka kalibracji dzieli się na dwie mechaniki.
+
+Komponenty WYDAJNOŚCI (Rotor, Podajnik) wpływają na przepustowość.
+
+Idealne ustawienia dają +5% Bonusu Prędkości.
+
+Komponenty CZYSZCZENIA (Wentylator, Sita) wpływają na separację.
+
+Idealne ustawienia gwarantują 0% Dodatkowych Strat.
+
+BONUS:
+- Perfekcja daje Tarczę Antyobciążeniową chroniącą przed skokami gęstości.
+        ]]></text>
+        <text name="rhm_help_difficulty_title"><![CDATA[
+            6. Ustawienia trudności i konfiguracja
+        ]]></text>
+        <text name="rhm_help_difficulty_1"><![CDATA[
+            ESC > Ustawienia > Realistic Harvesting.
+
+MOC SILNIKA kontroluje wydajność:
+- Arcade (200%)
+- Normal (120%)
+- Realistyczny (100%).
+
+INTENSYWNOŚĆ STRAT kontroluje karę:
+- Arcade (50%)
+- Normal (standard)
+- Realistyczny (200%).
+        ]]></text>
+        <text name="rhm_help_difficulty_2"><![CDATA[
+            Dodatkowe opcje:
+- Ogranicznik Prędkości (WŁ/WYŁ)
+- System Strat (WŁ/WYŁ)
+- Niezależny Rozruch.
+
+W MULTIPLAYERZE ustawienia serwera (trudność) są wspólne i zmienia je tylko admin.
+
+Ustawienia klienta (HUD, jednostki) są indywidualne.
+
+Wszystko jest zapisywane.
+        ]]></text>
+        <text name="rhm_help_overview_sub1"><![CDATA[
+            Główna mechanika
+        ]]></text>
+        <text name="rhm_help_overview_sub2"><![CDATA[
+            Wydajność i Obciążenie
+        ]]></text>
+        <text name="rhm_help_hud_sub1"><![CDATA[
+            Pomiary na Żywo
+        ]]></text>
+        <text name="rhm_help_hud_sub2"><![CDATA[
+            Personalizacja
+        ]]></text>
+        <text name="rhm_help_calibration_sub1"><![CDATA[
+            Elementy Wewnętrzne
+        ]]></text>
+        <text name="rhm_help_calibration_sub2"><![CDATA[
+            Raport ze Zbiorów
+        ]]></text>
+        <text name="rhm_help_special_sub1"><![CDATA[
+            Sieczkarnie
+        ]]></text>
+        <text name="rhm_help_special_sub2"><![CDATA[
+            Okopowe i Bawełna
+        ]]></text>
+        <text name="rhm_help_croploss_sub1"><![CDATA[
+            Źródła Strat
+        ]]></text>
+        <text name="rhm_help_croploss_sub2"><![CDATA[
+            Kary za Kalibrację
+        ]]></text>
+        <text name="rhm_help_difficulty_sub1"><![CDATA[
+            Poziom Trudności
+        ]]></text>
+        <text name="rhm_help_difficulty_sub2"><![CDATA[
+            Dodatkowe Ustawienia
+        ]]></text>
+        <text name="rhm_help_upgrades_sub1"><![CDATA[
+            Poziom 1: Wyposażenie standardowe
+        ]]></text>
+        <text name="rhm_help_upgrades_sub2"><![CDATA[
+            Poziom 2: Zestaw czujników
+        ]]></text>
+        <text name="rhm_help_upgrades_sub3"><![CDATA[
+            Poziom 3: Monitor plonu
+        ]]></text>
+        <text name="rhm_help_upgrades_sub4"><![CDATA[
+            Poziom 4: Opti-Harvest AI
+        ]]></text>
+        <text name="rhm_ui_speed_eff"><![CDATA[Efekt. pręd.]]></text>
+        <text name="rhm_help_moisture_title" text="8. System Wilgotności"/>
+        <text name="rhm_help_moisture_sub1" text="Integracja"/>
+        <text name="rhm_help_moisture_1" text="Realistic Harvesting obsługuje mod Moisture System. Wilgotność upraw dynamicznie wpływa na obciążenie silnika i prędkość."/>
+        <text name="rhm_help_moisture_sub2" text="Mokre Zbiorów"/>
+        <text name="rhm_help_moisture_2" text="Zbiór mokrych upraw znacznie zwiększa obciążenie kombajnu. Poziomy wilgotności są widoczne w HUD."/>
+        <text name="rhm_help_calibration_main_sub"><![CDATA[Ogólna Koncepcja]]></text>
+        <text name="rhm_help_calibration_main_text"><![CDATA[Wydajność kombajnu zależy bezpośrednio od prawidłowej kalibracji.
+Otwórz dotykowy terminal kalibracji w dowolnym momencie za pomocą (Prawy Shift + K).
+
+Każda uprawa posiada swoje optymalne parametry docelowe. Gra przelicza przepływ masy na obciążenie silnika. Zła kalibracja powoduje ogromne straty ziarna.
+
+Tryby pracy:
+- Poziomy 1–3: Całkowicie RĘCZNE sterowanie. Ustawiasz suwaki ręcznie i zapisujesz profile dla upraw przyciskiem ZAPISZ.
+- Poziom 4 (Opti-Harvest AI): Odblokowuje przycisk AUTO. Przejedź kilka metrów po polu, aby zebrać telemetrię, a następnie wciśnij AUTO dla natychmiastowej kalibracji AI.
+
+Sekcje podzespołów:
+- Separacja (Rotor / Podajnik): kontroluje intensywność omłotu i przepustowość.
+- Czyszczenie (Wentylator / Sita): odpowiada za czystość ziarna i zapobiega stratom.]]></text>
+        <text name="rhm_help_calibration_rotor_sub"><![CDATA[Kombajn zbożowy]]></text>
+        <text name="rhm_help_calibration_rotor_text"><![CDATA[Optymalne ustawienia (Pszenica):
+Obroty rotora: ~710 RPM.
+Przenośnik: ~550 RPM.
+Obroty wentylatora: ~810 RPM.
+Sito górne: ~14 mm.
+Sito dolne: ~8 mm.
+Uwaga: Kukurydza wymaga ~360 RPM rotora i ~18 mm sita górnego.]]></text>
+        <text name="rhm_help_calibration_rotor_long"><![CDATA[Kontroluje intensywność młócenia. Prędkości optymalne:
+Pszenica: ~700 RPM.
+Jęczmień: ~770 RPM.
+Owies: ~720 RPM.
+Ryż: ~550 RPM.
+Rzepak: ~500 RPM.
+Soja: ~550 RPM.
+Kukurydza: ~360 RPM.
+Słonecznik: ~320 RPM.
+Groch: ~340 RPM.
+Kukurydza wymaga NISKICH obrotów.]]></text>
+        <text name="rhm_help_calibration_fan_sub"><![CDATA[Wentylator Czyszczący]]></text>
+        <text name="rhm_help_calibration_fan_text"><![CDATA[Wentylator oddziela plewy od ziarna.]]></text>
+        <text name="rhm_help_calibration_fan_long"><![CDATA[Wydmuchuje plewy. Optymalne prędkości wentylatora:
+Kukurydza: ~900 RPM.
+Soja/Groch: ~850-875 RPM.
+Pszenica/Jęczmień: ~800 RPM.
+Ryż: ~775 RPM.
+Owies/Słonecznik: ~700 RPM.
+Rzepak: ~650 RPM.
+Lekkie ziarna wylatują przy wysokich wartościach — trzymać NISKO.]]></text>
+        <text name="rhm_help_calibration_sieve_sub"><![CDATA[Szczeliny Sit]]></text>
+        <text name="rhm_help_calibration_sieve_text"><![CDATA[Zbyt wąskie szczeliny powodują ogromne straty.]]></text>
+        <text name="rhm_help_calibration_sieve_long"><![CDATA[Szczelina sit górnych / dolnych wg uprawy:
+Pszenica / Jęczmień / Ryż: 14 mm / 8 mm.
+Owies: 10 mm / 6 mm.
+Rzepak: 12 mm / 6 mm.
+Soja / Groch: 15 mm / 10 mm.
+Kukurydza / Słonecznik: 18 mm / 11-12 mm.
+Zły rozmiar zatyka sita — do 25% straty.]]></text>
+        <text name="rhm_help_cropsettings_title" text="Przewodnik ustawień upraw"/>
+        <text name="rhm_help_cropsettings_grain_sub" text="Kombajny zbożowe"/>
+        <text name="rhm_help_cropsettings_grain_text"><![CDATA[Optymalne zakresy dla kombajnów zbożowych:
+• Zboża (Pszenica, Jęczmień, Ryż): Rotor 600-850 RPM, Wentylator 700-850 RPM, Sita 14mm / 8mm.
+• Oleiste (Rzepak, Słonecznik): Rotor 300-500 RPM, Wentylator 600-700 RPM, Sita 12mm / 6mm. (Uwaga: lekkie nasiona są wywiewane)
+• Kukurydza: Rotor 300-400 RPM, Wentylator 850-950 RPM, Sita 18mm / 12mm. (Wolny rotor, silny nadmuch)
+• Strączkowe: Rotor 300-500 RPM, Wentylator 800-950 RPM, Sita 15mm / 10mm. (Delikatny omłot)]]></text>
+        <text name="rhm_help_cropsettings_forage_sub" text="Sieczkarnie samojezdne"/>
+        <text name="rhm_help_cropsettings_forage_text"><![CDATA[• Kiszonka z kukurydzy: Bęben 1100-1160 RPM, Dmuchawa 1150-1290 RPM, Podajnik 400-480 RPM.
+• Trawa / Siano: Bęben 700-900 RPM, Dmuchawa 800-1000 RPM, Podajnik 300-450 RPM.
+* Wskazówka: Jeśli strata jest CZERWONA przy stabilnym obciążeniu silnika, nadmuch wywiewa plon. Zmniejsz dmuchawę.]]></text>
+        <text name="rhm_help_cropsettings_root_sub" text="Kombajny do roślin okopowych i warzyw"/>
+        <text name="rhm_help_cropsettings_root_text"><![CDATA[• Ciężkie (Ziemniaki, Buraki): Rolki ~400 RPM, Wentylator ~400-500 RPM, Przenośnik ~800 RPM.
+• Lekkie (Marchew, Pasternak): Rolki ~250 RPM, Wentylator ~300 RPM, Przenośnik ~900 RPM.
+• Cebula: Rolki ~300 RPM, Wentylator ~900-1100 RPM, Przenośnik ~600 RPM.
+• Szpinak: Rolki ~150 RPM, Wentylator ~100-200 RPM, Przenośnik ~700 RPM.
+* Wskazówka: Rolki oczyszczają z ziemi (ostrożnie z ziemniakami). Wentylator odrywa naci. Przenośnik kontroluje przepustowość.]]></text>
+        <text name="rhm_help_calibration_forage_intro_text"><![CDATA[Sieczkarnie są niezwykle wrażliwe na przeciążenie masą.
+- Gęsta kukurydza na kiszonkę wymaga wysokich obrotów bębna i silnego nadmuchu.
+- Trawa i siano są delikatniejsze — płynny przepływ chroni silnik przed zadławieniem.
+
+Jeśli obciążenie silnika na HUD staje się CZERWONE, zwolnij prędkość jazdy.
+
+Działanie suwaków:
+- Bęben tnący: intensywność rozdrabniania (wyższe obroty = większy pobór mocy).
+- Walce podające: ilość pobieranej masy (główny czynnik obciążenia silnika).
+- Dmuchawa wyrzutu: przepływ powietrza (zbyt wysoki = wywiewanie plonu).]]></text>
+        <text name="rhm_help_calibration_root_intro_text"><![CDATA[Okopowe i warzywa wymagają szczególnej dbałości przy odsiewaniu ziemi.
+- Ziemniaki: Łatwo ulegają obiciu! Rolki czyszczące powinny pracować powoli.
+- Cebula: Wymaga maksymalnego nadmuchu, aby usunąć suche łuski.
+- Szpinak: Bardzo delikatne liście, zmniejsz nadmuch, aby ich nie wywiać.
+
+Gdy straty są CZERWONE przy stabilnym silniku, wyreguluj wentylator.
+
+Działanie suwaków:
+- Rolki czyszczące: Oczyszczają z gleby bez uszkadzania bulw.
+- Taśma przenośnika: Kontroluje prędkość transportu do zbiornika.
+- Wentylator oddzielający: Przepływ powietrza do usuwania łęcin.]]></text>
+        <text name="rhm_help_hud_sub3" text="Wskaźniki HUD"/>
+        <text name="rhm_help_hud_3_load" text="Obciążenie Silnika (jak ciężko pracują komponenty)"/>
+        <text name="rhm_help_hud_3_yield" text="Plon (gęstość upraw na danym obszarze)"/>
+        <text name="rhm_help_hud_3_productivity" text="Wydajność (objętość przetworzona na godzinę)"/>
+        <text name="rhm_help_hud_3_moisture" text="Wilgotność (aktywne tylko z modyfikacją Moisture System)"/>
+        <text name="rhm_help_hud_3_loss" text="Straty plonów (ilość wyrzucanego ziarna)"/>
+        <text name="rhm_help_hud_3_speed" text="Aktualna i Zalecana prędkość"/>
+        <text name="rhm_ui_section_separation" text="SEPARACJA"/>
+        <text name="rhm_ui_section_cleaning" text="CZYSZCZENIE"/>
+        <text name="rhm_ui_section_discharge" text="ROZŁADUNEK"/>
+        <text name="rhm_ui_section_performance" text="WYDAJNOŚĆ"/>
+        <text name="rhm_ui_tier1_manual" text="POZIOM 1 - RĘCZNY"/>
+        <text name="rhm_ui_tier2_sensors" text="POZIOM 2 - CZUJNIKI"/>
+        <text name="rhm_ui_tier3_monitor" text="POZIOM 3 - MONITOR"/>
+        <text name="rhm_ui_tier4_opti" text="POZIOM 4 - AI OPTI"/>
+        <text name="rhm_ui_card_engine_load" text="OBCIĄŻENIE SILNIKA"/>
+        <text name="rhm_ui_card_efficiency" text="WYDAJNOŚĆ"/>
+        <text name="rhm_ui_card_predicted_loss" text="PRZEWIDYWANA STRATA"/>
+        <text name="rhm_ui_btn_ai_auto" text="AUTO-KALIB AI"/>
+        <text name="rhm_ui_btn_auto_locked" text="AUTO (ZABLOKOWANE)"/>
+        <text name="rhm_ui_btn_load_preset" text="WCZYTAJ"/>
+        <text name="rhm_ui_btn_save_profile" text="ZAPISZ"/>
+        <text name="rhm_ui_btn_load_locked" text="WCZYTAJ (ZABLOK.)"/>
+        <text name="rhm_ui_btn_save_locked" text="ZAPISZ (ZABLOK.)"/>
+        <text name="rhm_ui_btn_reset_defaults" text="PRZYWRÓĆ USTAWIENIA FABRYCZNE"/>
+        <text name="rhm_ui_status_optimal" text="OPTYMALNIE"/>
+        <text name="rhm_ui_status_low" text="ZA NISKO"/>
+        <text name="rhm_ui_status_high" text="ZA WYSOKO"/>
+        <text name="rhm_msg_req_tier4" text="Wymaga AI Opti-Harvest (Poziom 4)"/>
+        <text name="rhm_msg_req_tier3" text="Profile wymagają Monitora Telemetrii (Poziom 3)"/>
+        <text name="rhm_msg_profile_saved" text="Zapisano profil: %s"/>
+        <text name="rhm_msg_profile_loaded" text="Wczytano profil: %s"/>
+        <text name="rhm_msg_profile_not_found" text="Nie znaleziono zapisanego profilu dla tej uprawy"/>
+        <text name="rhm_ui_combine_not_init" text="Kombajn niezainicjalizowany"/>
+        <text name="rhm_unit_t_per_hour" text="t/h"/>
+        <text name="rhm_unit_ha_per_hour" text="ha/h"/>
+        <text name="rhm_setting_ai_tuning" text="Regulacja przez pomocników"/>
+        <text name="rhm_setting_ai_tuning_long" text="Określa, jak pracownicy AI i Courseplay traktują kalibrację kombajnu. 'Zachowaj moje' ściśle zachowuje ręczne ustawienia i zapisane profile. 'Zawsze autokalibruj' przelicza nastawy według poziomu elektroniki. 'Wyłączone' całkowicie blokuje zmianę ustawień przez pomocników."/>
+        <text name="rhm_setting_ai_tuning_keep" text="Zachowaj moje"/>
+        <text name="rhm_setting_ai_tuning_auto" text="Zawsze autokalibruj"/>
+        <text name="rhm_setting_ai_tuning_disabled" text="Wyłączone"/>
+    </texts>
+</l10n>

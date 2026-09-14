@@ -1,0 +1,521 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="rhm_section_simulation" text="Realistic Harvesting - Simulace"/>
+        <text name="rhm_section_visuals" text="Realistic Harvesting - HUD a Zobrazení"/>
+        <text name="input_RHM_OPEN_MENU" text="Menu Kombajnu"/>
+        <text name="input_RHM_TOGGLE_HUD" text="Přepnout HUD sklizně"/>
+        <text name="rhm_hud_load" text="ZÁTĚŽ"/>
+        <text name="rhm_hud_loss" text="ZTRÁTA"/>
+        <text name="rhm_hud_moist" text="VLHKOST"/>
+        <text name="rhm_ai_settings_retained" text="Ruční nastavení zachováno"/>
+        <text name="rhm_ai_auto_tuned" text="Automaticky zkalibrováno"/>
+        <text name="rhm_difficulty" text="Obtížnost"/>
+        <text name="rhm_difficulty_motor" text="Výkon motoru"/>
+        <text name="rhm_difficulty_motor_short" text="Motor"/>
+        <text name="rhm_difficulty_motor_long" text="Určuje dostupnou výkonovou rezervu motoru. Arkáda = +100%, Normální = +35%, Realistická = 0%."/>
+        <text name="rhm_difficulty_loss" text="Ztráta úrody"/>
+        <text name="rhm_difficulty_loss_short" text="Ztráta"/>
+        <text name="rhm_difficulty_loss_long" text="Určuje závažnost ztráty."/>
+        <text name="rhm_diff_1" text="Arkáda"/>
+        <text name="rhm_difficulty_long" text="Arkáda: Vysoké limity (+100%). Normální: Vyvážená fyzika (+35%). Realistická: Čistá simulace (0%)."/>
+        <text name="rhm_diff_2" text="Normální"/>
+        <text name="rhm_diff_3" text="Realistická"/>
+        <text name="rhm_show_yield" text="Zobrazit monitor výnosu"/>
+        <text name="rhm_show_yield_short" text="Zobrazit výnos"/>
+        <text name="rhm_show_yield_long" text="Zobrazit výnos v reálném čase v HUD (t/ha nebo bu/ac)"/>
+        <text name="rhm_yield_label" text="Výnos"/>
+        <text name="rhm_hud_short" text="Zobrazit HUD"/>
+        <text name="rhm_hud_long" text="Zobrazit informace o sklizni"/>
+        <text name="rhm_speedlimit_short" text="Omezovač rychlosti"/>
+        <text name="rhm_speedlimit_long"><![CDATA[
+            Automaticky omezit rychlost kombajnu podle zatížení motoru
+        ]]></text>
+        <text name="rhm_croploss_short" text="Povolit ztrátu úrody"/>
+        <text name="rhm_croploss_long" text="Vypočítat ztrátu úrody při přetížení"/>
+        <text name="rhm_show_speed_short" text="Zobrazit rychlost"/>
+        <text name="rhm_show_speed_long" text="Zobrazit aktuální a doporučenou rychlost v HUD"/>
+        <text name="rhm_show_load_short" text="Zobrazit zatížení"/>
+        <text name="rhm_show_load_long" text="Zobrazit procento zatížení motoru v HUD"/>
+        <text name="rhm_show_productivity_short" text="Zobrazit produktivitu"/>
+        <text name="rhm_show_productivity_long" text="Zobrazit průchodnost (t/h) v HUD"/>
+        <text name="rhm_show_croploss_short" text="Zobrazit ztrátu"/>
+        <text name="rhm_show_moisture_short" text="Zobrazit vlhkost"/>
+        <text name="rhm_show_moisture_long" text="Zobrazit procento vlhkosti plodin na HUDu"/>
+        <text name="rhm_moisture_enable_short" text="Postih za vlhkost"/>
+        <text name="rhm_moisture_enable_long"><![CDATA[
+            Aplikovat postih zatížení podle vlhkosti plodin (Vyžaduje Moisture System)
+            ]]></text>
+        <text name="rhm_ui_title_main" text="Kalibrace Kombajnu"/>
+        <text name="rhm_ui_page_settings" text="Nastavení"/>
+        <text name="rhm_ui_page_profiles" text="Profily"/>
+        <text name="rhm_ui_current_crop" text="Aktuální Plodina"/>
+        <text name="rhm_ui_load" text="Zatížení Motoru"/>
+        <text name="rhm_ui_loss" text="Ztráta"/>
+        <text name="rhm_ui_fan_speed" text="Otáčky Ventilátoru"/>
+        <text name="rhm_ui_rotor_speed" text="Otáčky Rotoru"/>
+        <text name="rhm_ui_upper_sieve" text="Horní Síto"/>
+        <text name="rhm_ui_lower_sieve" text="Spodní Síto"/>
+        <text name="rhm_ui_feeder_speed" text="Mezera mláticího koše"/>
+        <text name="rhm_ui_mode_auto" text="AUTO"/>
+        <text name="rhm_ui_mode_manual" text="MANUÁLNÍ"/>
+        <text name="rhm_ui_btn_reset" text="VÝCHOZÍ"/>
+        <text name="rhm_ui_profile_create" text="NOVÝ PROFIL"/>
+        <text name="rhm_ui_profile_save" text="ULOŽIT"/>
+        <text name="rhm_ui_profile_load" text="NAČÍST"/>
+        <text name="rhm_ui_profile_delete" text="SMAZAT"/>
+        <text name="rhm_ui_profile_name_placeholder" text="Název profilu..."/>
+        <text name="rhm_hud_yield_label" text="VÝNOS"/>
+        <text name="rhm_hud_load_label" text="ZAT"/>
+        <text name="rhm_hud_loss_label" text="ZTR"/>
+        <text name="rhm_loss_level_low" text="NÍZKÁ"/>
+        <text name="rhm_loss_level_med" text="STŘED"/>
+        <text name="rhm_loss_level_high" text="VYS"/>
+        <text name="rhm_show_croploss_long" text="Zobrazit procento ztráty v HUD"/>
+        <text name="rhm_show_load_warn_short" text="Zobrazit varování o zatížení"/>
+        <text name="rhm_show_load_warn_long"><![CDATA[
+            Zobrazit blikající varování při přetížení (Vysoké/Kritické)
+        ]]></text>
+        <text name="rhm_overload_sounds_short" text="Zvuky přetížení a namáhání"/>
+        <text name="rhm_overload_sounds_long"><![CDATA[Přehrávat realistický alarm v kabině a zvuky namáhání mlátičky při přetížení kombajnu nebo ztrátách zrna.]]></text>
+        <text name="rhm_section_audio" text="Realistic Harvesting - Zvuk"/>
+        <text name="rhm_alarm_sounds_short" text="Bzučák přetížení"/>
+        <text name="rhm_alarm_sounds_long" text="Spustí zvukový bzučák v kabině při kritickém zatížení (98%+) nebo vysokých ztrátách (&gt;4%)."/>
+        <text name="rhm_sound_volume_short" text="Hlasitost zvuku"/>
+        <text name="rhm_sound_volume_long" text="Nastavuje hlasitost bzučáku alarmu přetížení v kabině."/>
+        <text name="rhm_target_load" text="Cílové zatížení"/>
+        <text name="rhm_gui_title" text="Nastavení Kombajnu"/>
+        <text name="rhm_gui_crop" text="Plodina:"/>
+        <text name="rhm_gui_none" text="ŽÁDNÁ"/>
+        <text name="rhm_gui_btn_auto" text="AUTO"/>
+        <text name="rhm_gui_btn_load_preset" text="Načíst profil"/>
+        <text name="rhm_gui_btn_save" text="Uložit profil"/>
+        <text name="rhm_gui_btn_reset" text="Obnovit"/>
+        <text name="rhm_gui_engine_load" text="Zatížení motoru: %.0f%%"/>
+        <text name="rhm_gui_loss" text="Ztráta: %.1f%%"/>
+        <text name="rhm_gui_preview_loss" text="Odhad ztráty: %.1f%%"/>
+        <text name="rhm_gui_close_hint" text="RShift+K pro zavření"/>
+        <text name="rhm_gui_no_combine" text="Žádný kombajn"/>
+        <text name="rhm_gui_not_init" text="Kombajn neinicializován"/>
+        <text name="rhm_ui_drum_speed" text="Rychlost bubnu"/>
+        <text name="rhm_ui_roller_speed" text="Rychlost válce"/>
+        <text name="rhm_ui_picker_speed" text="Rychlost sběrače"/>
+        <text name="rhm_ui_forage_fan" text="Urychlovač"/>
+        <text name="rhm_ui_forage_drum" text="Řezací buben"/>
+        <text name="rhm_ui_forage_feeder" text="Vkládací válce"/>
+        <text name="rhm_ui_root_roller" text="Čisticí válce"/>
+        <text name="rhm_ui_root_feeder" text="Prosévací pás"/>
+        <text name="rhm_units_short" text="Jednotky"/>
+        <text name="rhm_units_long" text="Vyberte měrný systém (rychlost, hmotnost, plocha)"/>
+        <text name="rhm_unit_metric" text="Metrický (km/h, t/h, ha)"/>
+        <text name="rhm_unit_imperial" text="Imperiální (mph, ton/h, ac)"/>
+        <text name="rhm_unit_bushels" text="Imperiální s bušly (mph, bu/h, ac)"/>
+        <text name="rhm_reset" text="Resetovat nastavení RH"/>
+        <text name="rhm_loss_low" text="NÍZKÉ"/>
+        <text name="rhm_loss_med" text="STŘEDNÍ"/>
+        <text name="rhm_loss_high" text="VYSOKÉ"/>
+        <text name="rhm_warning_turn_on_combine" text="Nejdříve zapněte mlátičku!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Zapněte žací lištu!"/>
+        <text name="rhm_warn_overload_high" text="Kombajn přetížen! Snižte rychlost."/>
+        <text name="rhm_warn_overload_critical" text="KOMBAJN KRITICKY PŘETÍŽEN! Vážné ztráty sklizně!"/>
+        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_package_standard" text="Standard"/>
+        <text name="rhm_package_sensor" text="Sada Senzorů"/>
+        <text name="rhm_package_yield" text="Monitor Výnosu a Ztrát"/>
+        <text name="rhm_package_opti" text="Opti-Harvest AI"/>
+        <text name="rhm_msg_req_level_4" text="Vyžaduje balíček Opti-Harvest AI (Úroveň 4)."/>
+        <text name="rhm_msg_auto_need_crop" text="Opti-Harvest AI: Sklidte několik metrů pro spuštění autokalibrace!"/>
+        <text name="rhm_msg_auto_calibrated" text="Opti-Harvest AI: Úspěšně zkalibrováno pro %s!"/>
+        <text name="rhm_help_title"><![CDATA[
+            Průvodce realistickou sklizní
+        ]]></text>
+        <text name="rhm_help_overview_title"><![CDATA[
+            1. Přehled fyziky zpracování
+        ]]></text>
+        <text name="rhm_help_category"><![CDATA[
+            Realistic Harvesting
+        ]]></text>
+        <text name="rhm_help_overview_1"><![CDATA[
+            Mod Realistic Harvesting zavádí komplexní model fyziky zpracování zrna.
+Výkon vašeho kombajnu nyní závisí na skutečném objemu plodiny (hmotnostním toku).
+Každá plodina má svou vlastní hmotnost.
+        ]]></text>
+        <text name="rhm_help_overview_2"><![CDATA[Nejvyšší efektivity dosáhnete, když se zatížení motoru pohybuje mezi 95 % a 100 %.
+
+Při příliš rychlé jízdě se motor přetíží: sklizňové ztráty strmě vzrostou a stroj pracuje na hranici možností.
+Při příliš pomalé jízdě plýtváte palivem a časem.
+
+Praktický postup:
+1) Začněte sklízet s přiměřeným záběrem přizpůsobeným hustotě porostu.
+2) Sledujte HUD: doporučená rychlost se dynamicky počítá z vašeho cílového zatížení.
+3) Pokud ztráty zčervenají: zpomalte nebo zúžíte záběr žacího stolu.
+4) Pokud je zatížení ZELENÉ, ale ztráty ČERVENÉ: otevřete kalibraci (Pravý Shift + K) a doladte ventilátor a síta pro tuto plodinu.]]></text>
+        <text name="rhm_help_calibration_title"><![CDATA[
+            3. Ovládnutí kalibrace
+        ]]></text>
+        <text name="rhm_help_calibration_1"><![CDATA[
+            Vstupte do menu kalibrace (RShift + K) a doladte svůj stroj.
+
+ROTOR odděluje zrno od slámy.
+
+VENTILÁTOR vyfukuje plevy.
+
+SÍTA filtrují nečistoty – nalezení „Sweet Spot“ mezi čistým vzorkem a nulovými ztrátami je klíčem k zisku.
+        ]]></text>
+        <text name="rhm_help_calibration_2"><![CDATA[
+            Každá plodina má své optimální rozsahy.
+
+Použijte barevné indikátory stavu (vyžadován senzorový balíček) jako vodítko.
+
+Po dokončení pole bude vygenerován protokol o sklizni, který ukáže, jak kalibrace ovlivnila výsledky.
+        ]]></text>
+        <text name="rhm_help_upgrades_title"><![CDATA[
+            7. Profesionální upgrady
+        ]]></text>
+        <text name="rhm_help_upgrades_1"><![CDATA[
+            Standardní tovární elektronika. Poskytuje základní údaje HUD. Pracuje striktně v režimu MANUAL s výrobními tolerancemi při nákupu (~50% ± 8%).
+        ]]></text>
+        <text name="rhm_help_upgrades_2"><![CDATA[
+            Přidává profesionální senzory ztrát. Odemkne barevné indikátory v reálném čase (Zelená/Žlutá/Červená).
+        ]]></text>
+        <text name="rhm_help_upgrades_3"><![CDATA[
+            Pokročilá telemetrie. Odemkne živé statistiky výkonu a účinnosti v menu kalibrace (RShift + K).
+        ]]></text>
+        <text name="rhm_help_upgrades_4"><![CDATA[
+            Špičkový upgrade. Odemkne Opti-Harvest AI: sklidte několik metrů na poli a stiskněte AUTO v nabídce kalibrace (RShift + K) pro okamžitou AI kalibraci s plynulým dynamickým dolaďováním.
+        ]]></text>
+        <text name="rhm_help_hud_2_1"><![CDATA[
+            Pravým kliknutím aktivujte kurzor a přetáhněte HUD.
+        ]]></text>
+        <text name="rhm_help_hud_2_2"><![CDATA[
+            Každou metriku lze skrýt v ESC
+- Nastavení.
+        ]]></text>
+        <text name="rhm_help_hud_2_3"><![CDATA[
+            Můžete přepínat mezi měrnými systémy:
+- Metrické (t/ha)
+- Imperiální (bu/ac)
+- Bušl
+        ]]></text>
+        <text name="rhm_help_hud_2_4"><![CDATA[
+            Pozice se ukládá pro každého hráče.
+        ]]></text>
+        <text name="rhm_help_hud_title"><![CDATA[
+            2. HUD — Zobrazení na obrazovce
+        ]]></text>
+        <text name="rhm_help_hud_1_1"><![CDATA[
+            Panel HUD se zobrazí automaticky.
+        ]]></text>
+        <text name="rhm_help_hud_1_2"><![CDATA[
+            Ukazuje 5 živých metrik:
+- Zatížení motoru (%)
+- Produktivita (t/h)
+- Výnos (t/ha)
+- Aktuální a doporučená rychlost, Ztráty (NÍZKÉ/STŘEDNÍ/VYSOKÉ).
+        ]]></text>
+        <text name="rhm_help_hud_1"><![CDATA[
+            Panel HUD se zobrazí automaticky. Ukazuje 5 metrik :
+- Zatížení motoru (%)
+- Produktivita (t/h)
+- Výnos (t/ha)
+- Rychlost
+- Ztráty (NÍZKÉ/STŘEDNÍ/VYSOKÉ)
+
+Zelená = OK
+Žlutá = pozor
+Červená = ztráty.
+        ]]></text>
+        <text name="rhm_help_hud_1_3"><![CDATA[
+            Zelená = OK,
+Žlutá = pozor,
+Červená = ztráty.
+        ]]></text>
+        <text name="rhm_help_hud_2"><![CDATA[
+            Pravým kliknutím aktivujte kurzor a přetáhněte HUD.
+
+Každou metriku lze skrýt v ESC
+- Nastavení.
+
+Změna jednotek:
+- Metrické (t/ha)
+- Imperiální (bu/ac)
+- Bušl (Bushel)
+
+Pozice se ukládá pro každého hráče.
+        ]]></text>
+        <text name="rhm_help_special_title"><![CDATA[
+            4. Speciální stroje
+        ]]></text>
+        <text name="rhm_help_special_1"><![CDATA[
+            ŘEZAČKY mají 3 parametry:
+- Urychlovač (Blower Speed)
+- Řezací buben (Chopping Drum)
+- Vkládací válce (Feed Rolls).
+
+Zpracovávají trávu, seno, vojtěšku, jetel a kukuřičnou siláž.
+
+Kukuřičná siláž vyžaduje nejvyšší rychlost.
+
+Tráva je jemnější — snižte rychlost bubnu.
+        ]]></text>
+        <text name="rhm_help_special_2"><![CDATA[
+            SKLÍZEČE OKOPANIN (brambory, cukrová řepa, cibule, mrkev, špenát) mají Ventilátor (Fan Speed), Čisticí válce (Cleaning Rollers)
+- a Prosévací pás (Elevator Web).
+
+Každá plodina má JEDINEČNÉ optimální hodnoty!
+
+Brambory potřebují jemné válce.
+
+Cibule silný proud vzduchu. Špenát minimální vzduch.
+
+SBĚRAČE BAVLNY mají Ventilátor (Fan Speed)
+- Rychlost sběrače (Picker Speed)
+- a Podavač (Feeder Speed) — bavlna je extrémně lehká.
+        ]]></text>
+        <text name="rhm_help_loss_title"><![CDATA[
+            5. Ztráty sklizně — Příčiny a prevence
+        ]]></text>
+        <text name="rhm_help_loss_sub1"><![CDATA[Zdroj 1: Přetížení a rychlost]]></text>
+        <text name="rhm_help_loss_1"><![CDATA[
+            Ztráty pocházejí ze DVOU nezávislých zdrojů.
+
+ZDROJ 1 — PŘETÍŽENÍ (Rychlost):
+- Nad 95% zatížení motoru začínají ztráty. Čím rychleji, tím více. Řešení:
+- zpomalte.
+
+ZDROJ 2 — ŠPATNÁ KALIBRACE:
+- Špatný ventilátor, rotor nebo síta přidávají penalizaci.
+
+Použijte Náhled Ztrát v menu (RShift+K).
+        ]]></text>
+        <text name="rhm_help_loss_sub2"><![CDATA[Zdroj 2: Špatné nastavení kalibrace]]></text>
+        <text name="rhm_help_loss_2"><![CDATA[
+            Fyzika kalibrace se dělí na dvě mechaniky.
+
+Komponenty ÚČINNOSTI (Rotor, Podavač) ovlivňují rychlost.
+
+Dokonalé nastavení dává +5% Bonus Rychlosti.
+
+Komponenty ČIŠTĚNÍ (Ventilátor, Síta) ovlivňují separaci.
+
+Dokonalé nastavení zaručuje 0% Přidané Ztráty.
+
+BONUS:
+- Dokonalost dává Štít Proti Přetížení.
+        ]]></text>
+        <text name="rhm_help_difficulty_title"><![CDATA[
+            6. Nastavení obtížnosti a konfigurace
+        ]]></text>
+        <text name="rhm_help_difficulty_1"><![CDATA[
+            ESC
+- Nastavení
+- Realistic Harvesting.
+
+VÝKON MOTORU řídí kapacitu:
+- Arkáda (200%)
+- Normální (120%)
+- Realistický (100%).
+
+ZÁVAŽNOST ZTRÁT řídí intenzitu penalizace:
+- Arkáda (50%)
+- Normální (standard)
+- Realistický (200%).
+        ]]></text>
+        <text name="rhm_help_difficulty_2"><![CDATA[
+            Další přepínače:
+- Omezovač Rychlosti (ZAP/VYP)
+- Systém Ztrát (ZAP/VYP)
+- Nezávislý Start.
+
+V MULTIPLAYERU jsou serverová nastavení (obtížnost) sdílená a mění je pouze admin.
+
+Klientská nastavení (HUD, jednotky) jsou osobní.
+
+Vše se ukládá.
+        ]]></text>
+        <text name="rhm_help_overview_sub1"><![CDATA[
+            Základní mechanika
+        ]]></text>
+        <text name="rhm_help_overview_sub2"><![CDATA[
+            Účinnost a Zatížení
+        ]]></text>
+        <text name="rhm_help_hud_sub1"><![CDATA[
+            Živé Metriky
+        ]]></text>
+        <text name="rhm_help_hud_sub2"><![CDATA[
+            Přizpůsobení
+        ]]></text>
+        <text name="rhm_help_calibration_sub1"><![CDATA[
+            Vnitřní Komponenty
+        ]]></text>
+        <text name="rhm_help_calibration_sub2"><![CDATA[
+            Zpráva o Sklizni
+        ]]></text>
+        <text name="rhm_help_special_sub1"><![CDATA[
+            Řezačky
+        ]]></text>
+        <text name="rhm_help_special_sub2"><![CDATA[
+            Okopaniny a Bavlna
+        ]]></text>
+        <text name="rhm_help_croploss_sub1"><![CDATA[
+            Zdroje Ztrát
+        ]]></text>
+        <text name="rhm_help_croploss_sub2"><![CDATA[
+            Penále za Kalibraci
+        ]]></text>
+        <text name="rhm_help_difficulty_sub1"><![CDATA[
+            Obtížnost Hry
+        ]]></text>
+        <text name="rhm_help_difficulty_sub2"><![CDATA[
+            Další Nastavení
+        ]]></text>
+        <text name="rhm_help_upgrades_sub1"><![CDATA[
+            Úroveň 1: Standardní vybavení
+        ]]></text>
+        <text name="rhm_help_upgrades_sub2"><![CDATA[
+            Úroveň 2: Senzorový balíček
+        ]]></text>
+        <text name="rhm_help_upgrades_sub3"><![CDATA[
+            Úroveň 3: Monitor výnosu
+        ]]></text>
+        <text name="rhm_help_upgrades_sub4"><![CDATA[
+            Úroveň 4: Umělá Inteligence Opti-Harvest
+        ]]></text>
+        <text name="rhm_ui_speed_eff"><![CDATA[Účinnost rych.]]></text>
+        <text name="rhm_help_moisture_title" text="8. Systém Vlhkosti"/>
+        <text name="rhm_help_moisture_sub1" text="Integrace"/>
+        <text name="rhm_help_moisture_1" text="Realistic Harvesting podporuje mód Moisture System. Vlhkost plodin dynamicky ovlivňuje zatížení motoru a rychlost."/>
+        <text name="rhm_help_moisture_sub2" text="Vlhká Sklizeň"/>
+        <text name="rhm_help_moisture_2" text="Sklizeň vlhkých plodin výrazně zvyšuje zátěž kombajnu. Úrovně vlhkosti jsou viditelné na HUDu."/>
+        <text name="rhm_help_calibration_main_sub"><![CDATA[Obecný Koncept]]></text>
+        <text name="rhm_help_calibration_main_text"><![CDATA[Výkon mlátičky závisí přímo na správné kalibraci.
+Kalibrační terminál otevřete kdykoliv pomocí (Pravý Shift + K).
+
+Každá plodina má své optimální hodnoty. Hra převádí tok hmoty na zatížení motoru. Špatná kalibrace vede k masivním ztrátám zrna.
+
+Provozní režimy:
+- Úrovně 1–3: Čistě MANUÁLNÍ. Nastavujete posuvníky ručně a ukládáte profily tlačítkem ULOŽIT.
+- Úroveň 4 (Opti-Harvest AI): Odemkne tlačítko AUTO. Posečte několik metrů pro sběr telemetrie a stiskněte AUTO pro okamžitou AI kalibraci.
+
+Sekce komponent:
+- Separace (Rotor / Šikmý dopravník): řídí intenzitu výmlatu a průchodnost.
+- Čištění (Ventilátor / Síta): zajišťuje čistotu zrna a zamezuje ztrátám.]]></text>
+        <text name="rhm_help_calibration_rotor_sub"><![CDATA[Zbytkový kombajn]]></text>
+        <text name="rhm_help_calibration_rotor_text"><![CDATA[Optimální nastavení (Pšenice):
+Otáčky rotoru: ~710 RPM.
+Šikmý dopravník: ~550 RPM.
+Rychlost ventilátoru: ~810 RPM.
+Horní síto: ~14 mm.
+Dolní síto: ~8 mm.
+Poznámka: Kukuřice vyžaduje ~360 RPM rotoru a ~18 mm horního síta.]]></text>
+        <text name="rhm_help_calibration_rotor_long"><![CDATA[Ovládá intenzitu výmlatu. Optimální otáčky:
+Pšenice: ~700 RPM.
+Ječmen: ~770 RPM.
+Oves: ~720 RPM.
+Rýže: ~550 RPM.
+Řepka: ~500 RPM.
+Sója: ~550 RPM.
+Kukuřice: ~360 RPM.
+Slunečnice: ~320 RPM.
+Hrách: ~340 RPM.
+Kukuřice potřebuje NÍZKÉ otáčky.]]></text>
+        <text name="rhm_help_calibration_fan_sub"><![CDATA[Čisticí ventilátor]]></text>
+        <text name="rhm_help_calibration_fan_text"><![CDATA[Ventilátor odděluje plevy od zrna.]]></text>
+        <text name="rhm_help_calibration_fan_long"><![CDATA[Vyfukuje plevy. Optimální otáčky ventilátoru:
+Kukuřice: ~900 RPM.
+Sója/Hrách: ~850-875 RPM.
+Pšenice/Ječmen: ~800 RPM.
+Rýže: ~775 RPM.
+Oves/Slunečnice: ~700 RPM.
+Řepka: ~650 RPM.
+Lehká semena odlétají při vysokých otáčkách — udržovat NÍZKÉ.]]></text>
+        <text name="rhm_help_calibration_sieve_sub"><![CDATA[Mezera sít]]></text>
+        <text name="rhm_help_calibration_sieve_text"><![CDATA[Příliš těsná síta způsobují masivní ztráty.]]></text>
+        <text name="rhm_help_calibration_sieve_long"><![CDATA[Mezera horního / dolního síta dle plodiny:
+Pšenice / Ječmen / Rýže: 14 mm / 8 mm.
+Oves: 10 mm / 6 mm.
+Řepka: 12 mm / 6 mm.
+Sója / Hrách: 15 mm / 10 mm.
+Kukuřice / Slunečnice: 18 mm / 11-12 mm.
+Špatná mezera ucpává síta — až 25% ztráty.]]></text>
+        <text name="rhm_help_cropsettings_title" text="Průvodce nastavením plodin"/>
+        <text name="rhm_help_cropsettings_grain_sub" text="Sklízecí mlátičky"/>
+        <text name="rhm_help_cropsettings_grain_text"><![CDATA[Optimální rozsahy pro sklízecí mlátičky:
+• Obiloviny (Pšenice, Ječmen, Rýže): Rotor 600-850 ot/min, Ventilátor 700-850 ot/min, Síta 14mm / 8mm.
+• Olejniny (Řepka, Slunečnice): Rotor 300-500 ot/min, Ventilátor 600-700 ot/min, Síta 12mm / 6mm. (Pozor: lehká semena odfukují)
+• Kukuřice: Rotor 300-400 ot/min, Ventilátor 850-950 ot/min, Síta 18mm / 12mm. (Pomalý rotor, silný proud vzduchu)
+• Luštěniny: Rotor 300-500 ot/min, Ventilátor 800-950 ot/min, Síta 15mm / 10mm. (Jemný výmlat)]]></text>
+        <text name="rhm_help_cropsettings_forage_sub" text="Sklízecí řezačky"/>
+        <text name="rhm_help_cropsettings_forage_text"><![CDATA[• Kukuřičná siláž: Buben 1100-1160 ot/min, Ventilátor 1150-1290 ot/min, Vkládání 400-480 ot/min.
+• Tráva / Seno: Buben 700-900 ot/min, Ventilátor 800-1000 ot/min, Vkládání 300-450 ot/min.
+* Tip: Pokud je ztráta ČERVENÁ při stabilním zatížení motoru, proud vzduchu vyfukuje plodinu. Snižte ventilátor.]]></text>
+        <text name="rhm_help_cropsettings_root_sub" text="Sklízeče okopanin a zeleniny"/>
+        <text name="rhm_help_cropsettings_root_text"><![CDATA[• Těžké (Brambory, Řepa): Válce ~400 ot/min, Ventilátor ~400-500 ot/min, Elevátor ~800 ot/min.
+• Lehké (Mrkev, Pastinák): Válce ~250 ot/min, Ventilátor ~300 ot/min, Elevátor ~900 ot/min.
+• Cibule: Válce ~300 ot/min, Ventilátor ~900-1100 ot/min, Elevátor ~600 ot/min.
+• Špenát: Válce ~150 ot/min, Ventilátor ~100-200 ot/min, Elevátor ~700 ot/min.
+* Tip: Válce čistí hlínu (nepřetěžujte u brambor). Ventilátor odfukuje nať. Elevátor řídí rychlost plnění.]]></text>
+        <text name="rhm_help_calibration_forage_intro_text"><![CDATA[Sklízecí řezačky jsou velmi citlivé na přehlcení materiálem.
+- Hustá kukuřice vyžaduje vysoké otáčky bubnu a silný proud vzduchu.
+- Tráva a seno jsou jemnější — plynulý přísun chrání motor před přetížením.
+
+Pokud zatížení motoru na HUD zčervená, snižte pojezdovou rychlost.
+
+Funkce ovládacích prvků:
+- Řezací buben: intenzita řezání (vyšší = vyšší odběr výkonu).
+- Vkládací válce: množství přiváděné hmoty (hlavní vliv na zatížení motoru).
+- Vymetací ventilátor: proud vzduchu pro vyhazování (příliš vysoký = ztráty).]]></text>
+        <text name="rhm_help_calibration_root_intro_text"><![CDATA[Okopaniny a kořenová zelenina vyžadují zvláštní péči při oddělování zeminy.
+- Brambory: Snadno se potlučou! Udržujte čisticí válce na nízkých otáčkách.
+- Cibule: Vyžaduje maximální proud vzduchu k odtržení suchých slupek.
+- Špenát: Velmi křehké listy, snižte proud vzduchu, aby neuletěly.
+
+Pokud jsou ztráty ČERVENÉ při normálním zatížení motoru, upravte ventilátory.
+
+Funkce ovládacích prvků:
+- Čisticí válce: Čistí hlínu bez poškození plodů.
+- Pás elevátoru: Řídí rychlost plnění zásobníku.
+- Třídicí ventilátor: Proud vzduchu k odfukování natě.]]></text>
+        <text name="rhm_help_hud_sub3" text="Indikátory HUD"/>
+        <text name="rhm_help_hud_3_load" text="Zatížení motoru (jak těžce pracují sklízecí komponenty)"/>
+        <text name="rhm_help_hud_3_yield" text="Výnos (hustota plodin v aktuální oblasti)"/>
+        <text name="rhm_help_hud_3_productivity" text="Produktivita (objem zpracované plodiny za hodinu)"/>
+        <text name="rhm_help_hud_3_moisture" text="Úroveň vlhkosti (aktivní pouze s módem Moisture System)"/>
+        <text name="rhm_help_hud_3_loss" text="Ztráty (množství zrna vyhozeného ze stroje)"/>
+        <text name="rhm_help_hud_3_speed" text="Aktuální a Doporučená rychlost"/>
+        <text name="rhm_ui_section_separation" text="Separace"/>
+        <text name="rhm_ui_section_cleaning" text="Čištění"/>
+        <text name="rhm_ui_section_discharge" text="Výhoz"/>
+        <text name="rhm_ui_section_performance" text="Výkon"/>
+        <text name="rhm_ui_tier1_manual" text="ÚROVEŇ 1 - RUČNÍ"/>
+        <text name="rhm_ui_tier2_sensors" text="ÚROVEŇ 2 - SNÍMAČE"/>
+        <text name="rhm_ui_tier3_monitor" text="ÚROVEŇ 3 - MONITOR"/>
+        <text name="rhm_ui_tier4_opti" text="ÚROVEŇ 4 - AI OPTI"/>
+        <text name="rhm_ui_card_engine_load" text="ZATÍŽENÍ MOTORU"/>
+        <text name="rhm_ui_card_efficiency" text="EFEKTIVITA"/>
+        <text name="rhm_ui_card_predicted_loss" text="ODHADOVANÁ ZTRÁTA"/>
+        <text name="rhm_ui_btn_ai_auto" text="AUTO-KALIB AI"/>
+        <text name="rhm_ui_btn_auto_locked" text="AUTO (ZAMČENO)"/>
+        <text name="rhm_ui_btn_load_preset" text="NAČÍST"/>
+        <text name="rhm_ui_btn_save_profile" text="ULOŽIT"/>
+        <text name="rhm_ui_btn_load_locked" text="NAČÍST (ZAMČ.)"/>
+        <text name="rhm_ui_btn_save_locked" text="ULOŽIT (ZAMČ.)"/>
+        <text name="rhm_ui_btn_reset_defaults" text="OBNOVIT TOVÁRNÍ NASTAVENÍ"/>
+        <text name="rhm_ui_status_optimal" text="OPTIMÁLNÍ"/>
+        <text name="rhm_ui_status_low" text="NÍZKÉ"/>
+        <text name="rhm_ui_status_high" text="VYSOKÉ"/>
+        <text name="rhm_msg_req_tier4" text="Vyžaduje AI Opti-Harvest (Úroveň 4)"/>
+        <text name="rhm_msg_req_tier3" text="Profily vyžadují Monitor Telemetrie (Úroveň 3)"/>
+        <text name="rhm_msg_profile_saved" text="Profil uložen: %s"/>
+        <text name="rhm_msg_profile_loaded" text="Profil načten: %s"/>
+        <text name="rhm_msg_profile_not_found" text="Pro tuto plodinu nebyl nalezen žádný profil"/>
+        <text name="rhm_ui_combine_not_init" text="Sklízeč není inicializován"/>
+        <text name="rhm_unit_t_per_hour" text="t/h"/>
+        <text name="rhm_unit_ha_per_hour" text="ha/h"/>
+        <text name="rhm_setting_ai_tuning" text="Nastavení pomocníků"/>
+        <text name="rhm_setting_ai_tuning_long" text="Určuje, jak pomocníci a Courseplay nakládají s kalibrací kombajnu. 'Zachovat nastavení hráče' striktně uchovává vaše ruční úpravy a profily. 'Vždy automaticky' přepočítává podle úrovně elektroniky. 'Vypnuto' brání pomocníkům měnit nastavení."/>
+        <text name="rhm_setting_ai_tuning_keep" text="Zachovat nastavení"/>
+        <text name="rhm_setting_ai_tuning_auto" text="Vždy automaticky"/>
+        <text name="rhm_setting_ai_tuning_disabled" text="Vypnuto"/>
+    </texts>
+</l10n>
