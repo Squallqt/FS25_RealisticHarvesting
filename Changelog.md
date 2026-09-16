@@ -2,6 +2,18 @@
 
 ## Language: EN
 
+Changelog 1.5.4.0:
+- FIXED: Resolved Mouse Drag & Camera Freezes under Left Mouse Button (LMB)!
+  * Removed duplicate mission hooks that were simultaneously registered on both Mission00 and FSBaseMission.
+  * Eliminates recursive mouse delta re-dispatching during tool adjustment and camera rotation.
+- FIXED: Automatic Tutorial Onboarding Hints Triggering!
+  * Fixed an issue where cascading hints failed to pop up automatically due to querying uninitialized variables.
+  * Implemented robust combine cutter detection across attached and integrated cutters, real speed evaluation, and engine load monitoring.
+- OPTIMIZED: Notification Overlay Performance & Memory Footprint!
+  * Precalculated 9-slice panel UV vectors and single-pass text wrapping, reducing heap table allocations to zero in draw loops.
+  * Cached input glyph element dimensions, eliminating frame-by-frame destruction and recreation of input glyphs.
+  * Decoupled notification rendering from active combine presence, ensuring alerts always display reliably.
+
 Changelog 1.5.3.0:
 - NEW: In-Game Help Pages & Interactive Guide Overhaul!
   * Fully restructured all 9 In-game Help tutorial pages in the ESC menu (Overview, Engine Load, Crop Losses, Cutterbar & Header, Threshing Settings, Crop Profiles, Electronics Tiers, Moisture & Weather, Mod Compatibility).
@@ -1294,6 +1306,18 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: UK
+
+Зміни 1.5.4.0:
+- ВИПРАВЛЕНО: Усунено зависання та статтери при затисканні ЛКМ та русі мишкою!
+  * Прибрано дублюючі хуки подій, які були одночасно зареєстровані на Mission00 та FSBaseMission.
+  * Усунено рекурсивний подвійний виклик дельт миші при обертанні камери та регулюванні обладнання комбайна.
+- ВИПРАВЛЕНО: Автоматичне висвічування навчальних підказок для новачків!
+  * Виправлено помилку в умовах тригерів, через яку підказки не з'являлися автоматично під час роботи.
+  * Реалізовано надійне визначення активності жатки (навісної чи вбудованої), фактичної швидкості та навантаження двигуна.
+- ОПТИМІЗОВАНО: Продуктивність та використання пам'яті панелі сповіщень!
+  * Попередній розрахунок UV-векторів 9-slice панелі та одноразове форматування тексту: нуль алокацій пам'яті в циклі малювання (draw).
+  * Кешування розмірів гліфа закриття: усунено перестворення елементів InputGlyphElement щокадру.
+  * Відображення сповіщень відв'язано від перебування в комбайні — повідомлення та підказки надійно відображаються завжди.
 
 Зміни 1.5.3.0:
 - НОВЕ: Повне оновлення внутрішньоігрової довідки (In-game Help)!
