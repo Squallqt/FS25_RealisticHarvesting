@@ -236,9 +236,11 @@ function RHMCombineCalibrationGUI:open(vehicle)
         local mapCrops = RHM_CombineSettingsDatabase:getCropNamesForMachineType(mType, combineVehicle)
 
         local isValidCrop = false
+        local canonicalCurrent = RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(mem.currentCrop)
         if mem.currentCrop and mapCrops then
             for _, c in ipairs(mapCrops) do
-                if c == mem.currentCrop then
+                if c == mem.currentCrop or (canonicalCurrent and c == canonicalCurrent) then
+                    mem.currentCrop = c
                     isValidCrop = true
                     break
                 end
@@ -246,9 +248,10 @@ function RHMCombineCalibrationGUI:open(vehicle)
             if not isValidCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
                 local alias = RHM_CombineSettingsDatabase.cropAliases[mem.currentCrop]
                 if alias then
+                    local canonicalAlias = RHM_CombineSettingsDatabase:getCanonicalCropName(alias)
                     for _, c in ipairs(mapCrops) do
-                        if c == alias then
-                            mem.currentCrop = alias
+                        if c == alias or (canonicalAlias and c == canonicalAlias) then
+                            mem.currentCrop = c
                             isValidCrop = true
                             break
                         end
@@ -325,20 +328,22 @@ function RHMCombineCalibrationGUI:cycleCrop(direction)
     if #crops == 0 then return end
 
     local current = spec.combineMemory.currentCrop
+    local canonicalCurrent = RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(current)
     local index = 1
 
     if current then
         for i, name in ipairs(crops) do
-            if name == current then
+            if name == current or (canonicalCurrent and name == canonicalCurrent) then
                 index = i
                 break
             end
         end
-        if index == 1 and crops[1] ~= current and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
+        if index == 1 and crops[1] ~= current and (not canonicalCurrent or crops[1] ~= canonicalCurrent) and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.cropAliases then
             local alias = RHM_CombineSettingsDatabase.cropAliases[current]
             if alias then
+                local canonicalAlias = RHM_CombineSettingsDatabase:getCanonicalCropName(alias)
                 for i, name in ipairs(crops) do
-                    if name == alias then
+                    if name == alias or (canonicalAlias and name == canonicalAlias) then
                         index = i
                         break
                     end
@@ -593,9 +598,8 @@ function RHMCombineCalibrationGUI:draw()
         else
             local displayLoss = math.max(0, lossPenalty)
             local lossColor = (displayLoss <= 0.05) and ui.colors.success or ((displayLoss <= 2.0) and ui.colors.warning or ui.colors.error)
-            local lossPrefix = (displayLoss <= 0.05) and "" or "+"
             setTextColor(unpack(lossColor))
-            renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%s%.1f%%", lossPrefix, displayLoss))
+            renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%.1f%%", displayLoss))
         end
 
         setTextBold(false)
@@ -658,8 +662,10 @@ function RHMCombineCalibrationGUI:draw()
         table.insert(self.buttons, {
             x = autoBtnX, y = cy + 0.004, w = autoBtnW, h = autoBtnH,
             callback = function()
-                if g_currentMission and g_currentMission.hud then
-                    local msg = g_i18n:hasText("rhm_msg_req_tier4") and g_i18n:getText("rhm_msg_req_tier4") or "Requires Opti-Harvest AI (Tier 4)"
+                local msg = g_i18n:hasText("rhm_msg_req_tier4") and g_i18n:getText("rhm_msg_req_tier4") or "Requires Opti-Harvest AI (Tier 4)"
+                if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
                     g_currentMission.hud:showInGameMessage("RHM", msg, -1)
                 end
             end
@@ -741,50 +747,66 @@ function RHMCombineCalibrationGUI:draw()
     cy = cy - ui.lineHeight * 1.0
     local actionBtnW = (w - ui.margin * 2.5) / 2
 
-    if packageLevel >= 3 then
+    if packageLevel >= 2 then
         local btnLoadText = g_i18n:hasText("rhm_ui_btn_load_preset") and g_i18n:getText("rhm_ui_btn_load_preset") or "LOAD PRESET"
         self:drawButton(x + ui.margin, cy, actionBtnW, 0.026, btnLoadText, function()
             local success = memory:loadUserPreset()
-            if g_currentMission and g_currentMission.hud then
-                if success then
-                    local cropTitle = memory.currentCrop
-                    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName then
-                        cropTitle = RHM_CombineSettingsDatabase:getCropDisplayName(memory.currentCrop)
-                    end
-                    local formatStr = g_i18n:hasText("rhm_msg_profile_loaded") and g_i18n:getText("rhm_msg_profile_loaded") or "Loaded Profile: %s"
-                    g_currentMission.hud:showInGameMessage("RHM", string.format(formatStr, tostring(cropTitle)), -1)
-                else
-                    local msg = g_i18n:hasText("rhm_msg_profile_not_found") and g_i18n:getText("rhm_msg_profile_not_found") or "No saved profile found for this crop"
-                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+            local msg = ""
+            if success then
+                local cropTitle = memory.currentCrop
+                if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName then
+                    cropTitle = RHM_CombineSettingsDatabase:getCropDisplayName(memory.currentCrop)
                 end
+                local formatStr = g_i18n:hasText("rhm_msg_profile_loaded") and g_i18n:getText("rhm_msg_profile_loaded") or "Loaded Profile: %s"
+                msg = string.format(formatStr, tostring(cropTitle))
+            else
+                msg = g_i18n:hasText("rhm_msg_profile_not_found") and g_i18n:getText("rhm_msg_profile_not_found") or "No saved profile found for this crop"
+            end
+            if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+            elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
             end
         end, {0.08, 0.10, 0.12, 0.95})
 
         local btnSaveText = g_i18n:hasText("rhm_ui_btn_save_profile") and g_i18n:getText("rhm_ui_btn_save_profile") or "SAVE PROFILE"
         self:drawButton(x + w - ui.margin - actionBtnW, cy, actionBtnW, 0.026, btnSaveText, function()
             local success = memory:saveCurrentProfile(memory.currentCrop)
-            if g_currentMission and g_currentMission.hud and success then
+            if success then
                 local cropTitle = memory.currentCrop
                 if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropDisplayName then
                     cropTitle = RHM_CombineSettingsDatabase:getCropDisplayName(memory.currentCrop)
                 end
                 local formatStr = g_i18n:hasText("rhm_msg_profile_saved") and g_i18n:getText("rhm_msg_profile_saved") or "Saved Profile: %s"
-                g_currentMission.hud:showInGameMessage("RHM", string.format(formatStr, tostring(cropTitle)), -1)
+                local msg = string.format(formatStr, tostring(cropTitle))
+                if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                end
             end
         end, {0.08, 0.10, 0.12, 0.95})
     else
         local btnLoadLockText = g_i18n:hasText("rhm_ui_btn_load_locked") and g_i18n:getText("rhm_ui_btn_load_locked") or "LOAD (LOCKED)"
         self:drawButton(x + ui.margin, cy, actionBtnW, 0.026, btnLoadLockText, function()
-            if g_currentMission and g_currentMission.hud then
-                local msg = g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3") or "Profiles require Telemetry Monitor (Tier 3)"
+            local msg = (g_i18n:hasText("rhm_msg_req_tier2") and g_i18n:getText("rhm_msg_req_tier2"))
+                     or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
+                     or "Profiles require Sensors Package (Tier 2)"
+            if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+            elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
                 g_currentMission.hud:showInGameMessage("RHM", msg, -1)
             end
         end, {0.05, 0.055, 0.065, 0.70})
 
         local btnSaveLockText = g_i18n:hasText("rhm_ui_btn_save_locked") and g_i18n:getText("rhm_ui_btn_save_locked") or "SAVE (LOCKED)"
         self:drawButton(x + w - ui.margin - actionBtnW, cy, actionBtnW, 0.026, btnSaveLockText, function()
-            if g_currentMission and g_currentMission.hud then
-                local msg = g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3") or "Profiles require Telemetry Monitor (Tier 3)"
+            local msg = (g_i18n:hasText("rhm_msg_req_tier2") and g_i18n:getText("rhm_msg_req_tier2"))
+                     or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
+                     or "Profiles require Sensors Package (Tier 2)"
+            if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+            elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
                 g_currentMission.hud:showInGameMessage("RHM", msg, -1)
             end
         end, {0.05, 0.055, 0.065, 0.70})

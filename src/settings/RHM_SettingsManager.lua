@@ -45,7 +45,8 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "unitSystem",
     "showSpeedometer",
     "enableAlarmSound",
-    "soundVolume"
+    "soundVolume",
+    "enableTutorials"
 }
 
 -- EN: Default configuration values used as fallback when no saved file exists.
@@ -64,6 +65,7 @@ RHMSettingsManager.defaultConfig = {
     showMoisture = true,
     enableAlarmSound = true,
     soundVolume = 1.0,
+    enableTutorials = true,
     hudOffsetX = 0,
     hudOffsetY = 350,
     unitSystem = 1
@@ -196,6 +198,22 @@ function RHMSettingsManager:loadClientSettings(settingsObject)
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
                 end
             end
+
+            -- EN: Load seen tutorial flags to prevent repeating hints
+            -- UA: Завантажуємо прапорці переглянутих підказок щоб не повторювати їх
+            if RHM_NotificationManager then
+                local seenStr = xml:getString(self.XMLTAG..".seenTutorials", "")
+                if seenStr and seenStr ~= "" then
+                    RHM_NotificationManager.seenTutorials = RHM_NotificationManager.seenTutorials or {}
+                    for tutKey in seenStr:gmatch("[^;]+") do
+                        RHM_NotificationManager.seenTutorials[tutKey] = true
+                    end
+                    if RHM_NotificationManager.INSTANCE then
+                        RHM_NotificationManager.INSTANCE.seenTutorials = RHM_NotificationManager.seenTutorials
+                    end
+                end
+            end
+
             xml:delete()
             return
         end
@@ -290,6 +308,19 @@ function RHMSettingsManager:saveClientSettings(settingsObject)
                 xml:setBool(xmlKey, settingsObject[key] or false)
             end
         end
+
+        -- EN: Save seen tutorial flags
+        -- UA: Зберігаємо прапорці переглянутих підказок
+        if RHM_NotificationManager and RHM_NotificationManager.seenTutorials then
+            local seenList = {}
+            for tutKey, seen in pairs(RHM_NotificationManager.seenTutorials) do
+                if seen then
+                    table.insert(seenList, tutKey)
+                end
+            end
+            xml:setString(self.XMLTAG..".seenTutorials", table.concat(seenList, ";"))
+        end
+
         xml:save()
         xml:delete()
     end

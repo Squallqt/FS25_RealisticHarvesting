@@ -487,8 +487,10 @@ function RHMDraggableHUD:buildActiveCells()
     end
 
     local machineType = nil
+    local packageLevel = 1
     if self.vehicle and self.vehicle.spec_rhm_Combine then
         machineType = self.vehicle.spec_rhm_Combine.machineType
+        packageLevel = self.vehicle.spec_rhm_Combine.packageLevel or 1
     end
 
     local hasPF = false
@@ -516,8 +518,9 @@ function RHMDraggableHUD:buildActiveCells()
         })
     end
 
-    -- 2. Crop Loss Cell (or Speed if toggled / forage / cotton)
-    local showLossMode = (self.displayModes.cell2 == "loss") and (machineType ~= "forage" and machineType ~= "cotton")
+    -- 2. Crop Loss Cell (requires Tier >= 2; falls back to Speed if Tier 1, toggled, forage, or cotton)
+    local hasLossSensor = (packageLevel >= 2) and (machineType ~= "forage" and machineType ~= "cotton")
+    local showLossMode = (self.displayModes.cell2 == "loss") and hasLossSensor
     if showLossMode and self.settings.showCropLoss then
         local lossVal = self.data.cropLoss or 0
         local lossStr = (lossVal > 0.05) and string.format("%.1f%%", lossVal) or "0.0%"
@@ -544,8 +547,9 @@ function RHMDraggableHUD:buildActiveCells()
         })
     end
 
-    -- 3. Moisture Cell (or Yield if toggled / moisture absent)
-    local showMoistMode = (self.displayModes.cell3 == "moisture") and (hasPF or (RHM_MoistureAdapter and RHM_MoistureAdapter.isActive))
+    -- 3. Moisture Cell (requires Tier >= 3; falls back to Yield if Tier < 3, toggled, or moisture absent)
+    local hasMoistureSensor = (packageLevel >= 3) and (hasPF or (RHM_MoistureAdapter and RHM_MoistureAdapter.isActive))
+    local showMoistMode = (self.displayModes.cell3 == "moisture") and hasMoistureSensor
     if showMoistMode and self.settings.showMoisture then
         local mVal = self.data.moisture or 0
         local valStr = (mVal <= 0.1) and "--" or string.format("%.1f%%", mVal)
@@ -667,21 +671,34 @@ function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
         end
         return true
     elseif clickedCol == 2 then
-        -- Toggle between grain loss (%) and current speed (km/h)
-        if self.displayModes.cell2 == "loss" then
-            self.displayModes.cell2 = "speed"
-        else
-            self.displayModes.cell2 = "loss"
+        -- Toggle between grain loss (%) and current speed (km/h) (Loss requires Tier >= 2)
+        local pkgLevel = (self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.packageLevel) or 1
+        local mType = self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.machineType
+        local canShowLoss = (pkgLevel >= 2) and (mType ~= "forage" and mType ~= "cotton")
+        if canShowLoss then
+            if self.displayModes.cell2 == "loss" then
+                self.displayModes.cell2 = "speed"
+            else
+                self.displayModes.cell2 = "loss"
+            end
+            return true
         end
-        return true
     elseif clickedCol == 3 then
-        -- Toggle between moisture (%) and yield (t/ha)
-        if self.displayModes.cell3 == "moisture" then
-            self.displayModes.cell3 = "yield"
-        else
-            self.displayModes.cell3 = "moisture"
+        -- Toggle between moisture (%) and yield (t/ha) (Moisture requires Tier >= 3)
+        local pkgLevel = (self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.packageLevel) or 1
+        local hasPF = false
+        if self.vehicle and (self.vehicle.spec_precisionFarmingStatistic ~= nil or self.vehicle.spec_extendedCombine ~= nil) then
+            hasPF = true
         end
-        return true
+        local canShowMoisture = (pkgLevel >= 3) and (hasPF or (RHM_MoistureAdapter and RHM_MoistureAdapter.isActive))
+        if canShowMoisture then
+            if self.displayModes.cell3 == "moisture" then
+                self.displayModes.cell3 = "yield"
+            else
+                self.displayModes.cell3 = "moisture"
+            end
+            return true
+        end
     end
 
     return false

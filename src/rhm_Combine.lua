@@ -80,15 +80,17 @@ end
 -- UA: Реєструє шляхи XML для конфігурації засобу (XML магазину/modDesc). Зберігає налаштування комбайна для кожного засобу.
 function rhm_Combine.registerXMLPaths(schema, basePath)
     local cur = basePath .. ".combineMemory.current"
-    schema:register(XMLValueType.STRING, cur .. "#mode",        "Combine settings mode", "AUTO")
-    schema:register(XMLValueType.STRING, cur .. "#currentCrop", "Current crop", "")
-    schema:register(XMLValueType.BOOL,   cur .. "#autoSwitch",  "Auto switch enabled", true)
-    schema:register(XMLValueType.INT,    cur .. "#fan",         "Fan", 50)
-    schema:register(XMLValueType.INT,    cur .. "#upperSieve",  "Upper sieve", 50)
-    schema:register(XMLValueType.INT,    cur .. "#lowerSieve",  "Lower sieve", 50)
-    schema:register(XMLValueType.INT,    cur .. "#rotor",       "Rotor", 50)
-    schema:register(XMLValueType.INT,    cur .. "#feeder",      "Feeder", 50)
+    schema:register(XMLValueType.STRING, cur .. "#mode",            "Combine settings mode", "AUTO")
+    schema:register(XMLValueType.STRING, cur .. "#currentCrop",     "Current crop", "")
+    schema:register(XMLValueType.BOOL,   cur .. "#autoSwitch",      "Auto switch enabled", true)
+    schema:register(XMLValueType.INT,    cur .. "#fan",             "Fan", 50)
+    schema:register(XMLValueType.INT,    cur .. "#upperSieve",      "Upper sieve", 50)
+    schema:register(XMLValueType.INT,    cur .. "#lowerSieve",      "Lower sieve", 50)
+    schema:register(XMLValueType.INT,    cur .. "#rotor",           "Rotor", 50)
+    schema:register(XMLValueType.INT,    cur .. "#feeder",          "Feeder", 50)
     schema:register(XMLValueType.INT,    cur .. "#targetEngineLoad", "Target engine load", 88)
+    schema:register(XMLValueType.BOOL,   cur .. "#isCalibrated",    "Combine calibration status", true)
+    schema:register(XMLValueType.STRING, cur .. "#calibratedCrops", "List of calibrated crops", "")
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -682,20 +684,33 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --    ...
         -- end
 
+        -- EN: Detect forage harvester feed mode (pickup vs direct cutter)
+        -- UA: Визначаємо режим подачі форажного комбайна (підбирач чи прямий різ)
+        local feedMode = rhm_Combine.getForageFeedMode(self)
+        local isPickup = (feedMode == "pickup")
+
         -- EN: Determine crop name from RHM_CombineSettingsDatabase — full table including
         --     grain, roots (POTATO/ONION/CARROT), vegetables (SPINACH/GREENBEAN), and forage outputs.
-        -- UA: Визначаємо назву культури через RHM_CombineSettingsDatabase — повна таблиця включаючи
-        --     зернові, коренеплоди (POTATO/ONION/CARROT), овочі (SPINACH/GREENBEAN) та форажні виводи.
-        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, inputFruitType)
+        --     If harvesting windrows/straw or using a pickup header, never let ground fruit (e.g. underlying alfalfa)
+        --     override the actual material collected.
+        -- UA: Визначаємо назву культури через RHM_CombineSettingsDatabase.
+        --     Якщо підбираємо валки/солому або жатка є підбирачем, ґрунтова культура під валком
+        --     (напр. люцерна чи бур'ян) ніколи не повинна підміняти реальну зібрану солому.
+        local effectiveInputFruitType = inputFruitType
+        if isPickup or (outputFillType and (outputFillType == FillType.STRAW or outputFillType == FillType.GRASS_WINDROW or outputFillType == FillType.DRYGRASS_WINDROW)) then
+            effectiveInputFruitType = nil
+        end
+
+        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, effectiveInputFruitType)
 
         -- EN: CHAFF and SILAGE map to MAIZE_FORAGE in the DB — correct for corn silage but WRONG for
         --     direct grass/meadow silage (same output fill types in FS). That used factor ~0.30 and felt like
         --     unlimited speed (~15 km/h). Disambiguate using the combine's INPUT fruit from the cutter.
         -- UA: CHAFF/SILAGE у БД → MAIZE_FORAGE (кукурудза), але пряме косіння трави теж дає CHAFF — інакше фактор 0.3 і «літак».
-        if cropName == "MAIZE_FORAGE" and inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
+        if cropName == "MAIZE_FORAGE" and effectiveInputFruitType and effectiveInputFruitType ~= FillType.UNKNOWN and effectiveInputFruitType ~= 0 then
             local inName = nil
             if g_fruitTypeManager then
-                local fDesc = g_fruitTypeManager:getFruitTypeByIndex(inputFruitType)
+                local fDesc = g_fruitTypeManager:getFruitTypeByIndex(effectiveInputFruitType)
                 if fDesc and fDesc.name then
                     inName = string.upper(fDesc.name)
                 end
@@ -713,7 +728,7 @@ function rhm_Combine:addCutterArea(superFunc, ...)
                     cropName = "GRASS"
                 end
             else
-                local alt = RHM_CombineSettingsDatabase:getCropNameFromFillType(inputFruitType)
+                local alt = RHM_CombineSettingsDatabase:getCropNameFromFillType(effectiveInputFruitType)
                 if alt == "GRASS" or alt == "DRYGRASS" or alt == "GRASS_WINDROW" or alt == "DRYGRASS_WINDROW" then
                     cropName = alt
                 end
@@ -721,11 +736,11 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         end
         
         -- EN: Fallback for forage harvesters: they output CHAFF but inputFruitType=MAIZE.
-        --     getCropNameFromFillType(CHAFF) returns "MAIZE_FORAGE" usually, but try inputFruitType if not.
+        --     getCropNameFromFillType(CHAFF) returns "MAIZE_FORAGE" usually, but try effectiveInputFruitType if not.
         -- UA: Резервний варіант для форажних комбайнів: вони виводять CHAFF але inputFruitType=MAIZE.
-        --     getCropNameFromFillType(CHAFF) зазвичай повертає "MAIZE_FORAGE", але спробуємо inputFruitType якщо ні.
-        if not cropName and inputFruitType and inputFruitType ~= FillType.UNKNOWN then
-            cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(inputFruitType)
+        --     getCropNameFromFillType(CHAFF) зазвичай повертає "MAIZE_FORAGE", але спробуємо effectiveInputFruitType якщо ні.
+        if not cropName and effectiveInputFruitType and effectiveInputFruitType ~= FillType.UNKNOWN then
+            cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(effectiveInputFruitType)
         end
 
         -- EN: Forage harvester feed mode disambiguation.
@@ -737,13 +752,7 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --     Ключова різниця: прямий різ завжди має inputFruitType (напр. GRASS), підбирач має inputFruitType=nil.
         --     getForageFeedMode() може помилитись коли підбирач не має spec_pickup, тому inputFruitType — головний сигнал.
         if cropName and spec.combineMemory and spec.combineMemory.machineType == "forage" then
-            -- EN: PRIMARY DETECTION: inputFruitType is the most reliable signal.
-            --     nil/0 = pickup (FS25 never provides input fruit for windrow pickups)
-            --     valid value = direct cut (always has input fruit type)
-            -- UA: ОСНОВНА ДЕТЕКЦІЯ: inputFruitType — найнадійніший сигнал.
-            --     nil/0 = підбирач (FS25 ніколи не дає input fruit для підбору валків)
-            --     валідне значення = прямий різ (завжди має input fruit type)
-            local isPickupMode = (inputFruitType == nil or inputFruitType == 0)
+            local isPickupMode = isPickup or (effectiveInputFruitType == nil or effectiveInputFruitType == 0)
             
             if not isPickupMode then
                 -- EN: Direct cut: force WINDROW → standing crop name so the heavier factor applies.
@@ -756,9 +765,8 @@ function rhm_Combine:addCutterArea(superFunc, ...)
                 end
             end
             -- EN: Pickup mode: cropName from getCropNameFromFillType(GRASS_WINDROW) is already correct
-            --     ("GRASS_WINDROW" with factor 0.380). Do NOT override it.
-            -- UA: Підбирач: cropName з getCropNameFromFillType(GRASS_WINDROW) вже правильний
-            --     ("GRASS_WINDROW" з фактором 0.380). НЕ перезаписуємо.
+            --     ("GRASS_WINDROW" with factor 0.380, or "STRAW_WINDROW"). Do NOT override it.
+            -- UA: Підбирач: cropName з getCropNameFromFillType вже правильний. НЕ перезаписуємо.
         end
         
         -- EN: HOPPER GROUND TRUTH:
@@ -885,17 +893,24 @@ function rhm_Combine:onCropTypeChanged(newCropName)
 
     if spec.loadCalculator then
         spec.loadCalculator.currentCrop = newCropName
-        local remembered = spec.loadCalculator.cropHarvestingSpeeds and spec.loadCalculator.cropHarvestingSpeeds[newCropName]
-        if remembered then
+        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
+        local remembered = spec.loadCalculator.cropHarvestingSpeeds and (spec.loadCalculator.cropHarvestingSpeeds[canonical] or spec.loadCalculator.cropHarvestingSpeeds[newCropName])
+        remembered = remembered or spec.loadCalculator.lastHarvestingSpeed or (spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 and spec.loadCalculator.speedLimit)
+        if remembered and remembered > 0 then
             spec.loadCalculator.lastHarvestingSpeed = remembered
             spec.loadCalculator.speedLimit = remembered
+            if spec.loadCalculator.cropHarvestingSpeeds then
+                spec.loadCalculator.cropHarvestingSpeeds[canonical] = remembered
+                spec.loadCalculator.cropHarvestingSpeeds[newCropName] = remembered
+            end
         else
-            spec.loadCalculator.lastHarvestingSpeed = nil
             local defaultEntry = 5.5
             if spec.loadCalculator.vanillaWorkingSpeed and spec.loadCalculator.vanillaWorkingSpeed < defaultEntry then
                 defaultEntry = spec.loadCalculator.vanillaWorkingSpeed
             end
-            spec.loadCalculator.speedLimit = defaultEntry
+            if not spec.loadCalculator.speedLimit or spec.loadCalculator.speedLimit <= 0 then
+                spec.loadCalculator.speedLimit = defaultEntry
+            end
         end
     end
 
@@ -1010,17 +1025,13 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- EN: Single pass: working check + first attached (for header-change detection).
     -- UA: Один прохід: перевірка роботи + перша жатка (для зміни хедера).
     if spec_combine and spec_combine.attachedCutters then
-        local speedOk = self:getLastSpeed() > 0.5
         for cutter, _ in pairs(spec_combine.attachedCutters) do
             if firstAttachedCutter == nil then
                 firstAttachedCutter = cutter
             end
             if cutter.spec_cutter then
                 local spec_cutter = cutter.spec_cutter
-                -- FIX: Use same check as onUpdateTick - do NOT check movingDirection,
-                -- as Courseplay can set it differently. Only check isTurnedOn + speed + isLowered.
                 if cutter:getIsTurnedOn()
-                    and speedOk
                     and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
                     cutterIsWorking = true
                     break
@@ -1032,10 +1043,8 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- EN: Support self-propelled machines where cutter is integrated directly on the vehicle (self.spec_cutter)
     -- UA: Підтримка самохідних машин де жатка вбудована безпосередньо в машину (self.spec_cutter)
     if not cutterIsWorking and self.spec_cutter then
-        local speedOk = self:getLastSpeed() > 0.5
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn()
-            and speedOk
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
             cutterIsWorking = true
         end
@@ -1475,7 +1484,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         if cutter.spec_cutter then
             local spec_cutter = cutter.spec_cutter
             if cutter:getIsTurnedOn() 
-                and self:getLastSpeed() > 0.5 
                 and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
                 cutterIsTurnedOn = true
                 break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
@@ -1488,13 +1496,27 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     if not cutterIsTurnedOn and self.spec_cutter then
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn() 
-            and self:getLastSpeed() > 0.5 
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
             cutterIsTurnedOn = true
         end
     end
     
     if not cutterIsTurnedOn then
+        -- EN: Preserve cruise speed before reset if active so headland turns don't wipe memory
+        -- UA: Зберігаємо робочу швидкість перед скиданням щоб розвороти на краю поля не стирали пам'ять
+        if spec.loadCalculator and spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 then
+            local activeCrop = spec.loadCalculator.currentCrop or (spec.combineMemory and spec.combineMemory.currentCrop)
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            spec.loadCalculator.lastHarvestingSpeed = spec.loadCalculator.speedLimit
+            if activeCrop then
+                spec.loadCalculator.cropHarvestingSpeeds = spec.loadCalculator.cropHarvestingSpeeds or {}
+                spec.loadCalculator.cropHarvestingSpeeds[activeCrop] = spec.loadCalculator.speedLimit
+                if canonical then
+                    spec.loadCalculator.cropHarvestingSpeeds[canonical] = spec.loadCalculator.speedLimit
+                end
+            end
+        end
+
         -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
         -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
         if spec._rhmLastMotorSpeedLimit ~= nil then
@@ -1994,43 +2016,58 @@ function rhm_Combine:loadFromSavegame(savegame)
     end
 
     local function readInt(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getInt then
             val = xmlFile:getInt(path)
         end
         if val == nil and XMLValueType and XMLValueType.INT then
-            val = xmlFile:getValue(path, XMLValueType.INT)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.INT) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         return (val ~= nil and tonumber(val)) or def
     end
 
     local function readString(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getString then
             val = xmlFile:getString(path)
         end
         if val == nil and XMLValueType and XMLValueType.STRING then
-            val = xmlFile:getValue(path, XMLValueType.STRING)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.STRING) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         return (val ~= nil and tostring(val)) or def
     end
 
     local function readBool(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getBool then
             val = xmlFile:getBool(path)
         end
         if val == nil and XMLValueType and XMLValueType.BOOL then
-            val = xmlFile:getValue(path, XMLValueType.BOOL)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.BOOL) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         if val == nil then return def end
         if type(val) == "boolean" then return val end

@@ -3,14 +3,47 @@
 ## Language: EN
 
 Changelog 1.5.3.0:
-- NEW: Dynamic Thresher Mechanical Strain Audio! Added realistic mechanical stress sounds that scale dynamically with combine engine load and ground speed (volume and pitch smoothly rise as threshing load climbs towards 100%+).
-- NEW: In-Cabin Overload & High-Loss Alarm Buzzer! Electronic audible alarm triggers when combine load reaches critical levels (98%+) or crop loss exceeds 4.0%.
-- NEW: Seamless 1st & 3rd Person Audio! Sounds are now fully audible both inside the cabin (1st person) and outside (3rd person) with intelligent camera-dependent volume boosting (+25%) to cut through exterior engine roar.
-- NEW: Dedicated Audio Settings Section in ESC Menu!
-  * Combine Load & Stress Sounds toggle [ON / OFF]
-  * Overload Alarm Buzzer toggle [ON / OFF]
-  * Master Sound Volume selector [50%, 75%, 100%, 125%, 150%]
-- IMPROVED: Dynamic Mechanical Stress Row Palette! HUD text rows for engine load and crop loss now dynamically shift color (crisp white -> optimal yellow -> high strain orange -> pulsating red critical alert).
+- NEW: In-Game Help Pages & Interactive Guide Overhaul!
+  * Fully restructured all 9 In-game Help tutorial pages in the ESC menu (Overview, Engine Load, Crop Losses, Cutterbar & Header, Threshing Settings, Crop Profiles, Electronics Tiers, Moisture & Weather, Mod Compatibility).
+  * Rewritten in clean, native GIANTS handbook style with structured bullet points, eliminating technical jargon, formulas, and visual clutter.
+  * Complete, high-quality localization across 15 languages (EN, UK, DE, FR, PL, ES, IT, CZ, BR, PT, HU, RO, NL, TR, RU).
+- NEW: Interactive On-Screen Notification Dialogs!
+  * Added non-intrusive contextual notification banners for key harvesting events (first-time combine setup, overload warning, optimal tuning).
+  * Styled with a sleek, dark rounded panel and integrated input glyphs; dismissible via Left Mouse Click (LMB) or configurable hotkey.
+- NEW: Player Settings Protection from AI Helpers & Courseplay!
+  * Added dedicated `aiHelperTuning` setting (Keep Player Settings / Always AI Tune / Disabled).
+  * When set to 'Keep Player Settings', hired AI workers and Courseplay will never overwrite player-calibrated combine settings.
+  * Calibration GUI (`Right Shift + K`) can now be opened while an AI worker or Courseplay is actively driving to inspect or tweak settings on the fly.
+  * Automatically loads and respects player-saved crop profiles for hired workers.
+- NEW: Smooth Hydrostatic Cruise Control & Crop Speed Memory!
+  * Replaced abrupt speed steps with continuous exponential hydrostatic smoothing (`tau` filtering) for realistic acceleration and braking under load.
+  * Hermite S-curve transit ramp eases feederhouse entry, preventing sudden stops when entering thick crop stands.
+  * Per-crop harvesting speed memory (`cropHarvestingSpeeds`) remembers the optimal pace for each crop across headland turns.
+  * Fixed speed limit oscillation and erratic jerking when reversing.
+- NEW: In-Cabin Overload & High-Loss Audio Alarm!
+  * Added electronic in-cabin warning buzzer triggering during critical engine overload (98%+) or excessive grain loss (> 4.0%).
+  * Seamless audio propagation between 1st person cabin view and 3rd person exterior camera with intelligent volume balancing (+25% exterior boost).
+  * Dedicated audio settings in ESC menu to toggle alarms and adjust master volume (50%–150%).
+- IMPROVED: Hopper Ground Truth Crop Detection & Advanced Machine Classification!
+  * Hopper fill level (> 50 L) now acts as authoritative ground truth for active crop selection, eliminating header boundary overlap errors and false resets.
+  * Robust multi-map crop classification distinguishes grain legumes (`BEANS`, `FABABEAN`) from specialty root crops (`GREENBEAN`).
+  * Non-grain crops (grapes, olives, weeds) are strictly excluded from standard combine harvesters.
+  * Physical ASABE calibration models automatically generated for custom map grain legumes.
+- IMPROVED: HUD Telemetry & Precision Farming Docking!
+  * Dynamic mechanical stress row coloring (white -> yellow -> orange -> pulsing red critical alert).
+  * Zero-gap magnetic docking underneath the Precision Farming yield display box, adapting to F1 Help menu visibility.
+  * Added live target speed readout in the HUD telemetry capsule.
+  * Added `Right Shift + H` quick toggle hotkey to show/hide the RHM HUD.
+- FIXED: Interactive Control & HeadTracking Input Conflict Resolution!
+  * Integrated dedicated compatibility mediator (`RHM_ModCompatibility`) for `FS25_interactiveControl` and `FS25_headTrackICextension`.
+  * Suspends in-cab click point detection and fullscreen overlay capture while the RHM calibration GUI is active, preventing frozen mouse clicks.
+  * Eliminated camera rotation and cursor lock issues with Courseplay and AutoDrive.
+- FIXED: Savegame XML Schema Validation & Multi-Vehicle Persistence!
+  * Fully registered `#isCalibrated` and `#calibratedCrops` within the GIANTS `savegame_vehicles` schema, eliminating `Path not registered` console errors in `vehicles.xml`.
+  * Safe loading wrappers (`hasProperty` and `pcall`) prevent savegame corruption or crashes when updating existing careers.
+- OPTIMIZED: Performance & Garbage Collector Overhead!
+  * Replaced dynamic sliding-window tables in hot loops with fixed O(1) ring buffers, completely eliminating GC allocation spikes and micro-stutters during harvesting.
+  * Enhanced dedicated server network stream synchronization for seamless multiplayer joining.
 
 Changelog 1.5.2.0:
 - NEW: Dynamic Map Crop Extraction & Localization! The combine calibration menu (`Right Shift + K`) now exclusively displays crops present on the active map, sorted alphabetically and localized in the player's language (`ft.title`). Hardcoded static crop lists have been completely removed.
@@ -1263,15 +1296,47 @@ Changelog 1.1.0.0:
 ## Language: UK
 
 Зміни 1.5.3.0:
-- НОВЕ: Динамічний звук механічного навантаження молотарки! Додано реалістичний звук гулу та напруження робочих органів, що плавно наростає при збільшенні навантаження комбайна та швидкості ходу (гучність і висота тону адаптуються при наближенні до 100%+).
-- НОВЕ: Електронний зумер перевантаження та втрат у кабіні! Звуковий сигнал тривоги активується, коли навантаження досягає критичних 98%+ або втрати перевищують 4.0%.
-- НОВЕ: Звук від 1-ї та 3-ї особи! Звуки тепер безперервно відтворюються як усередині кабіни, так і при перегляді ззовні від третьої особи з автоматичним підсиленням (+25%), щоб прорізати зовнішній рев двигуна.
-- НОВЕ: Окремий розділ налаштувань звуку в меню ESC:
-  * Вмикання/вимикання звуку навантаження молотарки [ВКЛ / ВИКЛ]
-  * Вмикання/вимикання зумера перевантаження [ВКЛ / ВИКЛ]
-  * Регулятор гучності звуків [50%, 75%, 100%, 125%, 150%]
-- ПОКРАЩЕНО: Єдиний візуальний стиль інтерфейсів! Малий HUD та велике вікно налаштувань (`Right Shift + K`) тепер мають 100% однаковий стиль: глибоке чорне скло (80% непрозорості), зелена шапка бренду Courseplay та акцентний розділювач.
-- ПОКРАЩЕНО: Динамічні кольори стресу в HUD! Рядки навантаження та втрат динамічно змінюють колір (білий -> оптимальний жовтий -> напружений помаранчевий -> пульсуючий червоний сигнал тривоги).
+- НОВЕ: Повне оновлення внутрішньоігрової довідки (In-game Help)!
+  * Повністю перероблено всі 9 сторінок довідки в меню ESC (Огляд, Навантаження, Втрати врожаю, Жатка, Налаштування молотарки, Профілі, Електроніка, Погода та вологість, Сумісність).
+  * Тексти переписані в нативному лаконічному стилі довідника GIANTS: структуровані на чіткі пункти, без технічного жаргону, формул та зайвого тексту.
+  * Повна якісна локалізація всієї довідки на 15 мов (UK, EN, DE, FR, PL, ES, IT, CZ, BR, PT, HU, RO, NL, TR, RU).
+- НОВЕ: Інтерактивні спливаючі підказки на екрані!
+  * Створено систему контекстних вікон-підказок для ключових етапів роботи (перший запуск комбайна, перевантаження, оптимальне налаштування).
+  * Сучасний преміальний вигляд із заокругленою темною панеллю та нативними іконками клавіш; закриття за кліком ЛКМ або налаштованою гарячою клавішею.
+- НОВЕ: Захист налаштувань гравця від наймитів та Courseplay!
+  * Додано нове серверне налаштування `aiHelperTuning` (Зберігати налаштування гравця / Завжди калібрувати наймитом / Вимкнено).
+  * Якщо комбайн уже відкалібрований гравцем, наймит чи Courseplay більше не скидають і не перезаписують виставлені параметри.
+  * Меню калібрування (`Right Shift + K`) тепер можна відкривати безпосередньо під час руху наймита або Courseplay для моніторингу та тонкого коригування на ходу.
+  * Автоматичне завантаження та врахування збережених гравцем профілів культур для помічників.
+- НОВЕ: Плавний гідростатичний круїз-контроль та пам'ять швидкості!
+  * Замість різких ривків швидкості впроваджено плавне експоненційне згладжування (`tau`-фільтрація) гідростатики під навантаженням.
+  * S-подібна крива Hermite плавного набору маси в похилій камері запобігає «клюванню» та різким зупинкам при вході в густий масив культури.
+  * Пам'ять робочої швидкості збирання (`cropHarvestingSpeeds`) окремо для кожної культури: комбайн плавно повертається до оптимальної швидкості після розвороту на краю поля.
+  * Виправлено коливання ліміту швидкості та смикання комбайна при русі назад.
+- НОВЕ: Електронний зумер перевантаження та втрат у кабіні!
+  * Звуковий сигнал тривоги в кабіні при критичному навантаженні двигуна (98%+) або надмірних втратах зерна (> 4.0%).
+  * Безшовне відтворення звуку між кабіною (1-ша особа) та вулицею (3-тя особа) з розумним балансом гучності (+25% ззовні).
+  * Розділ налаштувань аудіо в меню ESC: вимикання сигналів та вибір гучності (50%–150%).
+- ПОКРАЩЕНО: Визначення культури за вмістом бункера та розширена класифікація машин!
+  * Вміст зернового бункера (> 50 л) тепер є абсолютним пріоритетом для вибору культури, усуваючи збої на краях полів та випадкові перемикання.
+  * Чітке розмежування культур для кастомних карт: відрізнення зернобобових (`BEANS`, `FABABEAN`) від коренеплідної стручкової квасолі (`GREENBEAN`).
+  * Суворе блокування незернових культур (виноград, оливки, бур'яни) для звичайних комбайнів.
+  * Автоматична генерація фізичних моделей ASABE для зернобобових культур з будь-яких мод-карт.
+- ПОКРАЩЕНО: Телеметрія HUD та магнітне стикування з Precision Farming!
+  * Динамічне забарвлення рядків навантаження та втрат (білий -> жовтий -> помаранчевий -> пульсуючий червоний).
+  * Безшовне стикування HUD безпосередньо під вікном урожайності Precision Farming за будь-якого стану меню F1.
+  * Відображення поточної цільової швидкості у капсулі телеметрії HUD.
+  * Гаряча клавіша `Right Shift + H` для швидкого приховування або показу HUD.
+- ВИПРАВЛЕНО: Усунення конфліктів керування з Interactive Control та HeadTracking!
+  * Додано модуль сумісності `RHM_ModCompatibility` для підтримки модів `FS25_interactiveControl` та `FS25_headTrackICextension`.
+  * Блокування перехоплення кліків миші та оверлеїв IC під час відкритого меню калібрування RHM.
+  * Усунено конфлікт блокування камери та миші при використанні Courseplay та AutoDrive.
+- ВИПРАВЛЕНО: Валідація XML-схеми сейвів та надійність збереження!
+  * Повна реєстрація атрибутів `#isCalibrated` та `#calibratedCrops` у схемі `savegame_vehicles`, що усунуло помилки `Path not registered` у файлі `vehicles.xml`.
+  * Захищене завантаження (`hasProperty` та `pcall`) запобігає будь-яким збоям при оновленні збережень кар'єри.
+- ОПТИМІЗОВАНО: Продуктивність та оптимізація пам'яті (GC)!
+  * Заміна динамічних таблиць у гарячих циклах оновлення на статичні кільцеві буфери $O(1)$, що повністю ліквідувало мікрофризи та навантаження на Garbage Collector.
+  * Покращено стабільність мережевої синхронізації виділених серверів (Dedicated Server).
 
 Зміни 1.5.2.0:
 - НОВЕ: Динамічне вилучення та локалізація культур карти! Меню калібрування комбайна (`Right Shift + K`) тепер відображає виключно ті культури, які наявні на поточній карті, відсортовані за алфавітом та локалізовані мовою гравця (`ft.title`). Статичні захардкоджені списки повністю усунуто.

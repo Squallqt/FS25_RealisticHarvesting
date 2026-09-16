@@ -304,6 +304,7 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
     <actions>
         <action name="RHM_OPEN_MENU" category="VEHICLE" />
         <action name="RHM_TOGGLE_HUD" category="VEHICLE" />
+        <action name="RHM_CLOSE_NOTIFICATION" displayCategory="PLAYER_INTERACTIVE" />
     </actions>
     
     <inputBinding>
@@ -312,6 +313,10 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
         </actionBinding>
         <actionBinding action="RHM_TOGGLE_HUD">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_h" />
+        </actionBinding>
+        <actionBinding action="RHM_CLOSE_NOTIFICATION">
+            <binding device="KB_MOUSE_DEFAULT" input="MOUSE_BUTTON_LEFT" />
+            <binding device="0_XINPUT_GAMEPAD" input="BUTTON_1" />
         </actionBinding>
     </inputBinding>
 
@@ -388,29 +393,12 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
                     <text text="$l10n_rhm_help_calibration_rotor_text"/>
                 </paragraph>
                 <paragraph>
-                    <text text="$l10n_rhm_help_calibration_rotor_long"/>
-                </paragraph>
-                <paragraph>
                     <title text="$l10n_rhm_help_calibration_fan_sub"/>
                     <text text="$l10n_rhm_help_calibration_fan_text"/>
                 </paragraph>
                 <paragraph>
-                    <text text="$l10n_rhm_help_calibration_fan_long"/>
-                </paragraph>
-                <paragraph>
-                    <title text="$l10n_rhm_help_calibration_sieve_sub"/>
-                    <text text="$l10n_rhm_help_calibration_sieve_text"/>
-                </paragraph>
-                <paragraph>
-                    <text text="$l10n_rhm_help_calibration_sieve_long"/>
-                </paragraph>
-                <paragraph>
-                    <title text="$l10n_rhm_help_cropsettings_forage_sub"/>
-                    <text text="$l10n_rhm_help_calibration_forage_intro_text"/>
-                </paragraph>
-                <paragraph>
-                    <title text="$l10n_rhm_help_cropsettings_root_sub"/>
-                    <text text="$l10n_rhm_help_calibration_root_intro_text"/>
+                    <title text="$l10n_rhm_help_calibration_perf_sub"/>
+                    <text text="$l10n_rhm_help_calibration_perf_text"/>
                 </paragraph>
             </page>
 

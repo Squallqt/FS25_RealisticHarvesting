@@ -212,10 +212,14 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
 
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [AI WORKER] Kept player's calibrated settings for %s (no overwrite)", cropName))
 
-        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) then
             local retainedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_settings_retained")) and g_i18n:getText("rhm_ai_settings_retained") or "Manual Settings Retained"
-            local msg = string.format("RHM [AI]: %s (%s)", retainedText, tostring(cropTitle))
-            g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+            local msg = string.format("%s (%s)", retainedText, tostring(cropTitle))
+            if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                RHM_NotificationManager.INSTANCE:showNotification("RHM [AI]", msg, 4000)
+            elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+                g_currentMission.hud:showInGameMessage("RHM", "RHM [AI]: " .. msg, -1)
+            end
         end
 
         return true
@@ -273,10 +277,14 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
             tostring(self.currentSettings.lowerSieve),
             tostring(self.currentSettings.targetEngineLoad)))
 
-        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+        if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) then
             local btnText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_gui_btn_load_preset")) and g_i18n:getText("rhm_gui_btn_load_preset") or "Loaded Profile"
-            local msg = string.format("RHM [AI]: %s (%s)", btnText, tostring(cropTitle))
-            g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+            local msg = string.format("%s (%s)", btnText, tostring(cropTitle))
+            if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+                RHM_NotificationManager.INSTANCE:showNotification("RHM [AI]", msg, 4000)
+            elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+                g_currentMission.hud:showInGameMessage("RHM", "RHM [AI]: " .. msg, -1)
+            end
         end
 
         -- In multiplayer, notify clients of updated helper settings
@@ -377,19 +385,26 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         end
     end
 
-    if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) and g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+    if self.combine and (self.combine.getIsEntered and self.combine:getIsEntered()) then
+        local title = "RHM [AI]"
         local msg = ""
         if pkgLevel >= 4 then
             local t4Text = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ui_btn_ai_auto")) and g_i18n:getText("rhm_ui_btn_ai_auto") or "Opti-Harvest AI"
-            msg = string.format("RHM [AI]: %s (%s)", t4Text, tostring(cropTitle))
+            msg = string.format("%s (%s)", t4Text, tostring(cropTitle))
         elseif adjustedCount == 0 then
+            title = string.format("RHM [AI Tier %d]", pkgLevel)
             local retainedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_settings_retained")) and g_i18n:getText("rhm_ai_settings_retained") or "Manual Settings Retained"
-            msg = string.format("RHM [AI Tier %d]: %s (%s)", pkgLevel, retainedText, tostring(cropTitle))
+            msg = string.format("%s (%s)", retainedText, tostring(cropTitle))
         else
+            title = string.format("RHM [AI Tier %d]", pkgLevel)
             local tunedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_auto_tuned")) and g_i18n:getText("rhm_ai_auto_tuned") or "Auto-Calibrated"
-            msg = string.format("RHM [AI Tier %d]: %s (%s)", pkgLevel, tunedText, tostring(cropTitle))
+            msg = string.format("%s (%s)", tunedText, tostring(cropTitle))
         end
-        g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+        if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+            RHM_NotificationManager.INSTANCE:showNotification(title, msg, 4000)
+        elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+            g_currentMission.hud:showInGameMessage("RHM", title .. ": " .. msg, -1)
+        end
     end
 
     self.isCalibrated = true
@@ -428,8 +443,10 @@ function RHM_CombineMemory:requestAutoSettings()
     end
 
     if not self.currentCrop then
-        if g_currentMission and g_currentMission.hud then
-            local text = g_i18n:hasText("rhm_msg_auto_need_crop") and g_i18n:getText("rhm_msg_auto_need_crop") or "Opti-Harvest AI: Harvest a few meters to begin auto-calibration!"
+        local text = g_i18n:hasText("rhm_msg_auto_need_crop") and g_i18n:getText("rhm_msg_auto_need_crop") or "Opti-Harvest AI: Harvest a few meters to begin auto-calibration!"
+        if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+            RHM_NotificationManager.INSTANCE:showNotification("RHM", text, 4000)
+        elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
             g_currentMission.hud:showInGameMessage("RHM", text, -1)
         end
         return
@@ -450,13 +467,16 @@ function RHM_CombineMemory:requestAutoSettings()
         rhm_log("RHM [RHM_CombineMemory]: RHM: [Sync] Requested AUTO settings from server")
     end
 
-    if g_currentMission and g_currentMission.hud then
-        local cropTitle = self.currentCrop
-        if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
-            cropTitle = RHM_CombineSettingsDatabase:getCropTitle(self.currentCrop)
-        end
-        local formatStr = g_i18n:hasText("rhm_msg_auto_calibrated") and g_i18n:getText("rhm_msg_auto_calibrated") or "Opti-Harvest AI: Auto-calibrated for %s!"
-        g_currentMission.hud:showInGameMessage("RHM", string.format(formatStr, tostring(cropTitle)), -1)
+    local cropTitle = self.currentCrop
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
+        cropTitle = RHM_CombineSettingsDatabase:getCropTitle(self.currentCrop)
+    end
+    local formatStr = g_i18n:hasText("rhm_msg_auto_calibrated") and g_i18n:getText("rhm_msg_auto_calibrated") or "Opti-Harvest AI: Auto-calibrated for %s!"
+    local msg = string.format(formatStr, tostring(cropTitle))
+    if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
+        RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+    elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
+        g_currentMission.hud:showInGameMessage("RHM", msg, -1)
     end
 end
 
@@ -760,6 +780,12 @@ end
 function RHM_CombineMemory:switchCrop(newCropName)
     if not newCropName then
         return
+    end
+
+    -- EN: Normalize alias to canonical crop key (e.g. PEAS -> PEA, CORN -> MAIZE)
+    -- UA: Нормалізуємо аліас до канонічного ключа культури (напр. PEAS -> PEA, CORN -> MAIZE)
+    if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName then
+        newCropName = RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
     end
 
     -- EN: Normalize alias to active map crop name if needed (e.g. LINSEED -> FLAX if map uses FLAX)

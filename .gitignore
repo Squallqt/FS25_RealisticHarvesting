@@ -12,6 +12,8 @@ Thumbs.db
 .vscode/
 .idea/
 .Example/
+.agents/
+scratch/
 
 # Temp files
 *.tmp

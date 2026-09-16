@@ -58,6 +58,7 @@ function RHMSettings.new(manager)
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
     self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
     self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
+    self.enableTutorials = true         -- EN: First-time onboarding tutorial hints / UA: Навчальні підказки для новачків
 
     -- EN: HUD visibility toggles (client-side, per-player).
     -- UA: Перемикачі видимості HUD (клієнтські, для кожного гравця).
@@ -228,6 +229,7 @@ function RHMSettings:resetToDefaults()
     self.showSpeedometer = true
     self.showLoadWarnings = true
     self.enableIndependentLaunch = true
+    self.enableTutorials = true
     self.hudOffsetX = 0
     self.hudOffsetY = 350
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD
@@ -236,6 +238,21 @@ function RHMSettings:resetToDefaults()
     self:saveAndSync()
 
     rhm_log("RHM [RHMSettings]: RHM: RHMSettings reset to defaults")
+end
+
+---EN: Gets whether tutorial hints are enabled
+---UA: Повертає чи увімкнено навчальні підказки
+function RHMSettings:getEnableTutorials()
+    return self.enableTutorials
+end
+
+---EN: Sets whether tutorial hints are enabled
+---UA: Встановлює чи увімкнено навчальні підказки
+function RHMSettings:setEnableTutorials(enabled)
+    self.enableTutorials = enabled
+    if self.save then
+        self:save()
+    end
 end
 
 

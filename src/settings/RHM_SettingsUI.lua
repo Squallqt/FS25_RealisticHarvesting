@@ -269,6 +269,9 @@ function RHMSettingsUI.inject(settings)
     RHMSettingsUI.loadWarnOption = addBinaryRow(settingsPage, generalLayout, "show_loadwarn", "rhm_show_load_warn_short", "rhm_show_load_warn_long",
         settings.showLoadWarnings, function(val) settings.showLoadWarnings = val; settings:save() end)
 
+    RHMSettingsUI.tutorialsOption = addBinaryRow(settingsPage, generalLayout, "enable_tutorials", "rhm_setting_enableTutorials", "rhm_setting_enableTutorials_long",
+        settings.enableTutorials, function(val) settings.enableTutorials = val; settings:save() end)
+
     local unitOptions = {
         g_i18n:hasText("rhm_unit_metric")   and g_i18n:getText("rhm_unit_metric")   or "Metric",
         g_i18n:hasText("rhm_unit_imperial") and g_i18n:getText("rhm_unit_imperial") or "Imperial",
@@ -344,6 +347,7 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.cropLossVisOption, settings.showCropLoss      and 2 or 1, false)
     setOpt(RHMSettingsUI.moistureVisOption, settings.showMoisture      and 2 or 1, false)
     setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
+    setOpt(RHMSettingsUI.tutorialsOption,      (settings.enableTutorials ~= false) and 2 or 1, false)
     setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
 
     setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
