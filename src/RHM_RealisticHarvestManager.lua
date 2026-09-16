@@ -55,7 +55,7 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     -- UA: Створюємо перетягуваний HUD (тільки клієнт, відображає живі дані).
     if mission:getIsClient() then
         if RHM_NotificationManager then
-            self.notificationManager = RHM_NotificationManager.new(modDirectory)
+            self.notificationManager = RHM_NotificationManager.new(modDirectory, self.settings)
             RHM_NotificationManager.INSTANCE = self.notificationManager
         end
 
@@ -299,6 +299,12 @@ function RHM_RealisticHarvestManager:draw()
         return
     end
 
+    -- EN: Notification and tutorial panel drawn independently over HUD
+    -- UA: Панель сповіщень та підказок малюється незалежно поверх HUD
+    if self.notificationManager then
+        self.notificationManager:draw()
+    end
+
     local combineVehicle = self.lastActiveCombine
     if not (self.hud and combineVehicle) then
         return
@@ -313,12 +319,6 @@ function RHM_RealisticHarvestManager:draw()
 
     if self.settings and self.settings.showHUD then
         self.hud:draw()
-    end
-
-    -- EN: Notification and tutorial panel drawn independently over HUD
-    -- UA: Панель сповіщень та підказок малюється незалежно поверх HUD
-    if self.notificationManager then
-        self.notificationManager:draw()
     end
 end
 

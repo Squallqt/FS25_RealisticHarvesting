@@ -163,9 +163,6 @@ local function onMissionUpdate(mission, dt)
         rhm:update(dt)
     end
 end
-if Mission00 ~= nil then
-    Mission00.update = Utils.appendedFunction(Mission00.update, onMissionUpdate)
-end
 if FSBaseMission ~= nil then
     FSBaseMission.update = Utils.appendedFunction(FSBaseMission.update, onMissionUpdate)
 end
@@ -178,9 +175,6 @@ local function onMissionDraw(mission)
     if rhm then
         rhm:draw()
     end
-end
-if Mission00 ~= nil then
-    Mission00.draw = Utils.appendedFunction(Mission00.draw, onMissionDraw)
 end
 if FSBaseMission ~= nil then
     FSBaseMission.draw = Utils.appendedFunction(FSBaseMission.draw, onMissionDraw)
@@ -201,9 +195,6 @@ local function onMissionMouseEvent(mission, superFunc, posX, posY, isDown, isUp,
         return superFunc(mission, posX, posY, isDown, isUp, button)
     end
 end
-if Mission00 ~= nil then
-    Mission00.mouseEvent = Utils.overwrittenFunction(Mission00.mouseEvent, onMissionMouseEvent)
-end
 if FSBaseMission ~= nil then
     FSBaseMission.mouseEvent = Utils.overwrittenFunction(FSBaseMission.mouseEvent, onMissionMouseEvent)
 end
@@ -222,9 +213,6 @@ local function onMissionKeyEvent(mission, superFunc, unicode, sym, modifier, isD
     if superFunc ~= nil then
         return superFunc(mission, unicode, sym, modifier, isDown)
     end
-end
-if Mission00 ~= nil then
-    Mission00.keyEvent = Utils.overwrittenFunction(Mission00.keyEvent, onMissionKeyEvent)
 end
 if FSBaseMission ~= nil then
     FSBaseMission.keyEvent = Utils.overwrittenFunction(FSBaseMission.keyEvent, onMissionKeyEvent)

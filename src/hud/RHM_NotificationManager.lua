@@ -29,13 +29,26 @@ local ROUNDED_PANEL_UV = {
     bottom      = {  5, 59, 54,  5 },
     bottomRight = { 59, 59,  5,  5 }
 }
+local ROUNDED_PANEL_PRECALCULATED_UVS = nil
 
-function RHM_NotificationManager.new(modDirectory)
+local function getPrecalculatedUVs()
+    if not ROUNDED_PANEL_PRECALCULATED_UVS and GuiUtils and GuiUtils.getUVs then
+        ROUNDED_PANEL_PRECALCULATED_UVS = {}
+        local texSize = {ROUNDED_PANEL_TEXTURE_SIZE, ROUNDED_PANEL_TEXTURE_SIZE}
+        for k, uv in pairs(ROUNDED_PANEL_UV) do
+            ROUNDED_PANEL_PRECALCULATED_UVS[k] = GuiUtils.getUVs(uv, texSize)
+        end
+    end
+    return ROUNDED_PANEL_PRECALCULATED_UVS
+end
+
+function RHM_NotificationManager.new(modDirectory, settings)
     local self = setmetatable({}, NotificationManager_mt)
 
     self.modDirectory = modDirectory or g_currentModDirectory
+    self.settings = settings
     self.activeNotification = nil
-    self.cooldownTimer = 5000 -- 5s initial silence after loading game
+    self.cooldownTimer = 2000 -- 2s initial silence after loading game
     self.cooldownDurationMs = 45000 -- 45s between tutorial hints to prevent spam
     self.seenTutorials = RHM_NotificationManager.seenTutorials or {}
     RHM_NotificationManager.seenTutorials = self.seenTutorials
@@ -47,6 +60,8 @@ function RHM_NotificationManager.new(modDirectory)
     self.quadOverlay = nil
     self.dividerOverlay = nil
     self.notificationCloseGlyph = nil
+    self.notificationCloseGlyphWidth = nil
+    self.notificationCloseGlyphHeight = nil
     self.notificationCloseGlyphInputMode = nil
 
     self.mouseButtonDownLast = false
@@ -62,6 +77,8 @@ function RHM_NotificationManager:load()
     if not self.dividerOverlay then
         self.dividerOverlay = Overlay.new("dataS/menu/base/graph_pixel.dds", 0, 0, 1, 1)
     end
+
+    getPrecalculatedUVs()
 
     addConsoleCommand("rhm_hint", "Show a tutorial hint manually [welcome|overload|loss|moisture|headland|upgrade]", "consoleCommandShowHint", self)
     addConsoleCommand("rhm_reset_hints", "Reset seen tutorial hints so they appear again", "consoleCommandResetHints", self)
@@ -82,6 +99,9 @@ function RHM_NotificationManager:delete()
     if self.notificationCloseGlyph then
         self.notificationCloseGlyph:delete()
         self.notificationCloseGlyph = nil
+        self.notificationCloseGlyphWidth = nil
+        self.notificationCloseGlyphHeight = nil
+        self.notificationCloseGlyphInputMode = nil
     end
 
     self.activeNotification = nil
@@ -148,58 +168,10 @@ function RHM_NotificationManager:consoleCommandResetHints()
     self.seenTutorials = {}
     RHM_NotificationManager.seenTutorials = self.seenTutorials
     self.cooldownTimer = 0
+    if self.settings and self.settings.save then
+        self.settings:save()
+    end
     return "All tutorial hints have been reset and will trigger naturally again."
-end
-
----EN: Displays a notification modal
----UA: Відображає модальне вікно сповіщення
-function RHM_NotificationManager:showNotification(title, text, durationMs, isTutorial, tutorialKey)
-    local rawTitle = tostring(title or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
-    local rawText = tostring(text or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
-
-    if rawText == "" then
-        self:dismissNotification()
-        return
-    end
-
-    local formattedTitle = nil
-    if rawTitle ~= "" then
-        if utf8ToUpper ~= nil then
-            formattedTitle = utf8ToUpper(rawTitle)
-        else
-            formattedTitle = string.upper(rawTitle)
-        end
-    end
-
-    local parsedDuration = tonumber(durationMs) or 0
-    local isPersistent = parsedDuration <= 0
-    local displayDuration = isPersistent and 60000 or math.max(parsedDuration, 4000)
-
-    self.activeNotification = {
-        title = formattedTitle,
-        text = rawText,
-        durationMs = displayDuration,
-        isPersistent = isPersistent,
-        timer = 0,
-        isTutorial = isTutorial or false,
-        tutorialKey = tutorialKey
-    }
-
-    if tutorialKey then
-        self.seenTutorials[tutorialKey] = true
-        if RHM_NotificationManager.seenTutorials then
-            RHM_NotificationManager.seenTutorials[tutorialKey] = true
-        end
-        self.cooldownTimer = self.cooldownDurationMs
-    end
-end
-
-function RHM_NotificationManager:dismissNotification()
-    self.activeNotification = nil
-end
-
-function RHM_NotificationManager:closeActiveNotification()
-    self:dismissNotification()
 end
 
 ---EN: Simple word-wrapper matching the native HUD line wrapping
@@ -229,6 +201,114 @@ function RHM_NotificationManager:wrapText(text, maxWidth, textSize)
     return lines
 end
 
+---EN: Displays a notification modal
+---UA: Відображає модальне вікно сповіщення
+function RHM_NotificationManager:showNotification(title, text, durationMs, isTutorial, tutorialKey)
+    local rawTitle = tostring(title or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+    local rawText = tostring(text or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+
+    if rawText == "" then
+        self:dismissNotification()
+        return
+    end
+
+    local formattedTitle = nil
+    if rawTitle ~= "" then
+        if utf8ToUpper ~= nil then
+            formattedTitle = utf8ToUpper(rawTitle)
+        else
+            formattedTitle = string.upper(rawTitle)
+        end
+    end
+
+    local parsedDuration = tonumber(durationMs) or 0
+    local isPersistent = parsedDuration <= 0
+    local displayDuration = isPersistent and 60000 or math.max(parsedDuration, 4000)
+
+    -- Pre-calculate layout & wrapped lines ONCE to avoid garbage collection and string splits in draw loop
+    local panelWidth = math.max(0.22, self:scalePixelToScreenWidth(420))
+    local padding = self:scalePixelToScreenWidth(15)
+    local fullTextWidth = panelWidth - (padding * 2)
+
+    local titleTextSize = self:scalePixelToScreenHeight(18)
+    local titleLineHeight = self:scalePixelToScreenHeight(22)
+    local textSize = self:scalePixelToScreenHeight(14)
+    local lineHeight = self:scalePixelToScreenHeight(20)
+
+    local titleSpacing = self:scalePixelToScreenHeight(7)
+    local titleDividerHeight = math.max(self:scalePixelToScreenHeight(1.5), 1 / (g_screenHeight or 1080))
+    local titleTextExtraSpacing = self:scalePixelToScreenHeight(8)
+    local dividerSpacing = self:scalePixelToScreenHeight(4)
+    local bottomDividerTextSpacing = self:scalePixelToScreenHeight(4)
+
+    local titleLines = {}
+    if formattedTitle ~= nil and formattedTitle ~= "" then
+        titleLines = self:wrapText(formattedTitle, fullTextWidth, titleTextSize)
+    end
+    local hasTitle = #titleLines > 0
+
+    local lines = self:wrapText(rawText, fullTextWidth, textSize)
+    local baseHeight = padding * 2 + lineHeight
+
+    local topSectionHeight = hasTitle and (padding + (#titleLines * titleLineHeight) + dividerSpacing + titleDividerHeight) or 0
+    local bottomSectionHeight = hasTitle and (topSectionHeight + dividerSpacing + bottomDividerTextSpacing) or 0
+    local dynamicHeight = hasTitle
+        and (padding + (#titleLines * titleLineHeight) + titleSpacing + titleTextExtraSpacing + (#lines * lineHeight) + bottomSectionHeight)
+        or (padding * 2 + (#lines * lineHeight))
+
+    local baseAnchorY = 0.14
+    local anchorCenterY = baseAnchorY + baseHeight * 0.5
+    local panelY = anchorCenterY - dynamicHeight * 0.5
+    local panelX = (1.0 - panelWidth) * 0.5
+
+    self.activeNotification = {
+        title = formattedTitle,
+        text = rawText,
+        titleLines = titleLines,
+        lines = lines,
+        hasTitle = hasTitle,
+        panelX = panelX,
+        panelY = panelY,
+        panelWidth = panelWidth,
+        dynamicHeight = dynamicHeight,
+        padding = padding,
+        titleTextSize = titleTextSize,
+        titleLineHeight = titleLineHeight,
+        textSize = textSize,
+        lineHeight = lineHeight,
+        titleSpacing = titleSpacing,
+        titleDividerHeight = titleDividerHeight,
+        titleTextExtraSpacing = titleTextExtraSpacing,
+        dividerSpacing = dividerSpacing,
+        bottomDividerTextSpacing = bottomDividerTextSpacing,
+        topSectionHeight = topSectionHeight,
+        durationMs = displayDuration,
+        isPersistent = isPersistent,
+        timer = 0,
+        isTutorial = isTutorial or false,
+        tutorialKey = tutorialKey
+    }
+
+    if tutorialKey then
+        self.seenTutorials[tutorialKey] = true
+        if RHM_NotificationManager.seenTutorials then
+            RHM_NotificationManager.seenTutorials[tutorialKey] = true
+        end
+        self.cooldownTimer = self.cooldownDurationMs
+        if self.settings and self.settings.save then
+            self.settings:save()
+        end
+    end
+end
+
+function RHM_NotificationManager:dismissNotification()
+    self.activeNotification = nil
+end
+
+function RHM_NotificationManager:closeActiveNotification()
+    self:dismissNotification()
+end
+
 ---EN: 9-slice quad renderer for rounded background panel
 function RHM_NotificationManager:renderPanelQuad(texturePath, x, y, width, height, color, uvs)
     if width <= 0 or height <= 0 then
@@ -243,14 +323,14 @@ function RHM_NotificationManager:renderPanelQuad(texturePath, x, y, width, heigh
 
     overlay:setPosition(x, y)
     overlay:setDimension(width, height)
-    if uvs ~= nil and GuiUtils ~= nil and GuiUtils.getUVs ~= nil then
-        overlay:setUVs(GuiUtils.getUVs(uvs, {ROUNDED_PANEL_TEXTURE_SIZE, ROUNDED_PANEL_TEXTURE_SIZE}))
+    if uvs ~= nil then
+        overlay:setUVs(uvs)
     end
     overlay:setColor(color[1], color[2], color[3], color[4] or 1)
     overlay:render()
 end
 
----EN: Draws the 9-slice background with rounded corners
+---EN: Draws the 9-slice background with rounded corners without allocating tables
 function RHM_NotificationManager:drawPanelBackground(x, y, width, height, color)
     local panelColor = color or COLOR_PANEL_BG
     local panelX, panelY, panelWidth, panelHeight = self:snapScreenRect(x, y, width, height)
@@ -272,19 +352,20 @@ function RHM_NotificationManager:drawPanelBackground(x, y, width, height, color)
     local topY = panelY + panelHeight - cornerHeight
     local centerWidth = math.max(rightX - centerX, 0)
     local centerHeight = math.max(topY - centerY, 0)
-    local uv = ROUNDED_PANEL_UV
+    local uvs = getPrecalculatedUVs()
+    if not uvs then return end
 
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, bottomY, cornerWidth, cornerHeight, panelColor, uv.bottomLeft)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, bottomY, centerWidth, cornerHeight, panelColor, uv.bottom)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, bottomY, cornerWidth, cornerHeight, panelColor, uv.bottomRight)
+    self:renderPanelQuad(self.panelBackgroundRounded, leftX, bottomY, cornerWidth, cornerHeight, panelColor, uvs.bottomLeft)
+    self:renderPanelQuad(self.panelBackgroundRounded, centerX, bottomY, centerWidth, cornerHeight, panelColor, uvs.bottom)
+    self:renderPanelQuad(self.panelBackgroundRounded, rightX, bottomY, cornerWidth, cornerHeight, panelColor, uvs.bottomRight)
 
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, centerY, cornerWidth, centerHeight, panelColor, uv.left)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, centerY, centerWidth, centerHeight, panelColor, uv.center)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, centerY, cornerWidth, centerHeight, panelColor, uv.right)
+    self:renderPanelQuad(self.panelBackgroundRounded, leftX, centerY, cornerWidth, centerHeight, panelColor, uvs.left)
+    self:renderPanelQuad(self.panelBackgroundRounded, centerX, centerY, centerWidth, centerHeight, panelColor, uvs.center)
+    self:renderPanelQuad(self.panelBackgroundRounded, rightX, centerY, cornerWidth, centerHeight, panelColor, uvs.right)
 
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, topY, cornerWidth, cornerHeight, panelColor, uv.topLeft)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, topY, centerWidth, cornerHeight, panelColor, uv.top)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, topY, cornerWidth, cornerHeight, panelColor, uv.topRight)
+    self:renderPanelQuad(self.panelBackgroundRounded, leftX, topY, cornerWidth, cornerHeight, panelColor, uvs.topLeft)
+    self:renderPanelQuad(self.panelBackgroundRounded, centerX, topY, centerWidth, cornerHeight, panelColor, uvs.top)
+    self:renderPanelQuad(self.panelBackgroundRounded, rightX, topY, cornerWidth, cornerHeight, panelColor, uvs.topRight)
 end
 
 ---EN: Draws a thin divider line
@@ -299,11 +380,11 @@ function RHM_NotificationManager:drawNotificationDivider(x, y, width, height, co
 
     overlay:setPosition(snappedX, snappedY)
     overlay:setDimension(snappedWidth, snappedHeight)
-    overlay:setColor(unpack(color))
+    overlay:setColor(color[1], color[2], color[3], color[4] or 1)
     overlay:render()
 end
 
----EN: Gets or creates the official close glyph element
+---EN: Gets or caches the close glyph element (avoids recreating every frame)
 function RHM_NotificationManager:getNotificationCloseGlyph(glyphWidth, glyphHeight)
     if g_inputDisplayManager == nil or InputGlyphElement == nil or InputAction == nil then
         return nil
@@ -315,11 +396,15 @@ function RHM_NotificationManager:getNotificationCloseGlyph(glyphWidth, glyphHeig
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
         self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_GAME_GREEN, {0, 0, 0, 0.8})
         self.notificationCloseGlyph:setButtonGlyphColor(COLOR_GAME_GREEN)
-    elseif self.notificationCloseGlyph.baseWidth ~= glyphWidth or self.notificationCloseGlyph.baseHeight ~= glyphHeight then
+        self.notificationCloseGlyphWidth = glyphWidth
+        self.notificationCloseGlyphHeight = glyphHeight
+    elseif self.notificationCloseGlyphWidth ~= glyphWidth or self.notificationCloseGlyphHeight ~= glyphHeight then
         self.notificationCloseGlyph:delete()
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
         self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_GAME_GREEN, {0, 0, 0, 0.8})
         self.notificationCloseGlyph:setButtonGlyphColor(COLOR_GAME_GREEN)
+        self.notificationCloseGlyphWidth = glyphWidth
+        self.notificationCloseGlyphHeight = glyphHeight
         self.notificationCloseGlyphInputMode = nil
     end
 
@@ -349,36 +434,46 @@ end
 function RHM_NotificationManager:updateInput()
     if not self.activeNotification then return end
 
-    local isMouseDown = Input.isMouseButtonPressed ~= nil and (Input.isMouseButtonPressed(Input.MOUSE_BUTTON_LEFT) or Input.isMouseButtonPressed(Input.MOUSE_BUTTON_RIGHT))
     local isGamepadDown = self:getNotificationGamepadState()
-
-    if g_gui ~= nil and g_gui:getIsGuiVisible() then
-        self.mouseButtonDownLast = isMouseDown
-        self.gamepadButtonDownLast = isGamepadDown
-        return
-    end
-
-    if isMouseDown and not self.mouseButtonDownLast then
-        self:dismissNotification()
-        self.mouseButtonDownLast = true
-        self.gamepadButtonDownLast = isGamepadDown
-        return
-    end
 
     if isGamepadDown and not self.gamepadButtonDownLast then
         self:dismissNotification()
-        self.mouseButtonDownLast = isMouseDown
         self.gamepadButtonDownLast = true
         return
     end
 
-    self.mouseButtonDownLast = isMouseDown
     self.gamepadButtonDownLast = isGamepadDown
+end
+
+---EN: Helper to detect if a combine cutter is currently active (lowered and spinning)
+function RHM_NotificationManager.getIsCutterActive(combineVehicle)
+    if not combineVehicle then return false end
+
+    local spec_combine = combineVehicle.spec_combine
+    if spec_combine and spec_combine.attachedCutters then
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if cutter.spec_cutter then
+                local spec_cutter = cutter.spec_cutter
+                if cutter:getIsTurnedOn() and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
+                    return true
+                end
+            end
+        end
+    end
+
+    if combineVehicle.spec_cutter then
+        local spec_cutter = combineVehicle.spec_cutter
+        if combineVehicle:getIsTurnedOn() and (spec_cutter.allowCuttingWhileRaised or combineVehicle:getIsLowered(true)) then
+            return true
+        end
+    end
+
+    return false
 end
 
 ---EN: Main update tick for managing timer and cascading onboarding tutorials
 function RHM_NotificationManager:update(dt, combineVehicle)
-    -- Poll mouse and gamepad dismiss
+    -- Poll gamepad dismiss
     self:updateInput()
 
     -- 1. Advance active notification timer
@@ -390,14 +485,22 @@ function RHM_NotificationManager:update(dt, combineVehicle)
         return
     end
 
-    -- 2. Decrement cooldown between tutorial hints
+    -- 2. Respect settings toggle
+    if self.settings and self.settings.getEnableTutorials and not self.settings:getEnableTutorials() then
+        return
+    end
+
+    -- 3. Decrement cooldown between tutorial hints
     if self.cooldownTimer > 0 then
         self.cooldownTimer = self.cooldownTimer - dt
         return
     end
 
-    -- 3. Only evaluate triggers if player is inside an active combine
-    if not combineVehicle or not combineVehicle.getIsEntered or not combineVehicle:getIsEntered() then
+    -- 4. Only evaluate triggers if player is inside an active combine
+    if not combineVehicle then return end
+    local isEntered = (combineVehicle.getIsEntered and combineVehicle:getIsEntered())
+        or (combineVehicle.rootVehicle and combineVehicle.rootVehicle.getIsEntered and combineVehicle.rootVehicle:getIsEntered())
+    if not isEntered then
         return
     end
 
@@ -406,12 +509,12 @@ function RHM_NotificationManager:update(dt, combineVehicle)
         return
     end
 
-    local data = spec.data
-    local isCutterActive = data.cutterTurnedOn and data.cutterLowered
-    local isHarvesting = isCutterActive and (data.lastSpeed or 0) > 0.5
-    local load = data.loadPercentage or 0
-    local cropLoss = data.cropLoss or 0
-    local moisture = data.moisture or 0
+    local isCutterActive = RHM_NotificationManager.getIsCutterActive(combineVehicle)
+    local speed = (combineVehicle.getLastSpeed and combineVehicle:getLastSpeed()) or 0
+    local isHarvesting = isCutterActive and speed > 0.5
+    local load = (spec.data and spec.data.load) or 0
+    local cropLoss = (spec.data and spec.data.cropLoss) or 0
+    local moisture = (spec.data and spec.data.moisture) or 0
 
     if isHarvesting then
         self.harvestActiveRunTime = self.harvestActiveRunTime + dt
@@ -426,7 +529,7 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- CASCADING TUTORIAL TRIGGERS (Priority order, max 1 trigger per check)
     -- =========================================================================
 
-    -- TRIGGER 1: First Harvest / Welcome
+    -- TRIGGER 1: First Harvest / Welcome (as soon as cutter is lowered and running)
     if not self.seenTutorials["WELCOME"] and isCutterActive then
         local title = g_i18n:hasText("rhm_tut_welcome_title") and g_i18n:getText("rhm_tut_welcome_title") or "REALISTIC HARVESTING"
         local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
@@ -486,54 +589,29 @@ function RHM_NotificationManager:draw()
         self:load()
     end
 
-    -- Layout proportions
-    local panelWidth = math.max(0.22, self:scalePixelToScreenWidth(420))
-    local panelX = (1.0 - panelWidth) * 0.5
-    local baseAnchorY = 0.14 -- Sitting comfortably in lower screen region
+    local panelX = notification.panelX
+    local panelY = notification.panelY
+    local panelWidth = notification.panelWidth
+    local dynamicHeight = notification.dynamicHeight
+    local padding = notification.padding
+    local titleLines = notification.titleLines
+    local hasTitle = notification.hasTitle
+    local lines = notification.lines
 
-    local padding = self:scalePixelToScreenWidth(15)
-    local fullTextWidth = panelWidth - (padding * 2)
-
-    local titleTextSize = self:scalePixelToScreenHeight(18)
-    local titleLineHeight = self:scalePixelToScreenHeight(22)
-    local textSize = self:scalePixelToScreenHeight(14)
-    local lineHeight = self:scalePixelToScreenHeight(20)
-
-    local titleSpacing = self:scalePixelToScreenHeight(7)
-    local titleDividerHeight = math.max(self:scalePixelToScreenHeight(1.5), 1 / (g_screenHeight or 1080))
-    local titleTextExtraSpacing = self:scalePixelToScreenHeight(8)
-    local dividerSpacing = self:scalePixelToScreenHeight(4)
-    local bottomDividerTextSpacing = self:scalePixelToScreenHeight(4)
-
-    local titleLines = {}
-    if notification.title ~= nil and notification.title ~= "" then
-        titleLines = self:wrapText(notification.title, fullTextWidth, titleTextSize)
-    end
-    local hasTitle = #titleLines > 0
-
-    local lines = self:wrapText(notification.text, fullTextWidth, textSize)
-    local baseHeight = padding * 2 + lineHeight
+    local titleTextSize = notification.titleTextSize
+    local titleLineHeight = notification.titleLineHeight
+    local textSize = notification.textSize
+    local lineHeight = notification.lineHeight
+    local titleSpacing = notification.titleSpacing
+    local titleDividerHeight = notification.titleDividerHeight
+    local titleTextExtraSpacing = notification.titleTextExtraSpacing
+    local dividerSpacing = notification.dividerSpacing
+    local bottomDividerTextSpacing = notification.bottomDividerTextSpacing
+    local topSectionHeight = notification.topSectionHeight
 
     local closeGlyphSize = 18
     local closeGlyphWidth = self:scalePixelToScreenWidth(closeGlyphSize)
     local closeGlyphHeight = self:scalePixelToScreenHeight(closeGlyphSize)
-
-    local topSectionHeight = hasTitle and (padding + (#titleLines * titleLineHeight) + dividerSpacing + titleDividerHeight) or 0
-    local bottomSectionHeight = hasTitle and (topSectionHeight + dividerSpacing + bottomDividerTextSpacing) or 0
-    local dynamicHeight = hasTitle
-        and (padding + (#titleLines * titleLineHeight) + titleSpacing + titleTextExtraSpacing + (#lines * lineHeight) + bottomSectionHeight)
-        or (padding * 2 + (#lines * lineHeight))
-
-    local anchorCenterY = baseAnchorY + baseHeight * 0.5
-    local panelY = anchorCenterY - dynamicHeight * 0.5
-
-    -- Record bounds for click detection
-    notification.bounds = {
-        x1 = panelX,
-        y1 = panelY,
-        x2 = panelX + panelWidth,
-        y2 = panelY + dynamicHeight
-    }
 
     -- 1. Draw 9-slice dark translucent background panel with rounded corners
     self:drawPanelBackground(panelX, panelY, panelWidth, dynamicHeight, COLOR_PANEL_BG)
@@ -546,7 +624,7 @@ function RHM_NotificationManager:draw()
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_TOP)
         setTextBold(true)
-        setTextColor(unpack(COLOR_GAME_GREEN))
+        setTextColor(COLOR_GAME_GREEN[1], COLOR_GAME_GREEN[2], COLOR_GAME_GREEN[3], COLOR_GAME_GREEN[4])
 
         for _, line in ipairs(titleLines) do
             renderText(centerX, currentY, titleTextSize, line)
@@ -632,8 +710,8 @@ end
 function RHM_NotificationManager:mouseEvent(posX, posY, isDown, isUp, button)
     if not self.activeNotification then return false end
 
-    -- Close on any left or right mouse click anywhere on the screen
-    if (isDown or isUp) and (button == Input.MOUSE_BUTTON_LEFT or button == Input.MOUSE_BUTTON_RIGHT) then
+    -- Close on any left or right mouse click down
+    if isDown and (button == Input.MOUSE_BUTTON_LEFT or button == Input.MOUSE_BUTTON_RIGHT) then
         self:dismissNotification()
         return true
     end
