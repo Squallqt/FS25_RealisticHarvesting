@@ -365,6 +365,39 @@ end
 function RHMCombineCalibrationGUI:update(dt)
     if not self.isOpen then return end
 
+    -- Keep mouse cursor explicitly visible while calibration GUI is open
+    if g_inputBinding and g_inputBinding.setShowMouseCursor then
+        g_inputBinding:setShowMouseCursor(true)
+    end
+
+    -- Keep camera rotation and translation blocked while GUI is open
+    local vehicle = self.controllerVehicle or (g_realisticHarvestManager and g_realisticHarvestManager:getControlledVehicle()) or self.activeVehicle
+    local camTarget = (vehicle and vehicle.spec_enterable and vehicle)
+                   or (self.activeVehicle and self.activeVehicle.spec_enterable and self.activeVehicle)
+    if camTarget and camTarget.spec_enterable and camTarget.spec_enterable.cameras then
+        for _, camera in pairs(camTarget.spec_enterable.cameras) do
+            camera.isRotatable = false
+            camera.allowTranslation = false
+        end
+    end
+
+    -- Suppress IC active controller while calibration GUI is open
+    if g_currentMission and g_currentMission.interactiveControl then
+        if g_currentMission.interactiveControl.activeController ~= nil then
+            if type(g_currentMission.interactiveControl.setActiveInteractiveController) == "function" then
+                g_currentMission.interactiveControl:setActiveInteractiveController(nil)
+            end
+        end
+    end
+
+    -- Keep VMC cursor overlay suppressed while calibration GUI is open
+    if VehicleMouseCursor ~= nil and VehicleMouseCursor._cursorGui ~= nil then
+        if VehicleMouseCursor._cursorGui.isOpen then
+            VehicleMouseCursor._cursorGui.isOpen = false
+        end
+        VehicleMouseCursor._cursorOwned = false
+    end
+
     if not self.activeVehicle then
         self:close()
         return
