@@ -79,23 +79,15 @@ If total required power approaches engine capacity, the combine automatically sl
 
 The sleek horizontal HUD bar gives you instant, non-intrusive feedback:
 
-| Capsule | Name | Meaning & Color Behavior |
+| Icon | Metric | Meaning & In-Game Behavior |
 |:---:|:---|:---|
-| 🏎️ | **Engine Load %** | Current machine load. 🟢 Green (<80%), 🟡 Yellow (80–95%), 🔴 Pulsing Red (>95%). |
-| 🌾 | **Crop Loss %** | Live percentage of lost crop. 🟢 Green (<1%), 🟡 Yellow (1–4%), 🔴 Red (>4% critical). |
-| 💧 | **Moisture %** | Real-time crop moisture. Active with [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025) on Tier 3+ combines. |
-| ⏱️ | **Productivity** | Live processing rate in tons/hour (`t/h`), bushels/hour (`bu/h`), or volume (`L/h`). |
-
-![HUD Telemetry Icons](docs/images/hud_icons.png)
-
-#### HUD Icon Atlas & Status Telemetry:
-1. **Engine Load (Gauge):** Live physical load on the engine (0–100%+). Underlined with a real-time mechanical stress bar (white → yellow → orange → pulsing red alert).
-2. **Field Yield (Field Area):** Instantaneous crop yield calculated from the cut swath area (`t/ha`, `ton/ac`, `bu/ac`).
-3. **Productivity (Clock / Mass Flow):** Live processing throughput rate over time (`t/h`, `ton/h`, `bu/h`, `L/h`).
-4. **Crop Moisture (Water Droplet):** Relative moisture level of crop and straw (integrated with [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025)).
-5. **Crop Loss (Sieve / Grain):** Real-time percentage of grain escaping separation or blown over the cleaning shoe.
-6. **Speed Limit (Speedometer):** Current forward speed alongside the dynamic RHM target speed.
-7. **Calibration Terminal (Gear):** Quick access icon for the interactive calibration touchscreen menu (**Right Shift + K**).
+| <img src="docs/images/icons/icon_load.png" width="36" alt="Engine Load" /> | **Engine Load %** | Current machine strain (0–100%+). Underlined with a real-time mechanical stress bar (white → yellow → orange → pulsing red alert). 🟢 Safe under 80%, 🟡 Warning at 80–95%, 🔴 Overload above 95%. |
+| <img src="docs/images/icons/icon_loss.png" width="36" alt="Crop Loss" /> | **Crop Loss %** | Live percentage of lost grain escaping separation or blown over the cleaning shoe. 🟢 Low (<1%), 🟡 Medium (1–4%), 🔴 Critical (>4%). |
+| <img src="docs/images/icons/icon_moisture.png" width="36" alt="Crop Moisture" /> | **Crop Moisture %** | Real-time crop & straw moisture content (active on Tier 3+ combines with [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025)). Damp crops increase engine resistance. |
+| <img src="docs/images/icons/icon_productivity.png" width="36" alt="Productivity" /> | **Productivity** | Live processing throughput rate over time (`t/h`, `ton/h`, `bu/h`, or `L/h`). |
+| <img src="docs/images/icons/icon_yield.png" width="36" alt="Field Yield" /> | **Field Yield** | Instantaneous crop yield sampled in real time from the cut field swath (`t/ha`, `ton/ac`, `bu/ac`). |
+| <img src="docs/images/icons/icon_speed.png" width="36" alt="Speed / Target" /> | **Speed / Target** | Current forward ground speed alongside the dynamically calculated safe speed limit. |
+| <img src="docs/images/icons/icon_settings.png" width="36" alt="Calibration Terminal" /> | **Calibration Terminal** | Quick-access indicator for the touchscreen calibration menu (**Right Shift + K**). |
 
 > 💡 **Repositioning the HUD:** Press **Right Shift + K** to unlock the mouse cursor. Click and drag the HUD to any custom position on your monitor. When docked, it automatically tracks Precision Farming or F1 menu changes.
 
