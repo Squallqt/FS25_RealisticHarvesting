@@ -12,35 +12,25 @@ local NotificationManager_mt = Class(RHM_NotificationManager)
 
 -- Visual constants matching the native style
 local COLOR_GAME_GREEN = {0.529, 0.706, 0, 1}
-local COLOR_PANEL_BG = {0, 0, 0, 0.72}
+local COLOR_PANEL_BG = {0.05, 0.06, 0.07, 0.88}
 local COLOR_TEXT = {1, 1, 1, 1}
 local COLOR_OK = {1, 1, 1, 0.95}
 
-local ROUNDED_PANEL_TEXTURE_SIZE = 64
 local ROUNDED_PANEL_CORNER_SIZE = 5
-local ROUNDED_PANEL_UV = {
-    topLeft     = {  0,  0,  5,  5 },
-    top         = {  5,  0, 54,  5 },
-    topRight    = { 59,  0,  5,  5 },
-    left        = {  0,  5,  5, 54 },
-    center      = {  5,  5, 54, 54 },
-    right       = { 59,  5,  5, 54 },
-    bottomLeft  = {  0, 59,  5,  5 },
-    bottom      = {  5, 59, 54,  5 },
-    bottomRight = { 59, 59,  5,  5 }
-}
-local ROUNDED_PANEL_PRECALCULATED_UVS = nil
 
-local function getPrecalculatedUVs()
-    if not ROUNDED_PANEL_PRECALCULATED_UVS and GuiUtils and GuiUtils.getUVs then
-        ROUNDED_PANEL_PRECALCULATED_UVS = {}
-        local texSize = {ROUNDED_PANEL_TEXTURE_SIZE, ROUNDED_PANEL_TEXTURE_SIZE}
-        for k, uv in pairs(ROUNDED_PANEL_UV) do
-            ROUNDED_PANEL_PRECALCULATED_UVS[k] = GuiUtils.getUVs(uv, texSize)
-        end
-    end
-    return ROUNDED_PANEL_PRECALCULATED_UVS
-end
+-- EN: Precalculated exact 8-float UV arrays for 64x64 9-slice panel texture
+-- UA: Попередньо розраховані точні масиви 8 UV-координат для 64x64 9-slice текстури
+local ROUNDED_PANEL_STATIC_UVS = {
+    topLeft     = { 0.0, 0.0, 0.0, 0.078125, 0.078125, 0.0, 0.078125, 0.078125 },
+    top         = { 0.078125, 0.0, 0.078125, 0.078125, 0.921875, 0.0, 0.921875, 0.078125 },
+    topRight    = { 0.921875, 0.0, 0.921875, 0.078125, 1.0, 0.0, 1.0, 0.078125 },
+    left        = { 0.0, 0.078125, 0.0, 0.921875, 0.078125, 0.078125, 0.078125, 0.921875 },
+    center      = { 0.078125, 0.078125, 0.078125, 0.921875, 0.921875, 0.078125, 0.921875, 0.921875 },
+    right       = { 0.921875, 0.078125, 0.921875, 0.921875, 1.0, 0.078125, 1.0, 0.921875 },
+    bottomLeft  = { 0.0, 0.921875, 0.0, 1.0, 0.078125, 0.921875, 0.078125, 1.0 },
+    bottom      = { 0.078125, 0.921875, 0.078125, 1.0, 0.921875, 0.921875, 0.921875, 1.0 },
+    bottomRight = { 0.921875, 0.921875, 0.921875, 1.0, 1.0, 0.921875, 1.0, 1.0 }
+}
 
 function RHM_NotificationManager.new(modDirectory, settings)
     local self = setmetatable({}, NotificationManager_mt)
@@ -77,8 +67,6 @@ function RHM_NotificationManager:load()
     if not self.dividerOverlay then
         self.dividerOverlay = Overlay.new("dataS/menu/base/graph_pixel.dds", 0, 0, 1, 1)
     end
-
-    getPrecalculatedUVs()
 
     addConsoleCommand("rhm_hint", "Show a tutorial hint manually [welcome|overload|loss|moisture|headland|upgrade]", "consoleCommandShowHint", self)
     addConsoleCommand("rhm_reset_hints", "Reset seen tutorial hints so they appear again", "consoleCommandResetHints", self)
@@ -171,11 +159,13 @@ function RHM_NotificationManager:consoleCommandResetHints()
     if self.settings and self.settings.save then
         self.settings:save()
     end
+    rhm_log("RHM [NotificationManager]: Reset all seen tutorials via console command")
     return "All tutorial hints have been reset and will trigger naturally again."
 end
 
----EN: Simple word-wrapper matching the native HUD line wrapping
+---EN: Word-wrapper with fallback character estimation
 function RHM_NotificationManager:wrapText(text, maxWidth, textSize)
+    local maxW = math.max(maxWidth or 0.2, 0.1)
     local words = {}
     for word in tostring(text or ""):gmatch("%S+") do
         table.insert(words, word)
@@ -184,9 +174,22 @@ function RHM_NotificationManager:wrapText(text, maxWidth, textSize)
     local lines = {}
     local currentLine = ""
 
+    local hasGetTextWidth = (getTextWidth ~= nil)
     for _, word in ipairs(words) do
-        local candidate = currentLine == "" and word or (currentLine .. " " .. word)
-        if currentLine == "" or getTextWidth(textSize, candidate) <= maxWidth then
+        local candidate = (currentLine == "") and word or (currentLine .. " " .. word)
+        local widthOk = true
+        if hasGetTextWidth then
+            local tw = getTextWidth(textSize, candidate)
+            if tw and tw > 0 then
+                widthOk = (tw <= maxW)
+            else
+                widthOk = (#candidate * textSize * 0.45 <= maxW)
+            end
+        else
+            widthOk = (#candidate * textSize * 0.45 <= maxW)
+        end
+
+        if currentLine == "" or widthOk then
             currentLine = candidate
         else
             table.insert(lines, currentLine)
@@ -225,8 +228,8 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
     local isPersistent = parsedDuration <= 0
     local displayDuration = isPersistent and 60000 or math.max(parsedDuration, 4000)
 
-    -- Pre-calculate layout & wrapped lines ONCE to avoid garbage collection and string splits in draw loop
-    local panelWidth = math.max(0.22, self:scalePixelToScreenWidth(420))
+    -- Pre-calculate layout & wrapped lines ONCE to avoid garbage collection in draw loop
+    local panelWidth = math.max(0.24, self:scalePixelToScreenWidth(460))
     local padding = self:scalePixelToScreenWidth(15)
     local fullTextWidth = panelWidth - (padding * 2)
 
@@ -256,10 +259,9 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
         and (padding + (#titleLines * titleLineHeight) + titleSpacing + titleTextExtraSpacing + (#lines * lineHeight) + bottomSectionHeight)
         or (padding * 2 + (#lines * lineHeight))
 
-    local baseAnchorY = 0.14
-    local anchorCenterY = baseAnchorY + baseHeight * 0.5
-    local panelY = anchorCenterY - dynamicHeight * 0.5
+    -- Position prominently in upper center (Y ~ 0.68) so it is unobscured by dashboard/speedometer
     local panelX = (1.0 - panelWidth) * 0.5
+    local panelY = 0.68
 
     self.activeNotification = {
         title = formattedTitle,
@@ -299,6 +301,8 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
             self.settings:save()
         end
     end
+
+    rhm_log(string.format("RHM [NotificationManager]: Displaying '%s' (tutorialKey=%s, duration=%dms)", tostring(formattedTitle), tostring(tutorialKey), displayDuration))
 end
 
 function RHM_NotificationManager:dismissNotification()
@@ -330,7 +334,7 @@ function RHM_NotificationManager:renderPanelQuad(texturePath, x, y, width, heigh
     overlay:render()
 end
 
----EN: Draws the 9-slice background with rounded corners without allocating tables
+---EN: Draws the 9-slice background with rounded corners using static precalculated UV constants
 function RHM_NotificationManager:drawPanelBackground(x, y, width, height, color)
     local panelColor = color or COLOR_PANEL_BG
     local panelX, panelY, panelWidth, panelHeight = self:snapScreenRect(x, y, width, height)
@@ -352,8 +356,7 @@ function RHM_NotificationManager:drawPanelBackground(x, y, width, height, color)
     local topY = panelY + panelHeight - cornerHeight
     local centerWidth = math.max(rightX - centerX, 0)
     local centerHeight = math.max(topY - centerY, 0)
-    local uvs = getPrecalculatedUVs()
-    if not uvs then return end
+    local uvs = ROUNDED_PANEL_STATIC_UVS
 
     self:renderPanelQuad(self.panelBackgroundRounded, leftX, bottomY, cornerWidth, cornerHeight, panelColor, uvs.bottomLeft)
     self:renderPanelQuad(self.panelBackgroundRounded, centerX, bottomY, centerWidth, cornerHeight, panelColor, uvs.bottom)
@@ -496,16 +499,10 @@ function RHM_NotificationManager:update(dt, combineVehicle)
         return
     end
 
-    -- 4. Only evaluate triggers if player is inside an active combine
+    -- 4. Only evaluate triggers if player is controlling an active combine
     if not combineVehicle then return end
-    local isEntered = (combineVehicle.getIsEntered and combineVehicle:getIsEntered())
-        or (combineVehicle.rootVehicle and combineVehicle.rootVehicle.getIsEntered and combineVehicle.rootVehicle:getIsEntered())
-    if not isEntered then
-        return
-    end
-
     local spec = combineVehicle.spec_rhm_Combine
-    if not spec or not spec.isRhmCombine or not spec.data then
+    if not spec or not spec.data then
         return
     end
 
@@ -529,49 +526,49 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- CASCADING TUTORIAL TRIGGERS (Priority order, max 1 trigger per check)
     -- =========================================================================
 
-    -- TRIGGER 1: First Harvest / Welcome (as soon as cutter is lowered and running)
-    if not self.seenTutorials["WELCOME"] and isCutterActive then
+    -- TRIGGER 1: First Harvest / Welcome (triggers upon boarding combine)
+    if not self.seenTutorials["WELCOME"] then
         local title = g_i18n:hasText("rhm_tut_welcome_title") and g_i18n:getText("rhm_tut_welcome_title") or "REALISTIC HARVESTING"
         local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
         self:showNotification(title, msg, 0, true, "WELCOME")
         return
     end
 
-    -- TRIGGER 2: Engine Overload (> 110%)
-    if not self.seenTutorials["OVERLOAD"] and isHarvesting and load >= 110 then
+    -- TRIGGER 2: Engine Overload (> 98%)
+    if not self.seenTutorials["OVERLOAD"] and isHarvesting and load >= 98 then
         local title = g_i18n:hasText("rhm_tut_overload_title") and g_i18n:getText("rhm_tut_overload_title") or "ENGINE OVERLOAD"
         local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. In extreme overloads, the threshing unit may clog."
         self:showNotification(title, msg, 0, true, "OVERLOAD")
         return
     end
 
-    -- TRIGGER 3: Excessive Crop Loss (> 2%)
-    if not self.seenTutorials["LOSS"] and isHarvesting and cropLoss > 2.0 then
+    -- TRIGGER 3: Excessive Crop Loss (> 1.5%)
+    if not self.seenTutorials["LOSS"] and isHarvesting and cropLoss > 1.5 then
         local title = g_i18n:hasText("rhm_tut_loss_title") and g_i18n:getText("rhm_tut_loss_title") or "CROP LOSS"
         local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press Shift+K to load an optimal factory preset."
         self:showNotification(title, msg, 0, true, "LOSS")
         return
     end
 
-    -- TRIGGER 4: High Moisture (> 16% or Rain)
+    -- TRIGGER 4: High Moisture (> 15% or Rain)
     local isRaining = g_currentMission and g_currentMission.environment and g_currentMission.environment.weather and g_currentMission.environment.weather:getIsRaining()
-    if not self.seenTutorials["MOISTURE"] and isHarvesting and (moisture > 16.0 or isRaining) then
+    if not self.seenTutorials["MOISTURE"] and isHarvesting and (moisture > 15.0 or isRaining) then
         local title = g_i18n:hasText("rhm_tut_moisture_title") and g_i18n:getText("rhm_tut_moisture_title") or "HIGH MOISTURE"
         local msg = g_i18n:hasText("rhm_tut_moisture_msg") and g_i18n:getText("rhm_tut_moisture_msg") or "Damp straw and grain require significantly more horsepower to thresh, reducing your harvesting speed and increasing loss risk. Harvest during dry conditions for optimal efficiency."
         self:showNotification(title, msg, 0, true, "MOISTURE")
         return
     end
 
-    -- TRIGGER 5: Headland Turn Speed Memory (cutter raised after >= 15s harvest)
-    if not self.seenTutorials["HEADLAND"] and not isCutterActive and self.harvestActiveRunTime >= 15000 then
+    -- TRIGGER 5: Headland Turn Speed Memory (cutter raised after >= 8s harvest)
+    if not self.seenTutorials["HEADLAND"] and not isCutterActive and self.harvestActiveRunTime >= 8000 then
         local title = g_i18n:hasText("rhm_tut_headland_title") and g_i18n:getText("rhm_tut_headland_title") or "WORKING SPEED MEMORY"
         local msg = g_i18n:hasText("rhm_tut_headland_msg") and g_i18n:getText("rhm_tut_headland_msg") or "The combine automatically remembers your cruising harvest speed across field turns. When lowering the header for the next row, it will smoothly accelerate back to this speed."
         self:showNotification(title, msg, 0, true, "HEADLAND")
         return
     end
 
-    -- TRIGGER 6: Upgrade Tiers (10 cumulative minutes on Tier 1 combine)
-    if not self.seenTutorials["UPGRADE_TIERS"] and spec.packageLevel == 1 and self.cumulativeTier1HarvestTime >= 600000 then
+    -- TRIGGER 6: Upgrade Tiers (2 cumulative minutes on Tier 1 combine)
+    if not self.seenTutorials["UPGRADE_TIERS"] and spec.packageLevel == 1 and self.cumulativeTier1HarvestTime >= 120000 then
         local title = g_i18n:hasText("rhm_tut_upgrade_title") and g_i18n:getText("rhm_tut_upgrade_title") or "UPGRADE PACKAGES"
         local msg = g_i18n:hasText("rhm_tut_upgrade_msg") and g_i18n:getText("rhm_tut_upgrade_msg") or "Harvester upgrade packages are available at the vehicle shop: Tier 2 (Sensors & Profiles), Tier 3 (Telemetry & Loss Monitor), and Tier 4 (Opti-Harvest AI autopilot)."
         self:showNotification(title, msg, 0, true, "UPGRADE_TIERS")
@@ -660,7 +657,7 @@ function RHM_NotificationManager:draw()
         local okText = "OK"
         local okTextSize = textSize
         local textSpacing = self:scalePixelToScreenWidth(6)
-        local okTextWidth = getTextWidth(okTextSize, okText)
+        local okTextWidth = getTextWidth ~= nil and getTextWidth(okTextSize, okText) or (#okText * okTextSize * 0.5)
 
         if glyph ~= nil then
             local glyphWidth = glyph:getGlyphWidth()

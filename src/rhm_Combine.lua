@@ -246,6 +246,8 @@ function rhm_Combine:onLoad(savegame)
             tostring(self:getFullName()), tostring(specName))
         return
     end
+
+    spec.isRhmCombine = true
     
     -- Синхронізація дебаг-прапорця з основним менеджером — тепер просто rhm_log()
     rhm_log(string.format("RHM [Combine]: RHM: onLoad called for %s (has savegame: %s)", 

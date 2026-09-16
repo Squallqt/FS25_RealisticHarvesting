@@ -157,11 +157,24 @@ Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
 -- EN: Update hook — runs every game frame to update HUD data and calibration GUI state.
+--     Guarded against re-entrant calls when Mission00 calls superClass().update.
 -- UA: Хук оновлення — виконується кожен кадр для оновлення даних HUD та стану GUI калібрування.
+--     Захищений від повторного виклику коли Mission00 викликає superClass().update.
+local isUpdating = false
 local function onMissionUpdate(mission, dt)
+    if isUpdating then
+        return
+    end
+    isUpdating = true
+
     if rhm then
         rhm:update(dt)
     end
+
+    isUpdating = false
+end
+if Mission00 ~= nil then
+    Mission00.update = Utils.appendedFunction(Mission00.update, onMissionUpdate)
 end
 if FSBaseMission ~= nil then
     FSBaseMission.update = Utils.appendedFunction(FSBaseMission.update, onMissionUpdate)
@@ -171,19 +184,30 @@ end
 --     IMPORTANT: renderOverlay() only works within draw callbacks, not update!
 -- UA: Хук малювання — виконується кожен кадр для рендерингу HUD оверлеїв.
 --     ВАЖЛИВО: renderOverlay() працює ТІЛЬКИ в draw callbacks, не в update!
+local isDrawing = false
 local function onMissionDraw(mission)
+    if isDrawing then
+        return
+    end
+    isDrawing = true
+
     if rhm then
         rhm:draw()
     end
+
+    isDrawing = false
+end
+if Mission00 ~= nil then
+    Mission00.draw = Utils.appendedFunction(Mission00.draw, onMissionDraw)
 end
 if FSBaseMission ~= nil then
     FSBaseMission.draw = Utils.appendedFunction(FSBaseMission.draw, onMissionDraw)
 end
 
 -- EN: Mouse event hook — captures mouse input for calibration GUI and HUD dragging.
---     Returns true to consume the event and prevent the game or third-party mods from intercepting it.
+--     Hooks Mission00 (or FSBaseMission fallback) to avoid recursive double delta handling.
 -- UA: Хук події миші — перехоплює введення миші для GUI калібрування та перетягування HUD.
---     Повертає true, щоб поглинути подію і не дати грі чи стороннім модам її перехопити.
+--     Підключається до Mission00 (або FSBaseMission фолбек), уникаючи подвійної обробки дельт миші.
 local function onMissionMouseEvent(mission, superFunc, posX, posY, isDown, isUp, button)
     if rhm then
         local wasUsed = rhm:mouseEvent(posX, posY, isDown, isUp, button)
@@ -195,14 +219,14 @@ local function onMissionMouseEvent(mission, superFunc, posX, posY, isDown, isUp,
         return superFunc(mission, posX, posY, isDown, isUp, button)
     end
 end
-if FSBaseMission ~= nil then
+if Mission00 ~= nil then
+    Mission00.mouseEvent = Utils.overwrittenFunction(Mission00.mouseEvent, onMissionMouseEvent)
+elseif FSBaseMission ~= nil then
     FSBaseMission.mouseEvent = Utils.overwrittenFunction(FSBaseMission.mouseEvent, onMissionMouseEvent)
 end
 
 -- EN: Key event hook — captures keyboard input (e.g. ESC to close calibration GUI).
---     Returns true to consume the event and prevent the game from handling it.
 -- UA: Хук клавіатури — перехоплює клавіші (наприклад ESC для закриття GUI калібрування).
---     Повертає true, щоб поглинути подію і не відкривати стандартне меню гри.
 local function onMissionKeyEvent(mission, superFunc, unicode, sym, modifier, isDown)
     if rhm and rhm.keyEvent then
         local wasUsed = rhm:keyEvent(unicode, sym, modifier, isDown)
@@ -214,7 +238,9 @@ local function onMissionKeyEvent(mission, superFunc, unicode, sym, modifier, isD
         return superFunc(mission, unicode, sym, modifier, isDown)
     end
 end
-if FSBaseMission ~= nil then
+if Mission00 ~= nil then
+    Mission00.keyEvent = Utils.overwrittenFunction(Mission00.keyEvent, onMissionKeyEvent)
+elseif FSBaseMission ~= nil then
     FSBaseMission.keyEvent = Utils.overwrittenFunction(FSBaseMission.keyEvent, onMissionKeyEvent)
 end
 
