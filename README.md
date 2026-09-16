@@ -86,6 +86,17 @@ The sleek horizontal HUD bar gives you instant, non-intrusive feedback:
 | 💧 | **Moisture %** | Real-time crop moisture. Active with [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025) on Tier 3+ combines. |
 | ⏱️ | **Productivity** | Live processing rate in tons/hour (`t/h`), bushels/hour (`bu/h`), or volume (`L/h`). |
 
+![HUD Telemetry Icons](docs/images/hud_icons.png)
+
+#### HUD Icon Atlas & Status Telemetry:
+1. **Engine Load (Gauge):** Live physical load on the engine (0–100%+). Underlined with a real-time mechanical stress bar (white → yellow → orange → pulsing red alert).
+2. **Field Yield (Field Area):** Instantaneous crop yield calculated from the cut swath area (`t/ha`, `ton/ac`, `bu/ac`).
+3. **Productivity (Clock / Mass Flow):** Live processing throughput rate over time (`t/h`, `ton/h`, `bu/h`, `L/h`).
+4. **Crop Moisture (Water Droplet):** Relative moisture level of crop and straw (integrated with [Moisture System](https://www.farming-simulator.com/mod.php?mod_id=354130&title=fs2025)).
+5. **Crop Loss (Sieve / Grain):** Real-time percentage of grain escaping separation or blown over the cleaning shoe.
+6. **Speed Limit (Speedometer):** Current forward speed alongside the dynamic RHM target speed.
+7. **Calibration Terminal (Gear):** Quick access icon for the interactive calibration touchscreen menu (**Right Shift + K**).
+
 > 💡 **Repositioning the HUD:** Press **Right Shift + K** to unlock the mouse cursor. Click and drag the HUD to any custom position on your monitor. When docked, it automatically tracks Precision Farming or F1 menu changes.
 
 ---
