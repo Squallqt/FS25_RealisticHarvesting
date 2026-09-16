@@ -19,6 +19,7 @@ RHMSettingsManager.XMLTAG = "realisticHarvestManager"
 RHMSettingsManager.SERVER_SETTINGS = {
     "difficultyMotor",
     "difficultyLoss",
+    "aiHelperTuning",
     "enableSpeedLimit",
     "enableCropLoss",
     "enableIndependentLaunch",
@@ -40,8 +41,12 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "hudOffsetY",
     "hudPosX",
     "hudPosY",
+    "hudDocked",
     "unitSystem",
-    "showSpeedometer"
+    "showSpeedometer",
+    "enableAlarmSound",
+    "soundVolume",
+    "enableTutorials"
 }
 
 -- EN: Default configuration values used as fallback when no saved file exists.
@@ -49,6 +54,7 @@ RHMSettingsManager.CLIENT_SETTINGS = {
 RHMSettingsManager.defaultConfig = {
     difficultyMotor = 2,
     difficultyLoss = 2,
+    aiHelperTuning = 1,
     showHUD = true,
     showYield = true,
     showSpeedometer = true,
@@ -57,6 +63,9 @@ RHMSettingsManager.defaultConfig = {
     enableIndependentLaunch = true,
     enableMoisture = true,
     showMoisture = true,
+    enableAlarmSound = true,
+    soundVolume = 1.0,
+    enableTutorials = true,
     hudOffsetX = 0,
     hudOffsetY = 350,
     unitSystem = 1
@@ -128,7 +137,7 @@ function RHMSettingsManager:loadServerSettings(settingsObject)
         if xml then
             for _, key in ipairs(self.SERVER_SETTINGS) do
                 local xmlKey = self.XMLTAG.."."..key
-                if key == "difficultyMotor" or key == "difficultyLoss" or key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
+                if key == "difficultyMotor" or key == "difficultyLoss" or key == "aiHelperTuning" or key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
                     settingsObject[key] = xml:getInt(xmlKey, self.defaultConfig[key])
                 else
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
@@ -183,10 +192,28 @@ function RHMSettingsManager:loadClientSettings(settingsObject)
                     -- EN: HUD position stored as float (nil if not set = auto positioning).
                     -- UA: Позиція HUD зберігається як float (nil якщо не встановлено = автоматичне позиціонування).
                     settingsObject[key] = xml:getFloat(xmlKey)
+                elseif key == "soundVolume" then
+                    settingsObject[key] = xml:getFloat(xmlKey, self.defaultConfig[key] or 1.0)
                 else
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
                 end
             end
+
+            -- EN: Load seen tutorial flags to prevent repeating hints
+            -- UA: Завантажуємо прапорці переглянутих підказок щоб не повторювати їх
+            if RHM_NotificationManager then
+                local seenStr = xml:getString(self.XMLTAG..".seenTutorials", "")
+                if seenStr and seenStr ~= "" then
+                    RHM_NotificationManager.seenTutorials = RHM_NotificationManager.seenTutorials or {}
+                    for tutKey in seenStr:gmatch("[^;]+") do
+                        RHM_NotificationManager.seenTutorials[tutKey] = true
+                    end
+                    if RHM_NotificationManager.INSTANCE then
+                        RHM_NotificationManager.INSTANCE.seenTutorials = RHM_NotificationManager.seenTutorials
+                    end
+                end
+            end
+
             xml:delete()
             return
         end
@@ -234,7 +261,7 @@ function RHMSettingsManager:saveServerSettings(settingsObject)
     if xml then
         for _, key in ipairs(self.SERVER_SETTINGS) do
             local xmlKey = self.XMLTAG.."."..key
-            if key == "difficultyMotor" or key == "difficultyLoss" then
+            if key == "difficultyMotor" or key == "difficultyLoss" or key == "aiHelperTuning" then
                 xml:setInt(xmlKey, settingsObject[key])
             else
                 xml:setBool(xmlKey, settingsObject[key])
@@ -275,10 +302,25 @@ function RHMSettingsManager:saveClientSettings(settingsObject)
                 if settingsObject[key] ~= nil then
                     xml:setFloat(xmlKey, settingsObject[key])
                 end
+            elseif key == "soundVolume" then
+                xml:setFloat(xmlKey, settingsObject[key] or 1.0)
             else
                 xml:setBool(xmlKey, settingsObject[key] or false)
             end
         end
+
+        -- EN: Save seen tutorial flags
+        -- UA: Зберігаємо прапорці переглянутих підказок
+        if RHM_NotificationManager and RHM_NotificationManager.seenTutorials then
+            local seenList = {}
+            for tutKey, seen in pairs(RHM_NotificationManager.seenTutorials) do
+                if seen then
+                    table.insert(seenList, tutKey)
+                end
+            end
+            xml:setString(self.XMLTAG..".seenTutorials", table.concat(seenList, ";"))
+        end
+
         xml:save()
         xml:delete()
     end

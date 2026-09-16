@@ -78,6 +78,41 @@ local function safeFillType(ft)
     return (ft ~= nil and ft ~= 0) and ft or nil
 end
 
+-- EN: Canonical internal crop keys mapping table. Maps synonyms, aliases, and mod variants to one authoritative key.
+-- UA: Таблиця канонічних внутрішніх назв культур. Зводить синоніми, аліаси та варіанти модів до одного ключа.
+RHM_CombineSettingsDatabase.canonicalCropNames = {
+    ["PEAS"]            = "PEA",
+    ["PEA"]             = "PEA",
+    ["CORN"]            = "MAIZE",
+    ["MAIZE"]           = "MAIZE",
+    ["BEAN"]            = "BEANS",
+    ["BEANS"]           = "BEANS",
+    ["OATS"]            = "OAT",
+    ["OAT"]             = "OAT",
+    ["FLAX"]            = "LINSEED",
+    ["LINSEED"]         = "LINSEED",
+    ["LUCERNE"]         = "ALFALFA",
+    ["ALFALFA"]         = "ALFALFA",
+    ["LUCERNE_WINDROW"] = "ALFALFA_WINDROW",
+    ["ALFALFA_WINDROW"] = "ALFALFA_WINDROW",
+    ["HAY"]             = "DRYGRASS",
+    ["HAY_WINDROW"]     = "DRYGRASS_WINDROW",
+    ["RICELONGGRAIN"]   = "RICE_LONG_GRAIN",
+    ["RICE_LONGGRAIN"]  = "RICE_LONG_GRAIN",
+    ["ONION_DIRTY"]     = "ONION",
+    ["FABABEAN"]        = "BEANS",
+    ["FIELD_BEAN"]      = "BEANS",
+    ["STRAW"]           = "STRAW_WINDROW",
+}
+
+---EN: Returns the canonical internal crop name for any given alias or variation.
+---UA: Повертає канонічну внутрішню назву культури для будь-якого аліаса або варіації.
+function RHM_CombineSettingsDatabase:getCanonicalCropName(cropName)
+    if not cropName then return nil end
+    local rawUpper = tostring(cropName):upper()
+    return self.canonicalCropNames[rawUpper] or (self.cropAliases and self.cropAliases[rawUpper]) or rawUpper
+end
+
 -- EN: Crop synonyms/aliases table. Allows bidirectional matching between common naming conventions
 --     (e.g. FLAX <-> LINSEED, MAIZE <-> CORN, LUCERNE <-> ALFALFA).
 -- UA: Таблиця синонімів/аліасів культур. Дозволяє двостороннє зіставлення між загальними назвами
@@ -95,6 +130,12 @@ RHM_CombineSettingsDatabase.cropAliases = {
     ["RICELONGGRAIN"]   = "RICE_LONG_GRAIN",
     ["RICE_LONGGRAIN"]  = "RICE_LONG_GRAIN",
     ["ONION_DIRTY"]     = "ONION",
+    ["BEANS"]           = "BEAN",
+    ["BEAN"]            = "BEANS",
+    ["FABABEAN"]        = "BEANS",
+    ["FIELD_BEAN"]      = "BEANS",
+    ["PEAS"]            = "PEA",
+    ["PEA"]             = "PEAS",
 }
 
 RHM_CombineSettingsDatabase.crops = {
@@ -119,8 +160,11 @@ RHM_CombineSettingsDatabase.crops = {
     -- Бобові
     ["SOYBEAN"]  = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.SOYBEAN) },
     ["PEA"]      = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.PEA) },
+    ["PEAS"]     = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.PEA) },
     ["LENTIL"]   = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.LENTIL) },
     ["CHICKPEA"] = { machineType = "grain", group = "legume", fillType = safeFillType(FillType.CHICKPEA) },
+    ["BEANS"]    = { machineType = "grain", group = "legume", fillType = safeFillType(FillType and (FillType.BEANS or FillType.BEAN)) },
+    ["BEAN"]     = { machineType = "grain", group = "legume", fillType = safeFillType(FillType and (FillType.BEAN or FillType.BEANS)) },
 
     -- Додаткові зернові (Mod crops)
     ["RYE"]       = { machineType = "grain", group = "grain", fillType = nil },
@@ -171,9 +215,19 @@ RHM_CombineSettingsDatabase.crops = {
     ["COTTON"] = { machineType = "cotton", group = "cotton", fillType = safeFillType(FillType.COTTON) },
 }
 
+-- Ensure alias crop keys directly point to the same table reference to avoid divergent state
+RHM_CombineSettingsDatabase.crops["PEAS"] = RHM_CombineSettingsDatabase.crops["PEA"]
+RHM_CombineSettingsDatabase.crops["CORN"] = RHM_CombineSettingsDatabase.crops["MAIZE"]
+RHM_CombineSettingsDatabase.crops["BEAN"] = RHM_CombineSettingsDatabase.crops["BEANS"]
+RHM_CombineSettingsDatabase.crops["OATS"] = RHM_CombineSettingsDatabase.crops["OAT"]
+RHM_CombineSettingsDatabase.crops["FLAX"] = RHM_CombineSettingsDatabase.crops["LINSEED"]
+RHM_CombineSettingsDatabase.crops["LUCERNE"] = RHM_CombineSettingsDatabase.crops["ALFALFA"]
+RHM_CombineSettingsDatabase.crops["LUCERNE_WINDROW"] = RHM_CombineSettingsDatabase.crops["ALFALFA_WINDROW"]
+
 ---EN: Dynamically derives physical optimal settings for any crop (vanilla or modded) using FS25 properties & ASABE standards.
 ---UA: Динамічно розраховує фізичні оптимальні налаштування для будь-якої культури за властивостями FS25 та стандартами ASABE.
 function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, context)
+    cropName = self:getCanonicalCropName(cropName) or cropName
     context = context or {}
     local machineType = context.machineType or "grain"
     if self.crops[cropName] and self.crops[cropName].machineType then
@@ -206,6 +260,7 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
             CORN = 0.76, MAIZE = 0.76, SOYBEAN = 0.75, SORGHUM = 0.72,
             RICE = 0.58, RICE_LONG_GRAIN = 0.58,
             PEA = 0.75, LENTIL = 0.75, CHICKPEA = 0.75,
+            BEANS = 0.76, BEAN = 0.76, FABABEAN = 0.78,
             RYE = 0.72, SPELT = 0.53, TRITICALE = 0.70,
             MILLET = 0.65, BUCKWHEAT = 0.60,
             LINSEED = 0.45, FLAX = 0.45, MUSTARD = 0.45, POPPY = 0.40,
@@ -220,7 +275,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
         hasStraw = fruitTypeDesc.hasWindrow
     elseif cropName == "WHEAT" or cropName == "BARLEY" or cropName == "OAT" or cropName == "OATS"
         or cropName == "RYE" or cropName == "SPELT" or cropName == "TRITICALE"
-        or cropName == "RICE" or cropName == "RICE_LONG_GRAIN" then
+        or cropName == "RICE" or cropName == "RICE_LONG_GRAIN"
+        or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
         hasStraw = true
     end
 
@@ -336,7 +392,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
             fanOpt = 61
         elseif cropName == "CORN" or cropName == "MAIZE" then
             fanOpt = 67
-        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+        elseif cropName == "PEA" or cropName == "PEAS" or cropName == "LENTIL" or cropName == "CHICKPEA"
+            or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
             fanOpt = 55
         end
 
@@ -369,7 +426,8 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
         elseif cropName == "SOYBEAN" then
             -- Brittle embryo: gentle rotor (39%), medium-wide concave (38%)
             rotorOpt = 39; concaveOpt = 38; upperOpt = 55; lowerOpt = 36; feederOpt = 36; moistLimit = 13
-        elseif cropName == "PEA" or cropName == "LENTIL" or cropName == "CHICKPEA" then
+        elseif cropName == "PEA" or cropName == "PEAS" or cropName == "LENTIL" or cropName == "CHICKPEA"
+            or cropName == "BEANS" or cropName == "BEAN" or cropName == "FABABEAN" then
             -- Large pulses: slow drum (30%), wide concave (45%)
             rotorOpt = 30; concaveOpt = 45; upperOpt = 55; lowerOpt = 35; feederOpt = 30; moistLimit = 14
         elseif cropName == "SORGHUM" then
@@ -510,21 +568,22 @@ function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
     end
 
     local rawUpper = cropName:upper()
-    local crop = self.crops[cropName] or self.crops[rawUpper]
+    local canonical = self:getCanonicalCropName(rawUpper)
+    local crop = self.crops[canonical] or self.crops[rawUpper] or self.crops[cropName]
     local baseTemplate = nil
 
     if crop then
         if not crop.template then
-            crop.template = self:calculatePhysicalOptimalSettings(cropName, context)
+            crop.template = self:calculatePhysicalOptimalSettings(canonical, context)
         end
         baseTemplate = crop.template
     else
         -- Completely unknown or custom mod crop: dynamically derive physical template
-        baseTemplate = self:calculatePhysicalOptimalSettings(cropName, context)
-        local fillTypeIdx = (context and context.fillType) or (g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName and g_fillTypeManager:getFillTypeIndexByName(cropName))
-        local resolvedTitle = self:resolveEngineCropTitle(cropName, context and context.fruitType, fillTypeIdx)
-        resolvedTitle = resolvedTitle or self:getCropDisplayName(cropName)
-        self.crops[cropName] = {
+        baseTemplate = self:calculatePhysicalOptimalSettings(canonical, context)
+        local fillTypeIdx = (context and context.fillType) or (g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName and g_fillTypeManager:getFillTypeIndexByName(canonical))
+        local resolvedTitle = self:resolveEngineCropTitle(canonical, context and context.fruitType, fillTypeIdx)
+        resolvedTitle = resolvedTitle or self:getCropDisplayName(canonical)
+        local newRecord = {
             name = resolvedTitle,
             nameEN = resolvedTitle,
             title = resolvedTitle,
@@ -533,7 +592,9 @@ function RHM_CombineSettingsDatabase:getSettingsForCrop(cropName, context)
             group = "custom",
             fillType = (fillTypeIdx and fillTypeIdx > 0) and fillTypeIdx or nil,
         }
-        rhm_log(string.format("RHM: [CROP DB] Dynamically generated physical profile for mod crop '%s' ('%s', machine: %s)", cropName, tostring(resolvedTitle), tostring(self.crops[cropName].machineType)))
+        self.crops[canonical] = newRecord
+        self.crops[rawUpper] = newRecord
+        rhm_log(string.format("RHM: [CROP DB] Dynamically generated physical profile for mod crop '%s' ('%s', machine: %s)", canonical, tostring(resolvedTitle), tostring(newRecord.machineType)))
     end
 
     if context and (context.moisture or context.yield) then
@@ -552,62 +613,84 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
         self:initMapCrops()
     end
 
-    -- 1. Try inputFruitType first if available (most reliable direct field detection)
-    if inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
+    -- 1. Extract string key from FillType index (query engine fillTypeManager first)
+    local fillTypeKey = nil
+    if fillType and fillType ~= FillType.UNKNOWN and fillType ~= 0 then
+        if g_fillTypeManager and g_fillTypeManager.getFillTypeNameByIndex then
+            fillTypeKey = g_fillTypeManager:getFillTypeNameByIndex(fillType)
+        end
+
+        if not fillTypeKey then
+            for k, v in pairs(FillType) do
+                if v == fillType then
+                    fillTypeKey = k
+                    break
+                end
+            end
+        end
+
+        if fillTypeKey then
+            fillTypeKey = fillTypeKey:upper()
+        end
+    end
+
+    -- 2. Windrow & Straw priority check:
+    --    Straw and windrows are collected materials from the ground. They are NEVER standing crops.
+    --    Never allow inputFruitType (e.g. underlying alfalfa or weeds under the swath) to override them!
+    if fillTypeKey == "STRAW" or fillTypeKey == "STRAW_WINDROW" then
+        return "STRAW_WINDROW"
+    elseif fillTypeKey == "GRASS_WINDROW" then
+        return "GRASS_WINDROW"
+    elseif fillTypeKey == "DRYGRASS_WINDROW" or fillTypeKey == "HAY_WINDROW" then
+        return "DRYGRASS_WINDROW"
+    elseif fillTypeKey == "ALFALFA_WINDROW" or fillTypeKey == "LUCERNE_WINDROW" then
+        return "ALFALFA_WINDROW"
+    elseif fillTypeKey == "CLOVER_WINDROW" then
+        return "CLOVER_WINDROW"
+    end
+
+    -- 3. If fillType is generic (CHAFF / SILAGE / GPS) or missing/unknown, consult inputFruitType
+    --    to identify what standing crop was chopped.
+    local isGenericOrUnknown = (fillTypeKey == nil or fillTypeKey == "CHAFF" or fillTypeKey == "SILAGE" or fillTypeKey == "GPS")
+    if isGenericOrUnknown and inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
         if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeByIndex then
             local fDesc = g_fruitTypeManager:getFruitTypeByIndex(inputFruitType)
             if fDesc and fDesc.name then
                 local fNameUpper = fDesc.name:upper()
-                if self.validMapCrops and self.validMapCrops[fNameUpper] then
-                    return fNameUpper
+                local canonical = self:getCanonicalCropName(fNameUpper)
+                if self.validMapCrops and (self.validMapCrops[canonical] or self.validMapCrops[fNameUpper]) then
+                    return canonical
                 end
                 local alias = self.cropAliases and self.cropAliases[fNameUpper]
-                if alias and self.validMapCrops and self.validMapCrops[alias] then
-                    return alias
+                if alias and self.validMapCrops and (self.validMapCrops[alias] or self.validMapCrops[self:getCanonicalCropName(alias)]) then
+                    return self:getCanonicalCropName(alias)
                 end
             end
         end
-    end
-
-    if not fillType or fillType == FillType.UNKNOWN then
-        return nil
-    end
-
-    -- 2. Extract string key from FillType index
-    local fillTypeKey = nil
-    for k, v in pairs(FillType) do
-        if v == fillType then
-            fillTypeKey = k
-            break
-        end
-    end
-
-    if not fillTypeKey and g_fillTypeManager and g_fillTypeManager.getFillTypeNameByIndex then
-        fillTypeKey = g_fillTypeManager:getFillTypeNameByIndex(fillType)
     end
 
     if not fillTypeKey then
         return nil
     end
 
-    fillTypeKey = fillTypeKey:upper()
-
-    -- 3. If fillTypeKey is directly an active map crop, return it!
-    if self.validMapCrops and self.validMapCrops[fillTypeKey] then
-        return fillTypeKey
+    -- 4. If fillTypeKey is directly an active map crop, return canonical
+    local canonicalFt = self:getCanonicalCropName(fillTypeKey)
+    if self.validMapCrops and (self.validMapCrops[canonicalFt] or self.validMapCrops[fillTypeKey]) then
+        return canonicalFt
     end
 
-    -- 4. If fillTypeKey has an alias registered on the map, prefer the map's naming
+    -- 5. If fillTypeKey has an alias registered on the map, prefer canonical
     local directAlias = self.cropAliases and self.cropAliases[fillTypeKey]
-    if directAlias and self.validMapCrops and self.validMapCrops[directAlias] then
-        return directAlias
+    if directAlias and self.validMapCrops and (self.validMapCrops[directAlias] or self.validMapCrops[self:getCanonicalCropName(directAlias)]) then
+        return self:getCanonicalCropName(directAlias)
     end
 
-    -- 5. Standard fillType to internal crop mapping table
+    -- 6. Standard fillType to internal crop mapping table (normalized to canonical keys)
     local fillTypeMapping = {
         ["WHEAT"] = "WHEAT",
         ["BARLEY"] = "BARLEY",
         ["OAT"] = "OAT",
+        ["OATS"] = "OAT",
         ["CANOLA"] = "CANOLA",
         ["SUNFLOWER"] = "SUNFLOWER",
         ["MAIZE"] = "MAIZE",
@@ -621,9 +704,13 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
 
         -- FS25 New & Mod Crops
         ["PEA"] = "PEA",
-        ["PEAS"] = "PEAS",
+        ["PEAS"] = "PEA",
         ["LENTIL"] = "LENTIL",
         ["CHICKPEA"] = "CHICKPEA",
+        ["BEAN"] = "BEANS",
+        ["BEANS"] = "BEANS",
+        ["FABABEAN"] = "BEANS",
+        ["FIELD_BEAN"] = "BEANS",
 
         ["RYE"] = "RYE",
         ["SPELT"] = "SPELT",
@@ -632,7 +719,7 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
         ["BUCKWHEAT"] = "BUCKWHEAT",
 
         ["LINSEED"] = "LINSEED",
-        ["FLAX"] = "FLAX",
+        ["FLAX"] = "LINSEED",
         ["MUSTARD"] = "MUSTARD",
         ["POPPY"] = "POPPY",
         ["HEMP"] = "HEMP",
@@ -697,7 +784,7 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
         rhm_log(string.format("RHM: [CROP DB] Dynamic crop auto-registered for FillType: '%s' (ID: %d)", tostring(fillTypeKey), fillType))
     end
 
-    return matchedName
+    return self:getCanonicalCropName(matchedName) or matchedName
 end
 
 ---EN: Resolves the official localized display name for a crop directly from the map/engine
@@ -733,6 +820,22 @@ function RHM_CombineSettingsDatabase:resolveEngineCropTitle(cropName, fruitTypeI
             return str
         end
         return nil
+    end
+
+    -- 0. Check dedicated mod localization keys first (e.g. rhm_crop_straw_windrow, rhm_crop_grass_windrow, etc.)
+    if rawNameUpper and g_i18n and g_i18n.hasText then
+        local l10nKey = "rhm_crop_" .. rawNameUpper:lower()
+        if g_i18n:hasText(l10nKey) then
+            local res = g_i18n:getText(l10nKey)
+            if isValidTitle(res) then return res end
+        end
+        if alias then
+            local aKey = "rhm_crop_" .. alias:lower()
+            if g_i18n:hasText(aKey) then
+                local res = g_i18n:getText(aKey)
+                if isValidTitle(res) then return res end
+            end
+        end
     end
 
     -- 1. Try explicit fillTypeIndex via g_fillTypeManager
@@ -838,7 +941,19 @@ function RHM_CombineSettingsDatabase:resolveEngineCropTitle(cropName, fruitTypeI
         end
     end
 
-    -- 6. Loose fallback: return whatever non-empty title was found in fillType or fruit
+    -- 6. Dynamic windrow fallback: if cropName ends in _WINDROW, resolve base crop and format
+    if rawNameUpper and rawNameUpper:find("_WINDROW$") then
+        local baseCrop = rawNameUpper:gsub("_WINDROW$", "")
+        local baseTitle = self:resolveEngineCropTitle(baseCrop, fruitTypeIndex, fillTypeIndex)
+        if baseTitle and baseTitle ~= "" then
+            if g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_windrow_format") then
+                return string.format(g_i18n:getText("rhm_windrow_format"), baseTitle)
+            end
+            return baseTitle .. " (Windrow)"
+        end
+    end
+
+    -- 7. Loose fallback: return whatever non-empty title was found in fillType or fruit
     if fillTypeIndex and fillTypeIndex ~= FillType.UNKNOWN and g_fillTypeManager then
         local ft = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
         if ft and ft.title and ft.title ~= "" then
@@ -871,28 +986,30 @@ function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
     end
 
     local rawUpper = cropName:upper()
-    local cropData = self.crops[cropName] or self.crops[rawUpper]
-    local alias = self.cropAliases and (self.cropAliases[cropName] or self.cropAliases[rawUpper])
+    local canonical = self:getCanonicalCropName(rawUpper)
+    local cropData = self.crops[canonical] or self.crops[rawUpper] or self.crops[cropName]
+    local alias = self.cropAliases and (self.cropAliases[cropName] or self.cropAliases[rawUpper] or self.cropAliases[canonical])
     local aliasData = alias and self.crops[alias]
 
     -- 0. Check stored localized title or name from initMapCrops if genuinely localized (not raw uppercase key)
-    if cropData and cropData.title and cropData.title ~= "" and cropData.title:upper() ~= rawUpper then
+    if cropData and cropData.title and cropData.title ~= "" and cropData.title:upper() ~= rawUpper and cropData.title:upper() ~= canonical then
         return cropData.title
     end
-    if cropData and cropData.name and cropData.name ~= "" and cropData.name:upper() ~= rawUpper then
+    if cropData and cropData.name and cropData.name ~= "" and cropData.name:upper() ~= rawUpper and cropData.name:upper() ~= canonical then
         return cropData.name
     end
-    if aliasData and aliasData.title and aliasData.title ~= "" and aliasData.title:upper() ~= rawUpper then
+    if aliasData and aliasData.title and aliasData.title ~= "" and aliasData.title:upper() ~= rawUpper and aliasData.title:upper() ~= canonical then
         return aliasData.title
     end
-    if aliasData and aliasData.name and aliasData.name ~= "" and aliasData.name:upper() ~= rawUpper then
+    if aliasData and aliasData.name and aliasData.name ~= "" and aliasData.name:upper() ~= rawUpper and aliasData.name:upper() ~= canonical then
         return aliasData.name
     end
 
     -- 1. Try resolving directly from engine (fillType / fruitType / l10n)
     local ftIdx = (cropData and cropData.fillType) or (aliasData and aliasData.fillType)
     local frIdx = (cropData and cropData.fruitType) or (aliasData and aliasData.fruitType)
-    local engineTitle = self:resolveEngineCropTitle(cropName, frIdx, ftIdx)
+    local engineTitle = self:resolveEngineCropTitle(canonical, frIdx, ftIdx)
+                     or self:resolveEngineCropTitle(cropName, frIdx, ftIdx)
     if engineTitle and engineTitle ~= "" then
         -- Cache into crop record so subsequent calls are instant
         if cropData then
@@ -903,7 +1020,7 @@ function RHM_CombineSettingsDatabase:getCropDisplayName(cropName)
     end
 
     -- 2. Clean formatted fallback string (e.g. "Peas", "Greenbean")
-    local cleanName = cropName:gsub("_", " ")
+    local cleanName = canonical:gsub("_", " ")
     return cleanName:sub(1,1):upper() .. cleanName:sub(2):lower()
 end
 
@@ -963,8 +1080,26 @@ function RHM_CombineSettingsDatabase:initMapCrops()
     self._mapCropsInitialized = true
     local validMapCrops = {}
 
+    -- Build lookup sets of fruit indices by category if available
+    local grainFruitIndices = {}
+    local forageFruitIndices = {}
+    if g_fruitTypeManager and g_fruitTypeManager.getFruitTypeIndicesByCategoryNames then
+        local grainIndices = g_fruitTypeManager:getFruitTypeIndicesByCategoryNames("GRAINHEADER MAIZECUTTER")
+        if grainIndices then
+            for _, idx in ipairs(grainIndices) do
+                grainFruitIndices[idx] = true
+            end
+        end
+        local forageIndices = g_fruitTypeManager:getFruitTypeIndicesByCategoryNames("DIRECTCUTTER MOWER")
+        if forageIndices then
+            for _, idx in ipairs(forageIndices) do
+                forageFruitIndices[idx] = true
+            end
+        end
+    end
+
     -- Helper to classify machine type for unknown/mod crops
-    local function detectMachineType(nameUpper)
+    local function detectMachineType(nameUpper, fruit)
         if nameUpper == "COTTON" then
             return "cotton"
         elseif nameUpper:find("GRAPE") then
@@ -973,49 +1108,71 @@ function RHM_CombineSettingsDatabase:initMapCrops()
             return "olive"
         elseif nameUpper:find("WEED") or nameUpper:find("OILSEEDRADISH") or nameUpper:find("STONE") then
             return nil -- Not harvestable by standard combines
-        elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
-            or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
-            or nameUpper:find("SPINACH") or (nameUpper:find("BEAN") and not nameUpper:find("SOYBEAN"))
-            or nameUpper:find("SUGARCANE") then
-            return "root"
-        elseif nameUpper:find("GRASS") or nameUpper:find("ALFALFA") or nameUpper:find("CLOVER")
+        elseif nameUpper:find("GREENRYE") or nameUpper:find("GREEN_RYE") or nameUpper:find("SILAGEMAIZE")
+            or nameUpper:find("GRASS") or nameUpper:find("ALFALFA") or nameUpper:find("CLOVER")
             or nameUpper:find("SILAGE") or nameUpper:find("CHAFF") or nameUpper:find("FORAGE")
             or nameUpper:find("LUCERNE") or nameUpper:find("POPLAR") or nameUpper:find("MEADOW") then
             return "forage"
-        else
+        elseif nameUpper:find("POTATO") or nameUpper:find("BEET") or nameUpper:find("CARROT")
+            or nameUpper:find("PARSNIP") or nameUpper:find("ONION") or nameUpper:find("GARLIC")
+            or nameUpper:find("SPINACH") or nameUpper:find("GREENBEAN") or nameUpper:find("GREEN_BEAN")
+            or nameUpper:find("STRINGBEAN") or nameUpper:find("CABBAGE") or nameUpper:find("SUGARCANE") then
+            return "root"
+        end
+
+        -- Check engine categories if available
+        if fruit and fruit.index then
+            if grainFruitIndices[fruit.index] then
+                return "grain"
+            elseif forageFruitIndices[fruit.index] and not grainFruitIndices[fruit.index] then
+                return "forage"
+            end
+        end
+
+        -- Straw producing crops are threshable grain crops
+        if fruit and fruit.hasWindrow then
             return "grain"
         end
+
+        return "grain"
     end
 
     for _, fruit in pairs(mapFruitTypes) do
         local rawName = fruit.name
         if rawName and rawName ~= "" then
             local nameUpper = rawName:upper()
-            local mType = detectMachineType(nameUpper)
+            local canonical = self:getCanonicalCropName(nameUpper)
+            local mType = detectMachineType(canonical, fruit) or detectMachineType(nameUpper, fruit)
 
             if mType ~= nil then
                 validMapCrops[nameUpper] = true
+                validMapCrops[canonical] = true
 
-                local resolvedTitle = self:resolveEngineCropTitle(nameUpper, fruit.index, fruit.fillTypeIndex)
-                resolvedTitle = resolvedTitle or (fruit.title and fruit.title ~= "" and fruit.title) or nameUpper
+                local resolvedTitle = self:resolveEngineCropTitle(canonical, fruit.index, fruit.fillTypeIndex)
+                                   or self:resolveEngineCropTitle(nameUpper, fruit.index, fruit.fillTypeIndex)
+                resolvedTitle = resolvedTitle or (fruit.title and fruit.title ~= "" and fruit.title) or canonical
 
-                if self.crops[nameUpper] then
-                    if not self.crops[nameUpper].fillType and fruit.fillTypeIndex then
-                        self.crops[nameUpper].fillType = fruit.fillTypeIndex
+                local targetCrop = self.crops[canonical] or self.crops[nameUpper]
+                if targetCrop then
+                    if fruit.fillTypeIndex then
+                        targetCrop.fillType = fruit.fillTypeIndex
                     end
-                    if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
-                        self.crops[nameUpper].title = resolvedTitle
-                        self.crops[nameUpper].name = resolvedTitle
+                    if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= canonical and resolvedTitle:upper() ~= nameUpper then
+                        targetCrop.title = resolvedTitle
+                        targetCrop.name = resolvedTitle
                     end
-                    self.crops[nameUpper].fruitType = fruit.index
+                    targetCrop.fruitType = fruit.index
+
+                    self.crops[canonical] = targetCrop
+                    self.crops[nameUpper] = targetCrop
                 else
                     local context = {
                         machineType = mType,
                         fruitType = fruit.index,
                         fillType = fruit.fillTypeIndex
                     }
-                    local template = self:calculatePhysicalOptimalSettings(nameUpper, context)
-                    self.crops[nameUpper] = {
+                    local template = self:calculatePhysicalOptimalSettings(canonical, context)
+                    local newRecord = {
                         name = resolvedTitle,
                         nameEN = resolvedTitle,
                         title = resolvedTitle,
@@ -1025,21 +1182,18 @@ function RHM_CombineSettingsDatabase:initMapCrops()
                         fillType = fruit.fillTypeIndex,
                         fruitType = fruit.index
                     }
+                    self.crops[canonical] = newRecord
+                    self.crops[nameUpper] = newRecord
                     rhm_log(string.format("RHM: [MAP CROP] Auto-registered map fruit: '%s' ('%s') -> %s", nameUpper, tostring(resolvedTitle), mType))
                 end
 
                 -- Also link alias if defined in self.cropAliases (e.g. FLAX <-> LINSEED, MAIZE <-> CORN)
-                local alias = self.cropAliases and self.cropAliases[nameUpper]
-                if alias and self.crops[alias] then
-                    if not self.crops[alias].fillType and fruit.fillTypeIndex then
-                        self.crops[alias].fillType = fruit.fillTypeIndex
+                local alias = self.cropAliases and (self.cropAliases[canonical] or self.cropAliases[nameUpper])
+                if alias then
+                    validMapCrops[alias] = true
+                    if self.crops[alias] == nil then
+                        self.crops[alias] = self.crops[canonical]
                     end
-                    if resolvedTitle and resolvedTitle ~= "" and resolvedTitle:upper() ~= nameUpper then
-                        self.crops[alias].title = resolvedTitle
-                        self.crops[alias].name = resolvedTitle
-                    end
-                    self.crops[alias].fruitType = fruit.index
-                    self.crops[alias].canonicalMapCrop = nameUpper
                 end
             end
         end
@@ -1061,6 +1215,53 @@ function RHM_CombineSettingsDatabase:initMapCrops()
     end
     if validMapCrops["CLOVER"] then
         validMapCrops["CLOVER_WINDROW"] = true
+    end
+
+    -- Ensure standard forage and windrow fill types are linked when available in FS25
+    if g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName then
+        local windrowFillTypes = {
+            STRAW_WINDROW    = "STRAW",
+            GRASS_WINDROW    = "GRASS_WINDROW",
+            DRYGRASS_WINDROW = "DRYGRASS_WINDROW",
+            ALFALFA_WINDROW  = "ALFALFA_WINDROW",
+            LUCERNE_WINDROW  = "ALFALFA_WINDROW",
+            CLOVER_WINDROW   = "CLOVER_WINDROW",
+            MAIZE_FORAGE     = "CHAFF"
+        }
+        for cropKey, ftName in pairs(windrowFillTypes) do
+            local rec = self.crops[cropKey]
+            if rec and (not rec.fillType or rec.fillType == 0) then
+                local ftIdx = g_fillTypeManager:getFillTypeIndexByName(ftName)
+                if ftIdx and ftIdx > 0 then
+                    rec.fillType = ftIdx
+                end
+            end
+        end
+    end
+
+    -- Pre-resolve titles for windrow & forage crops so they are localized immediately
+    local specialCrops = {
+        "STRAW_WINDROW",
+        "GRASS_WINDROW",
+        "DRYGRASS_WINDROW",
+        "ALFALFA_WINDROW",
+        "LUCERNE_WINDROW",
+        "CLOVER_WINDROW",
+        "MAIZE_FORAGE",
+        "ALFALFA",
+        "LUCERNE",
+        "GRASS",
+        "DRYGRASS"
+    }
+    for _, cKey in ipairs(specialCrops) do
+        local rec = self.crops[cKey]
+        if rec then
+            local t = self:resolveEngineCropTitle(cKey, rec.fruitType, rec.fillType)
+            if t and t ~= "" then
+                rec.title = t
+                rec.name = t
+            end
+        end
     end
 
     self.validMapCrops = validMapCrops
@@ -1092,28 +1293,66 @@ function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, veh
     end
 
     local names = {}
-    for cropName, cropData in pairs(self.crops) do
-        if cropData.machineType == machineType then
-            if not self.validMapCrops or self.validMapCrops[cropName] then
-                local isSupported = true
-                if supportedFillTypes and cropData.fillType then
-                    if not supportedFillTypes[cropData.fillType] then
-                        isSupported = false
-                    end
-                end
-                if isSupported then
-                    table.insert(names, cropName)
-                end
+    local seenCanonical = {}
+    local seenDisplayNames = {}
+
+    local function tryAddCrop(cropName, cropData)
+        if cropData.machineType ~= machineType then
+            return
+        end
+        local canonical = self:getCanonicalCropName(cropName)
+        if self.validMapCrops and not (self.validMapCrops[cropName] or self.validMapCrops[canonical]) then
+            return
+        end
+
+        local isSupported = true
+        if supportedFillTypes and cropData.fillType then
+            if not supportedFillTypes[cropData.fillType] then
+                isSupported = false
             end
         end
+        if not isSupported then
+            return
+        end
+
+        if seenCanonical[canonical] then
+            return
+        end
+
+        local displayName = self:getCropDisplayName(canonical):lower()
+        if displayName ~= "" and seenDisplayNames[displayName] then
+            return
+        end
+
+        seenCanonical[canonical] = true
+        if displayName ~= "" then
+            seenDisplayNames[displayName] = true
+        end
+        table.insert(names, canonical)
+    end
+
+    for cropName, cropData in pairs(self.crops) do
+        tryAddCrop(cropName, cropData)
     end
 
     -- Fallback to all map crops of this machineType if vehicle hopper filter was empty
     if #names == 0 and supportedFillTypes ~= nil then
+        seenCanonical = {}
+        seenDisplayNames = {}
         for cropName, cropData in pairs(self.crops) do
             if cropData.machineType == machineType then
-                if not self.validMapCrops or self.validMapCrops[cropName] then
-                    table.insert(names, cropName)
+                local canonical = self:getCanonicalCropName(cropName)
+                if not self.validMapCrops or self.validMapCrops[cropName] or self.validMapCrops[canonical] then
+                    if not seenCanonical[canonical] then
+                        local displayName = self:getCropDisplayName(canonical):lower()
+                        if displayName == "" or not seenDisplayNames[displayName] then
+                            seenCanonical[canonical] = true
+                            if displayName ~= "" then
+                                seenDisplayNames[displayName] = true
+                            end
+                            table.insert(names, canonical)
+                        end
+                    end
                 end
             end
         end

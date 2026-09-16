@@ -208,6 +208,24 @@ function RHMSettingsUI.inject(settings)
     if cropLossOpt and cropLossOpt.setDisabled then cropLossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.cropLossOption = cropLossOpt
 
+    local aiTuningOptions = {
+        g_i18n:hasText("rhm_setting_ai_tuning_keep") and g_i18n:getText("rhm_setting_ai_tuning_keep") or "Keep Player Settings",
+        g_i18n:hasText("rhm_setting_ai_tuning_auto") and g_i18n:getText("rhm_setting_ai_tuning_auto") or "Always Auto-Tune",
+        g_i18n:hasText("rhm_setting_ai_tuning_disabled") and g_i18n:getText("rhm_setting_ai_tuning_disabled") or "Disabled",
+    }
+
+    local aiTuningOpt = addMultiRow(settingsPage, gameLayout, "ai_tuning", "rhm_setting_ai_tuning", "rhm_setting_ai_tuning_long",
+        aiTuningOptions, settings.aiHelperTuning or 1,
+        function(val)
+            if not settings:canChangeServerSettings() then return end
+            settings.aiHelperTuning = val; settings:save()
+            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
+                RHM_SettingsSync:sendToClients(settings)
+            end
+        end)
+    if aiTuningOpt and aiTuningOpt.setDisabled then aiTuningOpt:setDisabled(not isAdmin) end
+    RHMSettingsUI.aiTuningOption = aiTuningOpt
+
     if RHM_MoistureAdapter and RHM_MoistureAdapter.isActive then
         local moistureEnableOpt = addBinaryRow(settingsPage, gameLayout, "moisture_enable", "rhm_moisture_enable_short", "rhm_moisture_enable_long",
             settings.enableMoisture,
@@ -251,6 +269,9 @@ function RHMSettingsUI.inject(settings)
     RHMSettingsUI.loadWarnOption = addBinaryRow(settingsPage, generalLayout, "show_loadwarn", "rhm_show_load_warn_short", "rhm_show_load_warn_long",
         settings.showLoadWarnings, function(val) settings.showLoadWarnings = val; settings:save() end)
 
+    RHMSettingsUI.tutorialsOption = addBinaryRow(settingsPage, generalLayout, "enable_tutorials", "rhm_setting_enableTutorials", "rhm_setting_enableTutorials_long",
+        settings.enableTutorials, function(val) settings.enableTutorials = val; settings:save() end)
+
     local unitOptions = {
         g_i18n:hasText("rhm_unit_metric")   and g_i18n:getText("rhm_unit_metric")   or "Metric",
         g_i18n:hasText("rhm_unit_imperial") and g_i18n:getText("rhm_unit_imperial") or "Imperial",
@@ -259,6 +280,31 @@ function RHMSettingsUI.inject(settings)
     RHMSettingsUI.unitOption = addMultiRow(settingsPage, generalLayout, "units", "rhm_units_short", "rhm_units_long",
         unitOptions, settings.unitSystem,
         function(val) settings.unitSystem = val; settings:save() end)
+
+    -- === SECTION: Audio / Звук ===
+    addSection(settingsPage, "rhm_section_audio", generalLayout)
+
+    RHMSettingsUI.alarmSoundOption = addBinaryRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
+        settings.enableAlarmSound ~= false, function(val) settings.enableAlarmSound = val; settings:save() end)
+
+    local volumeOptions = {"50%", "75%", "100%", "125%", "150%"}
+    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
+    local currentVolIndex = 3
+    if settings.soundVolume then
+        for idx, val in ipairs(volumeValues) do
+            if math.abs(settings.soundVolume - val) < 0.12 then
+                currentVolIndex = idx
+                break
+            end
+        end
+    end
+
+    RHMSettingsUI.soundVolumeOption = addMultiRow(settingsPage, generalLayout, "sound_volume", "rhm_sound_volume_short", "rhm_sound_volume_long",
+        volumeOptions, currentVolIndex,
+        function(idx)
+            settings.soundVolume = volumeValues[idx] or 1.0
+            settings:save()
+        end)
 
     if settingsPage.gameSettingsLayout then
         settingsPage.gameSettingsLayout:invalidateLayout()
@@ -290,6 +336,7 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.difficultyLossOption,  settings.difficultyLoss,  not isAdmin)
     setOpt(RHMSettingsUI.speedLimitOption,      settings.enableSpeedLimit and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.cropLossOption,        settings.enableCropLoss   and 2 or 1, not isAdmin)
+    setOpt(RHMSettingsUI.aiTuningOption,        settings.aiHelperTuning or 1,        not isAdmin)
     setOpt(RHMSettingsUI.moistureEnableOption,  settings.enableMoisture   and 2 or 1, not isAdmin)
 
     setOpt(RHMSettingsUI.hudOption,         settings.showHUD           and 2 or 1, false)
@@ -299,8 +346,22 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.prodOption,        settings.showProductivity  and 2 or 1, false)
     setOpt(RHMSettingsUI.cropLossVisOption, settings.showCropLoss      and 2 or 1, false)
     setOpt(RHMSettingsUI.moistureVisOption, settings.showMoisture      and 2 or 1, false)
-    setOpt(RHMSettingsUI.loadWarnOption,    settings.showLoadWarnings  and 2 or 1, false)
-    setOpt(RHMSettingsUI.unitOption,        settings.unitSystem,                    false)
+    setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
+    setOpt(RHMSettingsUI.tutorialsOption,      (settings.enableTutorials ~= false) and 2 or 1, false)
+    setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
+
+    setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
+    local volIdx = 3
+    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
+    if settings.soundVolume then
+        for idx, val in ipairs(volumeValues) do
+            if math.abs(settings.soundVolume - val) < 0.12 then
+                volIdx = idx
+                break
+            end
+        end
+    end
+    setOpt(RHMSettingsUI.soundVolumeOption, volIdx, false)
 end
 
 -- EN: Adds a "Reset" footer button to the settings page (called on updateButtons).

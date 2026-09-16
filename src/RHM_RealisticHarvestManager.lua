@@ -47,8 +47,6 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     self.settingsGUI = RHMSettingsGUI.new()
     self.settingsGUI:registerConsoleCommands()
 
-    self.combineSettingsGUI = RHMCombineSettingsGUI.new()
-
     -- EN: Load saved settings from XML before creating HUD (HUD reads settings in its constructor).
     -- UA: Завантажуємо збережені налаштування з XML перед створенням HUD (HUD читає налаштування в конструкторі).
     self.settings:load()
@@ -56,6 +54,11 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     -- EN: Create the draggable HUD overlay (client only, handles display of live data).
     -- UA: Створюємо перетягуваний HUD (тільки клієнт, відображає живі дані).
     if mission:getIsClient() then
+        if RHM_NotificationManager then
+            self.notificationManager = RHM_NotificationManager.new(modDirectory)
+            RHM_NotificationManager.INSTANCE = self.notificationManager
+        end
+
         self.hud = RHMDraggableHUD.new(self.modDirectory, self.settings)
 
         if not self.hud then
@@ -108,6 +111,9 @@ end
 -- EN: Called after the mission finishes loading. Initializes HUD overlay assets (textures, positions).
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
+    if self.notificationManager then
+        self.notificationManager:load()
+    end
     if self.hud then
         self.hud:load()
     end
@@ -258,6 +264,10 @@ function RHM_RealisticHarvestManager:update(dt)
             self.hud:setVehicle(nil)
         end
     end
+
+    if self.notificationManager then
+        self.notificationManager:update(dt, self.lastActiveCombine)
+    end
 end
 
 -- EN: Called every game frame to draw the HUD and calibration GUI.
@@ -304,11 +314,22 @@ function RHM_RealisticHarvestManager:draw()
     if self.settings and self.settings.showHUD then
         self.hud:draw()
     end
+
+    -- EN: Notification and tutorial panel drawn independently over HUD
+    -- UA: Панель сповіщень та підказок малюється незалежно поверх HUD
+    if self.notificationManager then
+        self.notificationManager:draw()
+    end
 end
 
 -- EN: Cleans up all HUD and GUI resources on mission end.
 -- UA: Очищає всі ресурси HUD і GUI при завершенні місії.
 function RHM_RealisticHarvestManager:delete()
+    if self.notificationManager then
+        self.notificationManager:delete()
+        self.notificationManager = nil
+        RHM_NotificationManager.INSTANCE = nil
+    end
     if self.hud then
         self.hud:delete()
         self.hud = nil
@@ -325,6 +346,10 @@ end
 function RHM_RealisticHarvestManager:mouseEvent(posX, posY, isDown, isUp, button)
     if not self.mission:getIsClient() then
         return
+    end
+
+    if self.notificationManager and self.notificationManager:mouseEvent(posX, posY, isDown, isUp, button) then
+        return true
     end
 
     if self.calibrationGUI and self.calibrationGUI:mouseEvent(posX, posY, isDown, isUp, button) then
@@ -349,6 +374,10 @@ end
 -- EN: Key event handler. Allows pressing ESC to cleanly close calibration GUI.
 -- UA: Обробник подій клавіатури. Дозволяє клавішею ESC чисто закривати GUI калібрування.
 function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
+    if isDown and self.notificationManager and self.notificationManager:keyEvent(unicode, sym, modifier, isDown) then
+        return true
+    end
+
     if isDown and sym == Input.KEY_esc then
         if self.calibrationGUI and self.calibrationGUI.isOpen then
             self.calibrationGUI:close()
@@ -359,8 +388,8 @@ function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
 end
 
 -- ============================================================================
--- EN: PUBLIC API FOR THIRD-PARTY MODS (e.g. Advanced Damage System - ADS)
--- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ (напр. Advanced Damage System - ADS)
+-- EN: PUBLIC API FOR THIRD-PARTY MODS
+-- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ
 -- ============================================================================
 
 ---EN: Returns current feed-rate engine load (0 to 100+ %) for a given vehicle or active combine.

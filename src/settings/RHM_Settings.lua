@@ -15,6 +15,12 @@ RHMSettings.DIFFICULTY_ARCADE = 1
 RHMSettings.DIFFICULTY_NORMAL = 2
 RHMSettings.DIFFICULTY_REALISTIC = 3
 
+-- EN: AI helper combine calibration behavior options.
+-- UA: Опції поведінки калібрування комбайна помічниками.
+RHMSettings.AI_TUNING_KEEP_PLAYER = 1   -- EN: Keep player settings / UA: Зберігати налаштування гравця
+RHMSettings.AI_TUNING_ALWAYS_AUTO = 2   -- EN: Always auto-tune / UA: Завжди авто-підлаштовувати
+RHMSettings.AI_TUNING_DISABLED = 3      -- EN: Disabled / UA: Вимкнено
+
 -- EN: Power boost values applied to the engine throughput calculation per difficulty level.
 --     Higher boost = combine can harvest faster before triggering speed limits.
 -- UA: Значення збільшення потужності, що застосовуються до розрахунку пропускної здатності двигуна.
@@ -39,6 +45,7 @@ function RHMSettings.new(manager)
     -- UA: Система роздільної складності: складність втрат та двигуна є незалежними.
     self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
     self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
+    self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
 
     -- EN: Feature toggle flags (server-side, global for all players).
     -- UA: Прапорці перемикання функцій (серверні, глобальні для всіх гравців).
@@ -49,6 +56,9 @@ function RHMSettings.new(manager)
     self.showYield = true
     self.showSpeedometer = true
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
+    self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
+    self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
+    self.enableTutorials = true         -- EN: First-time onboarding tutorial hints / UA: Навчальні підказки для новачків
 
     -- EN: HUD visibility toggles (client-side, per-player).
     -- UA: Перемикачі видимості HUD (клієнтські, для кожного гравця).
@@ -205,6 +215,7 @@ end
 function RHMSettings:resetToDefaults()
     self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
     self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
+    self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
     self.enableSpeedLimit = true
     self.enableCropLoss = true
     self.enableMoisture = true
@@ -218,6 +229,7 @@ function RHMSettings:resetToDefaults()
     self.showSpeedometer = true
     self.showLoadWarnings = true
     self.enableIndependentLaunch = true
+    self.enableTutorials = true
     self.hudOffsetX = 0
     self.hudOffsetY = 350
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD
@@ -226,6 +238,21 @@ function RHMSettings:resetToDefaults()
     self:saveAndSync()
 
     rhm_log("RHM [RHMSettings]: RHM: RHMSettings reset to defaults")
+end
+
+---EN: Gets whether tutorial hints are enabled
+---UA: Повертає чи увімкнено навчальні підказки
+function RHMSettings:getEnableTutorials()
+    return self.enableTutorials
+end
+
+---EN: Sets whether tutorial hints are enabled
+---UA: Встановлює чи увімкнено навчальні підказки
+function RHMSettings:setEnableTutorials(enabled)
+    self.enableTutorials = enabled
+    if self.save then
+        self:save()
+    end
 end
 
 

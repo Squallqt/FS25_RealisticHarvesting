@@ -129,6 +129,12 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
             end
+            mem.isCalibrated = true
+            mem.hasManualTuning = true
+            if mem.currentCrop and mem.currentCrop ~= "" then
+                mem.calibratedCrops = mem.calibratedCrops or {}
+                mem.calibratedCrops[mem.currentCrop] = true
+            end
             rhm_log("RHM [Network]: RHM: [Sync] Received full user profile settings via network")
         else
             if self.parameter == "CROP" then
@@ -144,6 +150,11 @@ function RHM_CombineSettingsEvent:run(connection)
                 if pkgLevel >= 4 then
                     mem.autoSwitchEnabled = true
                     mem.mode = "AUTO"
+                    mem.isCalibrated = true
+                    if mem.currentCrop and mem.currentCrop ~= "" then
+                        mem.calibratedCrops = mem.calibratedCrops or {}
+                        mem.calibratedCrops[mem.currentCrop] = true
+                    end
                     if mem.currentCrop then
                         mem:autoConfigureForCrop(mem.currentCrop, true)
                         rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
@@ -158,6 +169,11 @@ function RHM_CombineSettingsEvent:run(connection)
                 -- UA: Клієнт запросив RESET — скидаємо всі налаштування до нейтральних 50%.
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
+                mem.isCalibrated = false
+                mem.hasManualTuning = false
+                if mem.currentCrop and mem.currentCrop ~= "" and mem.calibratedCrops then
+                    mem.calibratedCrops[mem.currentCrop] = nil
+                end
                 if mem.currentCrop then
                     mem:autoConfigureForCrop(mem.currentCrop, false)
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied RESET to 50%% for %s", mem.currentCrop))
@@ -183,6 +199,12 @@ function RHM_CombineSettingsEvent:run(connection)
                     if self.parameter ~= "targetEngineLoad" then
                         mem.autoSwitchEnabled = false
                         mem.mode = "MANUAL"
+                    end
+                    mem.isCalibrated = true
+                    mem.hasManualTuning = true
+                    if mem.currentCrop and mem.currentCrop ~= "" then
+                        mem.calibratedCrops = mem.calibratedCrops or {}
+                        mem.calibratedCrops[mem.currentCrop] = true
                     end
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Received parameter update: %s = %d", self.parameter, self.value))
                 end
@@ -244,6 +266,12 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
             end
+            mem.isCalibrated = true
+            mem.hasManualTuning = true
+            if mem.currentCrop and mem.currentCrop ~= "" then
+                mem.calibratedCrops = mem.calibratedCrops or {}
+                mem.calibratedCrops[mem.currentCrop] = true
+            end
         elseif self.parameter == "CROP" then
             if self.cropName and self.cropName ~= "" then
                 mem.currentCrop = self.cropName
@@ -258,13 +286,25 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
             end
-        elseif self.parameter ~= "AUTO_SET" and self.parameter ~= "RESET_SET" then
+        elseif self.parameter == "RESET_SET" then
+            mem.isCalibrated = false
+            mem.hasManualTuning = false
+            if mem.currentCrop and mem.currentCrop ~= "" and mem.calibratedCrops then
+                mem.calibratedCrops[mem.currentCrop] = nil
+            end
+        elseif self.parameter ~= "AUTO_SET" then
             if mem.currentSettings[self.parameter] ~= nil then
                 local maxVal = self.parameter == "targetEngineLoad" and 110 or 100
                 mem.currentSettings[self.parameter] = math.max(0, math.min(maxVal, self.value))
                 if self.parameter ~= "targetEngineLoad" then
                     mem.autoSwitchEnabled = false
                     mem.mode = "MANUAL"
+                end
+                mem.isCalibrated = true
+                mem.hasManualTuning = true
+                if mem.currentCrop and mem.currentCrop ~= "" then
+                    mem.calibratedCrops = mem.calibratedCrops or {}
+                    mem.calibratedCrops[mem.currentCrop] = true
                 end
             end
         end

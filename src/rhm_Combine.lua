@@ -80,15 +80,17 @@ end
 -- UA: Реєструє шляхи XML для конфігурації засобу (XML магазину/modDesc). Зберігає налаштування комбайна для кожного засобу.
 function rhm_Combine.registerXMLPaths(schema, basePath)
     local cur = basePath .. ".combineMemory.current"
-    schema:register(XMLValueType.STRING, cur .. "#mode",        "Combine settings mode", "AUTO")
-    schema:register(XMLValueType.STRING, cur .. "#currentCrop", "Current crop", "")
-    schema:register(XMLValueType.BOOL,   cur .. "#autoSwitch",  "Auto switch enabled", true)
-    schema:register(XMLValueType.INT,    cur .. "#fan",         "Fan", 50)
-    schema:register(XMLValueType.INT,    cur .. "#upperSieve",  "Upper sieve", 50)
-    schema:register(XMLValueType.INT,    cur .. "#lowerSieve",  "Lower sieve", 50)
-    schema:register(XMLValueType.INT,    cur .. "#rotor",       "Rotor", 50)
-    schema:register(XMLValueType.INT,    cur .. "#feeder",      "Feeder", 50)
+    schema:register(XMLValueType.STRING, cur .. "#mode",            "Combine settings mode", "AUTO")
+    schema:register(XMLValueType.STRING, cur .. "#currentCrop",     "Current crop", "")
+    schema:register(XMLValueType.BOOL,   cur .. "#autoSwitch",      "Auto switch enabled", true)
+    schema:register(XMLValueType.INT,    cur .. "#fan",             "Fan", 50)
+    schema:register(XMLValueType.INT,    cur .. "#upperSieve",      "Upper sieve", 50)
+    schema:register(XMLValueType.INT,    cur .. "#lowerSieve",      "Lower sieve", 50)
+    schema:register(XMLValueType.INT,    cur .. "#rotor",           "Rotor", 50)
+    schema:register(XMLValueType.INT,    cur .. "#feeder",          "Feeder", 50)
     schema:register(XMLValueType.INT,    cur .. "#targetEngineLoad", "Target engine load", 88)
+    schema:register(XMLValueType.BOOL,   cur .. "#isCalibrated",    "Combine calibration status", true)
+    schema:register(XMLValueType.STRING, cur .. "#calibratedCrops", "List of calibrated crops", "")
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -128,6 +130,10 @@ function rhm_Combine.registerEventListeners(vehicleType)
     
     -- INPUT: Реєструємо події введення
     SpecializationUtil.registerEventListener(vehicleType, "onRegisterActionEvents", rhm_Combine)
+
+    -- LIFECYCLE: Видалення та вихід з техніки
+    SpecializationUtil.registerEventListener(vehicleType, "onDelete", rhm_Combine)
+    SpecializationUtil.registerEventListener(vehicleType, "onLeaveVehicle", rhm_Combine)
 end
 
 -- EN: Global hook for non-combine vehicles in a modular system (e.g. NEXAT main tractor).
@@ -293,55 +299,73 @@ function rhm_Combine:onLoad(savegame)
     local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
     local category = storeItem and storeItem.categoryName or ""
 
-    if category == "beetVehicles" or category == "beetHarvesting" 
-       or category == "potatoVehicles" or category == "potatoHarvesting"
-       or category == "vegetableVehicles" or category == "sugarCaneVehicles" then
-        machineType = "root"
-    elseif category == "forageHarvesters" then
+    if category == "combines" or category == "combineVehicles" or category == "harvesters" then
+        -- Grain combine harvesters: always grain, regardless of custom hopper fill types
+        machineType = "grain"
+    elseif category == "forageHarvesters" or category == "forageHarvesting" then
         machineType = "forage"
-    elseif category == "cottonVehicles" then
+    elseif category == "cottonVehicles" or category == "cottonHarvesting" then
         machineType = "cotton"
+    elseif category == "beetVehicles" or category == "beetHarvesting" 
+       or category == "potatoVehicles" or category == "potatoHarvesting"
+       or category == "vegetableVehicles" or category == "vegetableHarvesting"
+       or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
+        machineType = "root"
     else
-        -- EN: 2. Check Supported FillTypes on Hopper / FillUnits
-        -- UA: 2. Перевіряємо підтримувані типи в бункері
-        local isRoot = false
-        local isCotton = false
-        local fillUnits = self:getFillUnits()
-        if fillUnits then
-            for _, fillUnit in ipairs(fillUnits) do
-                if fillUnit.supportedFillTypes then
-                    for ftIndex, _ in pairs(fillUnit.supportedFillTypes) do
-                        local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
-                        if ft and ft.name then
-                            local name = string.upper(ft.name)
-                            if name:find("POTATO") or name:find("BEET") or name:find("CARROT")
-                               or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
-                               or name:find("SPINACH") or (name:find("BEAN") and not name:find("SOYBEAN"))
-                               or name:find("SUGARCANE") then
-                                isRoot = true
-                                break
-                            elseif name == "COTTON" then
-                                isCotton = true
+        -- EN: 2. Fallback for unclassified / mod vehicles without standard store category
+        -- UA: 2. Запасна перевірка для модової техніки без стандартної категорії магазину
+        local hasGrainStraw = sc and sc.strawEffects and #sc.strawEffects > 0
+        local isForageSpec = SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations) or self.spec_forageHarvester ~= nil
+        local isFruitPrep = self.spec_fruitPreparer ~= nil
+
+        if isForageSpec then
+            machineType = "forage"
+        elseif isFruitPrep then
+            machineType = "root"
+        elseif hasGrainStraw then
+            machineType = "grain"
+        else
+            -- Check hopper/tank supported fill types
+            local hasGrainFill = false
+            local hasRootFill = false
+            local hasCottonFill = false
+            local fillUnits = self:getFillUnits()
+            if fillUnits then
+                for _, fillUnit in ipairs(fillUnits) do
+                    if fillUnit.supportedFillTypes then
+                        for ftIndex, isSupp in pairs(fillUnit.supportedFillTypes) do
+                            if isSupp then
+                                local ft = g_fillTypeManager and g_fillTypeManager:getFillTypeByIndex(ftIndex)
+                                if ft and ft.name then
+                                    local name = string.upper(ft.name)
+                                    if name == "WHEAT" or name == "BARLEY" or name == "OAT" or name == "CANOLA"
+                                       or name == "SUNFLOWER" or name == "SOYBEAN" or name == "MAIZE" or name == "SORGHUM"
+                                       or name == "RYE" or name == "TRITICALE" or name == "BUCKWHEAT" or name == "MILLET" then
+                                        hasGrainFill = true
+                                        break
+                                    elseif name:find("POTATO") or name:find("BEET") or name:find("CARROT")
+                                       or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
+                                       or name:find("SPINACH") or name:find("GREENBEAN") or name:find("GREEN_BEAN")
+                                       or name:find("SUGARCANE") or name:find("CABBAGE") then
+                                        hasRootFill = true
+                                    elseif name == "COTTON" then
+                                        hasCottonFill = true
+                                    end
+                                end
                             end
                         end
                     end
+                    if hasGrainFill then break end
                 end
-                if isRoot or isCotton then break end
             end
-        end
 
-        if isRoot or self.spec_fruitPreparer ~= nil then
-            machineType = "root"
-        elseif isCotton then
-            machineType = "cotton"
-        elseif SpecializationUtil.hasSpecialization(ForageHarvester, self.specializations) then
-            machineType = "forage"
-        elseif sc then
-            local hasStrawEffects = sc.strawEffects and #sc.strawEffects > 0
-            if hasStrawEffects then
+            if hasGrainFill then
                 machineType = "grain"
-            elseif sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil and not isRoot then
-                -- Only fallback to forage if not already verified as root/vegetable
+            elseif hasCottonFill and not hasRootFill then
+                machineType = "cotton"
+            elseif hasRootFill then
+                machineType = "root"
+            elseif sc and sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil then
                 machineType = "forage"
             else
                 machineType = "grain"
@@ -421,6 +445,40 @@ function rhm_Combine:onLoad(savegame)
     
     -- TEST: Прапорець для показу тестового повідомлення
     spec.testMessageShown = false
+
+    -- AUDIO: Звуки перевантаження та навантаження молотарки (клієнт)
+    spec.samples = {}
+    spec._rhmAlarmTimer = 1500
+
+    if self.isClient then
+        local modDir = (g_realisticHarvestManager and g_realisticHarvestManager.modDirectory)
+                    or (g_currentModDirectory)
+                    or ""
+        local soundXmlPath = modDir .. "sounds/rhm_sounds.xml"
+        local xmlSoundFile = loadXMLFile("rhmSounds", soundXmlPath)
+        if xmlSoundFile ~= nil and xmlSoundFile ~= 0 then
+            local soundManager = g_soundManager
+            local audioGroup = AudioGroup.GUI or AudioGroup.VEHICLE
+
+            -- 1. Overload alarm buzzer (audible in both 1st and 3rd person)
+            if soundManager.loadSample2DFromXML then
+                spec.samples.overloadAlarm = soundManager:loadSample2DFromXML(xmlSoundFile, "sounds", "overloadAlarm", modDir, 1, audioGroup)
+            end
+            if spec.samples.overloadAlarm == nil then
+                local components = self.components or { { node = self.rootNode } }
+                spec.samples.overloadAlarm = soundManager:loadSampleFromXML(xmlSoundFile, "sounds", "overloadAlarm", modDir, components, 1, AudioGroup.VEHICLE, self.i3dMappings, self)
+            end
+
+            delete(xmlSoundFile)
+
+            Logging.info("RHM [Sounds]: Initialized for %s (alarm=%s, group=%s)",
+                tostring(self:getFullName()),
+                tostring(spec.samples.overloadAlarm ~= nil),
+                tostring(audioGroup))
+        else
+            Logging.warning("RHM [Sounds]: Could not open sound XML at: %s", tostring(soundXmlPath))
+        end
+    end
 
     -- EN: Restore saved combine settings from savegame if loading a saved game
     -- UA: Відновлюємо збережені налаштування комбайна з savegame при завантаженні збереження
@@ -626,20 +684,33 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --    ...
         -- end
 
+        -- EN: Detect forage harvester feed mode (pickup vs direct cutter)
+        -- UA: Визначаємо режим подачі форажного комбайна (підбирач чи прямий різ)
+        local feedMode = rhm_Combine.getForageFeedMode(self)
+        local isPickup = (feedMode == "pickup")
+
         -- EN: Determine crop name from RHM_CombineSettingsDatabase — full table including
         --     grain, roots (POTATO/ONION/CARROT), vegetables (SPINACH/GREENBEAN), and forage outputs.
-        -- UA: Визначаємо назву культури через RHM_CombineSettingsDatabase — повна таблиця включаючи
-        --     зернові, коренеплоди (POTATO/ONION/CARROT), овочі (SPINACH/GREENBEAN) та форажні виводи.
-        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, inputFruitType)
+        --     If harvesting windrows/straw or using a pickup header, never let ground fruit (e.g. underlying alfalfa)
+        --     override the actual material collected.
+        -- UA: Визначаємо назву культури через RHM_CombineSettingsDatabase.
+        --     Якщо підбираємо валки/солому або жатка є підбирачем, ґрунтова культура під валком
+        --     (напр. люцерна чи бур'ян) ніколи не повинна підміняти реальну зібрану солому.
+        local effectiveInputFruitType = inputFruitType
+        if isPickup or (outputFillType and (outputFillType == FillType.STRAW or outputFillType == FillType.GRASS_WINDROW or outputFillType == FillType.DRYGRASS_WINDROW)) then
+            effectiveInputFruitType = nil
+        end
+
+        local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, effectiveInputFruitType)
 
         -- EN: CHAFF and SILAGE map to MAIZE_FORAGE in the DB — correct for corn silage but WRONG for
         --     direct grass/meadow silage (same output fill types in FS). That used factor ~0.30 and felt like
         --     unlimited speed (~15 km/h). Disambiguate using the combine's INPUT fruit from the cutter.
         -- UA: CHAFF/SILAGE у БД → MAIZE_FORAGE (кукурудза), але пряме косіння трави теж дає CHAFF — інакше фактор 0.3 і «літак».
-        if cropName == "MAIZE_FORAGE" and inputFruitType and inputFruitType ~= FillType.UNKNOWN and inputFruitType ~= 0 then
+        if cropName == "MAIZE_FORAGE" and effectiveInputFruitType and effectiveInputFruitType ~= FillType.UNKNOWN and effectiveInputFruitType ~= 0 then
             local inName = nil
             if g_fruitTypeManager then
-                local fDesc = g_fruitTypeManager:getFruitTypeByIndex(inputFruitType)
+                local fDesc = g_fruitTypeManager:getFruitTypeByIndex(effectiveInputFruitType)
                 if fDesc and fDesc.name then
                     inName = string.upper(fDesc.name)
                 end
@@ -657,7 +728,7 @@ function rhm_Combine:addCutterArea(superFunc, ...)
                     cropName = "GRASS"
                 end
             else
-                local alt = RHM_CombineSettingsDatabase:getCropNameFromFillType(inputFruitType)
+                local alt = RHM_CombineSettingsDatabase:getCropNameFromFillType(effectiveInputFruitType)
                 if alt == "GRASS" or alt == "DRYGRASS" or alt == "GRASS_WINDROW" or alt == "DRYGRASS_WINDROW" then
                     cropName = alt
                 end
@@ -665,11 +736,11 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         end
         
         -- EN: Fallback for forage harvesters: they output CHAFF but inputFruitType=MAIZE.
-        --     getCropNameFromFillType(CHAFF) returns "MAIZE_FORAGE" usually, but try inputFruitType if not.
+        --     getCropNameFromFillType(CHAFF) returns "MAIZE_FORAGE" usually, but try effectiveInputFruitType if not.
         -- UA: Резервний варіант для форажних комбайнів: вони виводять CHAFF але inputFruitType=MAIZE.
-        --     getCropNameFromFillType(CHAFF) зазвичай повертає "MAIZE_FORAGE", але спробуємо inputFruitType якщо ні.
-        if not cropName and inputFruitType and inputFruitType ~= FillType.UNKNOWN then
-            cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(inputFruitType)
+        --     getCropNameFromFillType(CHAFF) зазвичай повертає "MAIZE_FORAGE", але спробуємо effectiveInputFruitType якщо ні.
+        if not cropName and effectiveInputFruitType and effectiveInputFruitType ~= FillType.UNKNOWN then
+            cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(effectiveInputFruitType)
         end
 
         -- EN: Forage harvester feed mode disambiguation.
@@ -681,13 +752,7 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --     Ключова різниця: прямий різ завжди має inputFruitType (напр. GRASS), підбирач має inputFruitType=nil.
         --     getForageFeedMode() може помилитись коли підбирач не має spec_pickup, тому inputFruitType — головний сигнал.
         if cropName and spec.combineMemory and spec.combineMemory.machineType == "forage" then
-            -- EN: PRIMARY DETECTION: inputFruitType is the most reliable signal.
-            --     nil/0 = pickup (FS25 never provides input fruit for windrow pickups)
-            --     valid value = direct cut (always has input fruit type)
-            -- UA: ОСНОВНА ДЕТЕКЦІЯ: inputFruitType — найнадійніший сигнал.
-            --     nil/0 = підбирач (FS25 ніколи не дає input fruit для підбору валків)
-            --     валідне значення = прямий різ (завжди має input fruit type)
-            local isPickupMode = (inputFruitType == nil or inputFruitType == 0)
+            local isPickupMode = isPickup or (effectiveInputFruitType == nil or effectiveInputFruitType == 0)
             
             if not isPickupMode then
                 -- EN: Direct cut: force WINDROW → standing crop name so the heavier factor applies.
@@ -700,35 +765,69 @@ function rhm_Combine:addCutterArea(superFunc, ...)
                 end
             end
             -- EN: Pickup mode: cropName from getCropNameFromFillType(GRASS_WINDROW) is already correct
-            --     ("GRASS_WINDROW" with factor 0.380). Do NOT override it.
-            -- UA: Підбирач: cropName з getCropNameFromFillType(GRASS_WINDROW) вже правильний
-            --     ("GRASS_WINDROW" з фактором 0.380). НЕ перезаписуємо.
+            --     ("GRASS_WINDROW" with factor 0.380, or "STRAW_WINDROW"). Do NOT override it.
+            -- UA: Підбирач: cropName з getCropNameFromFillType вже правильний. НЕ перезаписуємо.
         end
         
+        -- EN: HOPPER GROUND TRUTH:
+        --     In FS25, a combine hopper can only hold ONE fill type at a time.
+        --     If the hopper already contains grain (e.g. > 50 L of Sorghum), that is the authoritative
+        --     crop being harvested. A momentary brush of a wide header against weeds or an adjacent field
+        --     (e.g. brushing Field 28 Flax while harvesting Field 26 Sorghum) must NEVER override the active crop.
+        -- UA: БЕЗУМОВНА ІСТИНА БУНКЕРА:
+        --     У FS25 бункер комбайна може містити лише один тип врожаю.
+        --     Якщо в бункері вже є зерно (> 50 л), це авторитетна культура збирання.
+        --     Випадковий дотик краю широкої жатки до бур'янів чи сусіднього поля
+        --     НІКОЛИ не повинен підміняти активну культуру.
+        local fillUnitIndex = (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
+        local tankFillType = self:getFillUnitFillType(fillUnitIndex)
+        local tankFillLevel = self:getFillUnitFillLevel(fillUnitIndex) or 0
+        if (tankFillType == nil or tankFillType == FillType.UNKNOWN) and self.getFillUnitLastValidFillType then
+            tankFillType = self:getFillUnitLastValidFillType(fillUnitIndex)
+        end
+
+        local tankCropName = nil
+        if tankFillLevel > 50 and tankFillType and tankFillType ~= FillType.UNKNOWN then
+            tankCropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+        end
+
+        if tankCropName then
+            cropName = tankCropName
+        end
+
         if cropName then
             -- EN: Update current crop in RHM_LoadCalculator.
             -- UA: Оновлюємо поточну культуру в RHM_LoadCalculator.
             spec.loadCalculator.currentCrop = cropName
+            spec._lastHarvestTime = g_currentMission.time
             
             -- EN: Detect crop change with 2-second debounce to avoid thrash when header
             --     partially overlaps two crop types and flips between them each tick.
             -- UA: Визначаємо зміну культури з 2-секундним захистом від дребезгу щоб уникнути
             --     переключення коли жатка частково перекриває два типи культур і перемикає між ними кожен тік.
             if cropName ~= spec.combineMemory.currentCrop then
-                -- DEBOUNCE: чекаємо 2 секунди перед перемикання
-                -- Без цього жатка може детектувати різні культури кожен тік і створювати петлю
-                local now = g_currentMission.time
-                spec._lastCropSwitchTime = spec._lastCropSwitchTime or 0
-                
-                if spec._pendingCrop ~= cropName then
-                    -- EN: New crop candidate detected / UA: Виявлено нового кандидата
-                    spec._pendingCrop = cropName
-                    spec._lastCropSwitchTime = now
-                elseif (now - spec._lastCropSwitchTime) >= 2000 then
-                    -- EN: Confirmed after 2 seconds / UA: Підтверджено після 2 секунд
+                if tankCropName then
+                    -- EN: Hopper has grain -> instant authoritative switch without debounce delay!
+                    -- UA: У бункері є зерно -> миттєве авторитетне перемикання без затримки дребезгу!
                     spec._pendingCrop = nil
-                    rhm_log(string.format("RHM [Combine]: RHM: [CROP] Detected crop: %s", cropName))
-                    rhm_Combine.onCropTypeChanged(self, cropName)
+                    rhm_log(string.format("RHM [Combine]: RHM: [CROP] Hopper contains %d L of %s -> instant sync active crop", math.floor(tankFillLevel), tankCropName))
+                    rhm_Combine.onCropTypeChanged(self, tankCropName)
+                else
+                    -- EN: Empty hopper (or forage machine) -> 2-second debounce to prevent bouncing at borders
+                    -- UA: Порожній бункер (або силосний комбайн) -> 2-секундний захист від перемикань на межах
+                    local now = g_currentMission.time
+                    spec._lastCropSwitchTime = spec._lastCropSwitchTime or 0
+                    
+                    if spec._pendingCrop ~= cropName then
+                        -- EN: New crop candidate detected / UA: Виявлено нового кандидата
+                        spec._pendingCrop = cropName
+                        spec._lastCropSwitchTime = now
+                    elseif (now - spec._lastCropSwitchTime) >= 2000 then
+                        -- EN: Confirmed after 2 seconds / UA: Підтверджено після 2 секунд
+                        spec._pendingCrop = nil
+                        rhm_log(string.format("RHM [Combine]: RHM: [CROP] Detected crop: %s", cropName))
+                        rhm_Combine.onCropTypeChanged(self, cropName)
+                    end
                 end
             else
                 -- EN: Same crop, cancel any staged switch.
@@ -737,9 +836,13 @@ function rhm_Combine:addCutterArea(superFunc, ...)
             end
         end
     else
-        -- EN: No crop coming through (not harvesting) — clear staged crop.
-        -- UA: Не надходить культура (не збираємо) — очищаємо плановану культуру.
-        spec._pendingCrop = nil
+        -- EN: Only reset pending crop if harvesting has completely stopped for > 1500 ms.
+        --     Do NOT reset on a single empty slice or micro-gap between plants!
+        -- UA: Скидаємо плановану культуру тільки якщо збирання повністю припинилося на > 1500 мс.
+        --     НЕ скидаємо на окремому порожньому зрізі чи мікро-паузі між стеблами!
+        if g_currentMission and spec._lastHarvestTime and (g_currentMission.time - spec._lastHarvestTime > 1500) then
+            spec._pendingCrop = nil
+        end
     end
     
     -- DEBUG: Uncomment to see values in console
@@ -788,6 +891,29 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     -- UA: Делегуємо до switchCrop — оновлює currentCrop без зміни налаштувань.
     spec.combineMemory:switchCrop(newCropName)
 
+    if spec.loadCalculator then
+        spec.loadCalculator.currentCrop = newCropName
+        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
+        local remembered = spec.loadCalculator.cropHarvestingSpeeds and (spec.loadCalculator.cropHarvestingSpeeds[canonical] or spec.loadCalculator.cropHarvestingSpeeds[newCropName])
+        remembered = remembered or spec.loadCalculator.lastHarvestingSpeed or (spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 and spec.loadCalculator.speedLimit)
+        if remembered and remembered > 0 then
+            spec.loadCalculator.lastHarvestingSpeed = remembered
+            spec.loadCalculator.speedLimit = remembered
+            if spec.loadCalculator.cropHarvestingSpeeds then
+                spec.loadCalculator.cropHarvestingSpeeds[canonical] = remembered
+                spec.loadCalculator.cropHarvestingSpeeds[newCropName] = remembered
+            end
+        else
+            local defaultEntry = 5.5
+            if spec.loadCalculator.vanillaWorkingSpeed and spec.loadCalculator.vanillaWorkingSpeed < defaultEntry then
+                defaultEntry = spec.loadCalculator.vanillaWorkingSpeed
+            end
+            if not spec.loadCalculator.speedLimit or spec.loadCalculator.speedLimit <= 0 then
+                spec.loadCalculator.speedLimit = defaultEntry
+            end
+        end
+    end
+
     -- EN: If an AI worker or Courseplay helper is driving, auto-tune settings for this crop by tier
     -- UA: Якщо керує наймит або Courseplay, автоматично калібруємо налаштування за рівнем електроніки
     if self.isServer and rhm_Combine.isAiWorkerActive(self) then
@@ -805,6 +931,49 @@ function rhm_Combine:onCropTypeChanged(newCropName)
             self:raiseDirtyFlags(spec.dirtyFlag)
         end
     end
+end
+
+---EN: Checks if vehicle is driving or maneuvering in reverse. Harvesters NEVER harvest in reverse.
+---UA: Перевіряє чи комбайн рухається або маневрує назад. Комбайни НІКОЛИ не збирають врожай заднім ходом.
+function rhm_Combine.getIsVehicleReversing(vehicle)
+    if not vehicle then
+        return false
+    end
+    
+    -- 1. Official Drivable query (reverser direction * moving direction)
+    if vehicle.getIsDrivingBackward and vehicle:getIsDrivingBackward() then
+        return true
+    end
+    if vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0 then
+        return true
+    end
+    
+    -- 2. Physical chassis moving direction (< 0 is reverse)
+    if vehicle.movingDirection and vehicle.movingDirection < 0 then
+        return true
+    end
+    
+    -- 3. Hydrostatic / mechanical motor transmission direction
+    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
+        local motor = vehicle.spec_motorized.motor
+        if motor.currentDirection and motor.currentDirection < 0 then
+            return true
+        end
+    end
+    
+    -- 4. User driving inputs (shuttle reverser / pedal / S key)
+    local spec_drivable = vehicle.spec_drivable
+    if spec_drivable then
+        local revDir = spec_drivable.reverserDirection or 1
+        local axis = spec_drivable.axisForward or 0
+        if revDir < 0 and axis > 0.05 then
+            return true
+        elseif revDir > 0 and axis < -0.05 then
+            return true
+        end
+    end
+    
+    return false
 end
 
 -- EN: Override for getSpeedLimit. Returns a dynamically calculated speed cap from RHM_LoadCalculator
@@ -835,6 +1004,15 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
         return limit, doCheckSpeedLimit
     end
     
+    -- EN: If driving in reverse, harvesters NEVER harvest. Return vanilla limit immediately.
+    --     Prevents transmission oscillation and jerking while backing up.
+    -- UA: При русі заднім ходом комбайн НІКОЛИ не косить. Одразу повертаємо ванільний ліміт.
+    --     Запобігає смиканню та розгойдуванню трансмісії при їзді назад.
+    if rhm_Combine.getIsVehicleReversing(self) then
+        spec.isSpeedLimitActive = false
+        return limit, doCheckSpeedLimit
+    end
+    
     -- EN: CRITICAL FIX: Check if the cutter is actually WORKING (not just attached).
     --     If the cutter is raised or not cutting — do NOT limit speed.
     --     Same check as onUpdateTick: isTurnedOn + speed > 0.5 + lowered (or allowCuttingWhileRaised).
@@ -847,17 +1025,13 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- EN: Single pass: working check + first attached (for header-change detection).
     -- UA: Один прохід: перевірка роботи + перша жатка (для зміни хедера).
     if spec_combine and spec_combine.attachedCutters then
-        local speedOk = self:getLastSpeed() > 0.5
         for cutter, _ in pairs(spec_combine.attachedCutters) do
             if firstAttachedCutter == nil then
                 firstAttachedCutter = cutter
             end
             if cutter.spec_cutter then
                 local spec_cutter = cutter.spec_cutter
-                -- FIX: Use same check as onUpdateTick - do NOT check movingDirection,
-                -- as Courseplay can set it differently. Only check isTurnedOn + speed + isLowered.
                 if cutter:getIsTurnedOn()
-                    and speedOk
                     and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
                     cutterIsWorking = true
                     break
@@ -869,10 +1043,8 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- EN: Support self-propelled machines where cutter is integrated directly on the vehicle (self.spec_cutter)
     -- UA: Підтримка самохідних машин де жатка вбудована безпосередньо в машину (self.spec_cutter)
     if not cutterIsWorking and self.spec_cutter then
-        local speedOk = self:getLastSpeed() > 0.5
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn()
-            and speedOk
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
             cutterIsWorking = true
         end
@@ -1091,6 +1263,13 @@ function rhm_Combine:stopThreshing(superFunc)
         g_soundManager:stopSample(spec_combine.samples.start)
         g_soundManager:stopSample(spec_combine.samples.work)
         g_soundManager:playSample(spec_combine.samples.stop)
+
+        local spec_rhm = self.spec_rhm_Combine
+        if spec_rhm and spec_rhm.samples then
+            if spec_rhm.samples.overloadAlarm then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.overloadAlarm) end)
+            end
+        end
     end
     
     self:setCombineIsFilling(false, false, true)
@@ -1166,6 +1345,78 @@ function rhm_Combine:updateWarnings(dt)
     end
 end
 
+---Update audio feedback for engine/thresher load and crop loss (Client Side)
+function rhm_Combine:updateSounds(dt)
+    local spec = self.spec_rhm_Combine
+    if not spec or not spec.samples then
+        return
+    end
+
+    -- Check user settings
+    local alarmEnabled = true
+    local soundVolMultiplier = 1.0
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        if g_realisticHarvestManager.settings.enableAlarmSound == false then
+            alarmEnabled = false
+        end
+        if g_realisticHarvestManager.settings.soundVolume then
+            soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+        end
+    end
+
+    -- Check if player is entered in or controlling this vehicle (or rootVehicle in modular rigs)
+    local isPlayerEntered = (self.getIsEntered and self:getIsEntered())
+                         or (self.getIsControlled and self:getIsControlled())
+    if not isPlayerEntered and self.rootVehicle then
+        isPlayerEntered = (self.rootVehicle.getIsEntered and self.rootVehicle:getIsEntered())
+                       or (self.rootVehicle.getIsControlled and self.rootVehicle:getIsControlled())
+    end
+
+    local isTurnedOn = self:getIsTurnedOn()
+
+    -- If alarm disabled, player not in vehicle, or combine turned off: stop active sounds
+    if not alarmEnabled or not isPlayerEntered or not isTurnedOn then
+        if spec.samples.overloadAlarm then
+            pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
+        end
+        spec._rhmAlarmTimer = 1500
+        return
+    end
+
+    local load = (spec.data and spec.data.load) or 0
+    local loss = (spec.data and spec.data.cropLoss) or 0
+
+    -- Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0%)
+    if alarmEnabled and (load >= 98 or loss >= 4.0) and spec.samples.overloadAlarm then
+        spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
+        if spec._rhmAlarmTimer >= 2200 then
+            spec._rhmAlarmTimer = 0
+            
+            local alarmSample = spec.samples.overloadAlarm
+            local isCameraInside = true
+            if self.getActiveCamera then
+                local cam = self:getActiveCamera()
+                if cam and cam.isInside ~= nil then
+                    isCameraInside = cam.isInside
+                end
+            end
+            local camAlarmBoost = isCameraInside and 1.0 or 1.20
+            local alarmVol = 2.4 * soundVolMultiplier * camAlarmBoost
+
+            if g_soundManager.setSampleVolume then
+                pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+            end
+            if alarmSample.soundSample and type(setSampleVolume) == "function" then
+                pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+            end
+            
+            pcall(function() g_soundManager:playSample(alarmSample) end)
+        end
+    else
+        spec._rhmAlarmTimer = 1500
+    end
+end
+
 -- EN: Called on every game tick. Runs warning checks on client, load/yield/speed calculations on server.
 --     Server side: detects if thresher or cutter is off and resets HUD data accordingly.
 --     Passes harvested mass and area to RHM_LoadCalculator for physics-based engine load calculation.
@@ -1173,10 +1424,11 @@ end
 --     Серверна сторона: визначає якщо молотарка або жатка вимкнена і скидає дані HUD відповідно.
 --     Передає зібрану масу та площу до RHM_LoadCalculator для фізичного розрахунку навантаження двигуна.
 function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
-    -- EN: Client-side: update safety warnings only.
-    -- UA: Клієнтська сторона: лише оновлення попереджень безпеки.
+    -- EN: Client-side: update safety warnings and audio feedback.
+    -- UA: Клієнтська сторона: оновлення попереджень безпеки та звуків.
     if self.isClient then
         rhm_Combine.updateWarnings(self, dt)
+        rhm_Combine.updateSounds(self, dt)
     end
     
     if not self.isServer then
@@ -1190,12 +1442,21 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         return
     end
     
+    -- EN: Check if driving in reverse. Harvesters NEVER harvest while reversing.
+    -- UA: Перевірка руху заднім ходом. Комбайни НІКОЛИ не збирають врожай заднім ходом.
+    local isReversing = rhm_Combine.getIsVehicleReversing(self)
+    
     -- EN: Check if combine thresher is on and driving forward; reset load if not.
     -- UA: Перевіряємо чи молотарка увімкнена і рухається вперед; скидаємо навантаження якщо ні.
-    if not self:getIsTurnedOn() or self.movingDirection == -1 then
-        -- EN: Thresher off or reversing — reset load calculation.
-        -- UA: Молотарка вимкнена або рухається назад — скидаємо розрахунок навантаження.
-        spec._rhmLastMotorSpeedLimit = nil
+    if not self:getIsTurnedOn() or isReversing then
+        -- EN: Thresher off or reversing — release motor limit and reset load calculation.
+        -- UA: Молотарка вимкнена або рухається назад — відпускаємо ліміт мотора і скидаємо навантаження.
+        if spec._rhmLastMotorSpeedLimit ~= nil then
+            if self.spec_motorized and self.spec_motorized.motor then
+                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            end
+            spec._rhmLastMotorSpeedLimit = nil
+        end
         spec.loadCalculator:reset()
         if spec.data then
             spec.data.load = 0
@@ -1205,6 +1466,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.yield = 0
             spec.data.moisture = 0
             spec.data.recommendedSpeed = 0
+            spec.data.targetSpeed = spec.loadCalculator:getSpeedLimit() or 0
         end
         spec.isSpeedLimitActive = false
         self:raiseDirtyFlags(spec.dataDirtyFlag)
@@ -1222,7 +1484,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         if cutter.spec_cutter then
             local spec_cutter = cutter.spec_cutter
             if cutter:getIsTurnedOn() 
-                and self:getLastSpeed() > 0.5 
                 and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
                 cutterIsTurnedOn = true
                 break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
@@ -1235,16 +1496,35 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     if not cutterIsTurnedOn and self.spec_cutter then
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn() 
-            and self:getLastSpeed() > 0.5 
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
             cutterIsTurnedOn = true
         end
     end
     
     if not cutterIsTurnedOn then
-        -- EN: Cutter not working — reset indicators so they don't stay visible.
-        -- UA: Жатка не працює — скидаємо індикатори щоб вони не висіли.
-        spec._rhmLastMotorSpeedLimit = nil
+        -- EN: Preserve cruise speed before reset if active so headland turns don't wipe memory
+        -- UA: Зберігаємо робочу швидкість перед скиданням щоб розвороти на краю поля не стирали пам'ять
+        if spec.loadCalculator and spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 then
+            local activeCrop = spec.loadCalculator.currentCrop or (spec.combineMemory and spec.combineMemory.currentCrop)
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            spec.loadCalculator.lastHarvestingSpeed = spec.loadCalculator.speedLimit
+            if activeCrop then
+                spec.loadCalculator.cropHarvestingSpeeds = spec.loadCalculator.cropHarvestingSpeeds or {}
+                spec.loadCalculator.cropHarvestingSpeeds[activeCrop] = spec.loadCalculator.speedLimit
+                if canonical then
+                    spec.loadCalculator.cropHarvestingSpeeds[canonical] = spec.loadCalculator.speedLimit
+                end
+            end
+        end
+
+        -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
+        -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
+        if spec._rhmLastMotorSpeedLimit ~= nil then
+            if self.spec_motorized and self.spec_motorized.motor then
+                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            end
+            spec._rhmLastMotorSpeedLimit = nil
+        end
         spec.loadCalculator:reset() 
         if spec.data then
             spec.data.load = 0 
@@ -1254,6 +1534,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.yield = 0
             spec.data.moisture = 0
             spec.data.recommendedSpeed = 0 -- EN: Hide "/ X.X" from speed display / UA: Приховуємо "/ X.X" з відображення швидкості
+            spec.data.targetSpeed = spec.loadCalculator:getSpeedLimit() or 0
         end
         spec.isSpeedLimitActive = false
         
@@ -1387,6 +1668,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.litersPerHour = spec.loadCalculator:getLitersPerHour() -- NEW: Volume flow
         spec.data.hectaresPerHour = spec.loadCalculator:getHectaresPerHour() -- NEW: Area rate (ha/h)
         spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
+        spec.data.targetSpeed = spec.data.recommendedSpeed
         -- NEW: Yield Monitor Data
         spec.data.yield = spec.loadCalculator.currentYield or 0
     end
@@ -1402,6 +1684,28 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Автоналаштування коли керує наймит або Courseplay.
     --     Застосовується один раз при старті або зміні культури, зберігаючи повністю ручне керування для гравця.
     if self.isServer and cutterIsTurnedOn then
+        -- EN: Hopper sanity check: if the hopper contains grain of a different crop type than currentCrop,
+        --     synchronize currentCrop immediately to ensure settings match what is in the tank.
+        -- UA: Перевірка бункера: якщо в бункері вже є зерно іншого типу ніж currentCrop,
+        --     негайно синхронізуємо currentCrop, щоб налаштування відповідали зерну в бункері.
+        if spec.combineMemory then
+            local fillUnitIndex = (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
+            local tankFillLevel = self:getFillUnitFillLevel(fillUnitIndex) or 0
+            if tankFillLevel > 50 then
+                local tankFillType = self:getFillUnitFillType(fillUnitIndex)
+                if (tankFillType == nil or tankFillType == FillType.UNKNOWN) and self.getFillUnitLastValidFillType then
+                    tankFillType = self:getFillUnitLastValidFillType(fillUnitIndex)
+                end
+                if tankFillType and tankFillType ~= FillType.UNKNOWN then
+                    local tankCrop = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+                    if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
+                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
+                        rhm_Combine.onCropTypeChanged(self, tankCrop)
+                    end
+                end
+            end
+        end
+
         local isAi = rhm_Combine.isAiWorkerActive(self)
         if isAi then
             local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
@@ -1413,9 +1717,14 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 end
             end
         else
-            -- EN: Player is manually driving - reset tracking so AI will re-tune next time it takes over.
-            -- UA: Гравець керує вручну - скидаємо трекінг, щоб наймит налаштувався знову при перехопленні.
-            spec._lastAiTunedCrop = nil
+            -- EN: Player is manually driving. Only reset tracking if the crop changed or combine is uncalibrated,
+            --     so that already configured combine settings are not repeatedly re-evaluated.
+            -- UA: Гравець керує вручну. Скидаємо трекінг тільки якщо змінилася культура або комбайн не налаштований,
+            --     щоб уже налаштовані параметри не смикалися даремно.
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if spec._lastAiTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
+                spec._lastAiTunedCrop = nil
+            end
         end
     end
 
@@ -1433,14 +1742,22 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
                 if currentCrop and currentCrop ~= "" and spec._lastAiClientTunedCrop ~= currentCrop then
                     spec._lastAiClientTunedCrop = currentCrop
-                    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
-                    if pm and pm:getProfile(currentCrop) then
-                        spec.combineMemory:loadUserPreset()
+                    -- EN: Only auto-send saved profile if combine is NOT already calibrated by player
+                    -- UA: Автоматично надсилаємо збережений профіль тільки якщо комбайн ЩЕ НЕ налаштований гравцем
+                    local isCalib = spec.combineMemory and (spec.combineMemory.isCalibrated or (spec.combineMemory.calibratedCrops and spec.combineMemory.calibratedCrops[currentCrop]))
+                    if not isCalib then
+                        local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
+                        if pm and pm:getProfile(currentCrop) then
+                            spec.combineMemory:loadUserPreset()
+                        end
                     end
                 end
             end
         else
-            spec._lastAiClientTunedCrop = nil
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if spec._lastAiClientTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
+                spec._lastAiClientTunedCrop = nil
+            end
         end
     end
 
@@ -1455,7 +1772,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- Enforce the dynamic cap directly on the motor for both:
     --  - AI vehicles
     --  - player-controlled vehicles (so in-cab cruise reacts to load)
-    if self.isServer and cutterIsTurnedOn then
+    if self.isServer and cutterIsTurnedOn and not isReversing then
         local isAI = rhm_Combine.isAiWorkerActive(self)
         local isPlayerControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
 
@@ -1631,6 +1948,21 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     safeSet(cur .. "#feeder",     settings.feeder or 50)
     safeSet(cur .. "#targetEngineLoad", settings.targetEngineLoad or 95)
     
+    local isCalib = mem.isCalibrated == true or mem.hasManualTuning == true or (mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true)
+    safeSet(cur .. "#isCalibrated", isCalib)
+
+    local calibList = {}
+    if mem.calibratedCrops then
+        for crop, flag in pairs(mem.calibratedCrops) do
+            if flag then
+                table.insert(calibList, crop)
+            end
+        end
+    end
+    if #calibList > 0 then
+        safeSet(cur .. "#calibratedCrops", table.concat(calibList, " "))
+    end
+    
     rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
         self:getName() or "?",
         tostring(mem.currentCrop),
@@ -1684,43 +2016,58 @@ function rhm_Combine:loadFromSavegame(savegame)
     end
 
     local function readInt(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getInt then
             val = xmlFile:getInt(path)
         end
         if val == nil and XMLValueType and XMLValueType.INT then
-            val = xmlFile:getValue(path, XMLValueType.INT)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.INT) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         return (val ~= nil and tonumber(val)) or def
     end
 
     local function readString(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getString then
             val = xmlFile:getString(path)
         end
         if val == nil and XMLValueType and XMLValueType.STRING then
-            val = xmlFile:getValue(path, XMLValueType.STRING)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.STRING) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         return (val ~= nil and tostring(val)) or def
     end
 
     local function readBool(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
         local val = nil
         if xmlFile.getBool then
             val = xmlFile:getBool(path)
         end
         if val == nil and XMLValueType and XMLValueType.BOOL then
-            val = xmlFile:getValue(path, XMLValueType.BOOL)
+            local ok, res = pcall(function() return xmlFile:getValue(path, XMLValueType.BOOL) end)
+            if ok then val = res end
         end
         if val == nil then
-            val = xmlFile:getValue(path)
+            local ok, res = pcall(function() return xmlFile:getValue(path) end)
+            if ok then val = res end
         end
         if val == nil then return def end
         if type(val) == "boolean" then return val end
@@ -1761,6 +2108,24 @@ function rhm_Combine:loadFromSavegame(savegame)
         if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
         if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
         if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+    end
+
+    local isCalibrated = readBool(cur .. "#isCalibrated", true)
+    spec.combineMemory.isCalibrated = isCalibrated
+    spec.combineMemory.hasManualTuning = isCalibrated
+    spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+
+    if savedCrop and savedCrop ~= "" then
+        spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
+        spec._lastAiTunedCrop = savedCrop
+        spec._lastAiClientTunedCrop = savedCrop
+    end
+
+    local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
+    if savedCalibCropsStr and savedCalibCropsStr ~= "" then
+        for crop in string.gmatch(savedCalibCropsStr, "%S+") do
+            spec.combineMemory.calibratedCrops[crop] = true
+        end
     end
 
     self._rhmSettingsLoadedFromSavegame = true
@@ -2086,10 +2451,17 @@ function rhm_Combine:actionToggleHUD(actionName, inputValue, callbackState, isAn
     end
 end
 
--- EN: Clean up cursor and camera states when leaving the vehicle.
--- UA: Очищаємо стани курсора та камери при виході з транспортного засобу.
+-- EN: Clean up cursor, camera states, and audio when leaving the vehicle.
+-- UA: Очищаємо стани курсора, камери та звуків при виході з транспортного засобу.
 function rhm_Combine:onLeaveVehicle(wasEntered)
     if self.isClient then
+        local spec_rhm = self.spec_rhm_Combine
+        if spec_rhm and spec_rhm.samples then
+            if spec_rhm.samples.overloadAlarm then
+                pcall(function() g_soundManager:stopSample(spec_rhm.samples.overloadAlarm) end)
+            end
+        end
+
         if g_realisticHarvestManager then
             if g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
                 g_realisticHarvestManager.calibrationGUI:close()
@@ -2108,6 +2480,20 @@ function rhm_Combine:onLeaveVehicle(wasEntered)
         end
     end
 end
+
+-- EN: Clean up sound samples and resources when vehicle is deleted.
+-- UA: Очищення звукових семплів та ресурсів при видаленні комбайна.
+function rhm_Combine:onDelete()
+    local spec = self.spec_rhm_Combine
+    if spec and spec.samples then
+        if spec.samples.overloadAlarm then
+            pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
+        end
+        pcall(function() g_soundManager:deleteSamples(spec.samples) end)
+        spec.samples = nil
+    end
+end
+
 
 
 

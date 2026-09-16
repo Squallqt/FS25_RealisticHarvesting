@@ -29,7 +29,7 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- EN: Current Load Enum / UA: Поточне навантаження
     self.engineLoad = 0
-    self.speedLimit = 15  -- EN: Current km/h limit / UA: Поточний ліміт км/год
+    self.speedLimit = 5.5  -- EN: Initial approach km/h limit / UA: Початковий ліміт швидкості входу
     self.genuineSpeedLimit = -1  -- EN: Genuine limits from game db / UA: Ліміт з гри
     self.lastCropType = nil  -- EN: Last crop / UA: Остання культура
     self.lastHarvestTime = 0  -- EN: Last harvest time / UA: Час останнього збирання
@@ -57,6 +57,9 @@ function RHM_LoadCalculator.new(modDirectory)
     -- Combine RHMSettings System
     self.combineMemory = nil  -- EN: Will be set by rhm_Combine / UA: Буде встановлено з rhm_Combine
     self.currentCrop = nil    -- EN: Current crop for loss calc / UA: Поточна культура для розрахунку втрат
+    self.lastHarvestingSpeed = nil -- EN: Remembered stable harvesting speed / UA: Запам'ятована швидкість збирання
+    self.cropHarvestingSpeeds = {} -- EN: Per-crop remembered harvesting speeds / UA: Запам'ятовані швидкості по культурах
+    self.isActivelyHarvesting = false
     
     -- EN: Pre-allocated circular ring buffers for rolling metrics (zero runtime table allocations)
     -- UA: Попередньо виділені кільцеві буфери для ковзних метрик (без виділення пам'яті в рантаймі)
@@ -900,8 +903,9 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     end
 
     -- Feederhouse transport delay: physical crop transit from cutter bar to threshing rotor takes ~2.0 seconds
-    if (self.harvestActiveTime or 0) < 2500 then
-        local entryRamp = math.min(1.0, 0.40 + 0.60 * ((self.harvestActiveTime or 0) / 2500.0))
+    if (self.harvestActiveTime or 0) < 2000 then
+        local t = math.min(1.0, math.max(0.0, (self.harvestActiveTime or 0) / 2000.0))
+        local entryRamp = 0.15 + 0.85 * (t * t * (3.0 - 2.0 * t))
         avgMass = avgMass * entryRamp
     end
 
@@ -926,6 +930,7 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     local pSoil = 0
 
     local isActivelyHarvesting = (avgTph > 0.05) or (rawTph > 0.05)
+    self.isActivelyHarvesting = isActivelyHarvesting
 
     if isCutterActive or isActivelyHarvesting then
         -- Base mechanical & driveline losses:
@@ -1024,6 +1029,16 @@ end
 ---EN: Calculates Vehicle Speed Limit based on physical power load and target load.
 ---UA: Розраховує обмеження швидкості на основі навантаження двигуна та цільового навантаження.
 function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
+    -- EN: Never calculate harvesting speed limit if vehicle is reversing
+    -- UA: Ніколи не розраховуємо ліміт швидкості якщо техніка рухається назад
+    if vehicle and (
+        (vehicle.getIsDrivingBackward and vehicle:getIsDrivingBackward()) or
+        (vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0) or
+        (vehicle.movingDirection and vehicle.movingDirection < 0)
+    ) then
+        return
+    end
+
     -- EN: Reuse maxWorkingSpeed calculated in calculateEngineLoad to avoid duplicate hierarchy/XML scans.
     -- UA: Перевикористовуємо maxWorkingSpeed з calculateEngineLoad без повторного сканування ієрархії/XML.
     local maxWorkingSpeed = self.maxWorkingSpeed
@@ -1040,16 +1055,27 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
 
     local minSpeed = 3.5
 
-    -- If not harvesting, smoothly maintain an intelligent approach/entry speed (5.5 - 6.5 km/h).
-    -- This prevents the combine from charging into the standing crop at 10-12 km/h and choking the cylinder!
+    local dtSec = math.min(1.0, math.max(0.05, (self.lastUpdateInterval or 300) / 1000.0))
+
+    -- If not harvesting, smoothly maintain an intelligent approach/entry speed.
+    -- This prevents the combine from charging into the standing crop at high speed and choking the cylinder!
     if (self.currentAvgMass or 0) <= 0.01 and (self.tonPerHour or 0) <= 0.05 then
-        local target = self.lastHarvestingSpeed or 6.2
-        target = math.max(5.2, math.min(maxAllowedSpeed, target))
-        if self.speedLimit > target then
-            self.speedLimit = math.max(target, self.speedLimit - 0.5)
-        elseif self.speedLimit < target then
-            self.speedLimit = math.min(target, self.speedLimit + 0.5)
+        local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+        local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+        local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
+        if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
+            remembered = self.speedLimit
         end
+        local defaultEntry = 5.5
+        if self.vanillaWorkingSpeed and self.vanillaWorkingSpeed < defaultEntry then
+            defaultEntry = self.vanillaWorkingSpeed
+        end
+        local target = remembered or defaultEntry
+        target = math.max(minSpeed, math.min(maxAllowedSpeed, target))
+
+        -- Smooth hydrostatic easing towards target entry speed (tau = 0.8s)
+        local blend = 1.0 - math.exp(-dtSec / 0.8)
+        self.speedLimit = self.speedLimit + (target - self.speedLimit) * blend
         self.underloadTimer = 0
         return
     end
@@ -1097,49 +1123,75 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
     vEquilibrium = math.max(minSpeed, math.min(maxAllowedSpeed, vEquilibrium))
 
     -- ASYMMETRIC DUAL-LOOP CONTROLLER:
-    -- Check if we are in the initial entry phase of a new pass (< 2.5s)
-    local isEntry = (self.harvestActiveTime or 0) < 2500
+    -- Check if we are in the initial entry phase of a new pass (< 2.8s)
+    local isEntry = (self.harvestActiveTime or 0) < 2800
     local isSurge = not isEntry and (self.rawAvgMass or 0) > ((self.currentAvgMass or 0) * 1.15) and (self.rawAvgMass or 0) > 0.5
 
     local currentLimit = self.speedLimit or maxAllowedSpeed
 
     if isEntry then
-        -- GENTLE ROW ENTRY: Smoothly adjust speed towards equilibrium without hard jerking/slamming
+        -- GENTLE ROW ENTRY:
+        -- While entering standing crop, the feederhouse and drum are still filling up (~2.5s - 3.0s).
+        -- The measured engine load during this filling phase is artificially low.
+        -- NEVER accelerate above the approach speed during entry!
+        -- ONLY allow smooth braking if the crop is unexpectedly dense/heavy and starts overloading.
         self.underloadTimer = 0
-        local diff = vEquilibrium - currentLimit
-        local step = math.max(-1.2, math.min(0.5, diff * 0.45))
-        self.speedLimit = currentLimit + step
+        if vEquilibrium < (currentLimit - 0.15) then
+            local blend = 1.0 - math.exp(-dtSec / 0.6)
+            self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
+        else
+            -- Hold the remembered approach/average speed steady — no surging into crop!
+        end
     elseif isSurge or vEquilibrium < (currentLimit - 0.1) then
         -- BRAKING / OVERLOAD / SURGE:
         -- Reset underload confirmation timer immediately
         self.underloadTimer = 0
 
-        -- Fast, decisive, smooth transition to target equilibrium (closes ~65% of the gap per cycle)
-        -- Decisively prevents engine choking without overshooting into turtle crawl
-        local diff = vEquilibrium - currentLimit
-        local step = math.max(-2.5, diff * 0.65)
-        self.speedLimit = currentLimit + step
+        -- Fast, decisive, smooth transition to target equilibrium (tau = 0.45s)
+        -- Decisively prevents engine choking without harsh jarring steps
+        local blend = 1.0 - math.exp(-dtSec / 0.45)
+        self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
     elseif vEquilibrium > (currentLimit + 0.15) then
         -- ACCELERATION / UNDERLOAD:
         -- Accumulate confirmed underload time
         local dtMs = self.lastUpdateInterval or 300
         self.underloadTimer = (self.underloadTimer or 0) + dtMs
 
-        -- Confirmation window: only accelerate if light crop has been sustained for >= 2.0 seconds
-        if self.underloadTimer >= 2000 then
-            -- Lazy, dignified acceleration: small smooth step (+0.25 to +0.35 km/h per step)
-            local diff = vEquilibrium - currentLimit
-            local step = math.min(0.35, diff * 0.25)
-            self.speedLimit = currentLimit + step
+        -- Confirmation window: only accelerate if light crop has been sustained for >= 1.5 seconds
+        if self.underloadTimer >= 1500 then
+            -- Smooth, dignified acceleration (tau = 1.8s)
+            local blend = 1.0 - math.exp(-dtSec / 1.8)
+            self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
         end
     else
         -- Stable deadzone within +/- 0.15 km/h: hold steady!
         self.underloadTimer = 0
     end
 
-    -- Remember stable harvesting speed for next row approach
-    if isActivelyHarvesting and vEquilibrium and vEquilibrium >= minSpeed then
-        self.lastHarvestingSpeed = vEquilibrium
+    -- Rolling average of steady-state harvesting speed:
+    -- Samples whenever vehicle is actively harvesting with steady crop flow across all harvester types (grain, forage, root, cotton)
+    local hasCropFlow = ((self.currentAvgMass or 0) > 0.02) or ((self.tonPerHour or 0) > 0.1)
+    if self.isActivelyHarvesting and not isEntry and hasCropFlow then
+        local actualSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or currentSpeed
+        if actualSpeed >= minSpeed and actualSpeed <= maxAllowedSpeed then
+            local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+            if activeCrop then
+                local canonical = RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+                self.cropHarvestingSpeeds = self.cropHarvestingSpeeds or {}
+                local prevAvg = self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop] or self.lastHarvestingSpeed
+                if not prevAvg or prevAvg < minSpeed then
+                    self.cropHarvestingSpeeds[activeCrop] = actualSpeed
+                else
+                    -- Smooth exponential moving average across ~2.5s of steady harvesting
+                    local blend = 1.0 - math.exp(-dtSec / 2.5)
+                    self.cropHarvestingSpeeds[activeCrop] = prevAvg + (actualSpeed - prevAvg) * blend
+                end
+                if canonical then
+                    self.cropHarvestingSpeeds[canonical] = self.cropHarvestingSpeeds[activeCrop]
+                end
+                self.lastHarvestingSpeed = self.cropHarvestingSpeeds[activeCrop]
+            end
+        end
     end
 
     -- Final physical clamp
@@ -1162,9 +1214,34 @@ end
 
 ---EN: Caches base limit speed boundary / UA: Встановлює оригінальні межі ліміту
 function RHM_LoadCalculator:setGenuineSpeedLimit(limit, maxCap)
+    -- EN: Cache vanilla speed boundaries for the hydrostatic controller.
+    -- UA: Кешуємо межі ванільної швидкості для гідростатичного контролера.
     self.vanillaWorkingSpeed = limit
     self.genuineSpeedLimit = maxCap or limit
-    self.speedLimit = limit
+
+    local maxLimit = maxCap or limit
+    local defaultEntry = math.min(5.5, maxLimit)
+
+    -- EN: Do NOT overwrite speedLimit if there is already a valid (lower) remembered or starting value.
+    --     This lets the hydrostatic controller ramp up smoothly to the genuine limit via exp-curve,
+    --     giving both AI workers and players a natural field-entry acceleration.
+    -- UA: НЕ перезаписуємо speedLimit якщо вже є дійсне (менше) запам'ятане або стартове значення.
+    --     Це дозволяє гідростатичному контролеру плавно розігнатись до genuineSpeedLimit по exp-кривій,
+    --     забезпечуючи і наймитам, і гравцям природній розгін при вході в загінку.
+    local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+    local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+    local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
+    if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
+        remembered = self.speedLimit
+    end
+
+    if remembered and remembered > 0 then
+        self.speedLimit = math.min(maxLimit, remembered)
+    elseif not self.speedLimit or self.speedLimit <= 0 then
+        self.speedLimit = defaultEntry
+    elseif self.speedLimit > maxLimit then
+        self.speedLimit = maxLimit
+    end
 end
 
 ---EN: Fully resets accumulated internal data variables / UA: Повністю очищує змінні бази даних
@@ -1175,8 +1252,28 @@ function RHM_LoadCalculator:reset()
     self.currentAvgMass = 0
     self.engineLoad = 0
     self.cropLoss = 0
-    self.speedLimit = math.min(6.5, self.vanillaWorkingSpeed or 6.5)
-    self.lastHarvestingSpeed = nil
+    local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+    local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+    local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
+
+    -- EN: If speedLimit was cruising at working speed, preserve it so header lifts don't collapse to 5.5
+    -- UA: Якщо speedLimit вже мав робочу швидкість, зберігаємо її щоб підйом жатки на розвороті не скидав до 5.5
+    if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
+        remembered = self.speedLimit
+        self.lastHarvestingSpeed = remembered
+        if activeCrop then
+            self.cropHarvestingSpeeds = self.cropHarvestingSpeeds or {}
+            self.cropHarvestingSpeeds[activeCrop] = remembered
+            if canonical then self.cropHarvestingSpeeds[canonical] = remembered end
+        end
+    end
+
+    local defaultEntry = 5.5
+    if self.vanillaWorkingSpeed and self.vanillaWorkingSpeed < defaultEntry then
+        defaultEntry = self.vanillaWorkingSpeed
+    end
+    self.speedLimit = remembered or defaultEntry
+    -- NOTE: self.lastHarvestingSpeed and self.cropHarvestingSpeeds are intentionally PRESERVED across headland turns!
     self.productivityMass = 0
     self.productivityLiters = 0
     self.productivityTime = 0
@@ -1241,8 +1338,13 @@ function RHM_LoadCalculator:calculateCropLoss()
         
         -- FIELD ENTRY LOSS DAMPENER:
         -- When entering crop from empty, feederhouse and cleaning sieves are physically filling up.
-        -- Suppress overload losses during the initial 2.5 seconds of row entry while flow stabilizes.
-        local entryGrace = math.min(1.0, math.max(0.0, ((self.harvestActiveTime or 0) - 800) / 2000.0))
+        -- Suppress overload losses during the initial transit window while flow stabilizes across sieves.
+        local activeTime = self.harvestActiveTime or 0
+        local entryGrace = 0
+        if activeTime > 1200 then
+            local t = math.min(1.0, (activeTime - 1200) / 1800.0)
+            entryGrace = t * t * (3.0 - 2.0 * t) -- Smoothstep S-curve
+        end
         rawLoss = rawLoss * entryGrace
         
         self.cropLoss = math.min(rawLoss * lossMultiplier, 50) 
