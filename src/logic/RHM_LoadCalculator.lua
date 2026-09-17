@@ -951,6 +951,9 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
 
         -- Header power consumption (scales with ground speed)
         if headerHp > 0 then
+            local currentSpeed = (vehicle and vehicle.getLastSpeed and vehicle:getLastSpeed()) or self.speedLimit or 7.0
+            local refSpeed = math.max(1.0, maxWorkingSpeed or 10.0)
+            local speedRatio = math.min(1.0, math.max(0.0, currentSpeed / refSpeed))
             local dullCutterFactor = 1.0 + 0.15 * math.max(0.0, math.min(1.0, self.lastCutterDamage or 0))
             pHeader = headerHp * (0.20 + 0.80 * speedRatio) * dullCutterFactor
         end
