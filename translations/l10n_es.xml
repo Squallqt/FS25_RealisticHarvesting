@@ -119,7 +119,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Â¡Encienda el cabezal!"/>
         <text name="rhm_warn_overload_high" text="Cosechadora sobrecargada! Reduce la velocidad."/>
         <text name="rhm_warn_overload_critical" text="COSECHADORA CRÍTICAMENTE SOBRECARGADA! Graves pérdidas!"/>
-        <text name="rhm_configuration_title" text="Electrónica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemas Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanica basica"/>
         <text name="rhm_package_sensor" text="Tier 2: Paquete de sensores"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria y monitor"/>

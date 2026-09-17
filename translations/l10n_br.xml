@@ -117,7 +117,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Ligue a plataforma de corte!"/>
         <text name="rhm_warn_overload_high" text="Colheitadeira sobrecarregada! Reduza a velocidade."/>
         <text name="rhm_warn_overload_critical" text="COLHEITADEIRA CRITICAMENTE SOBRECARREGADA! Perdas graves!"/>
-        <text name="rhm_configuration_title" text="Eletrônica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemas Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanica basica"/>
         <text name="rhm_package_sensor" text="Tier 2: Pacote de sensores"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria e monitoramento"/>

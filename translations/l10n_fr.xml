@@ -121,7 +121,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Allumez la barre de coupe !"/>
         <text name="rhm_warn_overload_high" text="Moissonneuse surchargée ! Réduisez la vitesse."/>
         <text name="rhm_warn_overload_critical" text="MOISSONNEUSE SURCHARGÉE CRITIQUEMENT ! Grosses pertes !"/>
-        <text name="rhm_configuration_title" text="RHM Électronique"/>
+        <text name="rhm_configuration_title" text="Systèmes Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanique de base"/>
         <text name="rhm_package_sensor" text="Tier 2: Pack Capteurs"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetrie &amp; Moniteur"/>

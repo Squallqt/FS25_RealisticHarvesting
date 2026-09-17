@@ -117,7 +117,7 @@
         <text name="rhm_warning_turn_on_cutter" text="BiÃ§erdÃ¶ver tablasÄ±nÄ± Ã§alÄ±ÅŸtÄ±rÄ±n!"/>
         <text name="rhm_warn_overload_high" text="Combine overloaded! Reduce speed to minimize crop losses."/>
         <text name="rhm_warn_overload_critical" text="COMBINE CRITICALLY OVERLOADED! Severe crop losses occurring!"/>
-        <text name="rhm_configuration_title" text="RHM Electronics"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Sistemleri"/>
         <text name="rhm_package_standard" text="Tier 1: Temel Mekanik"/>
         <text name="rhm_package_sensor" text="Tier 2: Sensor Paketi"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetri ve Izleme"/>

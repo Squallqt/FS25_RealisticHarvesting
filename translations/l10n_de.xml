@@ -119,7 +119,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Schneidwerk einschalten!"/>
         <text name="rhm_warn_overload_high" text="Mähdrescher überlastet! Geschwindigkeit reduzieren."/>
         <text name="rhm_warn_overload_critical" text="MÄHDRESCHER KRITISCH ÜBERLASTET! Starke Ernteverluste!"/>
-        <text name="rhm_configuration_title" text="RHM Elektronik"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Systeme"/>
         <text name="rhm_package_standard" text="Standard"/>
         <text name="rhm_package_sensor" text="Sensor Kit"/>
         <text name="rhm_package_yield" text="Ertrags- &amp; Verlustmonitor"/>

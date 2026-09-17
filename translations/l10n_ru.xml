@@ -121,7 +121,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Включите жатку комбайна!"/>
         <text name="rhm_warn_overload_high" text="Комбайн перегружен! Снизьте скорость."/>
         <text name="rhm_warn_overload_critical" text="КОМБАЙН КРИТИЧЕСКИ ПЕРЕГРУЖЕН! Серьёзные потери урожая!"/>
-        <text name="rhm_configuration_title" text="Электроника RHM"/>
+        <text name="rhm_configuration_title" text="Электроника Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Базовая механика"/>
         <text name="rhm_package_sensor" text="Tier 2: Сенсорный пакет"/>
         <text name="rhm_package_yield" text="Tier 3: Телеметрия и мониторинг"/>

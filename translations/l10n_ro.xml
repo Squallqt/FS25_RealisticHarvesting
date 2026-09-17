@@ -117,7 +117,7 @@
         <text name="rhm_warning_turn_on_cutter" text="PorniÈ›i hederul combinei!"/>
         <text name="rhm_warn_overload_high" text="Combine overloaded! Reduce speed to minimize crop losses."/>
         <text name="rhm_warn_overload_critical" text="COMBINE CRITICALLY OVERLOADED! Severe crop losses occurring!"/>
-        <text name="rhm_configuration_title" text="RHM Electronics"/>
+        <text name="rhm_configuration_title" text="Sisteme Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanica de baza"/>
         <text name="rhm_package_sensor" text="Tier 2: Pachet de senzori"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetrie si monitorizare"/>

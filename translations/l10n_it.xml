@@ -119,7 +119,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Accendi la testata!"/>
         <text name="rhm_warn_overload_high" text="Mietitrebbia sovraccarica! Ridurre la velocità."/>
         <text name="rhm_warn_overload_critical" text="MIETITREBBIA CRITICAMENTE SOVRACCARICA! Gravi perdite!"/>
-        <text name="rhm_configuration_title" text="Elettronica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemi Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Meccanica di base"/>
         <text name="rhm_package_sensor" text="Tier 2: Pacchetto sensori"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria e monitoraggio"/>

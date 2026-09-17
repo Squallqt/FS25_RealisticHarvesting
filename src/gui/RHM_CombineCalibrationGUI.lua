@@ -697,9 +697,9 @@ function RHMCombineCalibrationGUI:draw()
             callback = function()
                 local msg = g_i18n:hasText("rhm_msg_req_tier4") and g_i18n:getText("rhm_msg_req_tier4") or "Requires Opti-Harvest AI (Tier 4)"
                 if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                    RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
                 elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                    g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
                 end
             end
         })
@@ -796,9 +796,9 @@ function RHMCombineCalibrationGUI:draw()
                 msg = g_i18n:hasText("rhm_msg_profile_not_found") and g_i18n:getText("rhm_msg_profile_not_found") or "No saved profile found for this crop"
             end
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
         end, {0.08, 0.10, 0.12, 0.95})
 
@@ -813,9 +813,9 @@ function RHMCombineCalibrationGUI:draw()
                 local formatStr = g_i18n:hasText("rhm_msg_profile_saved") and g_i18n:getText("rhm_msg_profile_saved") or "Saved Profile: %s"
                 local msg = string.format(formatStr, tostring(cropTitle))
                 if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                    RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
                 elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                    g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
                 end
             end
         end, {0.08, 0.10, 0.12, 0.95})
@@ -826,9 +826,9 @@ function RHMCombineCalibrationGUI:draw()
                      or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
                      or "Profiles require Sensors Package (Tier 2)"
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
         end, {0.05, 0.055, 0.065, 0.70})
 
@@ -838,9 +838,9 @@ function RHMCombineCalibrationGUI:draw()
                      or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
                      or "Profiles require Sensors Package (Tier 2)"
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
         end, {0.05, 0.055, 0.065, 0.70})
     end

@@ -237,6 +237,12 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
 
     local formattedTitle = nil
     if rawTitle ~= "" then
+        if rawTitle:upper() == "RHM" or rawTitle == "" then
+            rawTitle = "REALISTIC HARVESTING"
+        elseif rawTitle:upper() == "RHM [AI]" then
+            rawTitle = "REALISTIC HARVESTING [AI]"
+        end
+
         if utf8ToUpper ~= nil then
             formattedTitle = utf8ToUpper(rawTitle)
         else

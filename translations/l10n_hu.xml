@@ -119,7 +119,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Kapcsolja be a vÃ¡gÃ³asztalt!"/>
         <text name="rhm_warn_overload_high" text="A kombájn túlterhelt! Csökkentse a sebességet."/>
         <text name="rhm_warn_overload_critical" text="A KOMBÁJN KRITIKUSAN TÚLTERHELT! Súlyos termésveszteség!"/>
-        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Rendszerek"/>
         <text name="rhm_package_standard" text="Tier 1: Alap mechanika"/>
         <text name="rhm_package_sensor" text="Tier 2: Erzekelo keszlet"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria es monitor"/>
