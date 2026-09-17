@@ -386,10 +386,10 @@ function RHMDraggableHUD:draw()
     -- ── Authentic Precision Farming Background ───────────────────────────────
     -- Rendered via the 3 authentic PF slices from ui_elements.dds:
     -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom (matching rounded caps)
-    -- Tinted with deep dark obsidian glass color (0.028, 0.030, 0.036, 0.88)
+    -- Tinted with authentic FS25 basegame HUD pure deep black glass (0.0, 0.0, 0.0, 0.80) matching v1.5.2.0
     local capH = 0.0075 * self.uiScale
     local midH = math.max(0.001, h - capH * 2)
-    local bgR, bgG, bgB, bgA = 0.028, 0.030, 0.036, 0.88
+    local bgR, bgG, bgB, bgA = 0.0, 0.0, 0.0, 0.80
 
     self.bgTopOverlay:setPosition(x, y + h - capH)
     self.bgTopOverlay:setDimension(w, capH)

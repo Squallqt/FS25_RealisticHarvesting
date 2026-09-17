@@ -12,7 +12,7 @@ local NotificationManager_mt = Class(RHM_NotificationManager)
 
 -- EN: Visual constants unified with RHM Draggable HUD and Calibration Terminal
 -- UA: Візуальні константи, уніфіковані з RHM Draggable HUD та терміналом калібрування
-local COLOR_BG = {0.028, 0.030, 0.036, 0.88}            -- Deep obsidian dark glass (88% alpha)
+local COLOR_BG = {0.0, 0.0, 0.0, 0.80}               -- Pure deep black glass (80% opacity, matching game HUD and v1.5.2.0)
 local COLOR_ACCENT = {0.18, 0.78, 0.42, 0.95}        -- Authentic emerald harvest accent
 local COLOR_DIVIDER = {1.00, 1.00, 1.00, 0.12}       -- Subtle metallic divider
 local COLOR_TITLE = {0.18, 0.82, 0.45, 1.00}         -- Crisp emerald title

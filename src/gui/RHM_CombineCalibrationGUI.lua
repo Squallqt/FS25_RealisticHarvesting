@@ -62,22 +62,22 @@ function RHMCombineCalibrationGUI.new(modDirectory)
         buttonW      = 0.017,
         buttonH      = 0.017,
 
-        -- Deep obsidian carbon glass palette (unified with RHM Draggable HUD and Notifications)
+        -- Deep pure black glass palette (unified with RHM Draggable HUD, game HUD, and Notifications)
         colors = {
             outerRim       = {0.20, 0.22, 0.25, 0.35}, -- 1px metallic rim
-            bezel          = {0.045, 0.050, 0.058, 0.88}, -- Titanium outer frame (translucent)
-            bg             = {0.028, 0.030, 0.036, 0.88}, -- Deep obsidian dark glass (matching HUD)
-            header         = {0.038, 0.042, 0.050, 0.88}, -- Dark status bar
+            bezel          = {0.020, 0.020, 0.022, 0.85}, -- Titanium outer frame (translucent)
+            bg             = {0.0, 0.0, 0.0, 0.80}, -- Pure deep black glass (matching game HUD and v1.5.2.0)
+            header         = {0.015, 0.015, 0.018, 0.85}, -- Dark status bar
             headerAccent   = {0.18, 0.78, 0.42, 0.95}, -- Emerald harvest accent line
-            sectionBg      = {0.028, 0.032, 0.038, 0.88}, -- Carbon strip for section headers
+            sectionBg      = {0.012, 0.012, 0.015, 0.80}, -- Carbon strip for section headers
             sectionNotch   = {0.18, 0.78, 0.42, 0.95}, -- Emerald accent mark on section headers
-            statsCardBg    = {0.020, 0.022, 0.028, 0.88}, -- Recessed telemetry card background
+            statsCardBg    = {0.0, 0.0, 0.0, 0.65}, -- Recessed telemetry card background
             statsCardBorder= {1.00, 1.00, 1.00, 0.12},
             separator      = {1.00, 1.00, 1.00, 0.12},
             paramRowHover  = {1.00, 1.00, 1.00, 0.025},
 
             -- Tactile Slider Colors
-            trackGroove    = {0.012, 0.015, 0.018, 0.88}, -- Deep recessed groove
+            trackGroove    = {0.0, 0.0, 0.0, 0.80}, -- Deep recessed groove
             trackBorder    = {0.060, 0.065, 0.075, 0.80},
             trackTick      = {1.00, 1.00, 1.00, 0.12},
             trackOptimal   = {0.18, 0.78, 0.42, 0.45}, -- Glowing green sweet spot band
@@ -95,7 +95,7 @@ function RHMCombineCalibrationGUI.new(modDirectory)
             warning        = {0.95, 0.72, 0.18, 1.00}, -- Warm amber
             error          = {0.90, 0.24, 0.24, 1.00}, -- Alert red
 
-            button         = {0.055, 0.060, 0.070, 0.88},
+            button         = {0.040, 0.040, 0.045, 0.85},
             buttonBorder   = {1.00, 1.00, 1.00, 0.12},
             buttonHover    = {0.12, 0.14, 0.16, 0.95},
             buttonAuto     = {0.08, 0.42, 0.24, 0.90}, -- Rich emerald pill
