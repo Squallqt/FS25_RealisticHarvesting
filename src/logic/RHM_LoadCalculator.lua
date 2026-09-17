@@ -407,7 +407,9 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                     width = tonumber(item.specs.workingWidth) or width
                 end
             end
-            if width == 0 then
+            if width > 0 then
+                self.lastHeaderWidth = width
+            else
                 width = 6.0
             end
 

@@ -62,26 +62,27 @@ function RHMDraggableHUD:load()
     self.height = 0.042 * self.uiScale
     self.width  = 0.172 * self.uiScale
 
-    -- 1. Load authentic Precision Farming background texture & slices
-    self.uiElementsPath = self.modDirectory .. "textures/ui_elements.dds"
-    local texSize = {1024, 512}
+    -- 1. Load authentic FS25 rounded panel texture
+    if not self.roundedOverlay then
+        local panelTexturePath = self.modDirectory .. "textures/panelRounded.dds"
+        self.roundedOverlay = Overlay.new(panelTexturePath, 0, 0, 1, 1)
 
-    -- Exact 3-part slices from PF ui_elements.xml:
-    -- shortcutBox_top:    uvs="7px 250px 330px 8px"
-    -- shortcutBox_middle: uvs="7px 270px 330px 8px"
-    -- shortcutBox_bottom: uvs="7px 292px 330px 8px"
-    local topUVs = GuiUtils.getUVs({7, 250, 330, 8}, texSize)
-    local midUVs = GuiUtils.getUVs({7, 270, 330, 8}, texSize)
-    local botUVs = GuiUtils.getUVs({7, 292, 330, 8}, texSize)
-
-    self.bgTopOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if topUVs then self.bgTopOverlay:setUVs(topUVs) end
-
-    self.bgMidOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if midUVs then self.bgMidOverlay:setUVs(midUVs) end
-
-    self.bgBotOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if botUVs then self.bgBotOverlay:setUVs(botUVs) end
+        local pxUVs = {
+            topLeft     = {  0,  0,  5,  5 },
+            top         = {  5,  0, 54,  5 },
+            topRight    = { 59,  0,  5,  5 },
+            left        = {  0,  5,  5, 54 },
+            center      = {  5,  5, 54, 54 },
+            right       = { 59,  5,  5, 54 },
+            bottomLeft  = {  0, 59,  5,  5 },
+            bottom      = {  5, 59, 54,  5 },
+            bottomRight = { 59, 59,  5,  5 }
+        }
+        self.roundedUVs = {}
+        for key, coords in pairs(pxUVs) do
+            self.roundedUVs[key] = GuiUtils.getUVs(coords, {64, 64})
+        end
+    end
 
     -- 2. Solid 1x1 overlay for dividers and underline indicators
     self.iconAtlasPath = self.modDirectory .. "textures/hud_icons.dds"
@@ -354,6 +355,59 @@ function RHMDraggableHUD:update(dt)
     self.data.speed            = vehicle:getLastSpeed() or 0
 end
 
+function RHMDraggableHUD:drawPanelBackground(x, y, w, h, color)
+    if not self.roundedOverlay or not self.roundedUVs then return end
+
+    local c = color or {0.0, 0.0, 0.0, 0.72}
+    local r = c[1] or 0.0
+    local g = c[2] or 0.0
+    local b = c[3] or 0.0
+    local a = c[4] or 0.72
+
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local snappedX = math.floor(x * screenW + 0.5) / screenW
+    local snappedY = math.floor(y * screenH + 0.5) / screenH
+    local snappedW = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local snappedH = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+
+    local cornerW = math.min(math.floor((6 / screenW) * screenW + 0.5) / screenW, snappedW * 0.5)
+    local cornerH = math.min(math.floor((6 / screenH) * screenH + 0.5) / screenH, snappedH * 0.5)
+
+    local leftX = snappedX
+    local centerX = snappedX + cornerW
+    local rightX = snappedX + snappedW - cornerW
+    local bottomY = snappedY
+    local centerY = snappedY + cornerH
+    local topY = snappedY + snappedH - cornerH
+    local centerW = math.max(rightX - centerX, 0)
+    local centerH = math.max(topY - centerY, 0)
+
+    local overlay = self.roundedOverlay
+    overlay:setColor(r, g, b, a)
+
+    local function renderSlice(sx, sy, sw, sh, uvs)
+        if sw <= 0 or sh <= 0 or not uvs then return end
+        overlay:setPosition(sx, sy)
+        overlay:setDimension(sw, sh)
+        overlay:setUVs(uvs)
+        overlay:render()
+    end
+
+    local uvs = self.roundedUVs
+    renderSlice(leftX, bottomY, cornerW, cornerH, uvs.bottomLeft)
+    renderSlice(centerX, bottomY, centerW, cornerH, uvs.bottom)
+    renderSlice(rightX, bottomY, cornerW, cornerH, uvs.bottomRight)
+
+    renderSlice(leftX, centerY, cornerW, centerH, uvs.left)
+    renderSlice(centerX, centerY, centerW, centerH, uvs.center)
+    renderSlice(rightX, centerY, cornerW, centerH, uvs.right)
+
+    renderSlice(leftX, topY, cornerW, cornerH, uvs.topLeft)
+    renderSlice(centerX, topY, centerW, cornerH, uvs.top)
+    renderSlice(rightX, topY, cornerW, cornerH, uvs.topRight)
+end
+
 function RHMDraggableHUD:drawRect(x, y, w, h, r, g, b, a)
     if not self.rectOverlay then return end
     self.rectOverlay:setPosition(x, y)
@@ -367,10 +421,10 @@ function RHMDraggableHUD:draw()
     if not self.settings.showHUD then return end
     if not self.vehicle then return end
 
-    if not self.bgTopOverlay then
+    if not self.roundedOverlay then
         self:load()
     end
-    if not self.bgTopOverlay then return end
+    if not self.roundedOverlay then return end
 
     -- Update docked coordinates dynamically each frame to track F1 toggle & PF movement
     local dockX, dockY, dockW = self:getDockedPosition()
@@ -383,28 +437,8 @@ function RHMDraggableHUD:draw()
     local w = self.width
     local h = self.height
 
-    -- ── Authentic Precision Farming Background ───────────────────────────────
-    -- Rendered via the 3 authentic PF slices from ui_elements.dds:
-    -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom (matching rounded caps)
-    -- Tinted with authentic FS25 basegame HUD pure deep black glass (0.0, 0.0, 0.0, 0.80) matching v1.5.2.0
-    local capH = 0.0075 * self.uiScale
-    local midH = math.max(0.001, h - capH * 2)
-    local bgR, bgG, bgB, bgA = 0.0, 0.0, 0.0, 0.80
-
-    self.bgTopOverlay:setPosition(x, y + h - capH)
-    self.bgTopOverlay:setDimension(w, capH)
-    self.bgTopOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgTopOverlay:render()
-
-    self.bgMidOverlay:setPosition(x, y + capH)
-    self.bgMidOverlay:setDimension(w, midH)
-    self.bgMidOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgMidOverlay:render()
-
-    self.bgBotOverlay:setPosition(x, y)
-    self.bgBotOverlay:setDimension(w, capH)
-    self.bgBotOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgBotOverlay:render()
+    -- ── Authentic FS25 Translucent Rounded Background ─────────────────────────
+    self:drawPanelBackground(x, y, w, h, {0.0, 0.0, 0.0, 0.72})
 
     -- ── Build 4-Column PF-Style Stacked Cells ───────────────────────────────
     local cells = self:buildActiveCells()
@@ -632,7 +666,7 @@ function RHMDraggableHUD:getLoadColors(load)
         local c = {0.95, 0.80, 0.20, 0.95}
         return {0.98, 0.98, 0.98, 1.0}, c
     else
-        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, {0.529, 0.706, 0.0, 1.0}
     end
 end
 
@@ -645,7 +679,7 @@ function RHMDraggableHUD:getLossColors(loss)
         local c = {0.95, 0.80, 0.20, 0.95}
         return {0.98, 0.98, 0.98, 1.0}, c
     else
-        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, {0.529, 0.706, 0.0, 1.0}
     end
 end
 

@@ -12,13 +12,13 @@ local NotificationManager_mt = Class(RHM_NotificationManager)
 
 -- EN: Visual constants unified with RHM Draggable HUD and Calibration Terminal
 -- UA: Візуальні константи, уніфіковані з RHM Draggable HUD та терміналом калібрування
-local COLOR_BG = {0.0, 0.0, 0.0, 0.80}               -- Pure deep black glass (80% opacity, matching game HUD and v1.5.2.0)
-local COLOR_ACCENT = {0.18, 0.78, 0.42, 0.95}        -- Authentic emerald harvest accent
-local COLOR_DIVIDER = {1.00, 1.00, 1.00, 0.12}       -- Subtle metallic divider
-local COLOR_TITLE = {0.18, 0.82, 0.45, 1.00}         -- Crisp emerald title
+local COLOR_BG = {0.0, 0.0, 0.0, 0.72}               -- Pure deep black glass (72% opacity, matching game HUD)
+local COLOR_ACCENT = {0.529, 0.706, 0.0, 1.0}        -- Authentic game HUD green accent
+local COLOR_DIVIDER = {1.00, 1.00, 1.00, 0.10}       -- Subtle metallic divider
+local COLOR_TITLE = {0.529, 0.706, 0.0, 1.0}         -- Authentic game HUD green title
 local COLOR_TEXT = {0.94, 0.95, 0.97, 0.96}          -- High-readability clean white
 local COLOR_OK = {0.94, 0.95, 0.97, 1.00}            -- Action prompt text
-local COLOR_BUTTON_BG = {0.055, 0.060, 0.070, 0.88}  -- Action button badge
+local COLOR_BUTTON_BG = {0.0, 0.0, 0.0, 0.40}        -- Action button badge
 local COLOR_BUTTON_BORDER = {1.00, 1.00, 1.00, 0.12} -- Action button border
 
 function RHM_NotificationManager.new(modDirectory, settings)
@@ -35,9 +35,8 @@ function RHM_NotificationManager.new(modDirectory, settings)
     self.cumulativeTier1HarvestTime = 0
     self.harvestActiveRunTime = 0
 
-    self.bgTopOverlay = nil
-    self.bgMidOverlay = nil
-    self.bgBotOverlay = nil
+    self.roundedOverlay = nil
+    self.roundedUVs = nil
     self.rectOverlay = nil
     self.notificationCloseGlyph = nil
     self.notificationCloseGlyphWidth = nil
@@ -51,24 +50,25 @@ function RHM_NotificationManager.new(modDirectory, settings)
 end
 
 function RHM_NotificationManager:load()
-    if not self.bgTopOverlay then
-        local uiElementsPath = Utils.getFilename("textures/ui_elements.dds", self.modDirectory)
-        local texSize = {1024, 512}
+    if not self.roundedOverlay then
+        local panelTexturePath = Utils.getFilename("textures/panelRounded.dds", self.modDirectory)
+        self.roundedOverlay = Overlay.new(panelTexturePath, 0, 0, 1, 1)
 
-        -- Exact authentic 3-part slices from Precision Farming / FS25 HUD:
-        -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom
-        local topUVs = GuiUtils.getUVs({7, 250, 330, 8}, texSize)
-        local midUVs = GuiUtils.getUVs({7, 270, 330, 8}, texSize)
-        local botUVs = GuiUtils.getUVs({7, 292, 330, 8}, texSize)
-
-        self.bgTopOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
-        if topUVs then self.bgTopOverlay:setUVs(topUVs) end
-
-        self.bgMidOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
-        if midUVs then self.bgMidOverlay:setUVs(midUVs) end
-
-        self.bgBotOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
-        if botUVs then self.bgBotOverlay:setUVs(botUVs) end
+        local pxUVs = {
+            topLeft     = {  0,  0,  5,  5 },
+            top         = {  5,  0, 54,  5 },
+            topRight    = { 59,  0,  5,  5 },
+            left        = {  0,  5,  5, 54 },
+            center      = {  5,  5, 54, 54 },
+            right       = { 59,  5,  5, 54 },
+            bottomLeft  = {  0, 59,  5,  5 },
+            bottom      = {  5, 59, 54,  5 },
+            bottomRight = { 59, 59,  5,  5 }
+        }
+        self.roundedUVs = {}
+        for key, coords in pairs(pxUVs) do
+            self.roundedUVs[key] = GuiUtils.getUVs(coords, {64, 64})
+        end
     end
 
     if not self.rectOverlay then
@@ -88,18 +88,11 @@ function RHM_NotificationManager:delete()
     removeConsoleCommand("rhm_hint")
     removeConsoleCommand("rhm_reset_hints")
 
-    if self.bgTopOverlay then
-        self.bgTopOverlay:delete()
-        self.bgTopOverlay = nil
+    if self.roundedOverlay then
+        self.roundedOverlay:delete()
+        self.roundedOverlay = nil
     end
-    if self.bgMidOverlay then
-        self.bgMidOverlay:delete()
-        self.bgMidOverlay = nil
-    end
-    if self.bgBotOverlay then
-        self.bgBotOverlay:delete()
-        self.bgBotOverlay = nil
-    end
+    self.roundedUVs = nil
     if self.rectOverlay then
         self.rectOverlay:delete()
         self.rectOverlay = nil
@@ -344,38 +337,59 @@ function RHM_NotificationManager:closeActiveNotification()
     self:dismissNotification()
 end
 
----EN: Draws authentic Precision Farming / FS25 3-slice rounded panel matching RHM Draggable HUD
----UA: Малює автентичну 3-компонентну заокруглену панель PF/FS25, ідентичну до RHM Draggable HUD
+---EN: Draws authentic FS25 9-slice rounded translucent panel
+---UA: Малює автентичну 9-секційну заокруглену напівпрозору панель FS25
 function RHM_NotificationManager:drawPanelBackground(x, y, w, h, color)
-    if not self.bgTopOverlay then return end
+    if not self.roundedOverlay or not self.roundedUVs then return end
 
-    local panelColor = color or COLOR_BG
-    local bgR = panelColor[1] or 0.028
-    local bgG = panelColor[2] or 0.030
-    local bgB = panelColor[3] or 0.036
-    local bgA = panelColor[4] or 0.88
+    local c = color or COLOR_BG
+    local r = c[1] or 0.0
+    local g = c[2] or 0.0
+    local b = c[3] or 0.0
+    local a = c[4] or 0.72
 
-    local uiScale = 1.0
-    if g_gameSettings and g_gameSettings.getValue then
-        uiScale = g_gameSettings:getValue("uiScale") or 1.0
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local snappedX = math.floor(x * screenW + 0.5) / screenW
+    local snappedY = math.floor(y * screenH + 0.5) / screenH
+    local snappedW = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local snappedH = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+
+    local cornerW = math.min(math.floor((6 / screenW) * screenW + 0.5) / screenW, snappedW * 0.5)
+    local cornerH = math.min(math.floor((6 / screenH) * screenH + 0.5) / screenH, snappedH * 0.5)
+
+    local leftX = snappedX
+    local centerX = snappedX + cornerW
+    local rightX = snappedX + snappedW - cornerW
+    local bottomY = snappedY
+    local centerY = snappedY + cornerH
+    local topY = snappedY + snappedH - cornerH
+    local centerW = math.max(rightX - centerX, 0)
+    local centerH = math.max(topY - centerY, 0)
+
+    local overlay = self.roundedOverlay
+    overlay:setColor(r, g, b, a)
+
+    local function renderSlice(sx, sy, sw, sh, uvs)
+        if sw <= 0 or sh <= 0 or not uvs then return end
+        overlay:setPosition(sx, sy)
+        overlay:setDimension(sw, sh)
+        overlay:setUVs(uvs)
+        overlay:render()
     end
-    local capH = 0.0075 * uiScale
-    local midH = math.max(0.001, h - capH * 2)
 
-    self.bgTopOverlay:setPosition(x, y + h - capH)
-    self.bgTopOverlay:setDimension(w, capH)
-    self.bgTopOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgTopOverlay:render()
+    local uvs = self.roundedUVs
+    renderSlice(leftX, bottomY, cornerW, cornerH, uvs.bottomLeft)
+    renderSlice(centerX, bottomY, centerW, cornerH, uvs.bottom)
+    renderSlice(rightX, bottomY, cornerW, cornerH, uvs.bottomRight)
 
-    self.bgMidOverlay:setPosition(x, y + capH)
-    self.bgMidOverlay:setDimension(w, midH)
-    self.bgMidOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgMidOverlay:render()
+    renderSlice(leftX, centerY, cornerW, centerH, uvs.left)
+    renderSlice(centerX, centerY, centerW, centerH, uvs.center)
+    renderSlice(rightX, centerY, cornerW, centerH, uvs.right)
 
-    self.bgBotOverlay:setPosition(x, y)
-    self.bgBotOverlay:setDimension(w, capH)
-    self.bgBotOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgBotOverlay:render()
+    renderSlice(leftX, topY, cornerW, cornerH, uvs.topLeft)
+    renderSlice(centerX, topY, centerW, cornerH, uvs.top)
+    renderSlice(rightX, topY, cornerW, cornerH, uvs.topRight)
 end
 
 ---EN: Draws a solid rectangle using atlas white pixel
@@ -410,14 +424,14 @@ function RHM_NotificationManager:getNotificationCloseGlyph(glyphWidth, glyphHeig
 
     if self.notificationCloseGlyph == nil then
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
-        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0, 0, 0, 0.8})
+        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0.0, 0.0, 0.0, 0.72})
         self.notificationCloseGlyph:setButtonGlyphColor(COLOR_ACCENT)
         self.notificationCloseGlyphWidth = glyphWidth
         self.notificationCloseGlyphHeight = glyphHeight
     elseif self.notificationCloseGlyphWidth ~= glyphWidth or self.notificationCloseGlyphHeight ~= glyphHeight then
         self.notificationCloseGlyph:delete()
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
-        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0, 0, 0, 0.8})
+        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0.0, 0.0, 0.0, 0.72})
         self.notificationCloseGlyph:setButtonGlyphColor(COLOR_ACCENT)
         self.notificationCloseGlyphWidth = glyphWidth
         self.notificationCloseGlyphHeight = glyphHeight
@@ -595,7 +609,7 @@ function RHM_NotificationManager:draw()
     local notification = self.activeNotification
     if not notification or notification.text == nil then return end
 
-    if not self.bgTopOverlay or not self.rectOverlay then
+    if not self.roundedOverlay or not self.rectOverlay then
         self:load()
     end
 

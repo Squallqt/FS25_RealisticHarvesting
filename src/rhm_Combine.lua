@@ -1388,8 +1388,12 @@ function rhm_Combine:updateSounds(dt)
     local load = (spec.data and spec.data.load) or 0
     local loss = (spec.data and spec.data.cropLoss) or 0
 
-    -- Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0%)
-    if alarmEnabled and (load >= 98 or loss >= 4.0) and spec.samples.overloadAlarm then
+    -- Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0% with Tier 2+ loss sensors)
+    local hasLossSensor = (spec.packageLevel or 1) >= 2
+    local isLossAlarm = hasLossSensor and (loss >= 4.0)
+    local isOverloadAlarm = (load >= 98)
+
+    if alarmEnabled and (isOverloadAlarm or isLossAlarm) and spec.samples.overloadAlarm then
         spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
         if spec._rhmAlarmTimer >= 2200 then
             spec._rhmAlarmTimer = 0

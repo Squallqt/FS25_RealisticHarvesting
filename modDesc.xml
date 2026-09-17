@@ -330,10 +330,10 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
     <helpLines>
         <!-- Title category for GUI -->
         <category title="$l10n_rhm_help_category">
+            <!-- ===== PAGE 1: OVERVIEW & PHYSICS ===== -->
             <page title="$l10n_rhm_help_overview_title" iconSliceId="rhmHelp_overview.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_overview_sub1"/>
-                    <image filename="textures/help_pages/help_overview.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_overview_1"/>
                 </paragraph>
                 <paragraph>
@@ -342,11 +342,10 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
                 </paragraph>
             </page>
 
-            <!-- ===== PAGE 2: HUD ===== -->
+            <!-- ===== PAGE 2: HUD & TELEMETRY ===== -->
             <page title="$l10n_rhm_help_hud_title" iconSliceId="rhmHelp_hud.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_hud_sub1"/>
-                    <image filename="textures/help_pages/help_hud.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_hud_1"/>
                 </paragraph>
                 <paragraph>
@@ -355,30 +354,22 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
                 </paragraph>
                 <paragraph>
                     <title text="$l10n_rhm_help_hud_sub3"/>
+                    <text text="$l10n_rhm_help_hud_3_load"/>
                 </paragraph>
                 <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="0px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_load" alignToImage="true"/>
+                    <text text="$l10n_rhm_help_hud_3_yield"/>
                 </paragraph>
                 <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="64px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_yield" alignToImage="true"/>
+                    <text text="$l10n_rhm_help_hud_3_productivity"/>
                 </paragraph>
                 <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="128px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_productivity" alignToImage="true"/>
+                    <text text="$l10n_rhm_help_hud_3_moisture"/>
                 </paragraph>
                 <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="192px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_moisture" alignToImage="true"/>
+                    <text text="$l10n_rhm_help_hud_3_loss"/>
                 </paragraph>
                 <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="256px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_loss" alignToImage="true"/>
-                </paragraph>
-                <paragraph>
-                    <image filename="textures/hud_icons.dds" uvs="320px 0px 64px 64px" size="512 64" aspectRatio="1" displaySize="40px 40px"/>
-                    <text text="$l10n_rhm_help_hud_3_speed" alignToImage="true"/>
+                    <text text="$l10n_rhm_help_hud_3_speed"/>
                 </paragraph>
             </page>
 
@@ -406,7 +397,6 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
             <page title="$l10n_rhm_help_special_title" iconSliceId="rhmHelp_special.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_special_sub1"/>
-                    <image filename="textures/help_pages/help_special.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_special_1"/>
                 </paragraph>
                 <paragraph>
@@ -419,7 +409,6 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
             <page title="$l10n_rhm_help_loss_title" iconSliceId="rhmHelp_croploss.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_loss_sub1"/>
-                    <image filename="textures/help_pages/help_croploss.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_loss_1"/>
                 </paragraph>
                 <paragraph>
@@ -432,7 +421,6 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
             <page title="$l10n_rhm_help_difficulty_title" iconSliceId="rhmHelp_difficulty.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_difficulty_sub1"/>
-                    <image filename="textures/help_pages/help_difficulty.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_difficulty_1"/>
                 </paragraph>
                 <paragraph>
@@ -445,22 +433,18 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
             <page title="$l10n_rhm_help_upgrades_title" iconSliceId="rhmHelp_upgrades.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_upgrades_sub1"/>
-                    <image filename="textures/help_pages/help_upgrades_1.dds" aspectRatio="2" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_upgrades_1"/>
                 </paragraph>
                 <paragraph>
                     <title text="$l10n_rhm_help_upgrades_sub2"/>
-                    <image filename="textures/help_pages/help_upgrades_2.dds" aspectRatio="2" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_upgrades_2"/>
                 </paragraph>
                 <paragraph>
                     <title text="$l10n_rhm_help_upgrades_sub3"/>
-                    <image filename="textures/help_pages/help_upgrades_3.dds" aspectRatio="2" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_upgrades_3"/>
                 </paragraph>
                 <paragraph>
                     <title text="$l10n_rhm_help_upgrades_sub4"/>
-                    <image filename="textures/help_pages/help_upgrades_4.dds" aspectRatio="2" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_upgrades_4"/>
                 </paragraph>
             </page>
@@ -469,7 +453,6 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
             <page title="$l10n_rhm_help_moisture_title" iconSliceId="rhmHelp_moisture.tab">
                 <paragraph>
                     <title text="$l10n_rhm_help_moisture_sub1"/>
-                    <image filename="textures/help_pages/help_moisture.dds" aspectRatio="1" displaySize="256px 256px"/>
                     <text text="$l10n_rhm_help_moisture_1"/>
                 </paragraph>
                 <paragraph>
