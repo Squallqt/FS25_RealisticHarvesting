@@ -25,22 +25,9 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
 
     self.savedCameraRotatableInfo = {} -- EN: Stores camera rotatability before cursor mode / UA: Зберігає стан камери до режиму курсора
 
-    -- EN: PREPEND to class onFrameOpen so our elements are in the layout BEFORE the base game
-    --     computes positions. appendedFunction runs too late (after the frame is already drawn).
-    -- UA: PREPEND до класу onFrameOpen — наші елементи потрапляють в layout ДО того як гра
-    --     рахує позиції. appendedFunction запускається занадто пізно (кадр вже намальований).
-    if mission:getIsClient() and g_gui then
-        local settings = self.settings
-        InGameMenuSettingsFrame.onFrameOpen = Utils.prependedFunction(
-            InGameMenuSettingsFrame.onFrameOpen,
-            function(settingsPage)
-                pcall(function()
-                    RHMSettingsUI.inject(settings)
-                    RHMSettingsUI.refreshUI(settings)
-                end)
-            end
-        )
-    end
+    -- EN: Multi-layer settings hooking to guarantee injection even with mods like FS25_ScandinavianCurrencies.
+    -- UA: Багаторівневі хуки налаштувань для гарантованої ін'єкції навіть при наявності модів на кшталт FS25_ScandinavianCurrencies.
+    self:setupSettingsHooks()
 
     -- EN: Console commands are always registered (server and client need them).
     -- UA: Консольні команди реєструються завжди (і сервер, і клієнт їх потребують).
@@ -108,9 +95,90 @@ function RHM_RealisticHarvestManager:toggleHUD()
     end
 end
 
+---EN: Sets up hooks for InGameMenu and SettingsFrame to inject RHM settings.
+---    Uses a multi-layered hooking strategy (InGameMenu.onMenuOpened, class onFrameOpen,
+---    and instance onFrameOpen) to guarantee settings injection even when other mods
+---    (such as FS25_ScandinavianCurrencies) overwrite instance methods.
+---UA: Налаштовує хуки для InGameMenu та SettingsFrame для ін'єкції налаштувань RHM.
+---    Використовує багаторівневу стратегію хуків (InGameMenu.onMenuOpened, клас onFrameOpen
+---    та екземпляр onFrameOpen), щоб гарантувати появу налаштувань навіть тоді, коли інші моди
+---    (наприклад FS25_ScandinavianCurrencies) перезаписують методи екземпляра.
+function RHM_RealisticHarvestManager:setupSettingsHooks()
+    if not (self.mission and self.mission:getIsClient() and g_gui) then
+        return
+    end
+
+    local settings = self.settings
+
+    local function onSettingsFrameOpen(settingsPage)
+        pcall(function()
+            RHMSettingsUI.inject(settings)
+            RHMSettingsUI.refreshUI(settings)
+        end)
+    end
+
+    -- 1. Hook InGameMenu.onMenuOpened (Global menu hook, completely immune to pageSettings shadowing)
+    if InGameMenu and InGameMenu.onMenuOpened and not self._inGameMenuOpenedHooked then
+        InGameMenu.onMenuOpened = Utils.appendedFunction(
+            InGameMenu.onMenuOpened,
+            function(menu)
+                local currentMenu = menu or (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
+                if currentMenu and currentMenu.pageSettings and not self._settingsFrameInstanceHooked then
+                    local pageSettings = currentMenu.pageSettings
+                    if pageSettings.onFrameOpen then
+                        pageSettings.onFrameOpen = Utils.prependedFunction(
+                            pageSettings.onFrameOpen,
+                            onSettingsFrameOpen
+                        )
+                        self._settingsFrameInstanceHooked = true
+                    end
+                end
+                pcall(function()
+                    RHMSettingsUI.inject(settings)
+                    RHMSettingsUI.refreshUI(settings)
+                end)
+            end
+        )
+        self._inGameMenuOpenedHooked = true
+    end
+
+    -- 2. Hook InGameMenuSettingsFrame.onFrameOpen (Class-level hook)
+    if InGameMenuSettingsFrame and InGameMenuSettingsFrame.onFrameOpen and not self._settingsFrameClassHooked then
+        InGameMenuSettingsFrame.onFrameOpen = Utils.prependedFunction(
+            InGameMenuSettingsFrame.onFrameOpen,
+            onSettingsFrameOpen
+        )
+        self._settingsFrameClassHooked = true
+    end
+
+    -- 3. Hook pageSettings.onFrameOpen directly on the instance (if already instantiated)
+    --    CRITICAL: Fixes compatibility with mods like FS25_ScandinavianCurrencies which assign
+    --    pageSettings.onFrameOpen directly on the instance, shadowing InGameMenuSettingsFrame.onFrameOpen.
+    local inGameMenu = (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
+    if inGameMenu and inGameMenu.pageSettings and not self._settingsFrameInstanceHooked then
+        local pageSettings = inGameMenu.pageSettings
+        if pageSettings.onFrameOpen then
+            pageSettings.onFrameOpen = Utils.prependedFunction(
+                pageSettings.onFrameOpen,
+                onSettingsFrameOpen
+            )
+            self._settingsFrameInstanceHooked = true
+        end
+    end
+end
+
 -- EN: Called after the mission finishes loading. Initializes HUD overlay assets (textures, positions).
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
+    self:setupSettingsHooks()
+
+    if self.mission and self.mission:getIsClient() then
+        pcall(function()
+            RHMSettingsUI.inject(self.settings)
+            RHMSettingsUI.refreshUI(self.settings)
+        end)
+    end
+
     if self.notificationManager then
         self.notificationManager:load()
     end

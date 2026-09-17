@@ -124,15 +124,18 @@ end
 function RHMSettingsUI.inject(settings)
     if RHMSettingsUI.injected then return end
 
-    local inGameMenu = g_gui.screenControllers[InGameMenu]
+    local inGameMenu = (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
     if not inGameMenu then
-        Logging.error("RHM: InGameMenu controller not found!")
         return
     end
 
     local settingsPage = inGameMenu.pageSettings
     if not settingsPage then
-        Logging.error("RHM: pageSettings not found!")
+        return
+    end
+
+    local gameLayout = settingsPage.gameSettingsLayout
+    if not gameLayout then
         return
     end
 
@@ -144,7 +147,6 @@ function RHMSettingsUI.inject(settings)
 
     -- EN: Target layouts (where options are injected in FS25 settings UI).
     -- UA: куди саме вставляти наші рядки в UI налаштувань.
-    local gameLayout = settingsPage.gameSettingsLayout
     local generalLayout = settingsPage.generalSettingsLayout or settingsPage.generalLayout or gameLayout
     if not generalLayout then
         Logging.warning("RHM: generalSettingsLayout not found; using gameSettingsLayout as fallback.")
