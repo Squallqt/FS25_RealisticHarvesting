@@ -62,46 +62,46 @@ function RHMCombineCalibrationGUI.new(modDirectory)
         buttonW      = 0.017,
         buttonH      = 0.017,
 
-        -- Deep obsidian carbon glass palette (neutral dark, subtle translucency)
+        -- Deep obsidian carbon glass palette (unified with RHM Draggable HUD and Notifications)
         colors = {
             outerRim       = {0.20, 0.22, 0.25, 0.35}, -- 1px metallic rim
-            bezel          = {0.06, 0.07, 0.08, 0.85}, -- Titanium outer frame (translucent)
-            bg             = {0.018, 0.020, 0.024, 0.82}, -- Deep obsidian dark glass (translucent field view)
-            header         = {0.040, 0.045, 0.052, 0.88}, -- Dark status bar
-            headerAccent   = {0.18, 0.78, 0.42, 0.85}, -- Emerald harvest accent line
-            sectionBg      = {0.030, 0.035, 0.042, 0.80}, -- Carbon strip for section headers
+            bezel          = {0.045, 0.050, 0.058, 0.88}, -- Titanium outer frame (translucent)
+            bg             = {0.028, 0.030, 0.036, 0.88}, -- Deep obsidian dark glass (matching HUD)
+            header         = {0.038, 0.042, 0.050, 0.88}, -- Dark status bar
+            headerAccent   = {0.18, 0.78, 0.42, 0.95}, -- Emerald harvest accent line
+            sectionBg      = {0.028, 0.032, 0.038, 0.88}, -- Carbon strip for section headers
             sectionNotch   = {0.18, 0.78, 0.42, 0.95}, -- Emerald accent mark on section headers
-            statsCardBg    = {0.015, 0.018, 0.022, 0.75}, -- Recessed telemetry card background
-            statsCardBorder= {1.00, 1.00, 1.00, 0.08},
-            separator      = {1.00, 1.00, 1.00, 0.06},
+            statsCardBg    = {0.020, 0.022, 0.028, 0.88}, -- Recessed telemetry card background
+            statsCardBorder= {1.00, 1.00, 1.00, 0.12},
+            separator      = {1.00, 1.00, 1.00, 0.12},
             paramRowHover  = {1.00, 1.00, 1.00, 0.025},
 
             -- Tactile Slider Colors
-            trackGroove    = {0.012, 0.015, 0.018, 0.85}, -- Deep recessed groove
+            trackGroove    = {0.012, 0.015, 0.018, 0.88}, -- Deep recessed groove
             trackBorder    = {0.060, 0.065, 0.075, 0.80},
             trackTick      = {1.00, 1.00, 1.00, 0.12},
-            trackOptimal   = {0.12, 0.65, 0.35, 0.45}, -- Glowing green sweet spot band
-            trackOptimalBorder = {0.20, 0.85, 0.50, 0.70},
+            trackOptimal   = {0.18, 0.78, 0.42, 0.45}, -- Glowing green sweet spot band
+            trackOptimalBorder = {0.18, 0.85, 0.48, 0.70},
             trackCenterNotch   = {0.30, 1.00, 0.60, 0.95},
             trackThumb     = {0.94, 0.95, 0.97, 1.00}, -- Brushed metallic silver
             trackThumbHover= {1.00, 1.00, 1.00, 1.00},
-            trackFill      = {0.18, 0.80, 0.45, 0.85}, -- Emerald fill
-            trackFillWarn  = {0.95, 0.72, 0.18, 0.85}, -- Warm amber fill
-            trackFillErr   = {0.90, 0.24, 0.24, 0.85}, -- Alert ruby red fill
+            trackFill      = {0.18, 0.80, 0.45, 0.88}, -- Emerald fill
+            trackFillWarn  = {0.95, 0.72, 0.18, 0.88}, -- Warm amber fill
+            trackFillErr   = {0.90, 0.24, 0.24, 0.88}, -- Alert ruby red fill
 
             text           = {0.94, 0.95, 0.97, 1.00},
             textDim        = {0.60, 0.63, 0.68, 1.00},
-            success        = {0.20, 0.85, 0.48, 1.00}, -- Crisp emerald green
+            success        = {0.18, 0.82, 0.45, 1.00}, -- Crisp emerald green
             warning        = {0.95, 0.72, 0.18, 1.00}, -- Warm amber
             error          = {0.90, 0.24, 0.24, 1.00}, -- Alert red
 
-            button         = {0.055, 0.060, 0.070, 0.85},
-            buttonBorder   = {1.00, 1.00, 1.00, 0.08},
+            button         = {0.055, 0.060, 0.070, 0.88},
+            buttonBorder   = {1.00, 1.00, 1.00, 0.12},
             buttonHover    = {0.12, 0.14, 0.16, 0.95},
             buttonAuto     = {0.08, 0.42, 0.24, 0.90}, -- Rich emerald pill
-            buttonAutoBorder={0.20, 0.85, 0.50, 0.85},
+            buttonAutoBorder={0.18, 0.82, 0.45, 0.88},
             buttonAutoHover= {0.12, 0.55, 0.32, 1.00},
-            buttonReset    = {0.14, 0.07, 0.07, 0.85},
+            buttonReset    = {0.14, 0.07, 0.07, 0.88},
             buttonResetBorder={0.35, 0.10, 0.10, 0.50},
             buttonResetHover={0.38, 0.10, 0.10, 1.00},
         }

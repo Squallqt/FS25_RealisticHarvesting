@@ -425,7 +425,7 @@ function RHMDraggableHUD:draw()
 
         -- Thin vertical divider between cells (exact PF style)
         if i < numCells then
-            self:drawRect(cellEndX - borderW, y + 0.007 * self.uiScale, borderW, h - 0.014 * self.uiScale, 1.0, 1.0, 1.0, 0.18)
+            self:drawRect(cellEndX - borderW, y + 0.007 * self.uiScale, borderW, h - 0.014 * self.uiScale, 1.0, 1.0, 1.0, 0.12)
         end
 
         -- Icon (vertically centered on the left of cell)

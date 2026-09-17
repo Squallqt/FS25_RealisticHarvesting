@@ -10,27 +10,16 @@ RHM_NotificationManager.INSTANCE = nil
 
 local NotificationManager_mt = Class(RHM_NotificationManager)
 
--- Visual constants matching the authentic screenshot style
-local COLOR_GAME_GREEN = {0.78, 0.98, 0.05, 1}
-local COLOR_PANEL_BG = {0.05, 0.06, 0.05, 0.94}
-local COLOR_TEXT = {0.96, 0.96, 0.96, 1}
-local COLOR_OK = {1, 1, 1, 1}
-
-local ROUNDED_PANEL_CORNER_SIZE = 6
-
--- EN: Precalculated exact 8-float UV arrays for 64x64 9-slice panel texture
--- UA: Попередньо розраховані точні масиви 8 UV-координат для 64x64 9-slice текстури
-local ROUNDED_PANEL_STATIC_UVS = {
-    topLeft     = { 0.0, 0.0, 0.0, 0.078125, 0.078125, 0.0, 0.078125, 0.078125 },
-    top         = { 0.078125, 0.0, 0.078125, 0.078125, 0.921875, 0.0, 0.921875, 0.078125 },
-    topRight    = { 0.921875, 0.0, 0.921875, 0.078125, 1.0, 0.0, 1.0, 0.078125 },
-    left        = { 0.0, 0.078125, 0.0, 0.921875, 0.078125, 0.078125, 0.078125, 0.921875 },
-    center      = { 0.078125, 0.078125, 0.078125, 0.921875, 0.921875, 0.078125, 0.921875, 0.921875 },
-    right       = { 0.921875, 0.078125, 0.921875, 0.921875, 1.0, 0.078125, 1.0, 0.921875 },
-    bottomLeft  = { 0.0, 0.921875, 0.0, 1.0, 0.078125, 0.921875, 0.078125, 1.0 },
-    bottom      = { 0.078125, 0.921875, 0.078125, 1.0, 0.921875, 0.921875, 0.921875, 1.0 },
-    bottomRight = { 0.921875, 0.921875, 0.921875, 1.0, 1.0, 0.921875, 1.0, 1.0 }
-}
+-- EN: Visual constants unified with RHM Draggable HUD and Calibration Terminal
+-- UA: Візуальні константи, уніфіковані з RHM Draggable HUD та терміналом калібрування
+local COLOR_BG = {0.028, 0.030, 0.036, 0.88}            -- Deep obsidian dark glass (88% alpha)
+local COLOR_ACCENT = {0.18, 0.78, 0.42, 0.95}        -- Authentic emerald harvest accent
+local COLOR_DIVIDER = {1.00, 1.00, 1.00, 0.12}       -- Subtle metallic divider
+local COLOR_TITLE = {0.18, 0.82, 0.45, 1.00}         -- Crisp emerald title
+local COLOR_TEXT = {0.94, 0.95, 0.97, 0.96}          -- High-readability clean white
+local COLOR_OK = {0.94, 0.95, 0.97, 1.00}            -- Action prompt text
+local COLOR_BUTTON_BG = {0.055, 0.060, 0.070, 0.88}  -- Action button badge
+local COLOR_BUTTON_BORDER = {1.00, 1.00, 1.00, 0.12} -- Action button border
 
 function RHM_NotificationManager.new(modDirectory, settings)
     local self = setmetatable({}, NotificationManager_mt)
@@ -46,9 +35,10 @@ function RHM_NotificationManager.new(modDirectory, settings)
     self.cumulativeTier1HarvestTime = 0
     self.harvestActiveRunTime = 0
 
-    self.panelBackgroundRounded = Utils.getFilename("textures/panelRounded.dds", self.modDirectory)
-    self.quadOverlay = nil
-    self.dividerOverlay = nil
+    self.bgTopOverlay = nil
+    self.bgMidOverlay = nil
+    self.bgBotOverlay = nil
+    self.rectOverlay = nil
     self.notificationCloseGlyph = nil
     self.notificationCloseGlyphWidth = nil
     self.notificationCloseGlyphHeight = nil
@@ -61,11 +51,33 @@ function RHM_NotificationManager.new(modDirectory, settings)
 end
 
 function RHM_NotificationManager:load()
-    if not self.quadOverlay then
-        self.quadOverlay = Overlay.new(self.panelBackgroundRounded, 0, 0, 1, 1)
+    if not self.bgTopOverlay then
+        local uiElementsPath = Utils.getFilename("textures/ui_elements.dds", self.modDirectory)
+        local texSize = {1024, 512}
+
+        -- Exact authentic 3-part slices from Precision Farming / FS25 HUD:
+        -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom
+        local topUVs = GuiUtils.getUVs({7, 250, 330, 8}, texSize)
+        local midUVs = GuiUtils.getUVs({7, 270, 330, 8}, texSize)
+        local botUVs = GuiUtils.getUVs({7, 292, 330, 8}, texSize)
+
+        self.bgTopOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
+        if topUVs then self.bgTopOverlay:setUVs(topUVs) end
+
+        self.bgMidOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
+        if midUVs then self.bgMidOverlay:setUVs(midUVs) end
+
+        self.bgBotOverlay = Overlay.new(uiElementsPath, 0, 0, 1, 1)
+        if botUVs then self.bgBotOverlay:setUVs(botUVs) end
     end
-    if not self.dividerOverlay then
-        self.dividerOverlay = Overlay.new("dataS/menu/base/graph_pixel.dds", 0, 0, 1, 1)
+
+    if not self.rectOverlay then
+        local atlasPath = Utils.getFilename("textures/hud_icons.dds", self.modDirectory)
+        local bgUVs = GuiUtils.getUVs({388, 4, 56, 56}, {512, 64})
+        self.rectOverlay = Overlay.new(atlasPath, 0, 0, 1, 1)
+        if bgUVs then
+            self.rectOverlay:setUVs(bgUVs)
+        end
     end
 
     addConsoleCommand("rhm_hint", "Show a tutorial hint manually [welcome|overload|loss|moisture|headland|upgrade]", "consoleCommandShowHint", self)
@@ -76,13 +88,21 @@ function RHM_NotificationManager:delete()
     removeConsoleCommand("rhm_hint")
     removeConsoleCommand("rhm_reset_hints")
 
-    if self.quadOverlay then
-        self.quadOverlay:delete()
-        self.quadOverlay = nil
+    if self.bgTopOverlay then
+        self.bgTopOverlay:delete()
+        self.bgTopOverlay = nil
     end
-    if self.dividerOverlay then
-        self.dividerOverlay:delete()
-        self.dividerOverlay = nil
+    if self.bgMidOverlay then
+        self.bgMidOverlay:delete()
+        self.bgMidOverlay = nil
+    end
+    if self.bgBotOverlay then
+        self.bgBotOverlay:delete()
+        self.bgBotOverlay = nil
+    end
+    if self.rectOverlay then
+        self.rectOverlay:delete()
+        self.rectOverlay = nil
     end
     if self.notificationCloseGlyph then
         self.notificationCloseGlyph:delete()
@@ -318,78 +338,60 @@ function RHM_NotificationManager:closeActiveNotification()
     self:dismissNotification()
 end
 
----EN: 9-slice quad renderer for rounded background panel
-function RHM_NotificationManager:renderPanelQuad(texturePath, x, y, width, height, color, uvs)
-    if width <= 0 or height <= 0 then
-        return
-    end
+---EN: Draws authentic Precision Farming / FS25 3-slice rounded panel matching RHM Draggable HUD
+---UA: Малює автентичну 3-компонентну заокруглену панель PF/FS25, ідентичну до RHM Draggable HUD
+function RHM_NotificationManager:drawPanelBackground(x, y, w, h, color)
+    if not self.bgTopOverlay then return end
 
-    local overlay = self.quadOverlay
-    if not overlay then
-        self.quadOverlay = Overlay.new(self.panelBackgroundRounded, 0, 0, 1, 1)
-        overlay = self.quadOverlay
-    end
+    local panelColor = color or COLOR_BG
+    local bgR = panelColor[1] or 0.028
+    local bgG = panelColor[2] or 0.030
+    local bgB = panelColor[3] or 0.036
+    local bgA = panelColor[4] or 0.88
 
-    overlay:setPosition(x, y)
-    overlay:setDimension(width, height)
-    if uvs ~= nil then
-        overlay:setUVs(uvs)
+    local uiScale = 1.0
+    if g_gameSettings and g_gameSettings.getValue then
+        uiScale = g_gameSettings:getValue("uiScale") or 1.0
     end
-    overlay:setColor(color[1], color[2], color[3], color[4] or 1)
-    overlay:render()
+    local capH = 0.0075 * uiScale
+    local midH = math.max(0.001, h - capH * 2)
+
+    self.bgTopOverlay:setPosition(x, y + h - capH)
+    self.bgTopOverlay:setDimension(w, capH)
+    self.bgTopOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgTopOverlay:render()
+
+    self.bgMidOverlay:setPosition(x, y + capH)
+    self.bgMidOverlay:setDimension(w, midH)
+    self.bgMidOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgMidOverlay:render()
+
+    self.bgBotOverlay:setPosition(x, y)
+    self.bgBotOverlay:setDimension(w, capH)
+    self.bgBotOverlay:setColor(bgR, bgG, bgB, bgA)
+    self.bgBotOverlay:render()
 end
 
----EN: Draws the 9-slice background with rounded corners using static precalculated UV constants
-function RHM_NotificationManager:drawPanelBackground(x, y, width, height, color)
-    local panelColor = color or COLOR_PANEL_BG
-    local panelX, panelY, panelWidth, panelHeight = self:snapScreenRect(x, y, width, height)
-
-    local cornerWidth = math.min(
-        math.floor(self:scalePixelToScreenWidth(ROUNDED_PANEL_CORNER_SIZE) * (g_screenWidth or 1920) + 0.5) / (g_screenWidth or 1920),
-        panelWidth * 0.5
-    )
-    local cornerHeight = math.min(
-        math.floor(self:scalePixelToScreenHeight(ROUNDED_PANEL_CORNER_SIZE) * (g_screenHeight or 1080) + 0.5) / (g_screenHeight or 1080),
-        panelHeight * 0.5
-    )
-
-    local leftX = panelX
-    local centerX = panelX + cornerWidth
-    local rightX = panelX + panelWidth - cornerWidth
-    local bottomY = panelY
-    local centerY = panelY + cornerHeight
-    local topY = panelY + panelHeight - cornerHeight
-    local centerWidth = math.max(rightX - centerX, 0)
-    local centerHeight = math.max(topY - centerY, 0)
-    local uvs = ROUNDED_PANEL_STATIC_UVS
-
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, bottomY, cornerWidth, cornerHeight, panelColor, uvs.bottomLeft)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, bottomY, centerWidth, cornerHeight, panelColor, uvs.bottom)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, bottomY, cornerWidth, cornerHeight, panelColor, uvs.bottomRight)
-
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, centerY, cornerWidth, centerHeight, panelColor, uvs.left)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, centerY, centerWidth, centerHeight, panelColor, uvs.center)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, centerY, cornerWidth, centerHeight, panelColor, uvs.right)
-
-    self:renderPanelQuad(self.panelBackgroundRounded, leftX, topY, cornerWidth, cornerHeight, panelColor, uvs.topLeft)
-    self:renderPanelQuad(self.panelBackgroundRounded, centerX, topY, centerWidth, cornerHeight, panelColor, uvs.top)
-    self:renderPanelQuad(self.panelBackgroundRounded, rightX, topY, cornerWidth, cornerHeight, panelColor, uvs.topRight)
+---EN: Draws a solid rectangle using atlas white pixel
+---UA: Малює суцільний прямокутник за допомогою білого пікселя з атласу
+function RHM_NotificationManager:drawRect(x, y, w, h, r, g, b, a)
+    if not self.rectOverlay then return end
+    self.rectOverlay:setPosition(x, y)
+    self.rectOverlay:setDimension(w, h)
+    self.rectOverlay:setColor(r, g, b, a or 1.0)
+    self.rectOverlay:render()
 end
 
----EN: Draws a thin divider line
-function RHM_NotificationManager:drawNotificationDivider(x, y, width, height, color)
-    local snappedX, snappedY, snappedWidth, snappedHeight = self:snapScreenRect(x, y, width, height)
-
-    local overlay = self.dividerOverlay
-    if not overlay then
-        self.dividerOverlay = Overlay.new("dataS/menu/base/graph_pixel.dds", 0, 0, 1, 1)
-        overlay = self.dividerOverlay
-    end
-
-    overlay:setPosition(snappedX, snappedY)
-    overlay:setDimension(snappedWidth, snappedHeight)
-    overlay:setColor(color[1], color[2], color[3], color[4] or 1)
-    overlay:render()
+---EN: Draws a bordered rectangle (e.g. for button pills)
+---UA: Малює прямокутник з рамкою (наприклад, для кнопок-підказок)
+function RHM_NotificationManager:drawBorderedRect(x, y, w, h, bgR, bgG, bgB, bgA, borderR, borderG, borderB, borderA, borderWidth)
+    local bw = borderWidth or (1 / (g_screenWidth or 1920))
+    local bh = borderWidth or (1 / (g_screenHeight or 1080))
+    self:drawRect(x, y, w, h, bgR, bgG, bgB, bgA)
+    self:drawRect(x, y + h - bh, w, bh, borderR, borderG, borderB, borderA)
+    self:drawRect(x, y, w, bh, borderR, borderG, borderB, borderA)
+    self:drawRect(x, y + bh, bw, h - bh * 2, borderR, borderG, borderB, borderA)
+    self:drawRect(x + w - bw, y + bh, bw, h - bh * 2, borderR, borderG, borderB, borderA)
 end
 
 ---EN: Gets or caches the close glyph element (avoids recreating every frame)
@@ -402,15 +404,15 @@ function RHM_NotificationManager:getNotificationCloseGlyph(glyphWidth, glyphHeig
 
     if self.notificationCloseGlyph == nil then
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
-        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_GAME_GREEN, {0, 0, 0, 0.8})
-        self.notificationCloseGlyph:setButtonGlyphColor(COLOR_GAME_GREEN)
+        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0, 0, 0, 0.8})
+        self.notificationCloseGlyph:setButtonGlyphColor(COLOR_ACCENT)
         self.notificationCloseGlyphWidth = glyphWidth
         self.notificationCloseGlyphHeight = glyphHeight
     elseif self.notificationCloseGlyphWidth ~= glyphWidth or self.notificationCloseGlyphHeight ~= glyphHeight then
         self.notificationCloseGlyph:delete()
         self.notificationCloseGlyph = InputGlyphElement.new(g_inputDisplayManager, glyphWidth, glyphHeight)
-        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_GAME_GREEN, {0, 0, 0, 0.8})
-        self.notificationCloseGlyph:setButtonGlyphColor(COLOR_GAME_GREEN)
+        self.notificationCloseGlyph:setKeyboardGlyphColor(COLOR_ACCENT, {0, 0, 0, 0.8})
+        self.notificationCloseGlyph:setButtonGlyphColor(COLOR_ACCENT)
         self.notificationCloseGlyphWidth = glyphWidth
         self.notificationCloseGlyphHeight = glyphHeight
         self.notificationCloseGlyphInputMode = nil
@@ -587,7 +589,7 @@ function RHM_NotificationManager:draw()
     local notification = self.activeNotification
     if not notification or notification.text == nil then return end
 
-    if not self.quadOverlay or not self.dividerOverlay then
+    if not self.bgTopOverlay or not self.rectOverlay then
         self:load()
     end
 
@@ -614,18 +616,18 @@ function RHM_NotificationManager:draw()
     local closeGlyphHeight = notification.closeGlyphHeight or self:scalePixelToScreenHeight(16)
     local closeGlyphWidth = self:scalePixelToScreenWidth(16)
 
-    -- 1. Draw 9-slice dark translucent background panel with rounded corners
-    self:drawPanelBackground(panelX, panelY, panelWidth, dynamicHeight, COLOR_PANEL_BG)
+    -- 1. Draw authentic 3-part Precision Farming rounded dark glass background (matching HUD capsule)
+    self:drawPanelBackground(panelX, panelY, panelWidth, dynamicHeight, COLOR_BG)
 
     local centerX = panelX + panelWidth * 0.5
     local currentY = panelY + dynamicHeight - padTop
 
-    -- 2. Render UPPERCASE Bold Title in neon lime green
+    -- 2. Render Title in crisp emerald green with accent line
     if hasTitle then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_TOP)
         setTextBold(true)
-        setTextColor(COLOR_GAME_GREEN[1], COLOR_GAME_GREEN[2], COLOR_GAME_GREEN[3], COLOR_GAME_GREEN[4])
+        setTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], COLOR_TITLE[4])
 
         for _, line in ipairs(titleLines) do
             renderText(centerX, currentY, titleTextSize, line)
@@ -635,7 +637,8 @@ function RHM_NotificationManager:draw()
         currentY = currentY - gapAfterTitle
         local dividerWidth = panelWidth - padding * 2
         local dividerY = currentY - titleDividerHeight * 0.5
-        self:drawNotificationDivider(panelX + padding, dividerY, dividerWidth, titleDividerHeight, COLOR_GAME_GREEN)
+        -- Emerald accent divider line under title
+        self:drawRect(panelX + padding, dividerY, dividerWidth, titleDividerHeight, COLOR_ACCENT[1], COLOR_ACCENT[2], COLOR_ACCENT[3], COLOR_ACCENT[4])
 
         currentY = currentY - gapAfterTopDivider
     end
@@ -656,11 +659,12 @@ function RHM_NotificationManager:draw()
         currentY = currentY - gapBeforeBottomDivider
         local dividerWidth = panelWidth - padding * 2
         local bottomDividerY = currentY - titleDividerHeight * 0.5
-        self:drawNotificationDivider(panelX + padding, bottomDividerY, dividerWidth, titleDividerHeight, COLOR_GAME_GREEN)
+        -- Subtle metallic divider line above footer
+        self:drawRect(panelX + padding, bottomDividerY, dividerWidth, titleDividerHeight, COLOR_DIVIDER[1], COLOR_DIVIDER[2], COLOR_DIVIDER[3], COLOR_DIVIDER[4])
 
         currentY = currentY - gapBeforeFooter
 
-        -- 5. Footer: Icon Glyph + "OK"
+        -- 5. Footer: Input Glyph + "OK"
         local glyph = self:getNotificationCloseGlyph(closeGlyphWidth, closeGlyphHeight)
         local okText = "OK"
         local okTextSize = textSize
@@ -682,21 +686,15 @@ function RHM_NotificationManager:draw()
             setTextColor(COLOR_OK[1], COLOR_OK[2], COLOR_OK[3], COLOR_OK[4])
             renderText(glyphX + glyphWidth + textSpacing, footerY + closeGlyphHeight * 0.5, okTextSize, okText)
         else
-            -- Fallback vector mouse glyph
-            local mWidth = self:scalePixelToScreenWidth(13)
+            -- Fallback button badge: [ Enter ] OK
+            local mWidth = self:scalePixelToScreenWidth(16)
             local mHeight = closeGlyphHeight
             local totalFooterW = mWidth + textSpacing + okTextWidth
             local mX = centerX - totalFooterW * 0.5
             local mY = footerY
 
-            -- Mouse outline
-            self:drawNotificationDivider(mX, mY, mWidth, mHeight, COLOR_GAME_GREEN)
-            -- Inner fill
-            local bw = 1 / (g_screenWidth or 1920)
-            local bh = 1 / (g_screenHeight or 1080)
-            self:drawNotificationDivider(mX + bw, mY + bh, mWidth - bw*2, mHeight - bh*2, {0.05, 0.06, 0.05, 1})
-            -- Highlight left button
-            self:drawNotificationDivider(mX + bw, mY + mHeight*0.5, mWidth*0.5 - bw, mHeight*0.5 - bh, COLOR_GAME_GREEN)
+            self:drawBorderedRect(mX, mY, mWidth, mHeight, COLOR_BUTTON_BG[1], COLOR_BUTTON_BG[2], COLOR_BUTTON_BG[3], COLOR_BUTTON_BG[4], COLOR_BUTTON_BORDER[1], COLOR_BUTTON_BORDER[2], COLOR_BUTTON_BORDER[3], COLOR_BUTTON_BORDER[4])
+            self:drawRect(mX + self:scalePixelToScreenWidth(2), mY + mHeight * 0.5, (mWidth - self:scalePixelToScreenWidth(4)) * 0.5, (mHeight * 0.5) - self:scalePixelToScreenHeight(2), COLOR_ACCENT[1], COLOR_ACCENT[2], COLOR_ACCENT[3], 0.90)
 
             setTextAlignment(RenderText.ALIGN_LEFT)
             setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_MIDDLE)
