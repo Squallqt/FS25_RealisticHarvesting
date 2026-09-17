@@ -10,13 +10,13 @@ RHM_NotificationManager.INSTANCE = nil
 
 local NotificationManager_mt = Class(RHM_NotificationManager)
 
--- Visual constants matching the native style
-local COLOR_GAME_GREEN = {0.529, 0.706, 0, 1}
-local COLOR_PANEL_BG = {0.05, 0.06, 0.07, 0.88}
-local COLOR_TEXT = {1, 1, 1, 1}
-local COLOR_OK = {1, 1, 1, 0.95}
+-- Visual constants matching the authentic screenshot style
+local COLOR_GAME_GREEN = {0.78, 0.98, 0.05, 1}
+local COLOR_PANEL_BG = {0.05, 0.06, 0.05, 0.94}
+local COLOR_TEXT = {0.96, 0.96, 0.96, 1}
+local COLOR_OK = {1, 1, 1, 1}
 
-local ROUNDED_PANEL_CORNER_SIZE = 5
+local ROUNDED_PANEL_CORNER_SIZE = 6
 
 -- EN: Precalculated exact 8-float UV arrays for 64x64 9-slice panel texture
 -- UA: Попередньо розраховані точні масиви 8 UV-координат для 64x64 9-slice текстури
@@ -230,19 +230,22 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
 
     -- Pre-calculate layout & wrapped lines ONCE to avoid garbage collection in draw loop
     local panelWidth = math.max(0.24, self:scalePixelToScreenWidth(460))
-    local padding = self:scalePixelToScreenWidth(15)
+    local padding = self:scalePixelToScreenWidth(18)
     local fullTextWidth = panelWidth - (padding * 2)
 
-    local titleTextSize = self:scalePixelToScreenHeight(18)
-    local titleLineHeight = self:scalePixelToScreenHeight(22)
-    local textSize = self:scalePixelToScreenHeight(14)
-    local lineHeight = self:scalePixelToScreenHeight(20)
+    local titleTextSize = self:scalePixelToScreenHeight(17)
+    local titleLineHeight = self:scalePixelToScreenHeight(21)
+    local textSize = self:scalePixelToScreenHeight(13.5)
+    local lineHeight = self:scalePixelToScreenHeight(18.5)
 
-    local titleSpacing = self:scalePixelToScreenHeight(7)
+    local padTop = self:scalePixelToScreenHeight(12)
+    local gapAfterTitle = self:scalePixelToScreenHeight(7)
     local titleDividerHeight = math.max(self:scalePixelToScreenHeight(1.5), 1 / (g_screenHeight or 1080))
-    local titleTextExtraSpacing = self:scalePixelToScreenHeight(8)
-    local dividerSpacing = self:scalePixelToScreenHeight(4)
-    local bottomDividerTextSpacing = self:scalePixelToScreenHeight(4)
+    local gapAfterTopDivider = self:scalePixelToScreenHeight(9)
+    local gapBeforeBottomDivider = self:scalePixelToScreenHeight(9)
+    local gapBeforeFooter = self:scalePixelToScreenHeight(7)
+    local closeGlyphHeight = self:scalePixelToScreenHeight(16)
+    local padBottom = self:scalePixelToScreenHeight(9)
 
     local titleLines = {}
     if formattedTitle ~= nil and formattedTitle ~= "" then
@@ -251,18 +254,17 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
     local hasTitle = #titleLines > 0
 
     local lines = self:wrapText(rawText, fullTextWidth, textSize)
-    local baseHeight = padding * 2 + lineHeight
 
-    local topSectionHeight = hasTitle and (padding + (#titleLines * titleLineHeight) + dividerSpacing + titleDividerHeight) or 0
-    local bottomSectionHeight = hasTitle and (topSectionHeight + dividerSpacing + bottomDividerTextSpacing) or 0
-    local dynamicHeight = hasTitle
-        and (padding + (#titleLines * titleLineHeight) + titleSpacing + titleTextExtraSpacing + (#lines * lineHeight) + bottomSectionHeight)
-        or (padding * 2 + (#lines * lineHeight))
+    local dynamicHeight = 0
+    if hasTitle then
+        dynamicHeight = padTop + (#titleLines * titleLineHeight) + gapAfterTitle + titleDividerHeight + gapAfterTopDivider + (#lines * lineHeight) + gapBeforeBottomDivider + titleDividerHeight + gapBeforeFooter + closeGlyphHeight + padBottom
+    else
+        dynamicHeight = padTop + (#lines * lineHeight) + gapBeforeFooter + closeGlyphHeight + padBottom
+    end
 
     local baseAnchorY = 0.14 -- Sitting comfortably in lower screen region
-    local anchorCenterY = baseAnchorY + baseHeight * 0.5
     local panelX = (1.0 - panelWidth) * 0.5
-    local panelY = anchorCenterY - dynamicHeight * 0.5
+    local panelY = baseAnchorY
 
     self.activeNotification = {
         title = formattedTitle,
@@ -279,12 +281,14 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
         titleLineHeight = titleLineHeight,
         textSize = textSize,
         lineHeight = lineHeight,
-        titleSpacing = titleSpacing,
+        padTop = padTop,
+        gapAfterTitle = gapAfterTitle,
         titleDividerHeight = titleDividerHeight,
-        titleTextExtraSpacing = titleTextExtraSpacing,
-        dividerSpacing = dividerSpacing,
-        bottomDividerTextSpacing = bottomDividerTextSpacing,
-        topSectionHeight = topSectionHeight,
+        gapAfterTopDivider = gapAfterTopDivider,
+        gapBeforeBottomDivider = gapBeforeBottomDivider,
+        gapBeforeFooter = gapBeforeFooter,
+        closeGlyphHeight = closeGlyphHeight,
+        padBottom = padBottom,
         durationMs = displayDuration,
         isPersistent = isPersistent,
         timer = 0,
@@ -600,24 +604,23 @@ function RHM_NotificationManager:draw()
     local titleLineHeight = notification.titleLineHeight
     local textSize = notification.textSize
     local lineHeight = notification.lineHeight
-    local titleSpacing = notification.titleSpacing
-    local titleDividerHeight = notification.titleDividerHeight
-    local titleTextExtraSpacing = notification.titleTextExtraSpacing
-    local dividerSpacing = notification.dividerSpacing
-    local bottomDividerTextSpacing = notification.bottomDividerTextSpacing
-    local topSectionHeight = notification.topSectionHeight
 
-    local closeGlyphSize = 18
-    local closeGlyphWidth = self:scalePixelToScreenWidth(closeGlyphSize)
-    local closeGlyphHeight = self:scalePixelToScreenHeight(closeGlyphSize)
+    local padTop = notification.padTop or self:scalePixelToScreenHeight(12)
+    local gapAfterTitle = notification.gapAfterTitle or self:scalePixelToScreenHeight(7)
+    local titleDividerHeight = notification.titleDividerHeight or math.max(self:scalePixelToScreenHeight(1.5), 1 / (g_screenHeight or 1080))
+    local gapAfterTopDivider = notification.gapAfterTopDivider or self:scalePixelToScreenHeight(9)
+    local gapBeforeBottomDivider = notification.gapBeforeBottomDivider or self:scalePixelToScreenHeight(9)
+    local gapBeforeFooter = notification.gapBeforeFooter or self:scalePixelToScreenHeight(7)
+    local closeGlyphHeight = notification.closeGlyphHeight or self:scalePixelToScreenHeight(16)
+    local closeGlyphWidth = self:scalePixelToScreenWidth(16)
 
     -- 1. Draw 9-slice dark translucent background panel with rounded corners
     self:drawPanelBackground(panelX, panelY, panelWidth, dynamicHeight, COLOR_PANEL_BG)
 
     local centerX = panelX + panelWidth * 0.5
-    local currentY = panelY + dynamicHeight - padding
+    local currentY = panelY + dynamicHeight - padTop
 
-    -- 2. Render UPPERCASE Bold Title in neon green
+    -- 2. Render UPPERCASE Bold Title in neon lime green
     if hasTitle then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_TOP)
@@ -629,11 +632,12 @@ function RHM_NotificationManager:draw()
             currentY = currentY - titleLineHeight
         end
 
+        currentY = currentY - gapAfterTitle
         local dividerWidth = panelWidth - padding * 2
-        local dividerY = currentY - dividerSpacing - titleDividerHeight * 0.5
+        local dividerY = currentY - titleDividerHeight * 0.5
         self:drawNotificationDivider(panelX + padding, dividerY, dividerWidth, titleDividerHeight, COLOR_GAME_GREEN)
 
-        currentY = currentY - titleSpacing - titleTextExtraSpacing
+        currentY = currentY - gapAfterTopDivider
     end
 
     -- 3. Render Centered Body Text in pure crisp white
@@ -647,46 +651,50 @@ function RHM_NotificationManager:draw()
         currentY = currentY - lineHeight
     end
 
-    -- 4. Render Bottom Divider and Close Prompt
+    -- 4. Render Bottom Divider and Footer Prompt
     if hasTitle then
+        currentY = currentY - gapBeforeBottomDivider
         local dividerWidth = panelWidth - padding * 2
-        local bottomDividerY = currentY - dividerSpacing - bottomDividerTextSpacing - titleDividerHeight * 0.5
+        local bottomDividerY = currentY - titleDividerHeight * 0.5
         self:drawNotificationDivider(panelX + padding, bottomDividerY, dividerWidth, titleDividerHeight, COLOR_GAME_GREEN)
 
-        -- 5. Footer: Mouse Icon Glyph + "OK"
+        currentY = currentY - gapBeforeFooter
+
+        -- 5. Footer: Icon Glyph + "OK"
         local glyph = self:getNotificationCloseGlyph(closeGlyphWidth, closeGlyphHeight)
         local okText = "OK"
         local okTextSize = textSize
         local textSpacing = self:scalePixelToScreenWidth(6)
         local okTextWidth = getTextWidth ~= nil and getTextWidth(okTextSize, okText) or (#okText * okTextSize * 0.5)
 
+        local footerY = currentY - closeGlyphHeight
+
         if glyph ~= nil then
             local glyphWidth = glyph:getGlyphWidth()
             local totalFooterW = glyphWidth + textSpacing + okTextWidth
             local glyphX = centerX - totalFooterW * 0.5
-            local glyphY = panelY + math.max((topSectionHeight - titleDividerHeight - closeGlyphHeight) * 0.5, 0)
-            glyph:setPosition(glyphX, glyphY)
+            glyph:setPosition(glyphX, footerY)
             glyph:draw()
 
             setTextAlignment(RenderText.ALIGN_LEFT)
             setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_MIDDLE)
             setTextBold(true)
             setTextColor(COLOR_OK[1], COLOR_OK[2], COLOR_OK[3], COLOR_OK[4])
-            renderText(glyphX + glyphWidth + textSpacing - self:scalePixelToScreenWidth(4), glyphY + closeGlyphHeight * 0.5 + self:scalePixelToScreenHeight(2), okTextSize, okText)
+            renderText(glyphX + glyphWidth + textSpacing, footerY + closeGlyphHeight * 0.5, okTextSize, okText)
         else
             -- Fallback vector mouse glyph
-            local mWidth = self:scalePixelToScreenWidth(14)
-            local mHeight = self:scalePixelToScreenHeight(18)
+            local mWidth = self:scalePixelToScreenWidth(13)
+            local mHeight = closeGlyphHeight
             local totalFooterW = mWidth + textSpacing + okTextWidth
             local mX = centerX - totalFooterW * 0.5
-            local mY = panelY + math.max((topSectionHeight - titleDividerHeight - mHeight) * 0.5, 0)
+            local mY = footerY
 
             -- Mouse outline
             self:drawNotificationDivider(mX, mY, mWidth, mHeight, COLOR_GAME_GREEN)
             -- Inner fill
             local bw = 1 / (g_screenWidth or 1920)
             local bh = 1 / (g_screenHeight or 1080)
-            self:drawNotificationDivider(mX + bw, mY + bh, mWidth - bw*2, mHeight - bh*2, {0.05, 0.05, 0.05, 1})
+            self:drawNotificationDivider(mX + bw, mY + bh, mWidth - bw*2, mHeight - bh*2, {0.05, 0.06, 0.05, 1})
             -- Highlight left button
             self:drawNotificationDivider(mX + bw, mY + mHeight*0.5, mWidth*0.5 - bw, mHeight*0.5 - bh, COLOR_GAME_GREEN)
 
