@@ -244,7 +244,7 @@
         <text name="rhm_setting_enableTutorials" text="Astuces et didacticiel"/>
         <text name="rhm_setting_enableTutorials_long" text="Affiche des astuces interactives et des conseils lors de la récolte."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Entrée / Clic gauche)"/>
-        <text name="rhm_tut_welcome_title" text="Récolte Réaliste"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Bienvenue dans Realistic Harvesting ! La vitesse s&apos;ajuste selon la charge moteur, la densité et la barre de coupe. Consultez votre HUD et ouvrez le terminal avec (Maj droite + K)."/>
         <text name="rhm_tut_overload_title" text="Surcharge Moteur"/>
         <text name="rhm_tut_overload_msg" text="Le moteur est sous forte contrainte ! La transmission hydrostatique ralentit pour éviter le bourrage du batteur. Relevez la coupe ou réduisez la largeur travaillée."/>

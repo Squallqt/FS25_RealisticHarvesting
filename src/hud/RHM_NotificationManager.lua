@@ -138,7 +138,7 @@ end
 function RHM_NotificationManager:consoleCommandShowHint(name)
     name = tostring(name or "welcome"):upper():gsub("%s+", "")
     if name == "" or name == "WELCOME" or name == "1" then
-        local title = g_i18n:hasText("rhm_tut_welcome_title") and g_i18n:getText("rhm_tut_welcome_title") or "REALISTIC HARVESTING"
+        local title = "REALISTIC HARVESTING"
         local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: WELCOME"
@@ -535,7 +535,7 @@ function RHM_NotificationManager:update(dt, combineVehicle)
 
     -- TRIGGER 1: First Harvest / Welcome (triggers upon boarding combine)
     if not self.seenTutorials["WELCOME"] then
-        local title = g_i18n:hasText("rhm_tut_welcome_title") and g_i18n:getText("rhm_tut_welcome_title") or "REALISTIC HARVESTING"
+        local title = "REALISTIC HARVESTING"
         local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
         self:showNotification(title, msg, 0, true, "WELCOME")
         return

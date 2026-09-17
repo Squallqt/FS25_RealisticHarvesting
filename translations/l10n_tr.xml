@@ -240,7 +240,7 @@
         <text name="rhm_setting_enableTutorials" text="Eğitim İpuçları"/>
         <text name="rhm_setting_enableTutorials_long" text="Hasat sırasında etkileşimli eğitim ipuçları gösterir."/>
         <text name="rhm_ui_btn_close_notification" text="Tamam (Enter / Sol Tık)"/>
-        <text name="rhm_tut_welcome_title" text="Gerçekçi Hasat"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Realistic Harvesting&apos;e hoş geldiniz! Biçerdöver hızı motor yükü, ürün yoğunluğu ve tabla genişliğine göre dinamik belirlenir. (Sağ Shift + K) ile kalibrasyon terminalini açın."/>
         <text name="rhm_tut_overload_title" text="Motor Aşırı Yükü"/>
         <text name="rhm_tut_overload_msg" text="Motor aşırı zorlanıyor! Hidrostatik şanzıman batörün tıkanmasını önlemek için hızı yavaşlatır. Tablayı biraz kaldırın veya biçme genişliğini azaltın."/>

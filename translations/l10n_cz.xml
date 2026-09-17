@@ -242,7 +242,7 @@
         <text name="rhm_setting_enableTutorials" text="Tipy a nápověda"/>
         <text name="rhm_setting_enableTutorials_long" text="Zobrazovat interaktivní nápovědu a tipy během sklizně."/>
         <text name="rhm_ui_btn_close_notification" text="Rozumím (Enter / LMB)"/>
-        <text name="rhm_tut_welcome_title" text="Realistická Sklizeň"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Vítejte v Realistic Harvesting! Rychlost sklízeče se dynamicky řídí zatížením motoru, hustotou porostu a lištou. Otevřete terminál pomocí (Pravý Shift + K)."/>
         <text name="rhm_tut_overload_title" text="Přetížení Motoru"/>
         <text name="rhm_tut_overload_msg" text="Motor pracuje na hranici výkonu! Hydrostatický pohon zpomaluje stroj, aby zabránil ucpání mláticího bubnu. Přizvedněte lištu nebo snižte záběr."/>

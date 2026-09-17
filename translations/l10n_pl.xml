@@ -241,7 +241,7 @@
         <text name="rhm_setting_enableTutorials" text="Podpowiedzi samouczka"/>
         <text name="rhm_setting_enableTutorials_long" text="Wyświetla interaktywne wskazówki i porady podczas zbioru."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / LPM)"/>
-        <text name="rhm_tut_welcome_title" text="Realistyczne Zbiory"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Witaj w Realistic Harvesting! Prędkość kombajnu dostosowuje się dynamicznie do obciążenia silnika, gęstości łanu i hedera. Otwórz terminal kalibracji wciskając (Prawy Shift + K)."/>
         <text name="rhm_tut_overload_title" text="Przeciążenie Silnika"/>
         <text name="rhm_tut_overload_msg" text="Silnik pracuje na granicy możliwości! Napęd hydrostatyczny zwalnia kombajn, aby zapobiec zapchaniu bębna. Unieś heder lub zmniejsz szerokość roboczą."/>

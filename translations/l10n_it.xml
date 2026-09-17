@@ -242,7 +242,7 @@
         <text name="rhm_setting_enableTutorials" text="Suggerimenti tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Mostra suggerimenti interattivi durante la raccolta."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Invio / Clic sx)"/>
-        <text name="rhm_tut_welcome_title" text="Raccolta Realistica"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Benvenuto in Realistic Harvesting! La velocità dipende dal carico del motore, dalla densità del raccolto e dalla barra. Apri il terminale con (Shift destro + K)."/>
         <text name="rhm_tut_overload_title" text="Sovraccarico Motore"/>
         <text name="rhm_tut_overload_msg" text="Il motore è sotto forte sforzo! La trasmissione idrostatica rallenta la mietitrebbia per evitare l&apos;ingolfamento del battitore. Solleva la barra o riduci la presa."/>

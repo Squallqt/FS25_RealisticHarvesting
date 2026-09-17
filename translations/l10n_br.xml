@@ -240,7 +240,7 @@
         <text name="rhm_setting_enableTutorials" text="Dicas de tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Mostra dicas interativas e orientações durante a colheita."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / Clique esq.)"/>
-        <text name="rhm_tut_welcome_title" text="Colheita Realista"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Bem-vindo ao Realistic Harvesting! A velocidade ajusta-se dinamicamente à carga do motor, densidade e plataforma. Abra o terminal com (Shift direito + K)."/>
         <text name="rhm_tut_overload_title" text="Sobrecarga do Motor"/>
         <text name="rhm_tut_overload_msg" text="O motor está sob esforço extremo! A transmissão hidrostática desacelera para evitar entupimento do cilindro. Levante a plataforma ou reduza a largura de corte."/>

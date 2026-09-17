@@ -240,7 +240,7 @@
         <text name="rhm_setting_enableTutorials" text="Sfaturi tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Afișează sfaturi interactive în timpul recoltării."/>
         <text name="rhm_ui_btn_close_notification" text="Am înțeles (Enter / Clic stânga)"/>
-        <text name="rhm_tut_welcome_title" text="Recoltare Realistă"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Bun venit în Realistic Harvesting! Viteza combinei depinde dinamic de sarcina motorului, densitatea culturii și heder. Deschideți terminalul cu (Shift dreapta + K)."/>
         <text name="rhm_tut_overload_title" text="Supraîncărcare Motor"/>
         <text name="rhm_tut_overload_msg" text="Motorul este suprasolicitat! Transmisia hidrostatică încetinește combina pentru a preveni blocarea tobei. Ridicați hederul sau reduceți lățimea de tăiere."/>

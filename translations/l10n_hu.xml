@@ -242,7 +242,7 @@
         <text name="rhm_setting_enableTutorials" text="Oktató tippek"/>
         <text name="rhm_setting_enableTutorials_long" text="Interaktív tippek és útmutatók megjelenítése aratás közben."/>
         <text name="rhm_ui_btn_close_notification" text="Értem (Enter / Bal kattintás)"/>
-        <text name="rhm_tut_welcome_title" text="Realisztikus Betakarítás"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Üdvözöljük a Realistic Harvesting-ben! A kombájn sebességét a motorterhelés, a terméssűrűség és a vágóasztal határozza meg. Nyissa meg a terminált a (Jobb Shift + K) billentyűvel."/>
         <text name="rhm_tut_overload_title" text="Motortúlterhelés"/>
         <text name="rhm_tut_overload_msg" text="A motor a határon dolgozik! A hidrosztatikus hajtás lelassítja a gépet a cséplődob eltömődésének megelőzésére. Emelje meg az asztalt vagy csökkentse a szélességet."/>

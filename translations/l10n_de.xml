@@ -242,7 +242,7 @@
         <text name="rhm_setting_enableTutorials" text="Tutorial-Hinweise"/>
         <text name="rhm_setting_enableTutorials_long" text="Zeigt interaktive Einführungshinweise und Tipps während der Ernte an."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Eingabe / Linksklick)"/>
-        <text name="rhm_tut_welcome_title" text="Realistische Ernte"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Willkommen bei Realistic Harvesting! Die Mähdreschergeschwindigkeit passt sich dynamisch an Motorlast, Fruchtdichte und Schneidwerk an. Öffnen Sie das Kalibrierungsterminal mit (Rechte Umschalttaste + K)."/>
         <text name="rhm_tut_overload_title" text="Motorüberlastung"/>
         <text name="rhm_tut_overload_msg" text="Der Motor ist extrem belastet! Der hydrostatische Antrieb verlangsamt den Drescher, um Trommelblockaden zu verhindern. Heben Sie das Schneidwerk an oder reduzieren Sie die Schnittbreite."/>

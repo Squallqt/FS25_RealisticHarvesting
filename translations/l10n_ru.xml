@@ -244,7 +244,7 @@
         <text name="rhm_setting_enableTutorials" text="Подсказки и обучение"/>
         <text name="rhm_setting_enableTutorials_long" text="Показывать интерактивные обучающие подсказки и советы во время уборки урожая."/>
         <text name="rhm_ui_btn_close_notification" text="Понятно (Enter / ЛКМ)"/>
-        <text name="rhm_tut_welcome_title" text="Реалистичная уборка"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Добро пожаловать в Realistic Harvesting! Скорость комбайна динамически зависит от нагрузки двигателя, густоты культуры и жатки. Следите за HUD и нажмите (Правый Shift + K) для калибровки."/>
         <text name="rhm_tut_overload_title" text="Перегрузка двигателя"/>
         <text name="rhm_tut_overload_msg" text="Двигатель работает на пределе! Гидростатическая трансмиссия замедляет комбайн, чтобы не забить молотильный барабан. Приподнимите жатку или уменьшите захват культуры."/>

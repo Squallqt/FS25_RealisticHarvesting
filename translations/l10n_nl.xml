@@ -240,7 +240,7 @@
         <text name="rhm_setting_enableTutorials" text="Tutorial-tips"/>
         <text name="rhm_setting_enableTutorials_long" text="Toon interactieve tips en instructies tijdens het oogsten."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / Linksklik)"/>
-        <text name="rhm_tut_welcome_title" text="Realistisch Oogsten"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Welkom bij Realistic Harvesting! Snelheid past zich dynamisch aan op motorbelasting, gewas en maaibord. Druk op (Rechter Shift + K) voor het kalibratieterminal."/>
         <text name="rhm_tut_overload_title" text="Motoroverbelasting"/>
         <text name="rhm_tut_overload_msg" text="De motor staat onder zware belasting! De hydrostaat remt af om verstopping van de trommel te voorkomen. Hef het maaibord of verminder de maaibreedte."/>
