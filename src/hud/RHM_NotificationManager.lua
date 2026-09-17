@@ -259,9 +259,10 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
         and (padding + (#titleLines * titleLineHeight) + titleSpacing + titleTextExtraSpacing + (#lines * lineHeight) + bottomSectionHeight)
         or (padding * 2 + (#lines * lineHeight))
 
-    -- Position prominently in upper center (Y ~ 0.68) so it is unobscured by dashboard/speedometer
+    local baseAnchorY = 0.14 -- Sitting comfortably in lower screen region
+    local anchorCenterY = baseAnchorY + baseHeight * 0.5
     local panelX = (1.0 - panelWidth) * 0.5
-    local panelY = 0.68
+    local panelY = anchorCenterY - dynamicHeight * 0.5
 
     self.activeNotification = {
         title = formattedTitle,

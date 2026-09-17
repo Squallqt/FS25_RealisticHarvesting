@@ -179,8 +179,7 @@ local function onMissionUpdate(mission, dt)
 end
 if Mission00 ~= nil then
     Mission00.update = Utils.appendedFunction(Mission00.update, onMissionUpdate)
-end
-if FSBaseMission ~= nil then
+elseif FSBaseMission ~= nil then
     FSBaseMission.update = Utils.appendedFunction(FSBaseMission.update, onMissionUpdate)
 end
 
@@ -203,84 +202,47 @@ local function onMissionDraw(mission)
 end
 if Mission00 ~= nil then
     Mission00.draw = Utils.appendedFunction(Mission00.draw, onMissionDraw)
-end
-if FSBaseMission ~= nil then
+elseif FSBaseMission ~= nil then
     FSBaseMission.draw = Utils.appendedFunction(FSBaseMission.draw, onMissionDraw)
 end
 
 -- EN: Mouse event hook — captures mouse input for calibration GUI and HUD dragging.
---     Protected against re-entrant calls when Mission00 calls superClass().mouseEvent.
+--     Hooks Mission00 (or FSBaseMission fallback) to avoid recursive double delta handling.
 -- UA: Хук події миші — перехоплює введення миші для GUI калібрування та перетягування HUD.
---     Захищений від рекурсивного виклику, коли Mission00 викликає superClass().mouseEvent.
-local isHandlingMouseEvent = false
+--     Підключається до Mission00 (або FSBaseMission фолбек), уникаючи подвійної обробки дельт миші.
 local function onMissionMouseEvent(mission, superFunc, posX, posY, isDown, isUp, button)
-    if isHandlingMouseEvent then
-        if superFunc ~= nil then
-            return superFunc(mission, posX, posY, isDown, isUp, button)
-        end
-        return false
-    end
-
-    isHandlingMouseEvent = true
-    local wasUsed = false
     if rhm then
-        wasUsed = rhm:mouseEvent(posX, posY, isDown, isUp, button)
+        local wasUsed = rhm:mouseEvent(posX, posY, isDown, isUp, button)
+        if wasUsed then
+            return true
+        end
     end
-
-    if wasUsed then
-        isHandlingMouseEvent = false
-        return true
-    end
-
-    local ret = nil
     if superFunc ~= nil then
-        ret = superFunc(mission, posX, posY, isDown, isUp, button)
+        return superFunc(mission, posX, posY, isDown, isUp, button)
     end
-    isHandlingMouseEvent = false
-    return ret
 end
 if Mission00 ~= nil then
     Mission00.mouseEvent = Utils.overwrittenFunction(Mission00.mouseEvent, onMissionMouseEvent)
-end
-if FSBaseMission ~= nil then
+elseif FSBaseMission ~= nil then
     FSBaseMission.mouseEvent = Utils.overwrittenFunction(FSBaseMission.mouseEvent, onMissionMouseEvent)
 end
 
 -- EN: Key event hook — captures keyboard input (e.g. ESC to close calibration GUI).
---     Protected against re-entrant calls when Mission00 calls superClass().keyEvent.
 -- UA: Хук клавіатури — перехоплює клавіші (наприклад ESC для закриття GUI калібрування).
---     Захищений від рекурсивного виклику, коли Mission00 викликає superClass().keyEvent.
-local isHandlingKeyEvent = false
 local function onMissionKeyEvent(mission, superFunc, unicode, sym, modifier, isDown)
-    if isHandlingKeyEvent then
-        if superFunc ~= nil then
-            return superFunc(mission, unicode, sym, modifier, isDown)
-        end
-        return false
-    end
-
-    isHandlingKeyEvent = true
-    local wasUsed = false
     if rhm and rhm.keyEvent then
-        wasUsed = rhm:keyEvent(unicode, sym, modifier, isDown)
+        local wasUsed = rhm:keyEvent(unicode, sym, modifier, isDown)
+        if wasUsed then
+            return true
+        end
     end
-
-    if wasUsed then
-        isHandlingKeyEvent = false
-        return true
-    end
-
-    local ret = nil
     if superFunc ~= nil then
-        ret = superFunc(mission, unicode, sym, modifier, isDown)
+        return superFunc(mission, unicode, sym, modifier, isDown)
     end
-    isHandlingKeyEvent = false
-    return ret
 end
 if Mission00 ~= nil then
     Mission00.keyEvent = Utils.overwrittenFunction(Mission00.keyEvent, onMissionKeyEvent)
-end
-if FSBaseMission ~= nil then
+elseif FSBaseMission ~= nil then
     FSBaseMission.keyEvent = Utils.overwrittenFunction(FSBaseMission.keyEvent, onMissionKeyEvent)
 end
 
