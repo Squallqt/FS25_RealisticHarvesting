@@ -97,12 +97,15 @@ end
 
 ---EN: Sets up hooks for InGameMenu and SettingsFrame to inject RHM settings.
 ---    Uses a multi-layered hooking strategy (InGameMenu.onMenuOpened, class onFrameOpen,
----    and instance onFrameOpen) to guarantee settings injection even when other mods
----    (such as FS25_ScandinavianCurrencies) overwrite instance methods.
+---EN: Sets up hooks for InGameMenu and SettingsFrame to inject RHM settings.
+---    Hooks InGameMenu.onMenuOpened (matching the resilient pattern of mods like AdditionalContracts)
+---    and InGameMenuSettingsFrame.onFrameOpen (class-level).
+---    Strictly avoids overriding pageSettings.onFrameOpen on the instance to prevent shadowing class methods
+---    and breaking other mods like FS25_additionalGameSettings.
 ---UA: Налаштовує хуки для InGameMenu та SettingsFrame для ін'єкції налаштувань RHM.
----    Використовує багаторівневу стратегію хуків (InGameMenu.onMenuOpened, клас onFrameOpen
----    та екземпляр onFrameOpen), щоб гарантувати появу налаштувань навіть тоді, коли інші моди
----    (наприклад FS25_ScandinavianCurrencies) перезаписують методи екземпляра.
+---    Хукає InGameMenu.onMenuOpened (патерн як у AdditionalContracts) та InGameMenuSettingsFrame.onFrameOpen на рівні класу.
+---    Суворо уникає перезапису pageSettings.onFrameOpen на рівні екземпляра, щоб не тінити методи класу
+---    і не ламати сторонні моди, такі як FS25_additionalGameSettings.
 function RHM_RealisticHarvestManager:setupSettingsHooks()
     if not (self.mission and self.mission:getIsClient() and g_gui) then
         return
@@ -110,10 +113,21 @@ function RHM_RealisticHarvestManager:setupSettingsHooks()
 
     local settings = self.settings
 
+    local function ensureAdditionalGameSettings()
+        if g_additionalSettingsManager and g_additionalSettingsManager.settingsPage then
+            pcall(function()
+                if g_additionalSettingsManager.settingsPage.updateAlternating then
+                    g_additionalSettingsManager.settingsPage:updateAlternating()
+                end
+            end)
+        end
+    end
+
     local function onSettingsFrameOpen(settingsPage)
         pcall(function()
             RHMSettingsUI.inject(settings)
             RHMSettingsUI.refreshUI(settings)
+            ensureAdditionalGameSettings()
         end)
     end
 
@@ -122,20 +136,10 @@ function RHM_RealisticHarvestManager:setupSettingsHooks()
         InGameMenu.onMenuOpened = Utils.appendedFunction(
             InGameMenu.onMenuOpened,
             function(menu)
-                local currentMenu = menu or (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
-                if currentMenu and currentMenu.pageSettings and not self._settingsFrameInstanceHooked then
-                    local pageSettings = currentMenu.pageSettings
-                    if pageSettings.onFrameOpen then
-                        pageSettings.onFrameOpen = Utils.prependedFunction(
-                            pageSettings.onFrameOpen,
-                            onSettingsFrameOpen
-                        )
-                        self._settingsFrameInstanceHooked = true
-                    end
-                end
                 pcall(function()
                     RHMSettingsUI.inject(settings)
                     RHMSettingsUI.refreshUI(settings)
+                    ensureAdditionalGameSettings()
                 end)
             end
         )
@@ -149,21 +153,6 @@ function RHM_RealisticHarvestManager:setupSettingsHooks()
             onSettingsFrameOpen
         )
         self._settingsFrameClassHooked = true
-    end
-
-    -- 3. Hook pageSettings.onFrameOpen directly on the instance (if already instantiated)
-    --    CRITICAL: Fixes compatibility with mods like FS25_ScandinavianCurrencies which assign
-    --    pageSettings.onFrameOpen directly on the instance, shadowing InGameMenuSettingsFrame.onFrameOpen.
-    local inGameMenu = (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
-    if inGameMenu and inGameMenu.pageSettings and not self._settingsFrameInstanceHooked then
-        local pageSettings = inGameMenu.pageSettings
-        if pageSettings.onFrameOpen then
-            pageSettings.onFrameOpen = Utils.prependedFunction(
-                pageSettings.onFrameOpen,
-                onSettingsFrameOpen
-            )
-            self._settingsFrameInstanceHooked = true
-        end
     end
 end
 
