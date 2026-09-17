@@ -228,6 +228,18 @@ function RHMSettingsUI.inject(settings)
     if aiTuningOpt and aiTuningOpt.setDisabled then aiTuningOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.aiTuningOption = aiTuningOpt
 
+    local wearLossOpt = addBinaryRow(settingsPage, gameLayout, "wear_loss", "rhm_setting_wear_loss_short", "rhm_setting_wear_loss_long",
+        settings.enableWearLoss ~= false,
+        function(val)
+            if not settings:canChangeServerSettings() then return end
+            settings.enableWearLoss = val; settings:save()
+            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
+                RHM_SettingsSync:sendToClients(settings)
+            end
+        end)
+    if wearLossOpt and wearLossOpt.setDisabled then wearLossOpt:setDisabled(not isAdmin) end
+    RHMSettingsUI.wearLossOption = wearLossOpt
+
     if RHM_MoistureAdapter and RHM_MoistureAdapter.isActive then
         local moistureEnableOpt = addBinaryRow(settingsPage, gameLayout, "moisture_enable", "rhm_moisture_enable_short", "rhm_moisture_enable_long",
             settings.enableMoisture,
@@ -338,6 +350,7 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.difficultyLossOption,  settings.difficultyLoss,  not isAdmin)
     setOpt(RHMSettingsUI.speedLimitOption,      settings.enableSpeedLimit and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.cropLossOption,        settings.enableCropLoss   and 2 or 1, not isAdmin)
+    setOpt(RHMSettingsUI.wearLossOption,        (settings.enableWearLoss ~= false) and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.aiTuningOption,        settings.aiHelperTuning or 1,        not isAdmin)
     setOpt(RHMSettingsUI.moistureEnableOption,  settings.enableMoisture   and 2 or 1, not isAdmin)
 

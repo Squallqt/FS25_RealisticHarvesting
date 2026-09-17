@@ -415,6 +415,10 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
                     <title text="$l10n_rhm_help_loss_sub2"/>
                     <text text="$l10n_rhm_help_loss_2"/>
                 </paragraph>
+                <paragraph>
+                    <title text="$l10n_rhm_help_loss_sub3"/>
+                    <text text="$l10n_rhm_help_loss_3"/>
+                </paragraph>
             </page>
 
             <!-- ===== PAGE 6: DIFFICULTY ===== -->

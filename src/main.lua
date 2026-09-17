@@ -43,6 +43,11 @@ source(modDirectory .. "src/settings/RHM_CombineMemory.lua")
 source(modDirectory .. "src/network/RHM_CombineSettingsEvent.lua")
 source(modDirectory .. "src/integration/RHM_MoistureAdapter.lua")
 source(modDirectory .. "src/integration/RHM_ModCompatibility.lua")
+source(modDirectory .. "src/integration/RHM_Api.lua")
+if RHM_Api then
+    getfenv(0)["RHM_API"] = RHM_Api
+    getfenv(0)["RHM_Api"] = RHM_Api
+end
 if RHM_ModCompatibility and RHM_ModCompatibility.init then
     RHM_ModCompatibility.init()
 end
@@ -133,6 +138,8 @@ local function unload()
         rhm:delete()
         rhm = nil
         getfenv(0)["g_realisticHarvestManager"] = nil
+        getfenv(0)["RHM_API"] = nil
+        getfenv(0)["RHM_Api"] = nil
     end
 end
 

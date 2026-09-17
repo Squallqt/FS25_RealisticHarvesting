@@ -51,6 +51,7 @@ function RHMSettings.new(manager)
     -- UA: Прапорці перемикання функцій (серверні, глобальні для всіх гравців).
     self.enableSpeedLimit = true
     self.enableCropLoss = true
+    self.enableWearLoss = true
     self.enableMoisture = true
     self.showHUD = true
     self.showYield = true
@@ -218,6 +219,7 @@ function RHMSettings:resetToDefaults()
     self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
     self.enableSpeedLimit = true
     self.enableCropLoss = true
+    self.enableWearLoss = true
     self.enableMoisture = true
     self.showHUD = true
     self.showYield = true
@@ -238,6 +240,21 @@ function RHMSettings:resetToDefaults()
     self:saveAndSync()
 
     rhm_log("RHM [RHMSettings]: RHM: RHMSettings reset to defaults")
+end
+
+---EN: Gets whether wear-based crop loss is enabled
+---UA: Повертає чи увімкнено втрати від зносу техніки
+function RHMSettings:getEnableWearLoss()
+    return self.enableWearLoss ~= false
+end
+
+---EN: Sets whether wear-based crop loss is enabled
+---UA: Встановлює чи увімкнено втрати від зносу техніки
+function RHMSettings:setEnableWearLoss(enabled)
+    self.enableWearLoss = enabled
+    if self.save then
+        self:save()
+    end
 end
 
 ---EN: Gets whether tutorial hints are enabled

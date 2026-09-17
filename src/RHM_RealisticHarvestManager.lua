@@ -23,6 +23,10 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     self.settingsManager = RHMSettingsManager.new()
     self.settings = RHMSettings.new(self.settingsManager)
 
+    -- EN: Expose public API through manager instance
+    -- UA: Надаємо доступ до публічного API через екземпляр менеджера
+    self.api = RHM_Api
+
     self.savedCameraRotatableInfo = {} -- EN: Stores camera rotatability before cursor mode / UA: Зберігає стан камери до режиму курсора
 
     -- EN: Multi-layer settings hooking to guarantee injection even with mods like FS25_ScandinavianCurrencies.
@@ -445,8 +449,8 @@ function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
 end
 
 -- ============================================================================
--- EN: PUBLIC API FOR THIRD-PARTY MODS
--- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ
+-- EN: PUBLIC API FOR THIRD-PARTY MODS (DELEGATED TO RHM_Api)
+-- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ (ДЕЛЕГУЄТЬСЯ ДО RHM_Api)
 -- ============================================================================
 
 ---EN: Returns current feed-rate engine load (0 to 100+ %) for a given vehicle or active combine.
@@ -454,9 +458,11 @@ end
 ---@param vehicle table|nil Optional vehicle object. If nil, uses currently controlled vehicle.
 ---@return number engineLoad Current load percentage (0.0 if not harvesting or not an RHM combine).
 function RHM_RealisticHarvestManager:getEngineLoad(vehicle)
+    if RHM_Api and RHM_Api.getEngineLoad then
+        return RHM_Api.getEngineLoad(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return 0.0 end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator:getEngineLoad() or 0.0
@@ -464,14 +470,28 @@ function RHM_RealisticHarvestManager:getEngineLoad(vehicle)
     return 0.0
 end
 
+---EN: Returns normalized engine load factor strictly clamped between 0.0 and 1.0 (for ADS / wear mods).
+---UA: Повертає нормалізоване навантаження двигуна строго від 0.0 до 1.0 (для модів зносу ADS).
+---@param vehicle table|nil
+---@return number normalizedLoad (0.0 .. 1.0)
+function RHM_RealisticHarvestManager:getNormalizedEngineLoad(vehicle)
+    if RHM_Api and RHM_Api.getNormalizedEngineLoad then
+        return RHM_Api.getNormalizedEngineLoad(vehicle)
+    end
+    local raw = self:getEngineLoad(vehicle)
+    return math.max(0.0, math.min(1.0, raw / 100.0))
+end
+
 ---EN: Checks if a vehicle is an active combine managed by Realistic Harvesting.
 ---UA: Перевіряє чи є транспорт активним комбайном під керуванням Realistic Harvesting.
 ---@param vehicle table|nil
 ---@return boolean
 function RHM_RealisticHarvestManager:isRHMActive(vehicle)
+    if RHM_Api and RHM_Api.isRHMActive then
+        return RHM_Api.isRHMActive(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return false end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     return (combine ~= nil and combine.spec_rhm_Combine ~= nil)
 end
@@ -481,9 +501,11 @@ end
 ---@param vehicle table|nil
 ---@return table|nil
 function RHM_RealisticHarvestManager:getVehicleData(vehicle)
+    if RHM_Api and RHM_Api.getTelemetry then
+        return RHM_Api.getTelemetry(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return nil end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     if combine and combine.spec_rhm_Combine then
         return combine.spec_rhm_Combine.data

@@ -36,6 +36,11 @@
             ]]></text>
         <text name="rhm_croploss_short" text="Enable Crop Loss"/>
         <text name="rhm_croploss_long" text="Calculate crop loss when overloaded"/>
+        <text name="rhm_setting_wear_loss_short" text="Mechanical Wear Loss"/>
+        <text name="rhm_setting_wear_loss_long" text="Calculate and display crop losses caused by mechanical wear of the cutter (dull knives) and combine (thresher separation)."/>
+        <text name="rhm_ui_wear_loss" text="Wear"/>
+        <text name="rhm_ui_cutter_wear" text="Header Wear"/>
+        <text name="rhm_ui_combine_wear" text="Combine Wear"/>
         <text name="rhm_show_speed_short" text="Show Speed"/>
         <text name="rhm_show_speed_long" text="Display current speed and recommended speed in HUD"/>
         <text name="rhm_show_load_short" text="Show Engine Load"/>
@@ -171,6 +176,8 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Up to 90% load, losses remain negligible (&lt;0.5%), but climb along an exponential curve past 100%. Operating deep in the red zone (&gt;110%) overloads the cleaning shoe, wasting massive yield and risking severe drum clogging."/>
         <text name="rhm_help_loss_sub2" text="Physical Hopper Liter Deduction"/>
         <text name="rhm_help_loss_2" text="Crop losses in Realistic Harvesting are 100% physical: wasted liters are subtracted directly from the combine grain tank in real time. Misconfigured sieves or drums can waste up to 25% of your crop. Keep an eye on the HUD and calibrate your machine."/>
+        <text name="rhm_help_loss_sub3" text="Mechanical Wear &amp; Blunt Knives"/>
+        <text name="rhm_help_loss_3" text="Equipment wear significantly degrades harvesting efficiency. Blunt cutterbar knives shatter standing crop heads (up to +3% loss and +15% PTO drive drag). A worn threshing drum and sieves drop unseparated grain (up to +3% loss). Keep headers and combines well-maintained at the workshop to eliminate wear penalties."/>
         <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Hydrostatic Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="Smart cruise control analyzes crop mass intake and adjusts hydrostatic swash plate displacement smoothly. Entering a new pass features a 2.8s entry timer to let the drum fill without sudden jerks. The combine eases off in dense patches and accelerates smoothly in lighter crop."/>
@@ -256,5 +263,10 @@
         <text name="rhm_tut_headland_msg" text="When lifting the cutter at headlands, the combine remembers your active harvesting speed. You will seamlessly re-enter rows without sudden braking."/>
         <text name="rhm_tut_upgrade_title" text="Combine Upgrades"/>
         <text name="rhm_tut_upgrade_msg" text="Basic combines require manual tuning. Upgrade electronics at the workshop to unlock Sensor Kits (Tier 2), Yield Monitors (Tier 3), or Opti-Harvest AI Autopilot (Tier 4)."/>
+        <text name="rhm_setting_wear_loss_short" text="Mechanical Wear Losses"/>
+        <text name="rhm_setting_wear_loss_long" text="Simulates grain loss from equipment wear. Dull header knives shatter crop heads (up to +3% loss and +15% power drag). A worn threshing drum and sieves drop unseparated grain (up to +3% loss)."/>
+        <text name="rhm_ui_wear_loss" text="Wear Loss"/>
+        <text name="rhm_ui_cutter_wear" text="Cutter Wear"/>
+        <text name="rhm_ui_combine_wear" text="Thresher Wear"/>
     </texts>
 </l10n>

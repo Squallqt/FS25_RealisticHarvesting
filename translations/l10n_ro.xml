@@ -167,7 +167,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Uzura mecanică și cuțite tocite"/>
+        <text name="rhm_help_loss_3" text="Uzura echipamentului degradează considerabil eficiența recoltării. Cuțitele tocite ale hederului scutură spicele și păstăile (până la +3% pierderi și +15% rezistență PTO). Toba de treier și sitele uzate pierd boabe neseparate (până la +3% pierderi). Întreținerea regulată la atelier previne aceste pierderi."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -252,5 +254,10 @@
         <text name="rhm_tut_headland_msg" text="La ridicarea hederului la capăt de rând, combina memorează viteza de lucru, reaccelerând lin la intrarea pe următorul rând."/>
         <text name="rhm_tut_upgrade_title" text="Îmbunătățiri Combină"/>
         <text name="rhm_tut_upgrade_msg" text="Combinele de bază necesită reglaj manual. Instalați Pachet Senzori (Nivel 2), Monitor Recoltă (Nivel 3) sau Pilot Automat Opti-Harvest AI (Nivel 4) la atelier."/>
+        <text name="rhm_setting_wear_loss_short" text="Pierderi prin uzură mecanică"/>
+        <text name="rhm_setting_wear_loss_long" text="Simulează pierderile de boabe cauzate de uzura utilajelor. Cuțitele tocite scutură plantele (până la +3% pierderi și +15% rezistență). Toba și sitele uzate pierd boabe (până la +3% pierderi)."/>
+        <text name="rhm_ui_wear_loss" text="Pierdere prin uzură"/>
+        <text name="rhm_ui_cutter_wear" text="Uzură heder"/>
+        <text name="rhm_ui_combine_wear" text="Uzură combină"/>
     </texts>
 </l10n>

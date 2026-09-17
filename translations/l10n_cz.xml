@@ -169,7 +169,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mechanické opotřebení a tupé nože"/>
+        <text name="rhm_help_loss_3" text="Opotřebení techniky výrazně snižuje kvalitu sklizně. Tupé nože žací lišty vyklepávají klasy a lusky (až +3% ztrát a +15% odporu vývodového hřídele). Opotřebovaný mláticí buben a síta ztrácejí nevymlácené zrno (až +3% ztrát). Pravidelný servis v dílně těmto ztrátám zcela předchází."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -254,5 +256,10 @@
         <text name="rhm_tut_headland_msg" text="Při zvednutí lišty na souvrati si sklízeč pamatuje pracovní rychlost. Do nového řádku se plynule rozjede bez škubání."/>
         <text name="rhm_tut_upgrade_title" text="Vylepšení Sklízeče"/>
         <text name="rhm_tut_upgrade_msg" text="Základní sklízeč vyžaduje ruční ladění. V dílně můžete nainstalovat Senzory (Úroveň 2), Monitor Výnosu (Úroveň 3) nebo Autopilot Opti-Harvest AI (Úroveň 4)."/>
+        <text name="rhm_setting_wear_loss_short" text="Ztráty opotřebením techniky"/>
+        <text name="rhm_setting_wear_loss_long" text="Simuluje ztráty zrna způsobené opotřebením stroje. Tupé nože lišty vyklepávají zrno (až +3% ztrát a +15% odporu). Opotřebovaný buben a síta propouštějí nevymlácené zrno (až +3% ztrát)."/>
+        <text name="rhm_ui_wear_loss" text="Ztráta opotřebením"/>
+        <text name="rhm_ui_cutter_wear" text="Opotřebení lišty"/>
+        <text name="rhm_ui_combine_wear" text="Opotřebení mlátičky"/>
     </texts>
 </l10n>

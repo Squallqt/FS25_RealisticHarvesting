@@ -95,7 +95,7 @@ The sleek horizontal HUD bar gives you instant, non-intrusive feedback:
 
 ### Step 3: Understanding Crop Loss & Audio Alarms
 
-Grain losses occur from two primary sources:
+Grain losses occur from three primary sources:
 
 1. **Overload Losses (Driving Too Fast / Excessive Mass Flow):**
    - **0% to 80% Load:** Safe operating zone — **0.0% crop loss**.
@@ -105,7 +105,11 @@ Grain losses occur from two primary sources:
 2. **Calibration Losses (Misaligned Machine Settings):**
    - **Rotor Speed / Concave Clearance:** Poor threshing either leaves grain in the ear or overworks the engine (`Efficiency -%`). Proper calibration yields up to a **+5.0% Speed Bonus**.
    - **Fan Speed & Sieves:** Excessive fan air blows clean grain out the rear; weak fan air clogs the cleaning shoe with chaff.
-3. **In-Cabin Overload Buzzer:**
+3. **Mechanical Wear Losses (Equipment Damage & Dull Knives):**
+   - **Header Knife Wear:** Dull cutterbar knives fail to slice cleanly, shattering standing ears and pods (up to **+3.0% loss** and up to **+15% PTO drive resistance**).
+   - **Combine Thresher Wear:** Worn rasp bars and damaged sieves drop unseparated grain (up to **+3.0% loss**).
+   - Total wear loss is capped at **6.0%** to prevent over-punishment and can be toggled in `ESC → Game Settings`.
+4. **In-Cabin Overload Buzzer:**
    - Sounds automatically inside the cockpit whenever **Engine Load ≥ 98%** or **Crop Loss > 4.0%**.
    - Balanced with automated exterior volume boost (+25%) when using 3rd person chase camera. Volume and toggle can be configured in `ESC → General Settings → Realistic Harvesting - Audio`.
 

@@ -167,7 +167,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Desgaste Mecânico e Facas Cegas"/>
+        <text name="rhm_help_loss_3" text="O desgaste dos equipamentos degrada consideravelmente a eficiência da colheita. Facas cegas debulham espigas e vagens prematuramente (até +3% de perdas e +15% de arrasto na TDP). Rotor de trilha e peneiras desgastados deixam escapar grãos não separados (até +3% de perdas). A manutenção regular na oficina elimina essas perdas."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -252,5 +254,10 @@
         <text name="rhm_tut_headland_msg" text="Ao levantar a plataforma na cabeceira, a colheitadeira memoriza a velocidade de trabalho para retomar a passada seguinte com suavidade."/>
         <text name="rhm_tut_upgrade_title" text="Melhorias da Colheitadeira"/>
         <text name="rhm_tut_upgrade_msg" text="Máquinas básicas exigem calibração manual. Instale Kit de Sensores (Nível 2), Monitor de Produtividade (Nível 3) ou IA Opti-Harvest (Nível 4) na oficina."/>
+        <text name="rhm_setting_wear_loss_short" text="Perdas por Desgaste Mecânico"/>
+        <text name="rhm_setting_wear_loss_long" text="Simula perdas de grãos causadas pelo desgaste das máquinas. Facas cegas debulham as plantas (até +3% de perdas e +15% de arrasto). Rotor e peneiras desgastados derrubam grãos não trilhados (até +3% de perdas)."/>
+        <text name="rhm_ui_wear_loss" text="Perda por Desgaste"/>
+        <text name="rhm_ui_cutter_wear" text="Desgaste da Plataforma"/>
+        <text name="rhm_ui_combine_wear" text="Desgaste da Trilhadora"/>
     </texts>
 </l10n>

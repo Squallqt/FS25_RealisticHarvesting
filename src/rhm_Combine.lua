@@ -1535,6 +1535,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         if spec.data then
             spec.data.load = 0 
             spec.data.cropLoss = 0
+            spec.data.cutterWearLoss = 0
+            spec.data.combineWearLoss = 0
+            spec.data.totalWearLoss = 0
             spec.data.tonPerHour = 0
             spec.data.litersPerHour = 0
             spec.data.yield = 0
@@ -1605,7 +1608,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --     This makes crop loss visible as a real reduction in tank fill level.
     -- UA: Застосовуємо фізичні втрати врожаю: видаляємо втрачене зерно з fill unit на сервері.
     --     Це робить втрати врожаю видимими як реальне зменшення рівня наповнення бункера.
-    local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss()
+    local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss(self)
 
     if liters > 0 and self.isServer then
         -- EN: Calculate total crop loss including settings deviation penalty.
@@ -1615,12 +1618,18 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         
         if cropLoss > 0 and g_realisticHarvestManager and g_realisticHarvestManager.settings then
             if g_realisticHarvestManager.settings.enableCropLoss then
-                local lossRatio = cropLoss / 100
+                -- EN: Subtract only speed overload and settings loss physically from the tank.
+                --     Mechanical wear loss is already reduced natively by FS25 GIANTS yield logic.
+                -- UA: Віднімаємо з бункера лише фізичні втрати від перевантаження та налаштувань.
+                --     Втрати від зносу вже нативно зменшені логікою врожайності FS25 GIANTS.
+                local wearLossPct = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+                local physicalLossPct = math.max(0, cropLoss - wearLossPct)
+                local lossRatio = physicalLossPct / 100
                 local lostLiters = liters * lossRatio
                 
                 local fillUnitIndex = spec.lastFillUnitIndex or (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
                 local spec_fillUnit = self.spec_fillUnit
-                if spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
+                if lostLiters > 0.001 and spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
                     self:addFillUnitFillLevel(
                         self:getOwnerFarmId(),
                         fillUnitIndex,
@@ -1670,6 +1679,11 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.moisture = moisture or 0
         spec.data.load = spec.loadCalculator:getEngineLoad()
         spec.data.cropLoss = totalCropLossThisTick
+        spec.data.cutterWearLoss = spec.loadCalculator.cutterWearLoss or 0
+        spec.data.combineWearLoss = spec.loadCalculator.combineWearLoss or 0
+        spec.data.totalWearLoss = spec.loadCalculator.totalWearLoss or 0
+        spec.data.cutterDamage = spec.loadCalculator.lastCutterDamage or 0
+        spec.data.combineDamage = spec.loadCalculator.lastCombineDamage or 0
         spec.data.tonPerHour = spec.loadCalculator:getTonPerHour()
         spec.data.litersPerHour = spec.loadCalculator:getLitersPerHour() -- NEW: Volume flow
         spec.data.hectaresPerHour = spec.loadCalculator:getHectaresPerHour() -- NEW: Area rate (ha/h)

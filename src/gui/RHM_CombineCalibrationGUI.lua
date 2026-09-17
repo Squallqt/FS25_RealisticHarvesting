@@ -848,10 +848,23 @@ function RHMCombineCalibrationGUI:draw()
             setTextColor(unpack(ui.colors.textDim))
             renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, "N/A")
         else
-            local displayLoss = math.max(0, lossPenalty)
+            local settingsLoss = math.max(0, lossPenalty)
+            local wearLoss = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+            local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
+            if not isWearEnabled then
+                wearLoss = 0
+            end
+            local displayLoss = settingsLoss + wearLoss
             local lossColor = (displayLoss <= 0.05) and ui.colors.success or ((displayLoss <= 2.0) and ui.colors.warning or ui.colors.error)
             setTextColor(unpack(lossColor))
-            renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%.1f%%", displayLoss))
+            if wearLoss > 0.05 then
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.22, ui.fontSize * 0.90, string.format("%.1f%%", displayLoss))
+                local wearLabel = g_i18n:hasText("rhm_ui_wear_loss") and g_i18n:getText("rhm_ui_wear_loss") or "Wear"
+                setTextColor(unpack(ui.colors.warning))
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.06, ui.statusSize * 0.85, string.format("+%.1f%% %s", wearLoss, wearLabel))
+            else
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%.1f%%", displayLoss))
+            end
         end
 
         setTextBold(false)

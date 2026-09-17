@@ -22,6 +22,7 @@ RHMSettingsManager.SERVER_SETTINGS = {
     "aiHelperTuning",
     "enableSpeedLimit",
     "enableCropLoss",
+    "enableWearLoss",
     "enableIndependentLaunch",
     "enableMoisture"
 }
@@ -60,6 +61,7 @@ RHMSettingsManager.defaultConfig = {
     showSpeedometer = true,
     enableSpeedLimit = true,
     enableCropLoss = false,
+    enableWearLoss = true,
     enableIndependentLaunch = true,
     enableMoisture = true,
     showMoisture = true,

@@ -26,6 +26,7 @@ function RHM_SettingsSyncEvent.new(settings)
     self.aiHelperTuning = settings.aiHelperTuning or 1
     self.enableSpeedLimit = settings.enableSpeedLimit
     self.enableCropLoss = settings.enableCropLoss
+    self.enableWearLoss = settings.enableWearLoss ~= false
     self.enableIndependentLaunch = settings.enableIndependentLaunch
     self.enableMoisture = settings.enableMoisture ~= false
 
@@ -40,6 +41,7 @@ function RHM_SettingsSyncEvent:writeStream(streamId, connection)
     streamWriteUInt8(streamId, self.aiHelperTuning)
     streamWriteBool(streamId, self.enableSpeedLimit)
     streamWriteBool(streamId, self.enableCropLoss)
+    streamWriteBool(streamId, self.enableWearLoss)
     streamWriteBool(streamId, self.enableIndependentLaunch)
     streamWriteBool(streamId, self.enableMoisture)
 end
@@ -52,6 +54,7 @@ function RHM_SettingsSyncEvent:readStream(streamId, connection)
     self.aiHelperTuning = streamReadUInt8(streamId)
     self.enableSpeedLimit = streamReadBool(streamId)
     self.enableCropLoss = streamReadBool(streamId)
+    self.enableWearLoss = streamReadBool(streamId)
     self.enableIndependentLaunch = streamReadBool(streamId)
     self.enableMoisture = streamReadBool(streamId)
 
@@ -84,6 +87,7 @@ function RHM_SettingsSyncEvent:run(connection)
             settings.aiHelperTuning = self.aiHelperTuning
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
+            settings.enableWearLoss = self.enableWearLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch
             settings.enableMoisture = self.enableMoisture
 
@@ -114,6 +118,7 @@ function RHM_SettingsSyncEvent:run(connection)
             settings.aiHelperTuning = self.aiHelperTuning
             settings.enableSpeedLimit = self.enableSpeedLimit
             settings.enableCropLoss = self.enableCropLoss
+            settings.enableWearLoss = self.enableWearLoss
             settings.enableIndependentLaunch = self.enableIndependentLaunch
             settings.enableMoisture = self.enableMoisture
             

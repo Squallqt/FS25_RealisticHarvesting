@@ -36,6 +36,11 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- Crop loss and productivity
     self.cropLoss = 0  -- EN: Current crop loss (%) / UA: Поточні втрати врожаю (%)
+    self.cutterWearLoss = 0   -- EN: Loss from cutterbar knife wear (%) / UA: Втрати від зносу жатки (%)
+    self.combineWearLoss = 0  -- EN: Loss from thresher wear (%) / UA: Втрати від зносу комбайна (%)
+    self.totalWearLoss = 0    -- EN: Total mechanical wear loss (%) / UA: Сумарні втрати від зносу (%)
+    self.lastCutterDamage = 0 -- EN: Cached cutter damage (0..1) / UA: Кешований знос жатки
+    self.lastCombineDamage = 0 -- EN: Cached combine damage (0..1) / UA: Кешований знос комбайна
     self.tonPerHour = 0  -- EN: Yield in T/h / UA: Продуктивність в Т/год
     self.litersPerHour = 0  -- EN: Yield in L/h / UA: Продуктивність в Л/год
     self.hectaresPerHour = 0 -- EN: Area rate in ha/h / UA: Продуктивність в га/год
@@ -946,9 +951,8 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
 
         -- Header power consumption (scales with ground speed)
         if headerHp > 0 then
-            local speedKmh = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
-            local speedRatio = math.min(1.2, math.max(0.0, speedKmh / math.max(1.0, maxWorkingSpeed)))
-            pHeader = headerHp * (0.20 + 0.80 * speedRatio)
+            local dullCutterFactor = 1.0 + 0.15 * math.max(0.0, math.min(1.0, self.lastCutterDamage or 0))
+            pHeader = headerHp * (0.20 + 0.80 * speedRatio) * dullCutterFactor
         end
     end
 
@@ -1254,6 +1258,9 @@ function RHM_LoadCalculator:reset()
     self.currentAvgMass = 0
     self.engineLoad = 0
     self.cropLoss = 0
+    self.cutterWearLoss = 0
+    self.combineWearLoss = 0
+    self.totalWearLoss = 0
     local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
     local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
     local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
@@ -1379,11 +1386,83 @@ function RHM_LoadCalculator:updateSettingsImpact()
     end
 end
 
-function RHM_LoadCalculator:calculateTotalCropLoss()
+---EN: Calculates crop loss contribution from cutterbar and thresher mechanical wear
+---UA: Розраховує додаткові втрати врожаю від механічного зносу жатки та молотарки
+function RHM_LoadCalculator:calculateWearLoss(vehicle)
+    if not g_realisticHarvestManager or not g_realisticHarvestManager.settings then
+        return 0, 0, 0
+    end
+    -- Check if wear loss calculation is enabled
+    if g_realisticHarvestManager.settings.enableWearLoss == false then
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
+        return 0, 0, 0
+    end
+
+    local cutterDamage = 0
+    local combineDamage = 0
+
+    if vehicle then
+        if vehicle.getDamageAmount then
+            combineDamage = vehicle:getDamageAmount() or 0
+        end
+
+        -- Find attached cutter damage
+        local spec_combine = vehicle.spec_combine
+        local spec_cutter = vehicle.spec_cutter
+        if spec_combine and spec_combine.attachedCutters then
+            for cutter, _ in pairs(spec_combine.attachedCutters) do
+                if cutter and cutter.getDamageAmount then
+                    cutterDamage = math.max(cutterDamage, cutter:getDamageAmount() or 0)
+                end
+            end
+        end
+        -- If combine itself has cutter spec (self-propelled mower/cutter)
+        if spec_cutter and vehicle.getDamageAmount then
+            cutterDamage = math.max(cutterDamage, vehicle:getDamageAmount() or 0)
+        end
+    end
+
+    self.lastCutterDamage = cutterDamage
+    self.lastCombineDamage = combineDamage
+
+    -- 1. Cutter Wear Loss:
+    -- Deadzone: first 15% wear produces 0 loss (normal blade sharpness)
+    -- Scaling: remaining wear (0.15 .. 1.00) produces up to 3.0% loss (blunt knives shattering grain)
+    local cutterLoss = 0
+    if cutterDamage > 0.15 then
+        local effCutterDmg = (cutterDamage - 0.15) / 0.85
+        cutterLoss = math.min(3.0, effCutterDmg * 3.0)
+    end
+
+    -- 2. Combine Thresher Wear Loss:
+    -- Deadzone: first 20% wear produces 0 loss
+    -- Scaling: remaining wear (0.20 .. 1.00) produces up to 3.0% loss (worn rasp bars, sieves, concave)
+    local combineLoss = 0
+    if combineDamage > 0.20 then
+        local effCombineDmg = (combineDamage - 0.20) / 0.80
+        combineLoss = math.min(3.0, effCombineDmg * 3.0)
+    end
+
+    -- 3. Total Wear Loss (capped at 6.0%)
+    local totalWear = math.min(6.0, cutterLoss + combineLoss)
+
+    self.cutterWearLoss = cutterLoss
+    self.combineWearLoss = combineLoss
+    self.totalWearLoss = totalWear
+
+    return totalWear, cutterLoss, combineLoss
+end
+
+function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
     -- EN: Forage and Cotton harvesters never have crop loss — bypass all calculations.
     -- UA: Силосні та бавовняні комбайни ніколи не мають втрат врожаю — пропускаємо всі розрахунки.
     if self.combineMemory and (self.combineMemory.machineType == "forage" or self.combineMemory.machineType == "cotton") then
         self.cropLoss = 0
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
         return 0
     end
     if self.combineMemory and self.combineMemory.currentCrop then
@@ -1394,7 +1473,13 @@ function RHM_LoadCalculator:calculateTotalCropLoss()
     end
     local baseLoss = self:calculateCropLoss()
     local settingsAddedLoss = self.settingsLoss or 0
-    local totalLoss = baseLoss + settingsAddedLoss
+    local wearLoss = 0
+    if vehicle then
+        wearLoss = self:calculateWearLoss(vehicle)
+    else
+        wearLoss = self.totalWearLoss or 0
+    end
+    local totalLoss = baseLoss + settingsAddedLoss + wearLoss
     totalLoss = math.min(totalLoss, 50)
     self.cropLoss = totalLoss
     return totalLoss

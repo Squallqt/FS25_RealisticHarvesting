@@ -167,7 +167,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mechanische slijtage &amp; Botte messen"/>
+        <text name="rhm_help_loss_3" text="Slijtage van apparatuur vermindert de oogstkwaliteit aanzienlijk. Botte maaibalkmessen slaan aren en peulen stuk (tot +3% verlies en +15% aftakasweerstand). Een versleten dorstrommel en zeven verliezen ongescheiden graan (tot +3% verlies). Regelmatig onderhoud in de werkplaats voorkomt deze verliezen."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -252,5 +254,10 @@
         <text name="rhm_tut_headland_msg" text="Bij het heffen van het maaibord op de wendakker onthoudt de combine de werksnelheid, waardoor de volgende baan soepel en schokvrij start."/>
         <text name="rhm_tut_upgrade_title" text="Combine Upgrades"/>
         <text name="rhm_tut_upgrade_msg" text="Basis combines vereisen handmatige instelling. Upgrade naar Sensorpakket (Tier 2), Opbrengstmonitor (Tier 3) of Opti-Harvest AI (Tier 4) bij de dealer."/>
+        <text name="rhm_setting_wear_loss_short" text="Mechanische slijtageverliezen"/>
+        <text name="rhm_setting_wear_loss_long" text="Simuleert graanverlies door slijtage van de machine. Botte messen slaan aren stuk (tot +3% verlies en +15% weerstand). Versleten dorstrommels en zeven verliezen graan (tot +3% verlies)."/>
+        <text name="rhm_ui_wear_loss" text="Slijtageverlies"/>
+        <text name="rhm_ui_cutter_wear" text="Maaibalkslijtage"/>
+        <text name="rhm_ui_combine_wear" text="Dorserslijtage"/>
     </texts>
 </l10n>
