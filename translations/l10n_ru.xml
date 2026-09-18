@@ -111,6 +111,10 @@
         <text name="rhm_ui_forage_feeder" text="Питающие вальцы"/>
         <text name="rhm_ui_root_roller" text="Очистительные вальцы"/>
         <text name="rhm_ui_root_feeder" text="Транспортер"/>
+        <text name="rhm_ui_grape_shaker" text="Частота встряхивания"/>
+        <text name="rhm_ui_olive_shaker" text="Частота битеров"/>
+        <text name="rhm_ui_grape_conveyor" text="Скорость транспортера"/>
+        <text name="rhm_ui_grape_fan" text="Очистные вентиляторы"/>
         <text name="rhm_units_short" text="Единицы"/>
         <text name="rhm_units_long" text="Выберите систему измерения (скорость, масса, площадь)"/>
         <text name="rhm_unit_metric" text="Метрические (км/ч, т/ч, га)"/>

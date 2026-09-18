@@ -612,11 +612,34 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarning
             -- UA: Направляємо штраф до відповідного фізичного ефекту залежно від параметру.
             local isForage = (self.machineType == "forage")
             local isRoot   = (self.machineType == "root")
+            local isGrapeOrOlive = (self.machineType == "grape" or self.machineType == "olive")
 
             if isForage or isRoot then
                 -- EN: All params on forage/root affect only efficiency (no grain to lose)
                 efficiencyScore = efficiencyScore + score
                 effParamCount = effParamCount + 1
+            elseif isGrapeOrOlive then
+                -- EN: GRAPE/OLIVE:
+                --     rotor (shakers): under-shaking leaves fruit on vine; over-shaking crushes fruit & increases drag
+                --     fan (extractors): over-suction pulls berries/olives into fan exhaust (direct crop loss)
+                --     feeder (conveyor): bucket speed governs flow capacity (efficiency)
+                if param == "rotor" then
+                    efficiencyScore = efficiencyScore + (score * 0.5)
+                    lossScore = lossScore + (score * 0.5)
+                    effParamCount = effParamCount + 0.5
+                    lossParamCount = lossParamCount + 0.5
+                elseif param == "fan" then
+                    lossScore = lossScore + score
+                    lossParamCount = lossParamCount + 1
+                elseif param == "feeder" then
+                    efficiencyScore = efficiencyScore + score
+                    effParamCount = effParamCount + 1
+                else
+                    efficiencyScore = efficiencyScore + (score * 0.5)
+                    lossScore = lossScore + (score * 0.5)
+                    effParamCount = effParamCount + 0.5
+                    lossParamCount = lossParamCount + 0.5
+                end
             elseif param == "rotor" or param == "concave" then
                 -- EN: GRAIN: rotor/concave control threshing → primarily efficiency
                 efficiencyScore = efficiencyScore + score

@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Rulli di alimentazione"/>
         <text name="rhm_ui_root_roller" text="Rulli di pulizia"/>
         <text name="rhm_ui_root_feeder" text="Nastro elevatore"/>
+        <text name="rhm_ui_grape_shaker" text="Velocità scuotitori"/>
+        <text name="rhm_ui_olive_shaker" text="Velocità battitori"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocità convogliatore"/>
+        <text name="rhm_ui_grape_fan" text="Ventole di aspirazione"/>
         <text name="rhm_units_short" text="Unità"/>
         <text name="rhm_units_long" text="Scegli il sistema di misurazione (velocità, massa, area)"/>
         <text name="rhm_unit_metric" text="Metrico (km/h, t/h, ha)"/>

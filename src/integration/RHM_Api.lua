@@ -14,7 +14,7 @@
 -- ============================================================================
 
 RHM_Api = {}
-RHM_Api.VERSION = "1.5.4.1"
+RHM_Api.VERSION = "1.6.0.0"
 RHM_Api.listeners = {}
 
 -- ============================================================================
@@ -106,8 +106,8 @@ function RHM_Api.getVersion()
     return RHM_Api.VERSION
 end
 
----EN: Returns the machine harvester category: "grain", "forage", "root", "cotton", or "unknown".
----UA: Повертає категорію комбайна: "grain", "forage", "root", "cotton" або "unknown".
+---EN: Returns the machine harvester category: "grain", "forage", "root", "cotton", "grape", "olive", or "unknown".
+---UA: Повертає категорію комбайна: "grain", "forage", "root", "cotton", "grape", "olive" або "unknown".
 ---@param vehicle table|nil
 ---@return string
 function RHM_Api.getMachineType(vehicle)
@@ -116,6 +116,22 @@ function RHM_Api.getMachineType(vehicle)
         return combine.spec_rhm_Combine.combineMemory.machineType or "grain"
     end
     return "unknown"
+end
+
+---EN: Returns true if target combine is a specialized grape harvester.
+---UA: Повертає true, якщо комбайн є виноградозбиральним.
+---@param vehicle table|nil
+---@return boolean
+function RHM_Api.isGrapeHarvester(vehicle)
+    return RHM_Api.getMachineType(vehicle) == "grape"
+end
+
+---EN: Returns true if target combine is a specialized olive harvester.
+---UA: Повертає true, якщо комбайн є оливкозбиральним.
+---@param vehicle table|nil
+---@return boolean
+function RHM_Api.isOliveHarvester(vehicle)
+    return RHM_Api.getMachineType(vehicle) == "olive"
 end
 
 ---EN: Returns the installed electronic package level (1..4):

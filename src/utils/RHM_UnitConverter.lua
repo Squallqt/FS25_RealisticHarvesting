@@ -218,6 +218,16 @@ RHM_UnitConverter.PHYSICAL_RANGES = {
         fan    = { min = 2500, max = 4000, unit = "RPM", decimals = 0, step = 10 }, -- EN: Air system blower / UA: Вентилятор повітряної системи
         rotor  = { min = 150,  max = 250,  unit = "RPM", decimals = 0, step = 10 }, -- EN: Spindle drums / UA: Барабани шпинделів
         feeder = { min = 100,  max = 300,  unit = "RPM", decimals = 0, step = 10 }, -- EN: Feeder / UA: Подача
+    },
+    grape = {
+        rotor  = { min = 350,  max = 550,  unit = "RPM", decimals = 0, step = 5  }, -- EN: Shaking rods / UA: Струшувальні стрижні
+        feeder = { min = 50,   max = 150,  unit = "RPM", decimals = 0, step = 5  }, -- EN: Noria bucket conveyor / UA: Ковшовий конвеєр
+        fan    = { min = 800,  max = 1600, unit = "RPM", decimals = 0, step = 10 }, -- EN: Extractor fans / UA: Очисні турбіни
+    },
+    olive = {
+        rotor  = { min = 400,  max = 650,  unit = "RPM", decimals = 0, step = 5  }, -- EN: Shaker beaters / UA: Бітери струшування
+        feeder = { min = 50,   max = 150,  unit = "RPM", decimals = 0, step = 5  }, -- EN: Noria bucket conveyor / UA: Ковшовий конвеєр
+        fan    = { min = 800,  max = 1600, unit = "RPM", decimals = 0, step = 10 }, -- EN: Extractor fans / UA: Очисні турбіни
     }
 }
 

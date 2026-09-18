@@ -2,7 +2,7 @@
 <modDesc descVersion="111">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.5.4.1</version>
+    <version>1.6.0.0</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
@@ -21,7 +21,7 @@ Features:
 - Multi-tier AI Worker & Courseplay auto-tuning based on electronics package
 - Full savegame persistence for active combine settings and custom crop profiles
 - Full multiplayer support with server-side settings
-- Comprehensive support for Grain, Forage, Root crops (Potatoes, Beet, Carrots, Onions, Spinach) and Cotton
+- Comprehensive support for Grain, Forage, Root crops, Cotton, Grapes and Olives
 - Pickup Header support (Swathing) & Experimental NEXAT modular carrier support
 - Seamless integration with Precision Farming & Moisture System
 - Interactive 9-page in-game help guide in ESC menu

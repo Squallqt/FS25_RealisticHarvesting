@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Walce wciągające"/>
         <text name="rhm_ui_root_roller" text="Rolki czyszczące"/>
         <text name="rhm_ui_root_feeder" text="Taśma odsiewająca"/>
+        <text name="rhm_ui_grape_shaker" text="Prędkość otrząsaczy"/>
+        <text name="rhm_ui_olive_shaker" text="Prędkość bijaków"/>
+        <text name="rhm_ui_grape_conveyor" text="Prędkość przenośnika"/>
+        <text name="rhm_ui_grape_fan" text="Wentylatory czyszczące"/>
         <text name="rhm_units_short" text="Jednostki"/>
         <text name="rhm_units_long" text="Wybierz system pomiarowy (prędkość, masa, powierzchnia)"/>
         <text name="rhm_unit_metric" text="Metryczny (km/h, t/h, ha)"/>

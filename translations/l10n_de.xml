@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Einzugswalzen"/>
         <text name="rhm_ui_root_roller" text="Reinigungswalzen"/>
         <text name="rhm_ui_root_feeder" text="Siebband"/>
+        <text name="rhm_ui_grape_shaker" text="Schüttlerdrehzahl"/>
+        <text name="rhm_ui_olive_shaker" text="Klopferdrehzahl"/>
+        <text name="rhm_ui_grape_conveyor" text="Förderbanddrehzahl"/>
+        <text name="rhm_ui_grape_fan" text="Reinigungsgebläse"/>
         <text name="rhm_units_short" text="Einheiten"/>
         <text name="rhm_units_long" text="Wählen Sie das Messsystem (Geschwindigkeit, Masse, Fläche)"/>
         <text name="rhm_unit_metric" text="Metrisch (km/h, t/h, ha)"/>

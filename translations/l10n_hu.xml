@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Behúzóhengerek"/>
         <text name="rhm_ui_root_roller" text="Tisztítóhengerek"/>
         <text name="rhm_ui_root_feeder" text="Felhordószalag"/>
+        <text name="rhm_ui_grape_shaker" text="Rázószerkezet sebessége"/>
+        <text name="rhm_ui_olive_shaker" text="Verődob sebessége"/>
+        <text name="rhm_ui_grape_conveyor" text="Szállítószalag sebessége"/>
+        <text name="rhm_ui_grape_fan" text="Tisztító ventilátorok"/>
         <text name="rhm_units_short" text="Mértékegységek"/>
         <text name="rhm_units_long" text="Mérési rendszer kiválasztása (sebesség, tömeg, terület)"/>
         <text name="rhm_unit_metric" text="Metrikus (km/h, t/h, ha)"/>

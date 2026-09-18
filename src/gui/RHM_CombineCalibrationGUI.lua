@@ -293,6 +293,8 @@ function RHMCombineCalibrationGUI:open(vehicle)
                            or (mType == "root" and "POTATO")
                            or (mType == "forage" and "MAIZE_FORAGE")
                            or (mType == "cotton" and "COTTON")
+                           or (mType == "grape" and "GRAPE")
+                           or (mType == "olive" and "OLIVE")
             if preferred then
                 for _, c in ipairs(mapCrops) do
                     if c == preferred then

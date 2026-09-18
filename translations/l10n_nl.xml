@@ -107,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Feed Rolls"/>
         <text name="rhm_ui_root_roller" text="Cleaning Rollers"/>
         <text name="rhm_ui_root_feeder" text="Elevator Web"/>
+        <text name="rhm_ui_grape_shaker" text="Schudsnelheid"/>
+        <text name="rhm_ui_olive_shaker" text="Slaagbalksnelheid"/>
+        <text name="rhm_ui_grape_conveyor" text="Transportsnelheid"/>
+        <text name="rhm_ui_grape_fan" text="Reinigingsblazers"/>
         <text name="rhm_units_short" text="Eenhedensysteem"/>
         <text name="rhm_units_long" text="Selecteer metrisch, imperiaal of bushels."/>
         <text name="rhm_unit_metric" text="Metrisch (km/u, t/ha)"/>

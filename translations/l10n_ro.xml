@@ -107,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Feed Rolls"/>
         <text name="rhm_ui_root_roller" text="Cleaning Rollers"/>
         <text name="rhm_ui_root_feeder" text="Elevator Web"/>
+        <text name="rhm_ui_grape_shaker" text="Viteza scuturătorilor"/>
+        <text name="rhm_ui_olive_shaker" text="Viteza bătătoarelor"/>
+        <text name="rhm_ui_grape_conveyor" text="Viteza transportorului"/>
+        <text name="rhm_ui_grape_fan" text="Ventilatoare curățare"/>
         <text name="rhm_units_short" text="Sistem de Unități"/>
         <text name="rhm_units_long" text="Selectează metric, imperial sau bushels."/>
         <text name="rhm_unit_metric" text="Metric (km/h, t/ha)"/>

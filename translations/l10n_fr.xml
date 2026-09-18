@@ -111,6 +111,10 @@
         <text name="rhm_ui_forage_feeder" text="Rouleaux d'alimentation"/>
         <text name="rhm_ui_root_roller" text="Rouleaux de nettoyage"/>
         <text name="rhm_ui_root_feeder" text="Tapis cribleur"/>
+        <text name="rhm_ui_grape_shaker" text="Vitesse secoueurs"/>
+        <text name="rhm_ui_olive_shaker" text="Vitesse batteurs"/>
+        <text name="rhm_ui_grape_conveyor" text="Vitesse convoyeur"/>
+        <text name="rhm_ui_grape_fan" text="Turbines d'aspiration"/>
         <text name="rhm_units_short" text="Unités"/>
         <text name="rhm_units_long" text="Choisissez le système de mesure (vitesse, masse, superficie)"/>
         <text name="rhm_unit_metric" text="Métrique (km/h, t/h, ha)"/>

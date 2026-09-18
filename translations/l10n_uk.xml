@@ -118,6 +118,10 @@
         <text name="rhm_ui_forage_feeder" text="Живильні вальці"/>
         <text name="rhm_ui_root_roller" text="Очисні вальці (Сепаратор)"/>
         <text name="rhm_ui_root_feeder" text="Транспортер"/>
+        <text name="rhm_ui_grape_shaker" text="Частота струшування"/>
+        <text name="rhm_ui_olive_shaker" text="Швидкість бітерів"/>
+        <text name="rhm_ui_grape_conveyor" text="Швидкість конвеєра"/>
+        <text name="rhm_ui_grape_fan" text="Очисні вентилятори"/>
         <text name="rhm_units_short" text="Одиниці"/>
         <text name="rhm_units_long" text="Оберіть систему вимірювання (швидкість, маса, площа)"/>
         <text name="rhm_unit_metric" text="Метричні (км/год, т/год, га)"/>

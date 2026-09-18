@@ -107,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Rolos Alimentadores"/>
         <text name="rhm_ui_root_roller" text="Rolos de Limpeza"/>
         <text name="rhm_ui_root_feeder" text="Esteira Elevadora"/>
+        <text name="rhm_ui_grape_shaker" text="Velocidade dos sacudidores"/>
+        <text name="rhm_ui_olive_shaker" text="Velocidade dos batedores"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocidade da esteira"/>
+        <text name="rhm_ui_grape_fan" text="Exaustores de limpeza"/>
         <text name="rhm_units_short" text="Unidades"/>
         <text name="rhm_units_long" text="Escolha o sistema de medição (velocidade, massa, área)"/>
         <text name="rhm_unit_metric" text="Métrico (km/h, t/h, ha)"/>

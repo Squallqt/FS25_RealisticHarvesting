@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Rodillos de alimentación"/>
         <text name="rhm_ui_root_roller" text="Rodillos de limpieza"/>
         <text name="rhm_ui_root_feeder" text="Cinta de criba"/>
+        <text name="rhm_ui_grape_shaker" text="Frecuencia sacudidores"/>
+        <text name="rhm_ui_olive_shaker" text="Velocidad batidores"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocidad transportador"/>
+        <text name="rhm_ui_grape_fan" text="Extractores de hojas"/>
         <text name="rhm_units_short" text="Unidades"/>
         <text name="rhm_units_long" text="Elija el sistema de medición (velocidad, masa, área)"/>
         <text name="rhm_unit_metric" text="Métrico (km/h, t/h, ha)"/>

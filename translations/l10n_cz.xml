@@ -109,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Vkládací válce"/>
         <text name="rhm_ui_root_roller" text="Čisticí válce"/>
         <text name="rhm_ui_root_feeder" text="Prosévací pás"/>
+        <text name="rhm_ui_grape_shaker" text="Rychlost vytřásadel"/>
+        <text name="rhm_ui_olive_shaker" text="Rychlost mlátidel"/>
+        <text name="rhm_ui_grape_conveyor" text="Rychlost dopravníku"/>
+        <text name="rhm_ui_grape_fan" text="Čisticí ventilátory"/>
         <text name="rhm_units_short" text="Jednotky"/>
         <text name="rhm_units_long" text="Vyberte měrný systém (rychlost, hmotnost, plocha)"/>
         <text name="rhm_unit_metric" text="Metrický (km/h, t/h, ha)"/>

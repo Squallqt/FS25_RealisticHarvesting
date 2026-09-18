@@ -333,6 +333,14 @@ function rhm_Combine:onLoad(savegame)
        or category == "vegetableVehicles" or category == "vegetableHarvesting"
        or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
         machineType = "root"
+    elseif category == "grapeVehicles" or category == "grapeHarvesting" then
+        if fullName:upper():find("OLIVE") or (self.configFileName and self.configFileName:lower():find("olive")) then
+            machineType = "olive"
+        else
+            machineType = "grape"
+        end
+    elseif category == "oliveVehicles" or category == "oliveHarvesting" then
+        machineType = "olive"
     else
         -- EN: 2. Fallback for unclassified / mod vehicles without standard store category
         -- UA: 2. Запасна перевірка для модової техніки без стандартної категорії магазину
@@ -351,6 +359,8 @@ function rhm_Combine:onLoad(savegame)
             local hasGrainFill = false
             local hasRootFill = false
             local hasCottonFill = false
+            local hasGrapeFill = false
+            local hasOliveFill = false
             local fillUnits = (type(self.getFillUnits) == "function" and self:getFillUnits()) 
                            or (self.spec_fillUnit and self.spec_fillUnit.fillUnits)
             if fillUnits then
@@ -373,6 +383,10 @@ function rhm_Combine:onLoad(savegame)
                                         hasRootFill = true
                                     elseif name == "COTTON" then
                                         hasCottonFill = true
+                                    elseif name:find("GRAPE") then
+                                        hasGrapeFill = true
+                                    elseif name:find("OLIVE") then
+                                        hasOliveFill = true
                                     end
                                 end
                             end
@@ -388,6 +402,16 @@ function rhm_Combine:onLoad(savegame)
                 machineType = "cotton"
             elseif hasRootFill then
                 machineType = "root"
+            elseif hasGrapeFill and not hasOliveFill then
+                machineType = "grape"
+            elseif hasOliveFill and not hasGrapeFill then
+                machineType = "olive"
+            elseif hasGrapeFill and hasOliveFill then
+                if fullName:upper():find("OLIVE") or (self.configFileName and self.configFileName:lower():find("olive")) then
+                    machineType = "olive"
+                else
+                    machineType = "grape"
+                end
             elseif sc and sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil then
                 machineType = "forage"
             else
@@ -542,8 +566,11 @@ function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
     
     local spec = self.spec_rhm_Combine
     if spec and actualAdded and type(actualAdded) == "number" and actualAdded > 0 then
-        -- Рахуємо тільки якщо ми активно косимо (lastRawArea > 0)
-        if spec.lastRawArea and spec.lastRawArea > 0 then
+        -- Рахуємо якщо ми активно косимо (lastRawArea > 0) або це увімкнений виноградо/оливкозбиральний комбайн
+        local isGrapeOrOlive = (spec.machineType == "grape" or spec.machineType == "olive" 
+            or (spec.combineMemory and (spec.combineMemory.machineType == "grape" or spec.combineMemory.machineType == "olive")))
+        local isHarvestingActive = (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
+        if isHarvestingActive then
             -- EN: Cotton Harvester fix: Ignore massive instant internal transfers (e.g. spool unloading)
             -- UA: Фікс бавовняних комбайнів: ігноруємо масивні миттєві внутрішні переміщення (напр. розвантаження котушки)
             local isMassiveTransfer = false
@@ -1130,6 +1157,15 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
             cutterIsWorking = true
         end
     end
+
+    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
+    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
+    if not cutterIsWorking and (spec.machineType == "grape" or spec.machineType == "olive"
+        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
+        if self:getIsTurnedOn() then
+            cutterIsWorking = true
+        end
+    end
     
     -- Якщо жатка НЕ працює - знімаємо обмеження відразу
     if not cutterIsWorking then
@@ -1427,23 +1463,15 @@ function rhm_Combine:updateWarnings(dt)
 end
 
 ---Update audio feedback for engine/thresher load and crop loss (Client Side)
----EN: Plays the overload alarm sample with cabin/exterior acoustic modeling.
----UA: Програє звук зумера перевантаження з кабінною та зовнішньою акустикою.
+---EN: Plays the overload alarm sample with consistent cabin and exterior volume.
+---UA: Програє звук зумера перевантаження з однаковою гучністю як у кабіні, так і ззовні.
 function rhm_Combine.playAlarmSample(vehicle, spec, soundVolMultiplier)
     local alarmSample = spec.samples and spec.samples.overloadAlarm
     if not alarmSample then return end
 
-    local isCameraInside = true
-    if vehicle.getActiveCamera then
-        local cam = vehicle:getActiveCamera()
-        if cam and cam.isInside ~= nil then
-            isCameraInside = cam.isInside
-        end
-    end
-
-    -- Cabin acoustic modeling: in-cab is crisp and pleasant (0.85); exterior is muffled (0.35)
-    local camAlarmVol = isCameraInside and 0.85 or 0.35
-    local alarmVol = camAlarmVol * soundVolMultiplier
+    -- EN: Consistent, comfortable buzzer volume both inside and outside the cabin
+    -- UA: Однаковий, комфортний рівень гучності зумера як всередині кабіни, так і ззовні
+    local alarmVol = 0.85 * soundVolMultiplier
 
     if g_soundManager.setSampleVolume then
         pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
@@ -1637,6 +1665,15 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn() 
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
+            cutterIsTurnedOn = true
+        end
+    end
+
+    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
+    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
+    if not cutterIsTurnedOn and (spec.machineType == "grape" or spec.machineType == "olive"
+        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
+        if self:getIsTurnedOn() then
             cutterIsTurnedOn = true
         end
     end

@@ -386,8 +386,9 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         -- In trailed setups (e.g. Grimme Rootster on a tractor), a separate harvester implement consumes PTO power.
         -- Must NOT be the vehicle running RHM itself (e.g. NEXCO modular harvester).
         local isTrailedHarvester = (obj ~= motorCarrier and obj ~= vehicle and obj.spec_combine ~= nil)
+        local isGrapeOrOliveMachine = (obj == vehicle and self.combineMemory and (self.combineMemory.machineType == "grape" or self.combineMemory.machineType == "olive"))
 
-        if isCutter or isTrailedHarvester then
+        if isCutter or isTrailedHarvester or isGrapeOrOliveMachine then
             cutterCount = cutterCount + 1
 
             -- Check active state
@@ -527,8 +528,8 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         end
     end
 
-    -- If self-propelled machine with built-in cutter and no separate PTO consumer was registered:
-    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil) then
+    -- If self-propelled machine with built-in cutter/shaker and no separate PTO consumer was registered:
+    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil or vehicle.spec_combine ~= nil) then
         local width = 0
         if vehicle.getWorkingWidth then
             local w = vehicle:getWorkingWidth()
@@ -543,10 +544,15 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                 width = tonumber(item.specs.workingWidth) or width
             end
         end
-        if width == 0 then
-            width = 3.0
-        end
+
         local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local isGrapeOrOlive = (cropUpper:find("GRAPE") or cropUpper:find("OLIVE")
+            or (self.combineMemory and (self.combineMemory.machineType == "grape" or self.combineMemory.machineType == "olive")))
+
+        if width == 0 then
+            width = isGrapeOrOlive and 2.5 or 3.0
+        end
+
         local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
         if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
             local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
@@ -554,9 +560,21 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                 cropUpper = string.upper(fruitTypeDesc.name)
             end
         end
+
         local isStripper = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
-        local hpPerMeter = isStripper and 28.0 or 22.0
+        local hpPerMeter = 22.0
+        if isStripper then
+            hpPerMeter = 28.0
+        elseif isGrapeOrOlive then
+            hpPerMeter = 14.0 -- Shaker tunnel rods and extractor turbines (~35 HP total)
+        end
         headerHp = width * hpPerMeter
+        self.lastHeaderWidth = width
+
+        if vehicle.getIsTurnedOn and vehicle:getIsTurnedOn() then
+            isCutterActive = true
+            cutterCount = math.max(1, cutterCount)
+        end
     end
 
     maxWorkingSpeed = maxWorkingSpeed or self.vanillaWorkingSpeed or (self.genuineSpeedLimit > 0 and self.genuineSpeedLimit) or 10.0
@@ -668,9 +686,9 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         baseESpec = 4.8 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
 
     -- 5. GRAPES & OLIVES (Specialized straddle harvesters)
-    elseif cropName:find("GRAPE") then
+    elseif machineType == "grape" or cropName:find("GRAPE") then
         baseESpec = 3.8 -- Shaker rod frequency, sorting belts, destemmer
-    elseif cropName:find("OLIVE") then
+    elseif machineType == "olive" or cropName:find("OLIVE") then
         baseESpec = 2.6 -- Olive shaker beaters, leaf blowers
 
     -- 6. GRAIN COMBINE HARVESTERS (Grain tank stream processing)
@@ -772,7 +790,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
     if machineType == "root" then
         alpha = 0.12
         minFactor = 0.75
-    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" then
+    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" or machineType == "grape" or machineType == "olive" then
         alpha = 0.15
         minFactor = 0.75
     end
@@ -823,6 +841,8 @@ function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
 
     local isForage = (machineType == "forage" or category:find("forage") ~= nil)
     local isRoot = (machineType == "root" or category:find("beet") ~= nil or category:find("potato") ~= nil or category:find("vegetable") ~= nil)
+    local isCotton = (machineType == "cotton" or category:find("cotton") ~= nil)
+    local isGrapeOrOlive = (machineType == "grape" or machineType == "olive" or category:find("grape") ~= nil or category:find("olive") ~= nil)
 
     -- Nominal throughput at 100% processing load (t/h)
     local nominalTph = 0
@@ -830,6 +850,10 @@ function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
         nominalTph = hp / 2.1 -- ~2.1 HP per t/h
     elseif isRoot then
         nominalTph = hp / 0.75 -- ~0.75 HP per t/h
+    elseif isCotton then
+        nominalTph = hp / 18.0 -- ~18 HP per t/h for cotton
+    elseif isGrapeOrOlive then
+        nominalTph = hp / 3.2 -- ~3.2 HP per t/h for grape/olive picking & shaking
     else
         nominalTph = hp / 5.2 -- ~5.2 HP per t/h for grain
     end
