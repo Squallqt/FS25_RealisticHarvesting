@@ -65,16 +65,16 @@ function RHMCombineCalibrationGUI.new(modDirectory)
         bezelBottom  = 0.0038,
         bezelTop     = 0.0038,
 
-        -- Authentic pure black glass palette (unified with RHM Draggable HUD, game HUD, and Notifications)
+        -- Authentic frosted glass palette (unified with RHM Draggable HUD, game HUD, and Notifications)
         colors = {
-            outerBorder    = {1.00, 1.00, 1.00, 0.08}, -- 1px subtle glass edge
-            bg             = {0.0, 0.0, 0.0, 0.86}, -- Pure deep black glass (86% opacity, high readability)
+            outerBorder    = {1.00, 1.00, 1.00, 0.10}, -- 1px subtle glass edge
+            bg             = {0.012, 0.015, 0.020, 0.68}, -- Smoked semi-transparent glass base
             header         = {0.0, 0.0, 0.0, 0.0}, -- Seamless with body glass
             headerAccent   = {0.529, 0.706, 0.0, 1.0}, -- Authentic game HUD green accent line
             sectionBg      = {0.0, 0.0, 0.0, 0.0}, -- Transparent, seamless with body glass
             sectionNotch   = {0.529, 0.706, 0.0, 1.0}, -- Authentic game HUD green notch
-            statsCardBg    = {0.0, 0.0, 0.0, 0.25}, -- Recessed telemetry card background
-            statsCardBorder= {1.00, 1.00, 1.00, 0.10},
+            statsCardBg    = {0.005, 0.008, 0.012, 0.45}, -- Recessed frosted telemetry card background
+            statsCardBorder= {1.00, 1.00, 1.00, 0.12},
             separator      = {1.00, 1.00, 1.00, 0.10},
             paramRowHover  = {1.00, 1.00, 1.00, 0.025},
 
@@ -580,8 +580,15 @@ function RHMCombineCalibrationGUI:draw()
     self:drawPanelBackground(tabletX, tabletY, tabletW, tabletH, caseBg)
     self:drawBorder(tabletX, tabletY, tabletW, tabletH, {0.16, 0.18, 0.22, 0.60}, 1)
 
-    -- ── 2. Inner Recessed Touchscreen Display Glass ───────────────────────────
+    -- ── 2. Inner Recessed Touchscreen Display Glass (Smoked Acrylic & Edge Refraction) ──
     self:drawPanelBackground(x, y, w, h, ui.colors.bg)
+
+    -- Glass Refraction Edge Highlights & Sub-surface Chamfer
+    self:drawRect(x + pixelW, y + h - pixelH, w - 2 * pixelW, pixelH, {1.0, 1.0, 1.0, 0.22}) -- Top specular rim
+    self:drawRect(x, y + pixelH, pixelW, h - 2 * pixelH, {1.0, 1.0, 1.0, 0.12})              -- Left ambient rim
+    self:drawRect(x + w - pixelW, y, pixelW, h, {0.0, 0.0, 0.0, 0.50})                       -- Right inner bezel shadow
+    self:drawRect(x, y, w, pixelH, {0.0, 0.0, 0.0, 0.65})                                    -- Bottom inner bezel shadow
+    self:drawBorder(x + 1.5 * pixelW, y + 1.5 * pixelH, w - 3 * pixelW, h - 3 * pixelH, {1.0, 1.0, 1.0, 0.04}, 1) -- Sub-surface glass thickness
 
     -- ── Terminal Status Header (Inside Display) ──────────────────────────────
     local headerY = y + h - ui.headerHeight
