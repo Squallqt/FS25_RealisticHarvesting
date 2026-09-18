@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Reproducir alarmas de cabina y sonidos de esfuerzo de la trilladora cuando la cosechadora se sobrecarga o pierde grano.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Zumbador de sobrecarga"/>
-        <text name="rhm_alarm_sounds_long" text="Activa un zumbador electrónico en cabina en caso de carga crítica (98%+) o pérdidas elevadas (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modo del zumbador en cabina ante sobrecarga severa (105%+) o pérdidas elevadas (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligente (3 pitidos)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuo"/>
+        <text name="rhm_alarm_mode_off" text="Desactivado"/>
         <text name="rhm_sound_volume_short" text="Volumen de sonido"/>
         <text name="rhm_sound_volume_long" text="Ajusta el volumen del zumbador de alarma de sobrecarga en cabina."/>
         <text name="rhm_target_load" text="Carga Objetivo"/>

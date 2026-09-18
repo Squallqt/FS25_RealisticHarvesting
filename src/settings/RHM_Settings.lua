@@ -35,6 +35,12 @@ RHMSettings.UNIT_METRIC = 1     -- EN: km/h, t/h, ha / UA: км/год, т/го�
 RHMSettings.UNIT_IMPERIAL = 2   -- EN: mph, ton/h, acres / UA: миль/год, тон/год, акри
 RHMSettings.UNIT_BUSHELS = 3    -- EN: mph, bu/h, acres / UA: миль/год, бушелі/год, акри
 
+-- EN: Alarm buzzer mode constants.
+-- UA: Константи режиму кабінного зумера перевантаження.
+RHMSettings.ALARM_MODE_SMART = 1       -- EN: Smart 3-beep alert + pause / UA: Розумний сигнал (3 імпульси + пауза)
+RHMSettings.ALARM_MODE_CONTINUOUS = 2  -- EN: Continuous beeping under overload / UA: Безперервний сигнал при перевантаженні
+RHMSettings.ALARM_MODE_OFF = 3         -- EN: Disabled / UA: Вимкнено
+
 -- EN: Creates and initializes a new RHMSettings instance with default values.
 -- UA: Створює та ініціалізує новий екземпляр RHMSettings зі значеннями за замовчуванням.
 function RHMSettings.new(manager)
@@ -57,6 +63,7 @@ function RHMSettings.new(manager)
     self.showYield = true
     self.showSpeedometer = true
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
+    self.alarmMode = RHMSettings.ALARM_MODE_SMART -- EN: Alarm mode (1=Smart, 2=Continuous, 3=Off) / UA: Режим зумера
     self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
     self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
     self.enableTutorials = true         -- EN: First-time onboarding tutorial hints / UA: Навчальні підказки для новачків
@@ -232,6 +239,9 @@ function RHMSettings:resetToDefaults()
     self.showLoadWarnings = true
     self.enableIndependentLaunch = true
     self.enableTutorials = true
+    self.alarmMode = RHMSettings.ALARM_MODE_SMART
+    self.enableAlarmSound = true
+    self.soundVolume = 1.0
     self.hudOffsetX = 0
     self.hudOffsetY = 350
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD

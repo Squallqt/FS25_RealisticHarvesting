@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Ses"/>
         <text name="rhm_alarm_sounds_short" text="Aşırı Yük Alarmı"/>
-        <text name="rhm_alarm_sounds_long" text="Kritik yükte (%98+) veya yüksek kayıpta (&gt;%4) kabin içinde elektronik ikaz sesi çalar."/>
+        <text name="rhm_alarm_sounds_long" text="Aşırı motor yükünde (%105+) veya yüksek ürün kaybında (&gt;%5) kabin ikaz modu."/>
+        <text name="rhm_alarm_mode_smart" text="Akıllı (3 bip)"/>
+        <text name="rhm_alarm_mode_continuous" text="Sürekli"/>
+        <text name="rhm_alarm_mode_off" text="Kapalı"/>
         <text name="rhm_sound_volume_short" text="Ses Seviyesi"/>
         <text name="rhm_sound_volume_long" text="Kabin içi aşırı yük alarm ses seviyesini ayarlar."/>
         <text name="rhm_target_load" text="Target Engine Load"/>

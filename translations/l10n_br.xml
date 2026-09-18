@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long" text="Toca alarme na cabine quando a máquina estiver sobrecarregada ou exceder os limites de perda."/>
         <text name="rhm_section_audio" text="Realistic Harvesting - Áudio"/>
         <text name="rhm_alarm_sounds_short" text="Alarme Sonoro de Sobrecarga"/>
-        <text name="rhm_alarm_sounds_long" text="Toca um alarme sonoro na cabine com carga crítica (98%+) ou perdas elevadas (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modo do alarme sonoro na cabine com sobrecarga severa (105%+) ou perdas elevadas (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligente (3 bips)"/>
+        <text name="rhm_alarm_mode_continuous" text="Contínuo"/>
+        <text name="rhm_alarm_mode_off" text="Desativado"/>
         <text name="rhm_sound_volume_short" text="Volume dos Sons"/>
         <text name="rhm_sound_volume_long" text="Ajusta o volume do alarme sonoro de sobrecarga na cabine."/>
         <text name="rhm_target_load" text="Carga Alvo"/>

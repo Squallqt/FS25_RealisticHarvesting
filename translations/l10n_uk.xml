@@ -89,8 +89,11 @@
         <text name="rhm_overload_sounds_short" text="Звуки перевантаження та стресу"/>
         <text name="rhm_overload_sounds_long"><![CDATA[Відтворювати реалістичний сигнал тривоги в кабіні та гул молотарки при перевантаженні або надмірних втратах урожаю.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Звук"/>
-        <text name="rhm_alarm_sounds_short" text="Сигнал тривоги перевантаження"/>
-        <text name="rhm_alarm_sounds_long" text="Вмикає звуковий електронний зумер у кабіні при критичному навантаженні (98%+) або високих втратах (понад 4%)."/>
+        <text name="rhm_alarm_sounds_short" text="Режим зумера перевантаження"/>
+        <text name="rhm_alarm_sounds_long" text="Режим роботи звукового кабінного зумера при перевантаженні двигуна (понад 105%) або критичних втратах (понад 5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Розумний (3 сигнали)"/>
+        <text name="rhm_alarm_mode_continuous" text="Безперервний"/>
+        <text name="rhm_alarm_mode_off" text="Вимкнено"/>
         <text name="rhm_sound_volume_short" text="Гучність звуків"/>
         <text name="rhm_sound_volume_long" text="Регулює гучність звукового сигналу тривоги (зумера) у кабіні при перевантаженні."/>
         <text name="rhm_target_load" text="Цільове Навантаження"/>

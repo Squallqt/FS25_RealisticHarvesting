@@ -83,7 +83,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Émettre une alarme de cabine et des bruits de batteur lorsque la moissonneuse est surchargée ou subit des pertes.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Avertisseur de surcharge"/>
-        <text name="rhm_alarm_sounds_long" text="Active un avertisseur sonore en cabine en cas de charge critique (98%+) ou de pertes élevées (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Mode de l'avertisseur sonore en cabine en cas de surcharge sévère (105%+) ou de pertes élevées (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Intelligent (3 bips)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continu"/>
+        <text name="rhm_alarm_mode_off" text="Désactivé"/>
         <text name="rhm_sound_volume_short" text="Volume sonore"/>
         <text name="rhm_sound_volume_long" text="Règle le volume de l'avertisseur sonore de surcharge en cabine."/>
         <text name="rhm_target_load" text="Charge Cible"/>

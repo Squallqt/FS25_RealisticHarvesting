@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Sunet"/>
         <text name="rhm_alarm_sounds_short" text="Alarmă Suprasarcină"/>
-        <text name="rhm_alarm_sounds_long" text="Activează un avertizor sonor în cabină la sarcină critică (98%+) sau pierderi mari (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modul avertizorului sonor din cabină la suprasarcină severă (105%+) sau pierderi mari (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligent (3 bipuri)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuu"/>
+        <text name="rhm_alarm_mode_off" text="Oprit"/>
         <text name="rhm_sound_volume_short" text="Volum Sunete"/>
         <text name="rhm_sound_volume_long" text="Ajustează volumul alarmei sonore de suprasarcină din cabină."/>
         <text name="rhm_target_load" text="Target Engine Load"/>

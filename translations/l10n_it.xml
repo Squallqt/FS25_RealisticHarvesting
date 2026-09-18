@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Riproduci allarmi in cabina e suoni di sforzo del battitore quando la mietitrebbia è sovraccarica o subisce perdite.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Cicalino di sovraccarico"/>
-        <text name="rhm_alarm_sounds_long" text="Attiva un cicalino in cabina in caso di carico critico (98%+) o perdite elevate (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modalità cicalino in cabina in caso di forte sovraccarico (105%+) o perdite elevate (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Intelligente (3 segnali)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuo"/>
+        <text name="rhm_alarm_mode_off" text="Disattivato"/>
         <text name="rhm_sound_volume_short" text="Volume del suono"/>
         <text name="rhm_sound_volume_long" text="Regola il volume del cicalino di allarme sovraccarico in cabina."/>
         <text name="rhm_target_load" text="Carico Target"/>

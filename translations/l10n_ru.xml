@@ -82,8 +82,11 @@
         <text name="rhm_overload_sounds_short" text="Звуки перегрузки и стресса"/>
         <text name="rhm_overload_sounds_long"><![CDATA[Воспроизводить реалистичный сигнал тревоги в кабине и гул молотилки при перегрузке или чрезмерных потерях урожая.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Звук"/>
-        <text name="rhm_alarm_sounds_short" text="Звуковой сигнал тревоги"/>
-        <text name="rhm_alarm_sounds_long" text="Включает звуковой электронный зуммер в кабине при критической нагрузке (98%+) или потерях (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_short" text="Режим зуммера перегрузки"/>
+        <text name="rhm_alarm_sounds_long" text="Режим работы звукового зуммера в кабине при перегрузке (&gt;105%) или критических потерях (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Умный (3 сигнала)"/>
+        <text name="rhm_alarm_mode_continuous" text="Непрерывный"/>
+        <text name="rhm_alarm_mode_off" text="Выключено"/>
         <text name="rhm_sound_volume_short" text="Громкость звуков"/>
         <text name="rhm_sound_volume_long" text="Регулирует громкость сигнала тревоги (зуммера) в кабине при перегрузке."/>
         <text name="rhm_target_load" text="Целевая Нагрузка"/>

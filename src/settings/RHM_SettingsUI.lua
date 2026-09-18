@@ -298,8 +298,21 @@ function RHMSettingsUI.inject(settings)
     -- === SECTION: Audio / Звук ===
     addSection(settingsPage, "rhm_section_audio", generalLayout)
 
-    RHMSettingsUI.alarmSoundOption = addBinaryRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
-        settings.enableAlarmSound ~= false, function(val) settings.enableAlarmSound = val; settings:save() end)
+    local alarmModeOptions = {
+        g_i18n:hasText("rhm_alarm_mode_smart") and g_i18n:getText("rhm_alarm_mode_smart") or "Smart (3 Beeps)",
+        g_i18n:hasText("rhm_alarm_mode_continuous") and g_i18n:getText("rhm_alarm_mode_continuous") or "Continuous",
+        g_i18n:hasText("rhm_alarm_mode_off") and g_i18n:getText("rhm_alarm_mode_off") or "Off"
+    }
+    local currentAlarmMode = settings.alarmMode or (settings.enableAlarmSound == false and 3 or 1)
+    if currentAlarmMode < 1 or currentAlarmMode > 3 then currentAlarmMode = 1 end
+
+    RHMSettingsUI.alarmSoundOption = addMultiRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
+        alarmModeOptions, currentAlarmMode,
+        function(idx)
+            settings.alarmMode = idx
+            settings.enableAlarmSound = (idx ~= 3)
+            settings:save()
+        end)
 
     local volumeOptions = {"50%", "75%", "100%", "125%", "150%"}
     local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
@@ -365,7 +378,9 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.tutorialsOption,      (settings.enableTutorials ~= false) and 2 or 1, false)
     setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
 
-    setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
+    local currentAlarmMode = settings.alarmMode or (settings.enableAlarmSound == false and 3 or 1)
+    if currentAlarmMode < 1 or currentAlarmMode > 3 then currentAlarmMode = 1 end
+    setOpt(RHMSettingsUI.alarmSoundOption, currentAlarmMode, false)
     local volIdx = 3
     local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
     if settings.soundVolume then

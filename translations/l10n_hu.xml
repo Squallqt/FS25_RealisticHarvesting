@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Reális fülkeriasztás és cséplési feszültséghangok lejátszása túlterhelés vagy veszteség esetén.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Hangok"/>
         <text name="rhm_alarm_sounds_short" text="Túlterhelési hangjelzés"/>
-        <text name="rhm_alarm_sounds_long" text="Megszólaltat egy elektronikus berregőt a fülkében kritikus terhelésnél (98%+) vagy magas veszteségnél (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Fülke berregő üzemmódja erős túlterhelésnél (105%+) vagy magas veszteségnél (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Okos (3 sípolás)"/>
+        <text name="rhm_alarm_mode_continuous" text="Folyamatos"/>
+        <text name="rhm_alarm_mode_off" text="Kikapcsolva"/>
         <text name="rhm_sound_volume_short" text="Hangerő"/>
         <text name="rhm_sound_volume_long" text="Beállítja a fülkében lévő túlterhelési hangjelzés (berregő) hangerejét."/>
         <text name="rhm_target_load" text="Cél Motorterhelés"/>

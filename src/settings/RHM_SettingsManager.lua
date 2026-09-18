@@ -46,6 +46,7 @@ RHMSettingsManager.CLIENT_SETTINGS = {
     "unitSystem",
     "showSpeedometer",
     "enableAlarmSound",
+    "alarmMode",
     "soundVolume",
     "enableTutorials"
 }
@@ -66,6 +67,7 @@ RHMSettingsManager.defaultConfig = {
     enableMoisture = true,
     showMoisture = true,
     enableAlarmSound = true,
+    alarmMode = 1,
     soundVolume = 1.0,
     enableTutorials = true,
     hudOffsetX = 0,
@@ -188,8 +190,8 @@ function RHMSettingsManager:loadClientSettings(settingsObject)
         if xml then
             for _, key in ipairs(self.CLIENT_SETTINGS) do
                 local xmlKey = self.XMLTAG.."."..key
-                if key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
-                    settingsObject[key] = xml:getInt(xmlKey, self.defaultConfig[key] or 0)
+                if key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" or key == "alarmMode" then
+                    settingsObject[key] = xml:getInt(xmlKey, self.defaultConfig[key] or 1)
                 elseif key == "hudPosX" or key == "hudPosY" then
                     -- EN: HUD position stored as float (nil if not set = auto positioning).
                     -- UA: Позиція HUD зберігається як float (nil якщо не встановлено = автоматичне позиціонування).
@@ -296,8 +298,8 @@ function RHMSettingsManager:saveClientSettings(settingsObject)
     if xml then
         for _, key in ipairs(self.CLIENT_SETTINGS) do
             local xmlKey = self.XMLTAG.."."..key
-            if key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" then
-                xml:setInt(xmlKey, settingsObject[key])
+            if key == "hudOffsetX" or key == "hudOffsetY" or key == "unitSystem" or key == "alarmMode" then
+                xml:setInt(xmlKey, settingsObject[key] or 1)
             elseif key == "hudPosX" or key == "hudPosY" then
                 -- EN: Only save position if it has been explicitly set (not nil = auto).
                 -- UA: Зберігаємо позицію тільки якщо вона була явно встановлена (не nil = авто).

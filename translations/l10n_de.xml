@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Realistische Kabinenalarme und Dreschwerkgeräusche bei Überlastung oder übermäßigen Ernteverlusten abspielen.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Ton"/>
         <text name="rhm_alarm_sounds_short" text="Überlast-Summer"/>
-        <text name="rhm_alarm_sounds_long" text="Schaltet einen akustischen Summer in der Kabine bei kritischer Last (98%+) oder hohem Verlust (&gt;4%) ein."/>
+        <text name="rhm_alarm_sounds_long" text="Akustischer Summer in der Kabine bei kritischer Last (&gt;105%) oder hohem Verlust (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Intelligent (3 Signale)"/>
+        <text name="rhm_alarm_mode_continuous" text="Kontinuierlich"/>
+        <text name="rhm_alarm_mode_off" text="Aus"/>
         <text name="rhm_sound_volume_short" text="Lautstärke"/>
         <text name="rhm_sound_volume_long" text="Regelt die Lautstärke des Überlastungs-Summers in der Kabine."/>
         <text name="rhm_target_load" text="Soll-Motorlast"/>

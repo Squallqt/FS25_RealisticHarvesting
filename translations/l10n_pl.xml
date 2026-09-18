@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Odtwarzaj realistyczny alarm kabinowy i dźwięki obciążenia młocarni przy przeciążeniu kombajnu lub stratach ziarna.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Dźwięk"/>
         <text name="rhm_alarm_sounds_short" text="Brzęczyk przeciążenia"/>
-        <text name="rhm_alarm_sounds_long" text="Włącza elektroniczny brzęczyk w kabinie przy krytycznym obciążeniu (98%+) lub wysokich stratach (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Tryb brzęczyka w kabinie przy silnym przeciążeniu (105%+) lub wysokich stratach (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligentny (3 sygnały)"/>
+        <text name="rhm_alarm_mode_continuous" text="Ciągły"/>
+        <text name="rhm_alarm_mode_off" text="Wyłączony"/>
         <text name="rhm_sound_volume_short" text="Głośność dźwięków"/>
         <text name="rhm_sound_volume_long" text="Reguluje głośność brzęczyka alarmu przeciążenia w kabinie."/>
         <text name="rhm_target_load" text="Docelowe obciążenie"/>

@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Přehrávat realistický alarm v kabině a zvuky namáhání mlátičky při přetížení kombajnu nebo ztrátách zrna.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Zvuk"/>
         <text name="rhm_alarm_sounds_short" text="Bzučák přetížení"/>
-        <text name="rhm_alarm_sounds_long" text="Spustí zvukový bzučák v kabině při kritickém zatížení (98%+) nebo vysokých ztrátách (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Režim zvukového bzučáku v kabině při silném přetížení (105%+) nebo vysokých ztrátách (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Chytrý (3 pípnutí)"/>
+        <text name="rhm_alarm_mode_continuous" text="Nepřetržitý"/>
+        <text name="rhm_alarm_mode_off" text="Vypnuto"/>
         <text name="rhm_sound_volume_short" text="Hlasitost zvuku"/>
         <text name="rhm_sound_volume_long" text="Nastavuje hlasitost bzučáku alarmu přetížení v kabině."/>
         <text name="rhm_target_load" text="Cílové zatížení"/>

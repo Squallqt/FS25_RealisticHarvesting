@@ -88,7 +88,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Overload Alarm Buzzer"/>
-        <text name="rhm_alarm_sounds_long" text="Play an audible electronic buzzer in the cabin when combine load reaches critical levels (98%+) or crop loss exceeds 4%."/>
+        <text name="rhm_alarm_sounds_long" text="Cabin buzzer mode when engine load reaches severe overload (105%+) or crop loss exceeds 5%."/>
+        <text name="rhm_alarm_mode_smart" text="Smart (3 Beeps)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuous"/>
+        <text name="rhm_alarm_mode_off" text="Off"/>
         <text name="rhm_sound_volume_short" text="Sound Volume"/>
         <text name="rhm_sound_volume_long" text="Adjusts the volume of the cabin overload buzzer alarm."/>
         <text name="rhm_target_load" text="Target Engine Load"/>

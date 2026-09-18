@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Overbelastingsalarm"/>
-        <text name="rhm_alarm_sounds_long" text="Laat een zoemer in de cabine klinken bij kritieke belasting (98%+) of hoog verlies (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modus van de zoemer in de cabine bij zware overbelasting (105%+) of hoog verlies (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Slim (3 pieptonen)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continu"/>
+        <text name="rhm_alarm_mode_off" text="Uit"/>
         <text name="rhm_sound_volume_short" text="Geluidsvolume"/>
         <text name="rhm_sound_volume_long" text="Past het volume van de overbelastingszoemer in de cabine aan."/>
         <text name="rhm_target_load" text="Target Engine Load"/>

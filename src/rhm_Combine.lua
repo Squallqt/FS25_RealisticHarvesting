@@ -1427,6 +1427,34 @@ function rhm_Combine:updateWarnings(dt)
 end
 
 ---Update audio feedback for engine/thresher load and crop loss (Client Side)
+---EN: Plays the overload alarm sample with cabin/exterior acoustic modeling.
+---UA: Програє звук зумера перевантаження з кабінною та зовнішньою акустикою.
+function rhm_Combine.playAlarmSample(vehicle, spec, soundVolMultiplier)
+    local alarmSample = spec.samples and spec.samples.overloadAlarm
+    if not alarmSample then return end
+
+    local isCameraInside = true
+    if vehicle.getActiveCamera then
+        local cam = vehicle:getActiveCamera()
+        if cam and cam.isInside ~= nil then
+            isCameraInside = cam.isInside
+        end
+    end
+
+    -- Cabin acoustic modeling: in-cab is crisp and pleasant (0.85); exterior is muffled (0.35)
+    local camAlarmVol = isCameraInside and 0.85 or 0.35
+    local alarmVol = camAlarmVol * soundVolMultiplier
+
+    if g_soundManager.setSampleVolume then
+        pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+    end
+    if alarmSample.soundSample and type(setSampleVolume) == "function" then
+        pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+    end
+
+    pcall(function() g_soundManager:playSample(alarmSample) end)
+end
+
 function rhm_Combine:updateSounds(dt)
     local spec = self.spec_rhm_Combine
     if not spec or not spec.samples then
@@ -1434,14 +1462,17 @@ function rhm_Combine:updateSounds(dt)
     end
 
     -- Check user settings
-    local alarmEnabled = true
+    local alarmMode = 1 -- 1 = Smart (3 beeps), 2 = Continuous, 3 = Off
     local soundVolMultiplier = 1.0
     if g_realisticHarvestManager and g_realisticHarvestManager.settings then
-        if g_realisticHarvestManager.settings.enableAlarmSound == false then
-            alarmEnabled = false
+        local s = g_realisticHarvestManager.settings
+        if s.alarmMode then
+            alarmMode = s.alarmMode
+        elseif s.enableAlarmSound == false then
+            alarmMode = 3
         end
-        if g_realisticHarvestManager.settings.soundVolume then
-            soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+        if s.soundVolume then
+            soundVolMultiplier = s.soundVolume
         end
     end
 
@@ -1456,49 +1487,70 @@ function rhm_Combine:updateSounds(dt)
     local isTurnedOn = self:getIsTurnedOn()
 
     -- If alarm disabled, player not in vehicle, or combine turned off: stop active sounds
-    if not alarmEnabled or not isPlayerEntered or not isTurnedOn then
+    if alarmMode == 3 or not isPlayerEntered or not isTurnedOn then
         if spec.samples.overloadAlarm then
             pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
         end
         spec._rhmAlarmTimer = 1500
+        spec._rhmAlarmBurstCount = 0
+        spec._rhmAlarmPauseTimer = 0
         return
     end
 
     local load = (spec.data and spec.data.load) or 0
     local loss = (spec.data and spec.data.cropLoss) or 0
 
-    -- Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0% with Tier 2+ loss sensors)
+    -- Cabin Warning Alarm / Buzzer (Overload >= 105% or Crop Loss >= 5.0% with Tier 2+ loss sensors)
     local hasLossSensor = (spec.packageLevel or 1) >= 2
-    local isLossAlarm = hasLossSensor and (loss >= 4.0)
-    local isOverloadAlarm = (load >= 98)
+    local isLossAlarm = hasLossSensor and (loss >= 5.0)
+    local isOverloadAlarm = (load >= 105)
+    local isAlarmCondition = (isOverloadAlarm or isLossAlarm)
 
-    if alarmEnabled and (isOverloadAlarm or isLossAlarm) and spec.samples.overloadAlarm then
-        spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
-        if spec._rhmAlarmTimer >= 2200 then
-            spec._rhmAlarmTimer = 0
-            
-            local alarmSample = spec.samples.overloadAlarm
-            local isCameraInside = true
-            if self.getActiveCamera then
-                local cam = self:getActiveCamera()
-                if cam and cam.isInside ~= nil then
-                    isCameraInside = cam.isInside
-                end
-            end
-            local camAlarmBoost = isCameraInside and 1.0 or 1.20
-            local alarmVol = 2.4 * soundVolMultiplier * camAlarmBoost
-
-            if g_soundManager.setSampleVolume then
-                pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
-            end
-            if alarmSample.soundSample and type(setSampleVolume) == "function" then
-                pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
-            end
-            
-            pcall(function() g_soundManager:playSample(alarmSample) end)
+    if not isAlarmCondition then
+        -- Hysteresis reset: clear pulse tracking once machine operates safely below 100% load & <4.0% loss
+        if load < 100 and loss < 4.0 then
+            spec._rhmAlarmBurstCount = 0
+            spec._rhmAlarmPauseTimer = 0
+            spec._rhmAlarmTimer = 1500
         end
-    else
-        spec._rhmAlarmTimer = 1500
+        return
+    end
+
+    if not spec.samples.overloadAlarm then
+        return
+    end
+
+    spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
+
+    if alarmMode == 1 then
+        -- SMART MODE: 3 beeps burst, then 18-second pause reminder
+        spec._rhmAlarmBurstCount = spec._rhmAlarmBurstCount or 0
+        spec._rhmAlarmPauseTimer = spec._rhmAlarmPauseTimer or 0
+
+        if spec._rhmAlarmPauseTimer > 0 then
+            spec._rhmAlarmPauseTimer = spec._rhmAlarmPauseTimer - dt
+            return
+        end
+
+        -- Interval between beeps in burst: 1800ms
+        if spec._rhmAlarmTimer >= 1800 then
+            spec._rhmAlarmTimer = 0
+            spec._rhmAlarmBurstCount = spec._rhmAlarmBurstCount + 1
+
+            rhm_Combine.playAlarmSample(self, spec, soundVolMultiplier)
+
+            if spec._rhmAlarmBurstCount >= 3 then
+                -- 3 beeps completed -> pause for 18 seconds before a single gentle reminder
+                spec._rhmAlarmPauseTimer = 18000
+                spec._rhmAlarmBurstCount = 2 -- next time, only 1 reminder beep
+            end
+        end
+    elseif alarmMode == 2 then
+        -- CONTINUOUS MODE: beeps every 2.4s as long as condition persists
+        if spec._rhmAlarmTimer >= 2400 then
+            spec._rhmAlarmTimer = 0
+            rhm_Combine.playAlarmSample(self, spec, soundVolMultiplier)
+        end
     end
 end
 
