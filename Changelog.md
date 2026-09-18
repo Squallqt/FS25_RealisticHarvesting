@@ -2,6 +2,16 @@
 
 ## Language: EN
 
+Changelog 1.5.4.1:
+- FIXED: Full NEXAT Modular Carrier & NEXCO Harvester Support!
+  * Corrected horsepower resolution for encrypted DLC machinery (resolves true 1100 HP).
+  * Fixed phantom trailed harvester PTO load duplication on modular combines.
+  * Restored responsive harvesting speed and realistic Arcade mode engine load reduction.
+  * Fixed `Object.lua:187: invalid argument #2 to 'bor'` crash when network dirty flags are exhausted.
+  * Fixed `rhm_Combine.lua:813: attempt to index nil with 'currentCrop'` and guaranteed combine settings initialization.
+- IMPROVED: Public Integration API (`RHM_Api.lua`)!
+  * Added `RHM_Api.getEnginePowerHp(vehicle)` returning rated engine horsepower with modular carrier traversal.
+
 Changelog 1.5.4.0:
 - FIXED: Resolved Mouse Drag & Camera Freezes under Left Mouse Button (LMB)!
   * Removed duplicate mission hooks that were simultaneously registered on both Mission00 and FSBaseMission.
@@ -1306,6 +1316,16 @@ Changelog 1.1.0.0:
 ---
 
 ## Language: UK
+
+Зміни 1.5.4.1:
+- ВИПРАВЛЕНО: Повна підтримка модульного носія NEXAT та комбайна NEXCO!
+  * Виправлено розпізнавання кінських сил для зашифрованої техніки з DLC (визначає реальні 1100 к.с.).
+  * Усунено дублювання фантомного навантаження ВВП причіпного комбайна на модульних платформах.
+  * Відновлено робочу швидкість збирання та коректне зниження навантаження двигуна в Аркадному режимі.
+  * Виправлено падіння `Object.lua:187: invalid argument #2 to 'bor'` при вичерпанні мережевих dirty flags.
+  * Виправлено помилку `rhm_Combine.lua:813: attempt to index nil with 'currentCrop'` та гарантовано ініціалізацію налаштувань.
+- ПОКРАЩЕНО: Публічний API інтеграції (`RHM_Api.lua`)!
+  * Додано `RHM_Api.getEnginePowerHp(vehicle)` для отримання номінальної потужності з урахуванням носія.
 
 Зміни 1.5.4.0:
 - ВИПРАВЛЕНО: Усунено зависання та статтери при затисканні ЛКМ та русі мишкою!

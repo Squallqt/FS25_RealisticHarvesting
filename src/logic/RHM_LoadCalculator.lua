@@ -126,7 +126,8 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == motorConfigIndex and motorObj._rhm_engineHp > 0 then
+    local carrierConfigIndex = (motorObj.configurations and tonumber(motorObj.configurations.motor)) or motorConfigIndex
+    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == carrierConfigIndex and motorObj._rhm_engineHp > 0 then
         vehicle._rhm_engineHp = motorObj._rhm_engineHp
         vehicle._rhm_engineHpConfig = motorConfigIndex
         return motorObj._rhm_engineHp
@@ -134,34 +135,89 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
 
     local resolvedHp = nil
 
-    -- 1. Check VehicleMotor properties if runtime engine exposes them
-    if motorObj.spec_motorized and motorObj.spec_motorized.motor then
-        local motor = motorObj.spec_motorized.motor
-        if motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
-            resolvedHp = tonumber(motor.hp)
-        elseif motor.getPeakMotorPower then
-            local kw = motor:getPeakMotorPower()
-            if kw and tonumber(kw) and tonumber(kw) > 0 then
-                resolvedHp = tonumber(kw) * 1.35962
+    -- 2. Check official GIANTS engine shop specification method (Motorized.getSpecValuePower)
+    -- This correctly resolves encrypted DLC vehicles (e.g. NEXAT Pack) where XMLFile cannot inspect files.
+    if Motorized and Motorized.getSpecValuePower and motorObj.spec_motorized and motorObj.configFileName and g_storeManager then
+        local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
+        if storeItem then
+            local configs = motorObj.configurations or {}
+            -- Try with returnValues = true (returns raw minPower, maxPower in HP)
+            local okVal, p1, p2 = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, true)
+            if okVal and p2 and tonumber(p2) and tonumber(p2) > 0 then
+                resolvedHp = tonumber(p2)
+            elseif okVal and p1 and tonumber(p1) and tonumber(p1) > 0 then
+                resolvedHp = tonumber(p1)
+            else
+                -- Try with returnValues = false (returns formatted string, e.g. "809 kW / 1100 hp" or "1100 hp")
+                local okStr, pStr = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, false)
+                if okStr and type(pStr) == "string" then
+                    local hpVal = pStr:match("(%d+[%d%,%.]*)%s*[Hh][Pp]") 
+                               or pStr:match("(%d+[%d%,%.]*)%s*[Cc][Hh]")
+                               or pStr:match("(%d+[%d%,%.]*)%s*л%.%s*с")
+                               or pStr:match("(%d+[%d%,%.]*)%s*[Pp][Ss]")
+                    if hpVal then
+                        resolvedHp = tonumber(hpVal:gsub(",", "."))
+                    else
+                        local kwVal = pStr:match("(%d+[%d%,%.]*)%s*[Kk][Ww]") or pStr:match("(%d+[%d%,%.]*)%s*к[Вв][Тт]")
+                        if kwVal then
+                            resolvedHp = tonumber(kwVal:gsub(",", ".")) * 1.35962
+                        end
+                    end
+                end
             end
+        end
+    end
+
+    -- 3. Check VehicleMotor runtime engine instance properties
+    if not resolvedHp and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+        local motor = motorObj.spec_motorized.motor
+        -- In GIANTS Engine 10 (FS25) VehicleMotor:new assigns self.maxMotorPower (in kW)
+        if motor.maxMotorPower and tonumber(motor.maxMotorPower) and tonumber(motor.maxMotorPower) > 0 then
+            resolvedHp = tonumber(motor.maxMotorPower) * 1.35962
         elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
             resolvedHp = tonumber(motor.peakMotorPower) * 1.35962
+        elseif motor.motorPeakPower and tonumber(motor.motorPeakPower) and tonumber(motor.motorPeakPower) > 0 then
+            resolvedHp = tonumber(motor.motorPeakPower) * 1.35962
+        elseif motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
+            resolvedHp = tonumber(motor.hp)
         elseif motor.motorPower and tonumber(motor.motorPower) and tonumber(motor.motorPower) > 0 then
             resolvedHp = tonumber(motor.motorPower) * 1.35962
+        elseif motor.maxPower and tonumber(motor.maxPower) and tonumber(motor.maxPower) > 0 then
+            resolvedHp = tonumber(motor.maxPower) * 1.35962
         end
-    end
 
-    if not resolvedHp and motorObj.getMotor and type(motorObj.getMotor) == "function" then
-        local motor = motorObj:getMotor()
-        if motor and motor.getPeakMotorPower then
-            local kw = motor:getPeakMotorPower()
-            if kw and tonumber(kw) and tonumber(kw) > 0 then
-                resolvedHp = tonumber(kw) * 1.35962
+        -- Check methods if variables were private
+        if not resolvedHp then
+            if motor.getMaxMotorPower then
+                local kw = motor:getMaxMotorPower()
+                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
+            elseif motor.getPeakMotorPower then
+                local kw = motor:getPeakMotorPower()
+                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
+            elseif motor.getHp then
+                local hp = motor:getHp()
+                if hp and tonumber(hp) and tonumber(hp) > 0 then resolvedHp = tonumber(hp) end
             end
         end
     end
 
-    -- 2. Inspect vehicle XML via XMLFile for exact motorConfiguration hp or storeData specs
+    -- 4. Check in-memory spec_motorized.motorConfigurations table
+    if not resolvedHp and motorObj.spec_motorized and motorObj.spec_motorized.motorConfigurations then
+        local cfgs = motorObj.spec_motorized.motorConfigurations
+        local cfg = cfgs[carrierConfigIndex] or cfgs[1]
+        if cfg then
+            if cfg.hp and tonumber(cfg.hp) and tonumber(cfg.hp) > 0 then
+                resolvedHp = tonumber(cfg.hp)
+            elseif cfg.maxMotorPower and tonumber(cfg.maxMotorPower) and tonumber(cfg.maxMotorPower) > 0 then
+                resolvedHp = tonumber(cfg.maxMotorPower) * 1.35962
+            elseif cfg.power and tonumber(cfg.power) and tonumber(cfg.power) > 0 then
+                local p = tonumber(cfg.power)
+                resolvedHp = (p > 900) and p or (p * 1.35962)
+            end
+        end
+    end
+
+    -- 5. Inspect vehicle XML via XMLFile for unencrypted mod/basegame files
     if not resolvedHp and motorObj.configFileName then
         local xmlFile = nil
         local schema = (Vehicle and Vehicle.xmlSchema) or nil
@@ -174,7 +230,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         if xmlFile then
             local hp = nil
             if xmlFile.getInt then
-                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1))
                 if not hp or hp <= 0 then
                     hp = xmlFile:getInt("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
                 end
@@ -182,7 +238,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                     hp = xmlFile:getInt("vehicle.storeData.specs.power")
                 end
             elseif xmlFile.getValue and XMLValueType then
-                hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1), XMLValueType.INT)
+                hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1), XMLValueType.INT)
                 if not hp or hp <= 0 then
                     hp = xmlFile:getValue("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp", XMLValueType.INT)
                 end
@@ -190,7 +246,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                     hp = xmlFile:getValue("vehicle.storeData.specs.power", XMLValueType.INT)
                 end
             elseif getXMLInt then
-                hp = getXMLInt(xmlFile, string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                hp = getXMLInt(xmlFile, string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1))
                 if not hp or hp <= 0 then
                     hp = getXMLInt(xmlFile, "vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
                 end
@@ -211,18 +267,36 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    -- 3. Fallback to Store Item specs (instant table lookup)
+    -- 6. Direct storeItem.specs fallback
     if not resolvedHp and motorObj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
         local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
-        if storeItem and storeItem.specs and storeItem.specs.power then
-            local p = tonumber(storeItem.specs.power)
-            if p and p > 0 then
-                resolvedHp = p
+        if storeItem and storeItem.specs then
+            if storeItem.specs.power and tonumber(storeItem.specs.power) and tonumber(storeItem.specs.power) > 0 then
+                resolvedHp = tonumber(storeItem.specs.power)
+            elseif storeItem.specs.neededPower and tonumber(storeItem.specs.neededPower) and tonumber(storeItem.specs.neededPower) > 0 then
+                resolvedHp = tonumber(storeItem.specs.neededPower)
             end
         end
     end
 
-    -- 4. Check basePerfMass back-calculation if cached
+    -- 7. Signature recognition for known modular carrier platforms (NEXAT)
+    -- Dual 550 HP engines = 1100 HP total system rating
+    if not resolvedHp or resolvedHp <= 400 then
+        local brandName = ""
+        if motorObj.getBrandName then brandName = motorObj:getBrandName() or "" end
+        local rawName = (motorObj.getName and motorObj:getName()) or ""
+        local fullName = (motorObj.getFullName and motorObj:getFullName()) or ""
+        local vehBrand = ""
+        if vehicle.getBrandName then vehBrand = vehicle:getBrandName() or "" end
+        local vehName = (vehicle.getName and vehicle:getName()) or ""
+        local vehFull = (vehicle.getFullName and vehicle:getFullName()) or ""
+        local sig = string.format("%s %s %s %s %s %s", brandName, rawName, fullName, vehBrand, vehName, vehFull):upper()
+        if sig:find("NEXAT") or sig:find("NEXCO") then
+            resolvedHp = 1100
+        end
+    end
+
+    -- 8. Check basePerfMass back-calculation if cached
     if not resolvedHp and self.basePerfMass and self.basePerfMass > 0 then
         resolvedHp = math.max(150, self.basePerfMass * 3.6 * 5.2)
     end
@@ -231,7 +305,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     vehicle._rhm_engineHp = resolvedHp
     vehicle._rhm_engineHpConfig = motorConfigIndex
     motorObj._rhm_engineHp = resolvedHp
-    motorObj._rhm_engineHpConfig = motorConfigIndex
+    motorObj._rhm_engineHpConfig = carrierConfigIndex
 
     rhm_log(string.format("RHM [RHM_LoadCalculator]: Detected engine power for %s: %.0f HP (config #%d)", 
         motorObj.getFullName and motorObj:getFullName() or "Harvester", resolvedHp, motorConfigIndex))
@@ -309,8 +383,9 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         local isCutter = (obj.spec_cutter ~= nil or obj.spec_forageHarvesterCutter ~= nil 
                        or obj.spec_forageCutter ~= nil or obj.spec_pickup ~= nil)
 
-        -- In trailed setups (e.g. Grimme Rootster on a tractor), the harvester implement itself consumes PTO power
-        local isTrailedHarvester = (obj ~= motorCarrier and obj.spec_combine ~= nil)
+        -- In trailed setups (e.g. Grimme Rootster on a tractor), a separate harvester implement consumes PTO power.
+        -- Must NOT be the vehicle running RHM itself (e.g. NEXCO modular harvester).
+        local isTrailedHarvester = (obj ~= motorCarrier and obj ~= vehicle and obj.spec_combine ~= nil)
 
         if isCutter or isTrailedHarvester then
             cutterCount = cutterCount + 1

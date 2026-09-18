@@ -290,7 +290,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         -- In multiplayer, notify clients of updated helper settings
         if self.combine and g_server then
             local spec = self.combine.spec_rhm_Combine
-            if spec and spec.settingsDirtyFlag then
+            if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                 self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
             end
         end
@@ -419,7 +419,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     -- In multiplayer, notify clients of updated helper settings
     if self.combine and g_server then
         local spec = self.combine.spec_rhm_Combine
-        if spec and spec.settingsDirtyFlag then
+        if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
             self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
         end
     end
@@ -829,7 +829,7 @@ function RHM_CombineMemory:switchCrop(newCropName)
             g_client:getServerConnection():sendEvent(event)
         elseif g_server then
             local spec = self.combine.spec_rhm_Combine
-            if spec and spec.settingsDirtyFlag then
+            if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                 self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
             end
         end
@@ -958,7 +958,7 @@ function RHM_CombineMemory:updateAutoTrim(dt)
         end
     end
 
-    if changed and self.combine and rhmSpec.settingsDirtyFlag then
+    if changed and self.combine and rhmSpec and rhmSpec.settingsDirtyFlag and type(rhmSpec.settingsDirtyFlag) == "number" then
         self.combine:raiseDirtyFlags(rhmSpec.settingsDirtyFlag)
     end
 end

@@ -115,8 +115,8 @@
         <text name="rhm_loss_low" text="BAJO"/>
         <text name="rhm_loss_med" text="MEDIO"/>
         <text name="rhm_loss_high" text="ALTO"/>
-        <text name="rhm_warning_turn_on_combine" text="Â¡Encienda primero la cosechadora!"/>
-        <text name="rhm_warning_turn_on_cutter" text="Â¡Encienda el cabezal!"/>
+        <text name="rhm_warning_turn_on_combine" text="¡Encienda primero la cosechadora!"/>
+        <text name="rhm_warning_turn_on_cutter" text="¡Encienda el cabezal!"/>
         <text name="rhm_warn_overload_high" text="Cosechadora sobrecargada! Reduce la velocidad."/>
         <text name="rhm_warn_overload_critical" text="COSECHADORA CRÍTICAMENTE SOBRECARGADA! Graves pérdidas!"/>
         <text name="rhm_configuration_title" text="Sistemas Realistic Harvesting"/>

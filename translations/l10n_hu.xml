@@ -115,8 +115,8 @@
         <text name="rhm_loss_low" text="ALACSONY"/>
         <text name="rhm_loss_med" text="KÖZEPES"/>
         <text name="rhm_loss_high" text="MAGAS"/>
-        <text name="rhm_warning_turn_on_combine" text="ElÅ‘szÃ¶r a kombÃ¡jnt kapcsolja be!"/>
-        <text name="rhm_warning_turn_on_cutter" text="Kapcsolja be a vÃ¡gÃ³asztalt!"/>
+        <text name="rhm_warning_turn_on_combine" text="Először a kombájnt kapcsolja be!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Kapcsolja be a vágóasztalt!"/>
         <text name="rhm_warn_overload_high" text="A kombájn túlterhelt! Csökkentse a sebességet."/>
         <text name="rhm_warn_overload_critical" text="A KOMBÁJN KRITIKUSAN TÚLTERHELT! Súlyos termésveszteség!"/>
         <text name="rhm_configuration_title" text="Realistic Harvesting Rendszerek"/>

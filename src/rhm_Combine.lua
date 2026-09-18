@@ -222,6 +222,22 @@ if not rhm_Combine._nexatHookApplied then
     )
     rhm_log("RHM [Combine]: RHM: [NEXAT] Global Vehicle.onRegisterActionEvents hook applied.")
 end
+
+---EN: Safely gets or lazy-initializes RHM_CombineMemory to guarantee it is never nil.
+---UA: Безпечно повертає або ліниво ініціалізує RHM_CombineMemory для гарантії захисту від nil.
+function rhm_Combine.getOrInitCombineMemory(vehicle)
+    if not vehicle then return nil end
+    local spec = vehicle.spec_rhm_Combine
+    if not spec then return nil end
+    if not spec.combineMemory and RHM_CombineMemory then
+        local mType = spec.machineType or "grain"
+        spec.combineMemory = RHM_CombineMemory.new(vehicle, mType)
+        if spec.loadCalculator then
+            spec.loadCalculator.combineMemory = spec.combineMemory
+        end
+    end
+    return spec.combineMemory
+end
 -- ============================================================================
 
 -- EN: Called when the combine vehicle is loaded. Creates and wires up all subsystems:
@@ -300,8 +316,12 @@ function rhm_Combine:onLoad(savegame)
     -- UA: 1. Перевіряємо категорію магазину (головний авторитет для класифікації техніки)
     local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
     local category = storeItem and storeItem.categoryName or ""
+    local fullName = (self.getFullName and self:getFullName()) or ""
 
-    if category == "combines" or category == "combineVehicles" or category == "harvesters" then
+    if fullName:upper():find("NEXCO") or (self.configFileName and self.configFileName:lower():find("nexco")) then
+        -- NEXAT NEXCO combine module is a grain combine harvester
+        machineType = "grain"
+    elseif category == "combines" or category == "combineVehicles" or category == "harvesters" then
         -- Grain combine harvesters: always grain, regardless of custom hopper fill types
         machineType = "grain"
     elseif category == "forageHarvesters" or category == "forageHarvesting" then
@@ -331,7 +351,8 @@ function rhm_Combine:onLoad(savegame)
             local hasGrainFill = false
             local hasRootFill = false
             local hasCottonFill = false
-            local fillUnits = self:getFillUnits()
+            local fillUnits = (type(self.getFillUnits) == "function" and self:getFillUnits()) 
+                           or (self.spec_fillUnit and self.spec_fillUnit.fillUnits)
             if fillUnits then
                 for _, fillUnit in ipairs(fillUnits) do
                     if fillUnit.supportedFillTypes then
@@ -383,7 +404,6 @@ function rhm_Combine:onLoad(savegame)
         tostring(sc and sc.allowThreshingDuringRain),
         tostring(self.spec_fruitPreparer ~= nil)))
 
-
     -- EN: Create the combine memory system for current settings. Link it to RHM_LoadCalculator
     --     so that setting adjustments affect the live load and loss calculations.
     -- UA: Створюємо систему пам'яті для поточних налаштувань. Підключаємо до RHM_LoadCalculator
@@ -399,7 +419,9 @@ function rhm_Combine:onLoad(savegame)
         return
     end
     
-    spec.loadCalculator.combineMemory = spec.combineMemory
+    if spec.loadCalculator then
+        spec.loadCalculator.combineMemory = spec.combineMemory
+    end
     rhm_log("RHM [Combine]: RHM: [OK] Combine RHMSettings System initialized")
 
     
@@ -433,9 +455,12 @@ function rhm_Combine:onLoad(savegame)
     -- MULTIPLAYER: Dirty flags для роздільної синхронізації
     -- spec.dataDirtyFlag: часто оновлювана телеметрія (throttle)
     -- spec.settingsDirtyFlag: зміни налаштувань RHM_CombineMemory (тільки при зміні)
-    spec.dataDirtyFlag = self:getNextDirtyFlag()
-    spec.settingsDirtyFlag = self:getNextDirtyFlag()
-    spec.dirtyFlag = spec.dataDirtyFlag -- Fallback if needed
+    if type(self.getNextDirtyFlag) == "function" then
+        spec.dataDirtyFlag = self:getNextDirtyFlag()
+        spec.settingsDirtyFlag = self:getNextDirtyFlag()
+    end
+    spec.settingsDirtyFlag = spec.settingsDirtyFlag or spec.dataDirtyFlag
+    spec.dirtyFlag = spec.dataDirtyFlag or spec.settingsDirtyFlag
     
     -- Тротлінг мережевих оновлень (MP/DS)
     spec.lastDataUpdateTime = 0
@@ -807,7 +832,8 @@ function rhm_Combine:addCutterArea(superFunc, ...)
             --     partially overlaps two crop types and flips between them each tick.
             -- UA: Визначаємо зміну культури з 2-секундним захистом від дребезгу щоб уникнути
             --     переключення коли жатка частково перекриває два типи культур і перемикає між ними кожен тік.
-            if cropName ~= spec.combineMemory.currentCrop then
+            local memory = spec.combineMemory or rhm_Combine.getOrInitCombineMemory(self)
+            if memory and cropName ~= memory.currentCrop then
                 if tankCropName then
                     -- EN: Hopper has grain -> instant authoritative switch without debounce delay!
                     -- UA: У бункері є зерно -> миттєве авторитетне перемикання без затримки дребезгу!
@@ -862,6 +888,25 @@ end
 --     updates the active crop and triggers network sync without altering physical settings.
 --     Does NOT set currentCrop directly — switchCrop handles all state transitions.
 ---EN: Checks if the vehicle is currently operated by an AI helper or Courseplay.
+---EN: Resolves the motorized carrier (self or root/attacher tractor) for modular systems like NEXAT.
+---UA: Визначає тяговий засіб (себе або кореневий/причіпний тягач) для модульних систем на кшталт NEXAT.
+function rhm_Combine.getMotorizedCarrier(vehicle)
+    if not vehicle then return nil end
+    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
+        return vehicle
+    end
+    local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+    if root and root.spec_motorized and root.spec_motorized.motor then
+        return root
+    end
+    local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+    if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+        return attacher
+    end
+    return vehicle
+end
+
+---EN: Checks if combine is currently driven by an AI worker or Courseplay.
 ---UA: Перевіряє чи комбайном зараз керує наймит або Courseplay.
 function rhm_Combine.isAiWorkerActive(vehicle)
     if not vehicle then return false end
@@ -873,6 +918,20 @@ function rhm_Combine.isAiWorkerActive(vehicle)
     end
     if vehicle.cp and (vehicle.cp.isDriving or vehicle.cp.isFieldWorkActive) then
         return true
+    end
+
+    -- Check root or attacher carrier for modular/trailed combines (e.g. NEXAT carrier)
+    local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+    if root and root ~= vehicle then
+        if root.getIsAIActive and root:getIsAIActive() then return true end
+        if root.getIsCpActive and root:getIsCpActive() then return true end
+        if root.cp and (root.cp.isDriving or root.cp.isFieldWorkActive) then return true end
+    end
+    local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+    if attacher and attacher ~= vehicle and attacher ~= root then
+        if attacher.getIsAIActive and attacher:getIsAIActive() then return true end
+        if attacher.getIsCpActive and attacher:getIsCpActive() then return true end
+        if attacher.cp and (attacher.cp.isDriving or attacher.cp.isFieldWorkActive) then return true end
     end
     return false
 end
@@ -926,10 +985,10 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     -- EN: Sync crop change and settings to clients in multiplayer.
     -- UA: Синхронізуємо зміну культури та налаштувань для клієнтів у мультиплеєрі.
     if self.isServer then
-        if spec.settingsDirtyFlag then
+        if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
             self:raiseDirtyFlags(spec.settingsDirtyFlag)
         end
-        if spec.dirtyFlag then
+        if spec.dirtyFlag and type(spec.dirtyFlag) == "number" then
             self:raiseDirtyFlags(spec.dirtyFlag)
         end
     end
@@ -972,6 +1031,26 @@ function rhm_Combine.getIsVehicleReversing(vehicle)
             return true
         elseif revDir > 0 and axis < -0.05 then
             return true
+        end
+    end
+
+    -- 5. Carrier check for modular implements (e.g. NEXCO attached to NEXAT)
+    if not (vehicle.spec_motorized and vehicle.spec_motorized.motor) and not vehicle.spec_drivable then
+        local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+        if root and root ~= vehicle then
+            if root.getIsDrivingBackward and root:getIsDrivingBackward() then return true end
+            if root.getDrivingDirection and root:getDrivingDirection() < 0 then return true end
+            if root.movingDirection and root.movingDirection < 0 then return true end
+            if root.spec_motorized and root.spec_motorized.motor then
+                local motor = root.spec_motorized.motor
+                if motor.currentDirection and motor.currentDirection < 0 then return true end
+            end
+            if root.spec_drivable then
+                local revDir = root.spec_drivable.reverserDirection or 1
+                local axis = root.spec_drivable.axisForward or 0
+                if revDir < 0 and axis > 0.05 then return true
+                elseif revDir > 0 and axis < -0.05 then return true end
+            end
         end
     end
     
@@ -1458,8 +1537,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- EN: Thresher off or reversing — release motor limit and reset load calculation.
         -- UA: Молотарка вимкнена або рухається назад — відпускаємо ліміт мотора і скидаємо навантаження.
         if spec._rhmLastMotorSpeedLimit ~= nil then
-            if self.spec_motorized and self.spec_motorized.motor then
-                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            local motorObj = rhm_Combine.getMotorizedCarrier(self)
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                motorObj.spec_motorized.motor:setSpeedLimit(math.huge)
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
@@ -1475,7 +1555,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.targetSpeed = spec.loadCalculator:getSpeedLimit() or 0
         end
         spec.isSpeedLimitActive = false
-        self:raiseDirtyFlags(spec.dataDirtyFlag)
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+            self:raiseDirtyFlags(spec.dataDirtyFlag)
+        end
         return
     end
     
@@ -1526,8 +1608,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
         -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
         if spec._rhmLastMotorSpeedLimit ~= nil then
-            if self.spec_motorized and self.spec_motorized.motor then
-                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            local motorObj = rhm_Combine.getMotorizedCarrier(self)
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                motorObj.spec_motorized.motor:setSpeedLimit(math.huge)
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
@@ -1549,7 +1632,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         
         -- EN: Sync reset to clients so their HUD clears too.
         -- UA: Синхронізуємо скидання на клієнти щоб їх HUD теж очистився.
-        self:raiseDirtyFlags(spec.dataDirtyFlag)
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+            self:raiseDirtyFlags(spec.dataDirtyFlag)
+        end
         
         return
     end
@@ -1732,7 +1817,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             if currentCrop and currentCrop ~= "" and spec._lastAiTunedCrop ~= currentCrop then
                 spec._lastAiTunedCrop = currentCrop
                 spec.combineMemory:applyAiWorkerTuning(currentCrop)
-                if spec.settingsDirtyFlag then
+                if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                     self:raiseDirtyFlags(spec.settingsDirtyFlag)
                 end
             end
@@ -1793,12 +1878,16 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --  - AI vehicles
     --  - player-controlled vehicles (so in-cab cruise reacts to load)
     if self.isServer and cutterIsTurnedOn and not isReversing then
+        local motorObj = rhm_Combine.getMotorizedCarrier(self)
         local isAI = rhm_Combine.isAiWorkerActive(self)
-        local isPlayerControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
+        local isPlayerControlled = (type(self.getIsControlled) == "function" and self:getIsControlled())
+        if not isPlayerControlled and motorObj ~= self and type(motorObj.getIsControlled) == "function" then
+            isPlayerControlled = motorObj:getIsControlled()
+        end
 
         if isAI or isPlayerControlled then
-            if self.spec_motorized and self.spec_motorized.motor then
-                local motor = self.spec_motorized.motor
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                local motor = motorObj.spec_motorized.motor
                 local currentLimit = spec.loadCalculator:getSpeedLimit()
 
                 local settings = g_realisticHarvestManager and g_realisticHarvestManager.settings
@@ -1918,7 +2007,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 spec.lastSyncedData.overloadLevel = data.overloadLevel
                 spec.lastSyncedData.moisture = data.moisture
                 
-                self:raiseDirtyFlags(spec.dataDirtyFlag)
+                if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+                    self:raiseDirtyFlags(spec.dataDirtyFlag)
+                end
             end
         end
     end

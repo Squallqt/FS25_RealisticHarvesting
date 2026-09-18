@@ -2,12 +2,12 @@
 <modDesc descVersion="111">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.5.4.0</version>
+    <version>1.5.4.1</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
     </title>
-        <description>
+    <description>
 <en><![CDATA[Adds realistic harvesting mechanics to your combines.
 
 Features:
@@ -27,90 +27,90 @@ Features:
 - Interactive 9-page in-game help guide in ESC menu
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></en>
-<de><![CDATA[FÃ¼gt Ihren MÃ¤hdreschern realistische Erntemechaniken hinzu.
+<de><![CDATA[Fügt Ihren Mähdreschern realistische Erntemechaniken hinzu.
 
 Funktionen:
 - Dynamische Motorlastberechnung basierend auf Durchsatz (t/h, Masse/s)
-- Automatische Geschwindigkeitsbegrenzung zur Vermeidung von Ãœberlastung
-- Visuelle und physikalische Ernteverlustanzeige (NIEDRIG/MITTEL/HOCH)
+- Automatische Geschwindigkeitsbegrenzung zur Vermeidung von Überlastung
+- Visuelle und physikalische Ernteverlustanzeige mit realistischen Strafen
 - Ertragsmonitor (t/ha, bu/ac) mit realistischen Feldschwankungen
-- Anpassbares HUD mit Echtzeit-Messwerten (Geschwindigkeit, Last, Ertrag, Verlust, Feuchtigkeit)
-- MÃ¤hdrescher-Kalibrierungsterminal (Rechts-Shift + K) mit Erkennung von Map-FrÃ¼chten
+- Anpassbares HUD mit Echtzeit-Messwerten (Last, Geschwindigkeit, Ertrag, Verlust, Feuchtigkeit)
+- Mähdrescher-Kalibrierungsterminal (Rechts-Shift + K) mit Erkennung von Map-Früchten
 - 4 Elektronik-Stufen: Manuell, Sensor-Kit, Telemetrie-Monitor & Opti-Harvest KI
-- Mehrstufige automatische Anpassung fÃ¼r KI-Helfer & Courseplay
-- VollstÃ¤ndige Speicherung aktiver Einstellungen und Profile im Spielstand
-- Volle Multiplayer-UnterstÃ¼tzung mit serverseitigen Einstellungen
-- UnterstÃ¼tzung fÃ¼r Getreide, HÃ¤ckselgut, HackfrÃ¼chte (Kartoffeln, RÃ¼ben, MÃ¶hren, Zwiebeln, Spinat) und Baumwolle
-- UnterstÃ¼tzung fÃ¼r Pick-Up-Schneidwerke (Schwadablage) & experimentelle NEXAT-UnterstÃ¼tzung
+- Mehrstufige automatische Anpassung für KI-Helfer & Courseplay
+- Vollständige Speicherung aktiver Einstellungen und Profile im Spielstand
+- Volle Multiplayer-Unterstützung mit serverseitigen Einstellungen
+- Unterstützung für Getreide, Häckselgut, Hackfrüchte (Kartoffeln, Rüben, Möhren, Zwiebeln, Spinat) und Baumwolle
+- Unterstützung für Pick-Up-Schneidwerke (Schwadablage) & experimentelle NEXAT-Unterstützung
 - Nahtlose Integration mit Precision Farming & Moisture System
-- AusfÃ¼hrliche 9-seitige Ingame-Hilfe im ESC-MenÃ¼
+- Ausführliche 9-seitige Ingame-Hilfe im ESC-Menü
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></de>
-<fr><![CDATA[Ajoute des mÃ©caniques de rÃ©colte rÃ©alistes Ã  vos moissonneuses-batteuses.
+<fr><![CDATA[Ajoute des mécaniques de récolte réalistes à vos moissonneuses-batteuses.
 
-FonctionnalitÃ©s:
-- Calcul dynamique de la charge moteur basÃ© sur le dÃ©bit (t/h, masse/sec)
-- Limitation automatique de vitesse pour Ã©viter toute surcharge de la machine
-- Indicateur visuel et physique de perte de rÃ©colte avec pÃ©nalitÃ©s rÃ©alistes
-- Moniteur de rendement (t/ha, bu/ac) avec fluctuations rÃ©elles du champ
-- HUD personnalisable avec mÃ©triques en temps rÃ©el (charge, vitesse, rendement, pertes, humiditÃ©)
-- Terminal tactile de calibrage de rÃ©colte (Shift Droit + K)
-- Progression sur 4 niveaux d'Ã©lectronique: Manuel, Capteurs, Ã‰cran TÃ©lÃ©mÃ©trie & IA Opti-Harvest
-- RÃ©glage automatique multi-niveaux pour ouvriers IA & Courseplay
-- Sauvegarde complÃ¨te des profils et rÃ©glages actifs dans la partie
-- Support multijoueur complet avec paramÃ¨tres cÃ´tÃ© serveur
-- Prise en charge de tous types de rÃ©coltes: grains, ensilage, racines (pommes de terre, betteraves, carottes, oignons, Ã©pinards) et coton
-- Prise en charge des pick-ups d'andains et support expÃ©rimental NEXAT
-- IntÃ©gration transparente avec Precision Farming et le Moisture System
+Fonctionnalités:
+- Calcul dynamique de la charge moteur basé sur le débit (t/h, masse/sec)
+- Limitation automatique de vitesse pour éviter toute surcharge de la machine
+- Indicateur visuel et physique de perte de récolte avec pénalités réalistes
+- Moniteur de rendement (t/ha, bu/ac) avec fluctuations réelles du champ
+- HUD personnalisable avec métriques en temps réel (charge, vitesse, rendement, pertes, humidité)
+- Terminal tactile de calibrage de récolte (Shift Droit + K)
+- Progression sur 4 niveaux d'électronique: Manuel, Capteurs, Écran Télémétrie & IA Opti-Harvest
+- Réglage automatique multi-niveaux pour ouvriers IA & Courseplay
+- Sauvegarde complète des profils et réglages actifs dans la partie
+- Support multijoueur complet avec paramètres côté serveur
+- Prise en charge de tous types de récoltes: grains, ensilage, racines (pommes de terre, betteraves, carottes, oignons, épinards) et coton
+- Prise en charge des pick-ups d'andains et support expérimental NEXAT
+- Intégration transparente avec Precision Farming et le Moisture System
 - Guide d'aide interactif de 9 pages dans le menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></fr>
-<pl><![CDATA[Dodaje realistycznÄ… mechanikÄ™ Å¼niw do Twoich kombajnÃ³w.
+<pl><![CDATA[Dodaje realistyczną mechanikę żniw do Twoich kombajnów.
 
 Funkcje:
-- Dynamiczne obliczanie obciÄ…Å¼enia silnika na podstawie przepustowoÅ›ci (t/h, masa/s)
-- Automatyczny ogranicznik prÄ™dkoÅ›ci zapobiegajÄ…cy przeciÄ…Å¼eniu maszyny
-- Wizualny i fizyczny wskaÅºnik strat plonÃ³w (NISKI/ÅšREDNI/WYSOKI) z realnymi stratami
+- Dynamiczne obliczanie obciążenia silnika na podstawie przepustowości (t/h, masa/s)
+- Automatyczny ogranicznik prędkości zapobiegający przeciążeniu maszyny
+- Wizualny i fizyczny wskaźnik strat plonów z realnymi stratami
 - Monitor plonu (t/ha, bu/ac) z realistycznymi wahaniami polowymi
-- Konfigurowalny HUD z danymi w czasie rzeczywistym (obciÄ…Å¼enie, prÄ™dkoÅ›Ä‡, plon, straty, wilgotnoÅ›Ä‡)
+- Konfigurowalny HUD z danymi w czasie rzeczywistym (obciążenie, prędkość, plon, straty, wilgotność)
 - Dotykowy terminal kalibracji kombajnu (Prawy Shift + K) z wykrywaniem upraw mapy
-- 4 poziomy elektroniki: RÄ™czny, Pakiet czujnikÃ³w, Monitor telemetrii i Opti-Harvest AI
-- Wielopoziomowe strojenie pomocnikÃ³w AI (AI Worker i Courseplay)
-- PeÅ‚ny zapis aktywnych ustawieÅ„ i profili kombajnu w pliku zapisu gry
-- PeÅ‚ne wsparcie dla trybu wieloosobowego z ustawieniami po stronie serwera
-- ObsÅ‚uga zbÃ³Å¼, sieczkarni, roÅ›lin okopowych (ziemniaki, buraki, marchew, cebula, szpinak) i baweÅ‚ny
-- ObsÅ‚uga podbieraczy (zbiÃ³r z waÅ‚Ã³w) oraz eksperymentalne wsparcie dla NEXAT
-- PÅ‚ynna integracja z Precision Farming i Moisture System
+- 4 poziomy elektroniki: Ręczny, Pakiet czujników, Monitor telemetrii i Opti-Harvest AI
+- Wielopoziomowe strojenie pomocników AI (AI Worker i Courseplay)
+- Pełny zapis aktywnych ustawień i profili kombajnu w pliku zapisu gry
+- Pełne wsparcie dla trybu wieloosobowego z ustawieniami po stronie serwera
+- Obsługa zbóż, sieczkarni, roślin okopowych (ziemniaki, buraki, marchew, cebula, szpinak) i bawełny
+- Obsługa podbieraczy (zbiór z wałów) oraz eksperymentalne wsparcie dla NEXAT
+- Płynna integracja z Precision Farming i Moisture System
 - Rozbudowany 9-stronicowy przewodnik pomocy w menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></pl>
-<es><![CDATA[AÃ±ade mecÃ¡nicas de cosecha realistas a tus cosechadoras.
+<es><![CDATA[Añade mecánicas de cosecha realistas a tus cosechadoras.
 
-CaracterÃ­sticas:
-- CÃ¡lculo dinÃ¡mico de carga del motor basado en el flujo de masa (t/h, masa/seg)
-- Limitador automÃ¡tico de velocidad para evitar sobrecargas
-- Indicador visual y fÃ­sico de pÃ©rdida de grano con penalizaciones reales
+Características:
+- Cálculo dinámico de carga del motor basado en el flujo de masa (t/h, masa/seg)
+- Limitador automático de velocidad para evitar sobrecargas
+- Indicador visual y físico de pérdida de grano con penalizaciones reales
 - Monitor de rendimiento (t/ha, bu/ac) con fluctuaciones reales del terreno
-- HUD personalizable con telemetrÃ­a en tiempo real (velocidad, carga, rendimiento, pÃ©rdidas, humedad)
-- Terminal tÃ¡ctil de calibraciÃ³n de cosechadora (Shift Derecho + K)
-- ProgresiÃ³n de 4 niveles electrÃ³nicos: Manual, Sensores, Monitor de TelemetrÃ­a y Opti-Harvest AI
-- Ajuste automÃ¡tico multinivel para trabajadores IA y Courseplay
+- HUD personalizable con telemetría en tiempo real (velocidad, carga, rendimiento, pérdidas, humedad)
+- Terminal táctil de calibración de cosechadora (Shift Derecho + K)
+- Progresión de 4 niveles electrónicos: Manual, Sensores, Monitor de Telemetría y Opti-Harvest AI
+- Ajuste automático multinivel para trabajadores IA y Courseplay
 - Persistencia total en la partida guardada para configuraciones y perfiles
 - Soporte multijugador completo con ajustes en el servidor
-- Soporte para grano, forraje, raÃ­ces (patatas, remolachas, zanahorias, cebollas, espinacas) y algodÃ³n
+- Soporte para grano, forraje, raíces (patatas, remolachas, zanahorias, cebollas, espinacas) y algodón
 - Soporte para cabezales recolectores (hilerado) y soporte experimental para NEXAT
-- IntegraciÃ³n perfecta con Precision Farming y Moisture System
-- GuÃ­a interactiva de ayuda de 9 pÃ¡ginas en el menÃº ESC
+- Integración perfecta con Precision Farming y Moisture System
+- Guía interactiva de ayuda de 9 páginas en el menú ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></es>
 <it><![CDATA[Aggiunge meccaniche di raccolta realistiche alle tue mietitrebbiatrici.
 
 Caratteristiche:
 - Calcolo dinamico del carico motore basato sul flusso di massa (t/h, massa/sec)
-- Limitatore automatico di velocitÃ  per prevenire il sovraccarico
-- Indicatore visivo e fisico di perdita di raccolto con penalitÃ  realistiche
+- Limitatore automatico di velocità per prevenire il sovraccarico
+- Indicatore visivo e fisico di perdita di raccolto con penalità realistiche
 - Monitor della resa (t/ha, bu/ac) con fluttuazioni in campo
-- HUD personalizzabile con metriche in tempo reale (carico, velocitÃ , resa, perdite, umiditÃ )
+- HUD personalizzabile con metriche in tempo reale (carico, velocità, resa, perdite, umidità)
 - Terminale touch di calibrazione mietitrebbia (Shift Destro + K)
 - Progressione elettronica a 4 livelli: Manuale, Sensori, Monitor Telemetria & Opti-Harvest AI
 - Regolazione automatica per aiutanti IA e Courseplay
@@ -122,118 +122,118 @@ Caratteristiche:
 - Guida d'aiuto interattiva di 9 pagine nel menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></it>
-<cz><![CDATA[PÅ™idÃ¡vÃ¡ realistickou mechaniku skliznÄ› pro vaÅ¡e sklÃ­zecÃ­ mlÃ¡tiÄky.
+<cz><![CDATA[Přidává realistickou mechaniku sklizně pro vaše sklízecí mlátičky.
 
 Funkce:
-- DynamickÃ½ vÃ½poÄet zatÃ­Å¾enÃ­ motoru na zÃ¡kladÄ› prÅ¯toku hmoty (t/h, hmotnost/s)
-- AutomatickÃ© omezovÃ¡nÃ­ rychlosti zabraÅˆujÃ­cÃ­ pÅ™etÃ­Å¾enÃ­
-- VizuÃ¡lnÃ­ a fyzickÃ½ indikÃ¡tor ztrÃ¡t zrna s reÃ¡lnÃ½mi postihy
-- Monitor vÃ½nosu (t/ha, bu/ac) s reÃ¡lnÃ½mi odchylkami na poli
-- PÅ™izpÅ¯sobitelnÃ½ HUD s telemetriÃ­ v reÃ¡lnÃ©m Äase (zatÃ­Å¾enÃ­, rychlost, vÃ½nos, ztrÃ¡ty, vlhkost)
-- DotykovÃ½ kalibraÄnÃ­ terminÃ¡l sklÃ­zeÄe (PravÃ½ Shift + K) s naÄÃ­tÃ¡nÃ­m plodin mapy
-- 4 ÃºrovnÄ› elektroniky: ManuÃ¡lnÃ­, Sada senzorÅ¯, Monitor telemetrie a Opti-Harvest AI
-- VÃ­cestupÅˆovÃ© automatickÃ© ladÄ›nÃ­ pro AI pracovnÃ­ky a Courseplay
-- KompletnÃ­ uklÃ¡dÃ¡nÃ­ aktivnÃ­ch nastavenÃ­ a profilÅ¯ do uloÅ¾enÃ© pozice
-- PlnÃ¡ podpora hry pro vÃ­ce hrÃ¡ÄÅ¯ se serverovÃ½mi nastavenÃ­mi
-- Podpora pro obilÃ­, Å™ezaÄky, okopaniny (brambory, Å™epa, mrkev, cibule, Å¡penÃ¡t) a bavlnu
-- Podpora sbÄ›racÃ­ch adaptÃ©rÅ¯ (Å™Ã¡dkovÃ¡nÃ­) a experimentÃ¡lnÃ­ podpora pro NEXAT
-- BezproblÃ©movÃ¡ integrace s Precision Farming a Moisture System
-- PodrobnÃ½ 9strÃ¡nkovÃ½ prÅ¯vodce nÃ¡povÄ›dou v menu ESC
+- Dynamický výpočet zatížení motoru na základě průtoku hmoty (t/h, hmotnost/s)
+- Automatické omezování rychlosti zabraňující přetížení
+- Vizuální a fyzický indikátor ztrát zrna s reálnými postihy
+- Monitor výnosu (t/ha, bu/ac) s reálnými odchylkami na poli
+- Přizpůsobitelný HUD s telemetrií v reálném čase (zatížení, rychlost, výnos, ztráty, vlhkost)
+- Dotykový kalibrační terminál sklízeče (Pravý Shift + K) s načítáním plodin mapy
+- 4 úrovně elektroniky: Manuální, Sada senzorů, Monitor telemetrie a Opti-Harvest AI
+- Vícestupňové automatické ladění pro AI pracovníky a Courseplay
+- Kompletní ukládání aktivních nastavení a profilů do uložené pozice
+- Plná podpora hry pro více hráčů se serverovými nastaveními
+- Podpora pro obilí, řezačky, okopaniny (brambory, řepa, mrkev, cibule, špenát) a bavlnu
+- Podpora sběracích adaptérů (řádkování) a experimentální podpora pro NEXAT
+- Bezproblémová integrace s Precision Farming a Moisture System
+- Podrobný 9stránkový průvodce nápovědou v menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></cz>
-<pt><![CDATA[Adiciona mecÃ¢nicas de colheita realistas Ã s suas colheitadeiras.
+<pt><![CDATA[Adiciona mecânicas de colheita realistas às suas colheitadeiras.
 
 Recursos:
-- CÃ¡lculo dinÃ¢mico de carga do motor com base no fluxo de massa (t/h, massa/seg)
-- Limitador automÃ¡tico de velocidade para evitar sobrecarga
-- Indicador visual e fÃ­sico de perda de grÃ£os com penalidades reais
-- Monitor de produtividade (t/ha, bu/ac) com variaÃ§Ãµes reais da lavoura
-- HUD personalizÃ¡vel com telemetria em tempo real (carga, velocidade, produtividade, perdas, umidade)
-- Terminal touchscreen de calibraÃ§Ã£o da colheitadeira (Shift Direito + K)
-- ProgressÃ£o eletrÃ´nica de 4 nÃ­veis: Manual, Sensores, Monitor de Telemetria e Opti-Harvest AI
-- CalibraÃ§Ã£o automÃ¡tica multinÃ­vel para trabalhadores de IA e Courseplay
-- Salvamento completo das configuraÃ§Ãµes ativas e perfis no jogo salvo
-- Suporte total para multijogador com configuraÃ§Ãµes do servidor
-- Suporte para grÃ£os, forragem, raÃ­zes (batatas, beterrabas, cenouras, cebolas, espinafre) e algodÃ£o
+- Cálculo dinâmico de carga do motor com base no fluxo de massa (t/h, massa/seg)
+- Limitador automático de velocidade para evitar sobrecarga
+- Indicador visual e físico de perda de grãos com penalidades reais
+- Monitor de produtividade (t/ha, bu/ac) com variações reais da lavoura
+- HUD personalizável com telemetria em tempo real (carga, velocidade, produtividade, perdas, umidade)
+- Terminal touchscreen de calibração da colheitadeira (Shift Direito + K)
+- Progressão eletrônica de 4 níveis: Manual, Sensores, Monitor de Telemetria e Opti-Harvest AI
+- Calibração automática multinível para trabalhadores de IA e Courseplay
+- Salvamento completo das configurações ativas e perfis no jogo salvo
+- Suporte total para multijogador com configurações do servidor
+- Suporte para grãos, forragem, raízes (batatas, beterrabas, cenouras, cebolas, espinafre) e algodão
 - Suporte para plataformas recolhedoras (enleiramento) e suporte experimental para NEXAT
-- IntegraÃ§Ã£o perfeita com Precision Farming e Moisture System
-- Guia interativo de ajuda de 9 pÃ¡ginas no menu ESC
+- Integração perfeita com Precision Farming e Moisture System
+- Guia interativo de ajuda de 9 páginas no menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></pt>
-<br><![CDATA[Adiciona mecÃ¢nicas de colheita realistas Ã s suas colheitadeiras.
+<br><![CDATA[Adiciona mecânicas de colheita realistas às suas colheitadeiras.
 
 Recursos:
-- CÃ¡lculo dinÃ¢mico de carga do motor com base no fluxo de massa (t/h, massa/seg)
-- Limitador automÃ¡tico de velocidade para evitar sobrecarga
-- Indicador visual e fÃ­sico de perda de grÃ£os com penalidades reais
-- Monitor de produtividade (t/ha, bu/ac) com variaÃ§Ãµes reais da lavoura
-- HUD personalizÃ¡vel com telemetria em tempo real (carga, velocidade, produtividade, perdas, umidade)
-- Terminal touchscreen de calibraÃ§Ã£o da colheitadeira (Shift Direito + K)
-- ProgressÃ£o eletrÃ´nica de 4 nÃ­veis: Manual, Sensores, Monitor de Telemetria e Opti-Harvest AI
-- CalibraÃ§Ã£o automÃ¡tica multinÃ­vel para trabalhadores de IA e Courseplay
-- Salvamento completo das configuraÃ§Ãµes ativas e perfis no jogo salvo
-- Suporte total para multijogador com configuraÃ§Ãµes do servidor
-- Suporte para grÃ£os, forragem, raÃ­zes (batatas, beterrabas, cenouras, cebolas, espinafre) e algodÃ£o
+- Cálculo dinâmico de carga do motor com base no fluxo de massa (t/h, massa/seg)
+- Limitador automático de velocidade para evitar sobrecarga
+- Indicador visual e físico de perda de grãos com penalidades reais
+- Monitor de produtividade (t/ha, bu/ac) com variações reais da lavoura
+- HUD personalizável com telemetria em tempo real (carga, velocidade, produtividade, perdas, umidade)
+- Terminal touchscreen de calibração da colheitadeira (Shift Direito + K)
+- Progressão eletrônica de 4 níveis: Manual, Sensores, Monitor de Telemetria e Opti-Harvest AI
+- Calibração automática multinível para trabalhadores de IA e Courseplay
+- Salvamento completo das configurações ativas e perfis no jogo salvo
+- Suporte total para multijogador com configurações do servidor
+- Suporte para grãos, forragem, raízes (batatas, beterrabas, cenouras, cebolas, espinafre) e algodão
 - Suporte para plataformas recolhedoras (enleiramento) e suporte experimental para NEXAT
-- IntegraÃ§Ã£o perfeita com Precision Farming e Moisture System
-- Guia interativo de ajuda de 9 pÃ¡ginas no menu ESC
+- Integração perfeita com Precision Farming e Moisture System
+- Guia interativo de ajuda de 9 páginas no menu ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></br>
-<uk><![CDATA[Ð”Ð¾Ð´Ð°Ñ” Ñ€ÐµÐ°Ð»Ñ–ÑÑ‚Ð¸Ñ‡Ð½Ñƒ Ð¼ÐµÑ…Ð°Ð½Ñ–ÐºÑƒ Ð·Ð±Ð¸Ñ€Ð°Ð½Ð½Ñ Ð²Ñ€Ð¾Ð¶Ð°ÑŽ Ð´Ð»Ñ Ð²Ð°ÑˆÐ¸Ñ… ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ñ–Ð².
+<uk><![CDATA[Додає реалістичну механіку збирання врожаю для ваших комбайнів.
 
-ÐžÑÐ¾Ð±Ð»Ð¸Ð²Ð¾ÑÑ‚Ñ–:
-- Ð”Ð¸Ð½Ð°Ð¼Ñ–Ñ‡Ð½Ð¸Ð¹ Ñ€Ð¾Ð·Ñ€Ð°Ñ…ÑƒÐ½Ð¾Ðº Ð½Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½Ñ Ð´Ð²Ð¸Ð³ÑƒÐ½Ð° Ð·Ð°Ð»ÐµÐ¶Ð½Ð¾ Ð²Ñ–Ð´ Ð¿Ð¾Ñ‚Ð¾ÐºÑƒ Ð¼Ð°ÑÐ¸ (Ñ‚/Ð³Ð¾Ð´, Ð¼Ð°ÑÐ°/ÑÐµÐº)
-- ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ðµ Ð¾Ð±Ð¼ÐµÐ¶ÐµÐ½Ð½Ñ ÑˆÐ²Ð¸Ð´ÐºÐ¾ÑÑ‚Ñ– Ð´Ð»Ñ Ð·Ð°Ð¿Ð¾Ð±Ñ–Ð³Ð°Ð½Ð½Ñ Ð¿ÐµÑ€ÐµÐ²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½ÑŽ ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð°
-- Ð’Ñ–Ð·ÑƒÐ°Ð»ÑŒÐ½Ð¸Ð¹ Ñ‚Ð° Ñ„Ñ–Ð·Ð¸Ñ‡Ð½Ð¸Ð¹ Ñ–Ð½Ð´Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ð²Ñ‚Ñ€Ð°Ñ‚ Ð²Ñ€Ð¾Ð¶Ð°ÑŽ (ÐÐ˜Ð—Ð¬ÐšÐ†/Ð¡Ð•Ð Ð•Ð”ÐÐ†/Ð’Ð˜Ð¡ÐžÐšÐ†) Ð· Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¸Ð¼Ð¸ ÑˆÑ‚Ñ€Ð°Ñ„Ð°Ð¼Ð¸
-- ÐœÐ¾Ð½Ñ–Ñ‚Ð¾Ñ€ Ð²Ñ€Ð¾Ð¶Ð°Ð¹Ð½Ð¾ÑÑ‚Ñ– (Ñ‚/Ð³Ð°, Ð±Ñƒ/Ð°ÐºÑ€) Ð· Ñ€ÐµÐ°Ð»Ñ–ÑÑ‚Ð¸Ñ‡Ð½Ð¸Ð¼Ð¸ ÐºÐ¾Ð»Ð¸Ð²Ð°Ð½Ð½ÑÐ¼Ð¸
-- ÐÐ°Ð»Ð°ÑˆÑ‚Ð¾Ð²ÑƒÐ²Ð°Ð½Ð¸Ð¹ HUD Ð· Ð¼ÐµÑ‚Ñ€Ð¸ÐºÐ°Ð¼Ð¸ Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð¼Ñƒ Ñ‡Ð°ÑÑ– (Ð½Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½Ñ, ÑˆÐ²Ð¸Ð´ÐºÑ–ÑÑ‚ÑŒ, Ð²Ñ€Ð¾Ð¶Ð°Ð¹Ð½Ñ–ÑÑ‚ÑŒ, Ð²Ñ‚Ñ€Ð°Ñ‚Ð¸, Ð²Ð¾Ð»Ð¾Ð³Ñ–ÑÑ‚ÑŒ)
-- Ð¡ÐµÐ½ÑÐ¾Ñ€Ð½Ð¸Ð¹ Ñ‚ÐµÑ€Ð¼Ñ–Ð½Ð°Ð» ÐºÐ°Ð»Ñ–Ð±Ñ€ÑƒÐ²Ð°Ð½Ð½Ñ ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð° (Right Shift + K) Ð· Ð²Ð¸Ð»ÑƒÑ‡ÐµÐ½Ð½ÑÐ¼ ÐºÑƒÐ»ÑŒÑ‚ÑƒÑ€ ÐºÐ°Ñ€Ñ‚Ð¸
-- 4 Ñ€Ñ–Ð²Ð½Ñ– ÐµÐ»ÐµÐºÑ‚Ñ€Ð¾Ð½Ñ–ÐºÐ¸: Ð‘Ð°Ð·Ð¾Ð²Ð¸Ð¹ Ñ€ÑƒÑ‡Ð½Ð¸Ð¹, Ð¡ÐµÐ½ÑÐ¾Ñ€Ð½Ð¸Ð¹ Ð½Ð°Ð±Ñ–Ñ€, ÐœÐ¾Ð½Ñ–Ñ‚Ð¾Ñ€ Ñ‚ÐµÐ»ÐµÐ¼ÐµÑ‚Ñ€Ñ–Ñ— Ñ‚Ð° Opti-Harvest AI
-- Ð†Ð½Ñ‚ÐµÐ»ÐµÐºÑ‚ÑƒÐ°Ð»ÑŒÐ½Ðµ Ð°Ð²Ñ‚Ð¾-Ð½Ð°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½Ð½Ñ Ð½Ð°Ð¹Ð¼Ð¸Ñ‚Ñ–Ð² (AI Worker Ñ‚Ð° Courseplay) Ð·Ð° Ñ€Ñ–Ð²Ð½ÐµÐ¼ ÐµÐ»ÐµÐºÑ‚Ñ€Ð¾Ð½Ñ–ÐºÐ¸
-- ÐŸÐ¾Ð²Ð½Ðµ Ð·Ð±ÐµÑ€ÐµÐ¶ÐµÐ½Ð½Ñ Ð½Ð°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½ÑŒ Ñ‚Ð° Ð¾Ð±Ñ€Ð°Ð½Ð¸Ñ… Ð¿Ñ€Ð¾Ñ„Ñ–Ð»Ñ–Ð² ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð° Ñƒ ÑÐµÐ¹Ð²Ð³ÐµÐ¹Ð¼Ñ–
-- ÐŸÐ¾Ð²Ð½Ð° Ð¿Ñ–Ð´Ñ‚Ñ€Ð¸Ð¼ÐºÐ° Ð¼ÑƒÐ»ÑŒÑ‚Ð¸Ð¿Ð»ÐµÑ”Ñ€Ð° Ñ‚Ð° Ð½Ð°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½ÑŒ ÑÐµÑ€Ð²ÐµÑ€Ð°
-- ÐŸÑ–Ð´Ñ‚Ñ€Ð¸Ð¼ÐºÐ° Ð·ÐµÑ€Ð½Ð¾Ð²Ð¸Ñ…, ÐºÐ¾Ñ€Ð¼Ð¾Ð·Ð±Ð¸Ñ€Ð°Ð»ÑŒÐ½Ð¸Ñ…, ÐºÐ¾Ñ€ÐµÐ½ÐµÐ¿Ð»Ð¾Ð´Ñ–Ð² (ÐºÐ°Ñ€Ñ‚Ð¾Ð¿Ð»Ñ, Ð±ÑƒÑ€ÑÐº, Ð¼Ð¾Ñ€ÐºÐ²Ð°, Ñ†Ð¸Ð±ÑƒÐ»Ñ, ÑˆÐ¿Ð¸Ð½Ð°Ñ‚) Ñ‚Ð° Ð±Ð°Ð²Ð¾Ð²Ð½Ð¸
-- ÐŸÑ–Ð´Ñ‚Ñ€Ð¸Ð¼ÐºÐ° Ð¶Ð°Ñ‚Ð¾Ðº-Ð¿Ñ–Ð´Ð±Ð¸Ñ€Ð°Ñ‡Ñ–Ð² (Ð²Ð°Ð»ÐºÑƒÐ²Ð°Ð½Ð½Ñ) Ñ‚Ð° ÐµÐºÑÐ¿ÐµÑ€Ð¸Ð¼ÐµÐ½Ñ‚Ð°Ð»ÑŒÐ½Ð° Ð¿Ñ–Ð´Ñ‚Ñ€Ð¸Ð¼ÐºÐ° ÑˆÐ°ÑÑ– NEXAT
-- Ð‘ÐµÐ·ÑˆÐ¾Ð²Ð½Ð° Ñ–Ð½Ñ‚ÐµÐ³Ñ€Ð°Ñ†Ñ–Ñ Ð· Precision Farming Ñ‚Ð° Moisture System
-- Ð”ÐµÑ‚Ð°Ð»ÑŒÐ½Ð¸Ð¹ 9-ÑÑ‚Ð¾Ñ€Ñ–Ð½ÐºÐ¾Ð²Ð¸Ð¹ Ñ–Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¸Ð¹ Ð´Ð¾Ð²Ñ–Ð´Ð½Ð¸Ðº Ñƒ Ð¼ÐµÐ½ÑŽ Ð³Ñ€Ð¸ (ESC)
+Особливості:
+- Динамічний розрахунок навантаження двигуна залежно від потоку маси (т/год, маса/сек)
+- Автоматичне обмеження швидкості для запобігання перевантаженню комбайна
+- Візуальний та фізичний індикатор втрат врожаю з реальними втратами з бункера
+- Монітор врожайності (т/га, бу/акр) з реалістичними коливаннями
+- Налаштовуваний HUD з метриками в реальному часі (навантаження, швидкість, врожайність, втрати, вологість)
+- Сенсорний термінал калібрування комбайна (Right Shift + K) з вилученням культур карти
+- 4 рівні електроніки: Базовий ручний, Сенсорний набір, Монітор телеметрії та Opti-Harvest AI
+- Інтелектуальне авто-налаштування наймитів (AI Worker та Courseplay) за рівнем електроніки
+- Повне збереження налаштувань та обраних профілів комбайна у сейвгеймі
+- Повна підтримка мультиплеєра та налаштувань сервера
+- Підтримка зернових, кормозбиральних, коренеплодів (картопля, буряк, морква, цибуля, шпинат) та бавовни
+- Підтримка жаток-підбирачів (валкування) та експериментальна підтримка шасі NEXAT
+- Безшовна інтеграція з Precision Farming та Moisture System
+- Детальний 9-сторінковий інтерактивний довідник у меню гри (ESC)
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></uk>
-<ru><![CDATA[Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÑ‚ Ñ€ÐµÐ°Ð»Ð¸ÑÑ‚Ð¸Ñ‡Ð½ÑƒÑŽ Ð¼ÐµÑ…Ð°Ð½Ð¸ÐºÑƒ ÑƒÐ±Ð¾Ñ€ÐºÐ¸ ÑƒÑ€Ð¾Ð¶Ð°Ñ Ð´Ð»Ñ Ð²Ð°ÑˆÐ¸Ñ… ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð¾Ð².
+<ru><![CDATA[Добавляет реалистичную механику уборки урожая для ваших комбайнов.
 
-ÐžÑÐ¾Ð±ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸:
-- Ð”Ð¸Ð½Ð°Ð¼Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ñ€Ð°ÑÑ‡ÐµÑ‚ Ð½Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ Ð´Ð²Ð¸Ð³Ð°Ñ‚ÐµÐ»Ñ Ð½Ð° Ð¾ÑÐ½Ð¾Ð²Ðµ Ð¿Ð¾Ñ‚Ð¾ÐºÐ° Ð¼Ð°ÑÑÑ‹ (Ñ‚/Ñ‡, Ð¼Ð°ÑÑÐ°/ÑÐµÐº)
-- ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ðµ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ ÑÐºÐ¾Ñ€Ð¾ÑÑ‚Ð¸ Ð´Ð»Ñ Ð¿Ñ€ÐµÐ´Ð¾Ñ‚Ð²Ñ€Ð°Ñ‰ÐµÐ½Ð¸Ñ Ð¿ÐµÑ€ÐµÐ³Ñ€ÑƒÐ·ÐºÐ¸ ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð°
-- Ð’Ð¸Ð·ÑƒÐ°Ð»ÑŒÐ½Ñ‹Ð¹ Ð¸ Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð¸Ð½Ð´Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ð¿Ð¾Ñ‚ÐµÑ€ÑŒ ÑƒÑ€Ð¾Ð¶Ð°Ñ (ÐÐ˜Ð—ÐšÐ˜Ð•/Ð¡Ð Ð•Ð”ÐÐ˜Ð•/Ð’Ð«Ð¡ÐžÐšÐ˜Ð•) Ñ Ñ€ÐµÐ°Ð»ÑŒÐ½Ñ‹Ð¼Ð¸ ÑˆÑ‚Ñ€Ð°Ñ„Ð°Ð¼Ð¸
-- ÐœÐ¾Ð½Ð¸Ñ‚Ð¾Ñ€ ÑƒÑ€Ð¾Ð¶Ð°Ð¹Ð½Ð¾ÑÑ‚Ð¸ (Ñ‚/Ð³Ð°, Ð±Ñƒ/Ð°ÐºÑ€) Ñ Ñ€ÐµÐ°Ð»Ð¸ÑÑ‚Ð¸Ñ‡Ð½Ñ‹Ð¼Ð¸ Ð¿Ð¾Ð»ÐµÐ²Ñ‹Ð¼Ð¸ ÐºÐ¾Ð»ÐµÐ±Ð°Ð½Ð¸ÑÐ¼Ð¸
-- ÐÐ°ÑÑ‚Ñ€Ð°Ð¸Ð²Ð°ÐµÐ¼Ñ‹Ð¹ HUD Ñ Ñ‚ÐµÐ»ÐµÐ¼ÐµÑ‚Ñ€Ð¸ÐµÐ¹ Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð¼ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸ (Ð½Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°, ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ, ÑƒÑ€Ð¾Ð¶Ð°Ð¹Ð½Ð¾ÑÑ‚ÑŒ, Ð¿Ð¾Ñ‚ÐµÑ€Ð¸, Ð²Ð»Ð°Ð¶Ð½Ð¾ÑÑ‚ÑŒ)
-- Ð¡ÐµÐ½ÑÐ¾Ñ€Ð½Ñ‹Ð¹ Ñ‚ÐµÑ€Ð¼Ð¸Ð½Ð°Ð» ÐºÐ°Ð»Ð¸Ð±Ñ€Ð¾Ð²ÐºÐ¸ ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð° (Right Shift + K) Ñ Ð°Ð²Ñ‚Ð¾Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸ÐµÐ¼ ÐºÑƒÐ»ÑŒÑ‚ÑƒÑ€ ÐºÐ°Ñ€Ñ‚Ñ‹
-- 4 ÑƒÑ€Ð¾Ð²Ð½Ñ ÑÐ»ÐµÐºÑ‚Ñ€Ð¾Ð½Ð¸ÐºÐ¸: Ð ÑƒÑ‡Ð½Ð¾Ð¹, ÐÐ°Ð±Ð¾Ñ€ Ð´Ð°Ñ‚Ñ‡Ð¸ÐºÐ¾Ð², ÐœÐ¾Ð½Ð¸Ñ‚Ð¾Ñ€ Ñ‚ÐµÐ»ÐµÐ¼ÐµÑ‚Ñ€Ð¸Ð¸ Ð¸ Opti-Harvest AI
-- Ð˜Ð½Ñ‚ÐµÐ»Ð»ÐµÐºÑ‚ÑƒÐ°Ð»ÑŒÐ½Ð°Ñ Ð°Ð²Ñ‚Ð¾Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ° Ð´Ð»Ñ Ð½Ð°ÐµÐ¼Ð½Ñ‹Ñ… Ñ€Ð°Ð±Ð¾Ñ‡Ð¸Ñ… (AI Worker Ð¸ Courseplay)
-- ÐŸÐ¾Ð»Ð½Ð¾Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº Ð¸ Ð¿Ñ€Ð¾Ñ„Ð¸Ð»ÐµÐ¹ ÐºÐ¾Ð¼Ð±Ð°Ð¹Ð½Ð° Ð² ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ð¸ Ð¸Ð³Ñ€Ñ‹
-- ÐŸÐ¾Ð»Ð½Ð°Ñ Ð¿Ð¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ° Ð¼ÑƒÐ»ÑŒÑ‚Ð¸Ð¿Ð»ÐµÐµÑ€Ð° Ñ Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ°Ð¼Ð¸ Ð½Ð° ÑÑ‚Ð¾Ñ€Ð¾Ð½Ðµ ÑÐµÑ€Ð²ÐµÑ€Ð°
-- ÐŸÐ¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ° Ð·ÐµÑ€Ð½Ð¾Ð²Ñ‹Ñ…, ÐºÐ¾Ñ€Ð¼Ð¾ÑƒÐ±Ð¾Ñ€Ð¾Ñ‡Ð½Ñ‹Ñ…, ÐºÐ¾Ñ€Ð½ÐµÐ¿Ð»Ð¾Ð´Ð¾Ð² (ÐºÐ°Ñ€Ñ‚Ð¾Ñ„ÐµÐ»ÑŒ, ÑÐ²ÐµÐºÐ»Ð°, Ð¼Ð¾Ñ€ÐºÐ¾Ð²ÑŒ, Ð»ÑƒÐº, ÑˆÐ¿Ð¸Ð½Ð°Ñ‚) Ð¸ Ñ…Ð»Ð¾Ð¿ÐºÐ°
-- ÐŸÐ¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ° Ð¶Ð°Ñ‚Ð¾Ðº-Ð¿Ð¾Ð´Ð±Ð¾Ñ€Ñ‰Ð¸ÐºÐ¾Ð² (Ð²Ð°Ð»ÐºÐ¾Ð²Ð°Ð½Ð¸Ðµ) Ð¸ ÑÐºÑÐ¿ÐµÑ€Ð¸Ð¼ÐµÐ½Ñ‚Ð°Ð»ÑŒÐ½Ð°Ñ Ð¿Ð¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ° ÑˆÐ°ÑÑÐ¸ NEXAT
-- ÐŸÐ¾Ð»Ð½Ð°Ñ Ð¸Ð½Ñ‚ÐµÐ³Ñ€Ð°Ñ†Ð¸Ñ Ñ Precision Farming Ð¸ Moisture System
-- ÐŸÐ¾Ð´Ñ€Ð¾Ð±Ð½Ñ‹Ð¹ 9-ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ‡Ð½Ñ‹Ð¹ Ð¸Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ð¹ ÑÐ¿Ñ€Ð°Ð²Ð¾Ñ‡Ð½Ð¸Ðº Ð² Ð¼ÐµÐ½ÑŽ ESC
+Особенности:
+- Динамический расчет нагрузки двигателя на основе потока массы (т/ч, масса/сек)
+- Автоматическое ограничение скорости для предотвращения перегрузки комбайна
+- Визуальный и физический индикатор потерь урожая с реальными потерями из бункера
+- Монитор урожайности (т/га, бу/акр) с реалистичными полевыми колебаниями
+- Настраиваемый HUD с телеметрией в реальном времени (нагрузка, скорость, урожайность, потери, влажность)
+- Сенсорный терминал калибровки комбайна (Right Shift + K) с автоопределением культур карты
+- 4 уровня электроники: Ручной, Набор датчиков, Монитор телеметрии и Opti-Harvest AI
+- Интеллектуальная автонастройка для наемных рабочих (AI Worker и Courseplay)
+- Полное сохранение настроек и профилей комбайна в сохранении игры
+- Полная поддержка мультиплеера с настройками на стороне сервера
+- Поддержка зерновых, кормоуборочных, корнеплодов (картофель, свекла, морковь, лук, шпинат) и хлопка
+- Поддержка жаток-подборщиков (валкование) и экспериментальная поддержка шасси NEXAT
+- Полная интеграция с Precision Farming и Moisture System
+- Подробный 9-страничный интерактивный справочник в меню ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></ru>
-<hu><![CDATA[ValÃ³sÃ¡ghÅ± betakarÃ­tÃ¡si mechanikÃ¡kat ad hozzÃ¡ a kombÃ¡jnjaidhoz.
+<hu><![CDATA[Valósághű betakarítási mechanikákat ad hozzá a kombájnjaidhoz.
 
-FunkciÃ³k:
-- Dinamikus motorterhelÃ©s-szÃ¡mÃ­tÃ¡s a tÃ¶megÃ¡ram (t/h, tÃ¶meg/mp) alapjÃ¡n
-- Automatikus sebessÃ©gkorlÃ¡tozÃ¡s a tÃºlterhelÃ©s elkerÃ¼lÃ©se Ã©rdekÃ©ben
-- VizuÃ¡lis Ã©s fizikai termÃ©nyvesztesÃ©g-jelzÅ‘ (ALACSONY/KÃ–ZEPES/MAGAS) valÃ³s vesztesÃ©gekkel
-- HozamfigyelÅ‘ (t/ha, bu/ac) valÃ³sÃ¡ghÅ± szÃ¡ntÃ³fÃ¶ldi ingadozÃ¡sokkal
-- TestreszabhatÃ³ HUD valÃ³s idejÅ± adatokkal (terhelÃ©s, sebessÃ©g, hozam, vesztesÃ©g, nedvessÃ©g)
-- Ã‰rintÅ‘kÃ©pernyÅ‘s kalibrÃ¡ciÃ³s terminÃ¡l (Jobb Shift + K) a tÃ©rkÃ©p nÃ¶vÃ©nyeinek felismerÃ©sÃ©vel
-- 4 elektronikai szint: KÃ©zi, Ã‰rzÃ©kelÅ‘ kÃ©szlet, Telemetria monitor & Opti-Harvest MI
-- TÃ¶bbszintÅ± automatikus finomhangolÃ¡s AI munkÃ¡sokhoz Ã©s Courseplay-hez
-- AktÃ­v beÃ¡llÃ­tÃ¡sok Ã©s egyÃ©ni profilok mentÃ©se a jÃ¡tÃ©kmentÃ©sbe
-- Teljes tÃ¶bbjÃ¡tÃ©kos tÃ¡mogatÃ¡s, szerveroldali beÃ¡llÃ­tÃ¡sokkal
-- Gabona, silÃ³zÃ³, gyÃ¶kÃ©rzÃ¶ldsÃ©g (burgonya, rÃ©pa, sÃ¡rgarÃ©pa, hagyma, spenÃ³t) Ã©s gyapot tÃ¡mogatÃ¡sa
-- RendfelszedÅ‘ adapterek (rendre vÃ¡gÃ¡s) Ã©s kÃ­sÃ©rleti NEXAT tÃ¡mogatÃ¡s
-- ZÃ¶kkenÅ‘mentes integrÃ¡ciÃ³ a Precision Farming Ã©s Moisture System modokkal
-- RÃ©szletes 9 oldalas interaktÃ­v sÃºgÃ³ az ESC menÃ¼ben
+Funkciók:
+- Dinamikus motorterhelés-számítás a tömegáram (t/h, tömeg/mp) alapján
+- Automatikus sebességkorlátozás a túlterhelés elkerülése érdekében
+- Vizuális és fizikai terményveszteség-jelző valós veszteségekkel
+- Hozamfigyelő (t/ha, bu/ac) valósághű szántóföldi ingadozásokkal
+- Testreszabható HUD valós idejű adatokkal (terhelés, sebesség, hozam, veszteség, nedvesség)
+- Érintőképernyős kalibrációs terminál (Jobb Shift + K) a térkép növényeinek felismerésével
+- 4 elektronikai szint: Kézi, Érzékelő készlet, Telemetria monitor & Opti-Harvest MI
+- Többszintű automatikus finomhangolás AI munkásokhoz és Courseplay-hez
+- Aktív beállítások és egyéni profilok mentése a játékmentésbe
+- Teljes többjátékos támogatás, szerveroldali beállításokkal
+- Gabona, silózó, gyökérzöldség (burgonya, répa, sárgarépa, hagyma, spenót) és gyapot támogatása
+- Rendfelszedő adapterek (rendre vágás) és kísérleti NEXAT támogatás
+- Zökkenőmentes integráció a Precision Farming és Moisture System modokkal
+- Részletes 9 oldalas interaktív súgó az ESC menüben
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></hu>
 <nl><![CDATA[Voegt realistische oogstmechanica toe aan uw maaidorsers.
@@ -241,7 +241,7 @@ GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></hu>
 Functies:
 - Dynamische motorbelastingberekening op basis van massastroom (t/u, massa/sec)
 - Automatische snelheidsbegrenzer om overbelasting van de machine te voorkomen
-- Visuele en fysieke oogstverliesindicator (LAAG/GEMIDDELD/HOOG) met echte verliezen
+- Visuele en fysieke oogstverliesindicator met echte verliezen
 - Opbrengstmonitor (t/ha, bu/ac) met realistische veldfluctuaties
 - Aanpasbare HUD met realtime statistieken (belasting, snelheid, opbrengst, verlies, vocht)
 - Touchscreen maaidorser-kalibratieterminal (Rechter Shift + K)
@@ -255,42 +255,42 @@ Functies:
 - Interactieve handleiding van 9 pagina's in het ESC-menu
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></nl>
-<ro><![CDATA[AdaugÄƒ mecanici realiste de recoltare pentru combinele dumneavoastrÄƒ.
+<ro><![CDATA[Adaugă mecanici realiste de recoltare pentru combinele dumneavoastră.
 
 Caracteristici:
-- Calcul dinamic al sarcinii motorului Ã®n funcÈ›ie de debitul de masÄƒ (t/h, masÄƒ/sec)
-- Limitator automat de vitezÄƒ pentru a preveni suprasolicitarea combinei
-- Indicator vizual È™i fizic al pierderilor de recoltÄƒ cu penalizÄƒri reale
-- Monitor de randament (t/ha, bu/ac) cu fluctuaÈ›ii reale de producÈ›ie
-- HUD configurabil cu telemetrie Ã®n timp real (sarcinÄƒ, vitezÄƒ, randament, pierderi, umiditate)
+- Calcul dinamic al sarcinii motorului în funcție de debitul de masă (t/h, masă/sec)
+- Limitator automat de viteză pentru a preveni suprasolicitarea combinei
+- Indicator vizual și fizic al pierderilor de recoltă cu penalizări reale
+- Monitor de randament (t/ha, bu/ac) cu fluctuații reale de producție
+- HUD configurabil cu telemetrie în timp real (sarcină, viteză, randament, pierderi, umiditate)
 - Terminal touchscreen de calibrare a combinei (Shift Dreapta + K)
-- 4 niveluri de electronicÄƒ: Manual, Kit Senzori, Monitor Telemetrie È™i Opti-Harvest AI
-- Calibrare automatÄƒ pe mai multe niveluri pentru lucrÄƒtori AI È™i Courseplay
-- Salvare completÄƒ a setÄƒrilor active È™i a profilelor Ã®n salvarea jocului
-- Suport multiplayer complet cu setÄƒri pe partea de server
-- Suport pentru cereale, furaje, rÄƒdÄƒcinoase (cartofi, sfeclÄƒ, morcovi, ceapÄƒ, spanac) È™i bumbac
-- Suport pentru hedere pick-up (brazdÄƒ) È™i suport experimental NEXAT
-- Integrare perfectÄƒ cu Precision Farming È™i Moisture System
-- Ghid interactiv de ajutor cu 9 pagini Ã®n meniul ESC
+- 4 niveluri de electronică: Manual, Kit Senzori, Monitor Telemetrie și Opti-Harvest AI
+- Calibrare automată pe mai multe niveluri pentru lucrători AI și Courseplay
+- Salvare completă a setărilor active și a profilelor în salvarea jocului
+- Suport multiplayer complet cu setări pe partea de server
+- Suport pentru cereale, furaje, rădăcinoase (cartofi, sfeclă, morcovi, ceapă, spanac) și bumbac
+- Suport pentru hedere pick-up (brazdă) și suport experimental NEXAT
+- Integrare perfectă cu Precision Farming și Moisture System
+- Ghid interactiv de ajutor cu 9 pagini în meniul ESC
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></ro>
-<tr><![CDATA[BiÃ§erdÃ¶verlerinize gerÃ§ekÃ§i hasat mekanikleri ekler.
+<tr><![CDATA[Biçerdöverlerinize gerçekçi hasat mekanikleri ekler.
 
-Ã–zellikler:
-- KÃ¼tle akÄ±ÅŸÄ±na (t/sa, kÃ¼tle/sn) dayalÄ± dinamik motor yÃ¼kÃ¼ hesaplamasÄ±
-- BiÃ§erdÃ¶verin aÅŸÄ±rÄ± yÃ¼klenmesini Ã¶nlemek iÃ§in otomatik hÄ±z sÄ±nÄ±rlayÄ±cÄ±
-- GerÃ§ek kayÄ±p cezalarÄ±na sahip gÃ¶rsel ve fiziksel Ã¼rÃ¼n kaybÄ± gÃ¶stergesi
-- GerÃ§ekÃ§i tarla dalgalanmalarÄ±yla verim monitÃ¶rÃ¼ (t/ha, bu/ac)
-- GerÃ§ek zamanlÄ± telemetri verilerine sahip Ã¶zelleÅŸtirilebilir HUD (yÃ¼k, hÄ±z, verim, kayÄ±p, nem)
-- Dokunmatik biÃ§erdÃ¶ver kalibrasyon terminali (SaÄŸ Shift + K)
-- 4 Elektronik Seviyesi: Manuel, SensÃ¶r Kiti, Telemetri MonitÃ¶rÃ¼ ve Opti-Harvest AI
-- AI Ä°ÅŸÃ§iler ve Courseplay iÃ§in Ã§ok aÅŸamalÄ± akÄ±llÄ± otomatik ayar
-- Aktif ayarlarÄ±n ve Ã¶zel profillerin kayÄ±t dosyasÄ±na tam olarak kaydedilmesi
-- Sunucu tarafÄ± ayarlarla tam Ã§ok oyunculu (Multiplayer) desteÄŸi
-- TahÄ±l, silaj, kÃ¶k bitkiler (patates, pancar, havuÃ§, soÄŸan, Ä±spanak) ve pamuk desteÄŸi
-- Toplama tablalarÄ± (namlu) ve deneysel NEXAT desteÄŸi
+Özellikler:
+- Kütle akışına (t/sa, kütle/sn) dayalı dinamik motor yükü hesaplaması
+- Biçerdöverin aşırı yüklenmesini önlemek için otomatik hız sınırlayıcı
+- Gerçek kayıp cezalarına sahip görsel ve fiziksel ürün kaybı göstergesi
+- Gerçekçi tarla dalgalanmalarıyla verim monitörü (t/ha, bu/ac)
+- Gerçek zamanlı telemetri verilerine sahip özelleştirilebilir HUD (yük, hız, verim, kayıp, nem)
+- Dokunmatik biçerdöver kalibrasyon terminali (Sağ Shift + K)
+- 4 Elektronik Seviyesi: Manuel, Sensör Kiti, Telemetri Monitörü ve Opti-Harvest AI
+- AI İşçiler ve Courseplay için çok aşamalı akıllı otomatik ayar
+- Aktif ayarların ve özel profillerin kayıt dosyasına tam olarak kaydedilmesi
+- Sunucu tarafı ayarlarla tam çok oyunculu (Multiplayer) desteği
+- Tahıl, silaj, kök bitkiler (patates, pancar, havuç, soğan, ıspanak) ve pamuk desteği
+- Toplama tablaları (namlu) ve deneysel NEXAT desteği
 - Precision Farming ve Moisture System ile kusursuz entegrasyon
-- ESC menÃ¼sÃ¼nde 9 sayfalÄ±k kapsamlÄ± etkileÅŸimli yardÄ±m rehberi
+- ESC menüsünde 9 sayfalık kapsamlı etkileşimli yardım rehberi
 
 GitHub: https://github.com/exekx/FS25_RealisticHarvesting]]></tr>
     </description>

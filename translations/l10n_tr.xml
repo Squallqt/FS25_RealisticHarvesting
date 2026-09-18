@@ -113,8 +113,8 @@
         <text name="rhm_loss_low" text="LOW"/>
         <text name="rhm_loss_med" text="MED"/>
         <text name="rhm_loss_high" text="HIGH"/>
-        <text name="rhm_warning_turn_on_combine" text="Ã–nce biÃ§erdÃ¶veri Ã§alÄ±ÅŸtÄ±rÄ±n!"/>
-        <text name="rhm_warning_turn_on_cutter" text="BiÃ§erdÃ¶ver tablasÄ±nÄ± Ã§alÄ±ÅŸtÄ±rÄ±n!"/>
+        <text name="rhm_warning_turn_on_combine" text="Önce biçerdöveri çalıştırın!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Biçerdöver tablasını çalıştırın!"/>
         <text name="rhm_warn_overload_high" text="Combine overloaded! Reduce speed to minimize crop losses."/>
         <text name="rhm_warn_overload_critical" text="COMBINE CRITICALLY OVERLOADED! Severe crop losses occurring!"/>
         <text name="rhm_configuration_title" text="Realistic Harvesting Sistemleri"/>

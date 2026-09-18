@@ -235,10 +235,12 @@ function RHM_CombineSettingsEvent:run(connection)
             self.vehicle
         )
         local spec = self.vehicle.spec_rhm_Combine
-        if spec and spec.settingsDirtyFlag then
-            self.vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
-        else
-            self.vehicle:raiseDirtyFlags(spec.dirtyFlag)
+        if spec then
+            local flag = (spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" and spec.settingsDirtyFlag)
+                      or (spec.dirtyFlag and type(spec.dirtyFlag) == "number" and spec.dirtyFlag)
+            if flag then
+                self.vehicle:raiseDirtyFlags(flag)
+            end
         end
 
     else

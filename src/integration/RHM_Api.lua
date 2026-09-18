@@ -14,7 +14,7 @@
 -- ============================================================================
 
 RHM_Api = {}
-RHM_Api.VERSION = "1.5.4.0"
+RHM_Api.VERSION = "1.5.4.1"
 RHM_Api.listeners = {}
 
 -- ============================================================================
@@ -195,6 +195,18 @@ function RHM_Api.getPowerBreakdown(vehicle)
         }
     end
     return nil
+end
+
+---EN: Returns rated engine horsepower (HP) of the combine or motorized carrier (e.g. NEXAT).
+---UA: Повертає номінальну потужність двигуна (к.с.) комбайна або тягача (наприклад, NEXAT).
+---@param vehicle table|nil
+---@return number engineHp
+function RHM_Api.getEnginePowerHp(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        return combine.spec_rhm_Combine.loadCalculator:getEnginePowerHp(combine) or 0.0
+    end
+    return 0.0
 end
 
 -- ============================================================================

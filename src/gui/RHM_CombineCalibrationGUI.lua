@@ -710,12 +710,28 @@ function RHMCombineCalibrationGUI:draw()
     elseif spec and spec.loadCalculator and spec.loadCalculator.getEnginePowerHp then
         engineHp = spec.loadCalculator:getEnginePowerHp(v)
     end
-    if not engineHp and v and v.spec_motorized and v.spec_motorized.motor then
-        local motor = v.spec_motorized.motor
-        if motor.getHp then
-            engineHp = motor:getHp()
-        elseif motor.peakMotorPower then
-            engineHp = motor.peakMotorPower * 1.35962
+    if not engineHp and v then
+        local motorObj = v
+        if not (v.spec_motorized and v.spec_motorized.motor) then
+            local root = v.rootVehicle or (v.getRootVehicle and v:getRootVehicle())
+            if root and root.spec_motorized and root.spec_motorized.motor then
+                motorObj = root
+            else
+                local attacher = v.attacherVehicle or (v.getAttacherVehicle and v:getAttacherVehicle())
+                if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+                    motorObj = attacher
+                end
+            end
+        end
+        if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+            local motor = motorObj.spec_motorized.motor
+            if motor.maxMotorPower and tonumber(motor.maxMotorPower) and tonumber(motor.maxMotorPower) > 0 then
+                engineHp = tonumber(motor.maxMotorPower) * 1.35962
+            elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
+                engineHp = tonumber(motor.peakMotorPower) * 1.35962
+            elseif motor.getHp then
+                engineHp = motor:getHp()
+            end
         end
     end
     local hpStr = engineHp and string.format("%.0f HP", engineHp) or "—"
@@ -781,7 +797,12 @@ function RHMCombineCalibrationGUI:draw()
 
     local cy = headerY - ui.margin * 0.5
 
-    if not self.activeVehicle or not spec or not spec.combineMemory then
+    local memory = spec and spec.combineMemory
+    if not memory and self.activeVehicle and rhm_Combine and rhm_Combine.getOrInitCombineMemory then
+        memory = rhm_Combine.getOrInitCombineMemory(self.activeVehicle)
+    end
+
+    if not self.activeVehicle or not spec or not memory then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextColor(unpack(ui.colors.textDim))
         local notInitText = g_i18n:hasText("rhm_ui_combine_not_init") and g_i18n:getText("rhm_ui_combine_not_init") or "Combine not initialized"
@@ -790,8 +811,7 @@ function RHMCombineCalibrationGUI:draw()
         return
     end
 
-    local memory = spec.combineMemory
-    local machineType = spec.machineType or "grain"
+    local machineType = spec.machineType or (memory and memory.machineType) or "grain"
 
     -- ── Tier 3+ Live Telemetry Cards ────────────────────────────────────────
     if packageLevel >= 3 then

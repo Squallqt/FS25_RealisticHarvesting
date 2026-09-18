@@ -115,8 +115,8 @@
         <text name="rhm_loss_low" text="NÍZKÉ"/>
         <text name="rhm_loss_med" text="STŘEDNÍ"/>
         <text name="rhm_loss_high" text="VYSOKÉ"/>
-        <text name="rhm_warning_turn_on_combine" text="Nejprve zapnÄ›te kombajn!"/>
-        <text name="rhm_warning_turn_on_cutter" text="ZapnÄ›te Å¾acÃ­ liÅ¡tu!"/>
+        <text name="rhm_warning_turn_on_combine" text="Nejprve zapněte kombajn!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Zapněte žací lištu!"/>
         <text name="rhm_warn_overload_high" text="Kombajn přetížen! Snižte rychlost."/>
         <text name="rhm_warn_overload_critical" text="KOMBAJN KRITICKY PŘETÍŽEN! Vážné ztráty sklizně!"/>
         <text name="rhm_configuration_title" text="Systémy Realistic Harvesting"/>
