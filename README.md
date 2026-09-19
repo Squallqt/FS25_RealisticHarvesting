@@ -334,6 +334,8 @@ If you enjoy the enhanced harvesting physics and want to support further develop
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/exekx)
 
+---
+
 <div align="center">
 
 **Made with ❤️ for the FS25 Harvesting Community**
