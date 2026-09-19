@@ -323,9 +323,16 @@ Open `ESC → In-Game Help` to read the built-in 9-page handbook translated into
 
 **Created by:** exekx
 
-- **Official Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
-- **Community & Support:** [Discord Server](https://discord.gg/Dc2CvZJqU4)
-- **Bugs & Suggestions:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
+- 🌐 **Official Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
+- 💬 **Community & Support:** [Discord Server](https://discord.gg/Dc2CvZJqU4)
+- 🐛 **Bugs & Suggestions:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
+
+---
+
+### ☕ Support Ongoing Development
+If you enjoy the enhanced harvesting physics and want to support further development and new features:
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/exekx)
 
 <div align="center">
 
