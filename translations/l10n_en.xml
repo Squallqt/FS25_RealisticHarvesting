@@ -14,14 +14,12 @@
         <text name="rhm_difficulty" text="Difficulty"/>
         <text name="rhm_difficulty_motor" text="Engine Power Limit"/>
         <text name="rhm_difficulty_motor_short" text="Engine Limit"/>
-        <text name="rhm_difficulty_motor_long" text="Determines how much extra power is available. Arcade = +100%, Normal = +35%, Realistic = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determines engine load physics. Arcade = Disabled (no overload), Normal = +35% power headroom, Realistic = 100% authentic physics."/>
         <text name="rhm_difficulty_loss" text="Crop Loss Penalty"/>
         <text name="rhm_difficulty_loss_short" text="Loss Penalty"/>
-        <text name="rhm_difficulty_loss_long"><![CDATA[
-            Determines crop loss severity when overloaded. Realistic = High penalty.
-        ]]></text>
+        <text name="rhm_difficulty_loss_long" text="Determines crop losses. Arcade = 0% (no crop loss), Normal = standard losses, Realistic = increased losses (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: High limits (+100%). Normal: Balanced physics (+35%). Realistic: Pure simulation (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: No overload or crop loss (pure vanilla). Normal: Balanced physics (+35%). Realistic: Pure simulation (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Realistic"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -220,6 +218,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORS"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRY"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="ENGINE LOAD"/>
         <text name="rhm_ui_card_efficiency" text="EFFICIENCY"/>
         <text name="rhm_ui_card_predicted_loss" text="PREDICTED LOSS"/>

@@ -165,6 +165,9 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     if not cropName or cropName == "" then
         cropName = self.currentCrop
     end
+    if self.machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+        cropName = "MAIZE_FORAGE"
+    end
     if not cropName then
         return false
     end
@@ -551,6 +554,9 @@ end
 --     Повертає окремо штрафи за ефективність (швидкість) і втрати врожаю, плюс таблицю попереджень.
 --     Подача/Ротор впливають на ефективність (пропускну здатність), Вентилятор/Решета — на втрати (якість очищення).
 function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarnings)
+    if self.machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+        cropName = "MAIZE_FORAGE"
+    end
     if not context and self.combine and self.combine.spec_rhm_Combine then
         local rhmSpec = self.combine.spec_rhm_Combine
         self._cachedContext = self._cachedContext or {}
@@ -809,6 +815,10 @@ function RHM_CombineMemory:switchCrop(newCropName)
     -- UA: Нормалізуємо аліас до канонічного ключа культури (напр. PEAS -> PEA, CORN -> MAIZE)
     if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName then
         newCropName = RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
+    end
+
+    if self.machineType == "forage" and (newCropName == "MAIZE" or newCropName == "CORN") then
+        newCropName = "MAIZE_FORAGE"
     end
 
     -- EN: Normalize alias to active map crop name if needed (e.g. LINSEED -> FLAX if map uses FLAX)

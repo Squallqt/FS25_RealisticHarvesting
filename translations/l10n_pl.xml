@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Trudność"/>
         <text name="rhm_difficulty_motor" text="Moc silnika"/>
         <text name="rhm_difficulty_motor_short" text="Silnik"/>
-        <text name="rhm_difficulty_motor_long" text="Określa dostępny zapas mocy silnika. Zręcznościowy = +100%, Normalny = +35%, Realistyczny = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Określa fizykę obciążenia silnika. Zręcznościowy = Wyłączone (brak przeciążeń), Normalny = +35% zapasu mocy, Realistyczny = 100% autentyczna fizyka."/>
         <text name="rhm_difficulty_loss" text="Strata plonów"/>
         <text name="rhm_difficulty_loss_short" text="Strata"/>
-        <text name="rhm_difficulty_loss_long" text="Określa dotkliwość strat."/>
+        <text name="rhm_difficulty_loss_long" text="Określa straty plonów. Zręcznościowy = 0% (brak strat), Normalny = standardowe straty, Realistyczny = zwiększone straty (200%)."/>
         <text name="rhm_diff_1" text="Zręcznościowy"/>
-        <text name="rhm_difficulty_long" text="Arkada: wysokie limity (+100%). Normalna: zbalansowana fizyka (+35%). Realistyczna: czysta symulacja (0%)."/>
+        <text name="rhm_difficulty_long" text="Arkada: Brak przeciążeń i strat (czysta wanilia). Normalna: Zbalansowana fizyka (+35%). Realistyczna: Czysta symulacja (0%)."/>
         <text name="rhm_diff_2" text="Normalna"/>
         <text name="rhm_diff_3" text="Realistyczna"/>
         <text name="rhm_show_yield" text="Pokaż monitor plonów"/>
@@ -213,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="POZIOM 2 - CZUJNIKI"/>
         <text name="rhm_ui_tier3_monitor" text="POZIOM 3 - MONITOR"/>
         <text name="rhm_ui_tier4_opti" text="POZIOM 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="OBCIĄŻENIE SILNIKA"/>
         <text name="rhm_ui_card_efficiency" text="WYDAJNOŚĆ"/>
         <text name="rhm_ui_card_predicted_loss" text="PRZEWIDYWANA STRATA"/>

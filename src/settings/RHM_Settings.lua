@@ -65,7 +65,7 @@ function RHMSettings.new(manager)
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
     self.alarmMode = RHMSettings.ALARM_MODE_SMART -- EN: Alarm mode (1=Smart, 2=Continuous, 3=Off) / UA: Режим зумера
     self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
-    self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
+    self.soundVolume = 1.0              -- EN: Sound volume scale (0.0 to 1.0, 0% to 100%) / UA: Рівень гучності звуків (0.0 до 1.0, 0% до 100%)
     self.enableTutorials = true         -- EN: First-time onboarding tutorial hints / UA: Навчальні підказки для новачків
 
     -- EN: HUD visibility toggles (client-side, per-player).
@@ -113,7 +113,7 @@ end
 --     Застосовується до розрахованого відсотка втрат в RHM_LoadCalculator.
 function RHMSettings:getLossMultiplier()
     if self.difficultyLoss == RHMSettings.DIFFICULTY_ARCADE then
-        return 0.5 -- EN: Reduced losses for casual play / UA: Зменшені втрати для казуальної гри
+        return 0.0 -- EN: Zero losses in Arcade mode / UA: Нульові втрати в режимі Аркада
     elseif self.difficultyLoss == RHMSettings.DIFFICULTY_REALISTIC then
         return 2.0 -- EN: Doubled losses for realism / UA: Подвоєні втрати для реалізму
     else

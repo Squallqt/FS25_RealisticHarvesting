@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Dificultate"/>
         <text name="rhm_difficulty_motor" text="Limită Putere Motor"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Determină rezerva de putere a motorului. Arcadă = +100%, Normal = +35%, Realistic = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determină fizica sarcinii motorului. Arcadă = Dezactivat (fără supraîncărcare), Normal = +35% rezervă de putere, Realistic = 100% fizică autentică."/>
         <text name="rhm_difficulty_loss" text="Pierderi Recoltă"/>
         <text name="rhm_difficulty_loss_short" text="Pierderi"/>
-        <text name="rhm_difficulty_loss_long" text="Determină severitatea penalizărilor de pierderi."/>
+        <text name="rhm_difficulty_loss_long" text="Determină pierderile de recoltă. Arcadă = 0% (fără pierderi), Normal = pierderi standard, Realistic = pierderi mărite (200%)."/>
         <text name="rhm_diff_1" text="Arcadă"/>
-        <text name="rhm_difficulty_long" text="Arcadă: Limite ridicate (+100%). Normal: Fizică echilibrată (+35%). Realistic: Simulare pură (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcadă: Fără supraîncărcare sau pierderi (vanilla pur). Normal: Fizică echilibrată (+35%). Realistic: Simulare pură (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Realistic"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -211,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENZORI"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADĂ"/>
         <text name="rhm_ui_card_engine_load" text="SARCINĂ MOTOR"/>
         <text name="rhm_ui_card_efficiency" text="EFICIENȚĂ"/>
         <text name="rhm_ui_card_predicted_loss" text="PIERDERE ESTIMATĂ"/>

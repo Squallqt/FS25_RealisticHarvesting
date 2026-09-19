@@ -616,6 +616,21 @@ function RHMCombineCalibrationGUI:draw()
     setTextColor(unpack(tier.text))
     renderText(badgeX + badgeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, tier.label)
 
+    local isArcade = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+    local nextHeaderBadgeX = badgeX + badgeW
+    if isArcade then
+        local arcadeW = 0.046
+        local arcadeX = badgeX + badgeW + 0.004
+        self:drawRect(arcadeX, badgeY, arcadeW, badgeH, {0.05, 0.12, 0.04, 0.85})
+        self:drawBorder(arcadeX, badgeY, arcadeW, badgeH, {0.529, 0.706, 0.0, 0.80}, 1)
+        local arcadeLabel = g_i18n:hasText("rhm_ui_arcade_badge") and g_i18n:getText("rhm_ui_arcade_badge") or "ARCADE"
+        setTextAlignment(RenderText.ALIGN_CENTER)
+        setTextBold(true)
+        setTextColor(0.529, 0.706, 0.0, 1.0)
+        renderText(arcadeX + arcadeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, arcadeLabel)
+        nextHeaderBadgeX = arcadeX + arcadeW
+    end
+
     -- Close Button [X] (Top Right)
     local closeBtnW = 0.018
     local closeBtnH = 0.018
@@ -794,7 +809,7 @@ function RHMCombineCalibrationGUI:draw()
     setTextAlignment(RenderText.ALIGN_LEFT)
     setTextBold(true)
     setTextColor(unpack(ui.colors.text))
-    local titleX = badgeX + badgeW + 0.007
+    local titleX = (nextHeaderBadgeX or (badgeX + badgeW)) + 0.007
     local maxTitleW = hpBoxX - titleX - 0.006
     local titleSize = ui.titleSize
     local fullUpper = string.upper(fullVehicleName)
@@ -838,6 +853,14 @@ function RHMCombineCalibrationGUI:draw()
             local context = self:getHarvestContext(machineType)
             effPenalty, lossPenalty, _ = memory:checkSettingsForCrop(memory.currentCrop, context)
         end
+        local isArcadeMotor = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+        local isArcadeLoss = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyLoss == 1)
+        if isArcadeMotor then
+            effPenalty = 0
+        end
+        if isArcadeLoss then
+            lossPenalty = 0
+        end
         local isForage = (machineType == "forage")
 
         -- Card 1: Engine Load
@@ -880,7 +903,7 @@ function RHMCombineCalibrationGUI:draw()
             local settingsLoss = math.max(0, lossPenalty)
             local wearLoss = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
             local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
-            if not isWearEnabled then
+            if not isWearEnabled or isArcadeLoss then
                 wearLoss = 0
             end
             local displayLoss = settingsLoss + wearLoss

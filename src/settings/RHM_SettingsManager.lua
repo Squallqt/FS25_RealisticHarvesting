@@ -197,7 +197,7 @@ function RHMSettingsManager:loadClientSettings(settingsObject)
                     -- UA: Позиція HUD зберігається як float (nil якщо не встановлено = автоматичне позиціонування).
                     settingsObject[key] = xml:getFloat(xmlKey)
                 elseif key == "soundVolume" then
-                    settingsObject[key] = xml:getFloat(xmlKey, self.defaultConfig[key] or 1.0)
+                    settingsObject[key] = math.min(1.0, math.max(0.0, xml:getFloat(xmlKey, self.defaultConfig[key] or 1.0)))
                 else
                     settingsObject[key] = xml:getBool(xmlKey, self.defaultConfig[key])
                 end
@@ -307,7 +307,7 @@ function RHMSettingsManager:saveClientSettings(settingsObject)
                     xml:setFloat(xmlKey, settingsObject[key])
                 end
             elseif key == "soundVolume" then
-                xml:setFloat(xmlKey, settingsObject[key] or 1.0)
+                xml:setFloat(xmlKey, math.min(1.0, math.max(0.0, settingsObject[key] or 1.0)))
             else
                 xml:setBool(xmlKey, settingsObject[key] or false)
             end

@@ -50,6 +50,10 @@ function RHMDraggableHUD.new(modDirectory, settings)
     self.bgBotOverlay = nil
     self.icons = {}
 
+    self.isDragging = false
+    self.hasMoved = false
+    self.isNearDock = false
+
     return self
 end
 
@@ -92,7 +96,18 @@ function RHMDraggableHUD:load()
         self.rectOverlay:setUVs(self.bgUVs)
     end
 
-    self.x, self.y, self.width = self:getDockedPosition()
+    local dockX, dockY, dockW = self:getDockedPosition()
+    if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+        self.x = self.settings.hudPosX
+        self.y = self.settings.hudPosY
+        self.width = dockW
+        self.isSnapped = false
+    else
+        self.x = dockX
+        self.y = dockY
+        self.width = dockW
+        self.isSnapped = true
+    end
 
     self:loadIcons(self.uiScale)
 
@@ -311,12 +326,19 @@ function RHMDraggableHUD:getDockedPosition()
 end
 
 function RHMDraggableHUD:getPosition()
+    if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+        return self.settings.hudPosX, self.settings.hudPosY
+    end
     return self:getDockedPosition()
 end
 
 function RHMDraggableHUD:setPosition(x, y)
     self.x = x
     self.y = y
+    if self.settings then
+        self.settings.hudPosX = x
+        self.settings.hudPosY = y
+    end
 end
 
 function RHMDraggableHUD:setVehicle(vehicle)
@@ -416,6 +438,42 @@ function RHMDraggableHUD:drawRect(x, y, w, h, r, g, b, a)
     self.rectOverlay:render()
 end
 
+function RHMDraggableHUD:drawBorder(x, y, w, h, r, g, b, a, thickness)
+    local t = thickness or (0.0010 * (self.uiScale or 1.0))
+    self:drawRect(x, y, w, t, r, g, b, a)
+    self:drawRect(x, y + h - t, w, t, r, g, b, a)
+    self:drawRect(x, y + t, t, h - 2 * t, r, g, b, a)
+    self:drawRect(x + w - t, y + t, t, h - 2 * t, r, g, b, a)
+end
+
+function RHMDraggableHUD:drawDockSnapPlaceholder(dockX, dockY, dockW, dockH)
+    if not self.roundedOverlay or not self.roundedUVs then return end
+
+    local uiScale = self.uiScale or 1.0
+    local padX = 0.0035 * uiScale
+    local padY = 0.0025 * uiScale
+    local slotX = dockX - padX
+    local slotY = dockY - padY
+    local slotW = dockW + (padX * 2)
+    local slotH = (dockH or self.height) + (padY * 2)
+
+    local pulse = 0.85 + 0.15 * math.sin((g_time or 0) * 0.008)
+    local r = 0.529 * pulse
+    local g = 0.706 * pulse
+    local b = 0.0
+
+    -- 1. Outer rounded rectangle in magnetic green
+    self:drawPanelBackground(slotX, slotY, slotW, slotH, {r, g, b, 0.88})
+
+    -- 2. Inner rounded cutout (creates a crisp rounded outline with soft glowing fill)
+    local thickness = 0.0012 * uiScale
+    local inX = slotX + thickness
+    local inY = slotY + thickness
+    local inW = slotW - (thickness * 2)
+    local inH = slotH - (thickness * 2)
+    self:drawPanelBackground(inX, inY, inW, inH, {0.04, 0.08, 0.02, 0.60})
+end
+
 function RHMDraggableHUD:draw()
     if not g_currentMission:getIsClient() then return end
     if not self.settings.showHUD then return end
@@ -428,16 +486,31 @@ function RHMDraggableHUD:draw()
 
     -- Update docked coordinates dynamically each frame to track F1 toggle & PF movement
     local dockX, dockY, dockW = self:getDockedPosition()
-    self.x = dockX
-    self.y = dockY
     self.width = dockW
+
+    if not self.isDragging then
+        if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+            self.x = self.settings.hudPosX
+            self.y = self.settings.hudPosY
+            self.isSnapped = false
+        else
+            self.x = dockX
+            self.y = dockY
+            self.isSnapped = true
+        end
+    end
+
+    -- 1. If currently dragging AND in auto-snap zone: illuminate the target dock slot with rounded outline
+    if self.isDragging and self.hasMoved and self.isNearDock then
+        self:drawDockSnapPlaceholder(dockX, dockY, dockW, self.height)
+    end
 
     local x = self.x
     local y = self.y
     local w = self.width
     local h = self.height
 
-    -- ── Authentic FS25 Translucent Rounded Background ─────────────────────────
+    -- 2. Authentic FS25 Translucent Rounded Background for HUD
     self:drawPanelBackground(x, y, w, h, {0.0, 0.0, 0.0, 0.72})
 
     -- ── Build 4-Column PF-Style Stacked Cells ───────────────────────────────
@@ -689,13 +762,7 @@ function RHMDraggableHUD:isMouseOver(posX, posY)
            posY >= self.y and posY <= (self.y + self.height)
 end
 
-function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
-    if not isDown or button ~= 1 then return false end
-    if not self:isMouseOver(posX, posY) then return false end
-
-    local cellW = self.width / 4
-    local clickedCol = math.floor((posX - self.x) / cellW) + 1
-
+function RHMDraggableHUD:handleCellClick(clickedCol)
     if clickedCol == 4 then
         -- Toggle between tons/h and ha/h
         if self.displayModes.cell4 == "tonPerHour" then
@@ -733,6 +800,91 @@ function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
             end
             return true
         end
+    end
+    return false
+end
+
+function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
+    -- 1. Mouse Button Down (LMB): initiate drag or potential click
+    local isLMB = (button == 1) or (Input and button == Input.MOUSE_BUTTON_LEFT)
+    if isDown and isLMB then
+        if self:isMouseOver(posX, posY) then
+            self.isDragging = true
+            self.dragStartX = posX
+            self.dragStartY = posY
+            self.dragInitialHudX = self.x
+            self.dragInitialHudY = self.y
+            self.hasMoved = false
+            self.isNearDock = false
+            local cellW = self.width / 4
+            self.clickCell = math.floor((posX - self.x) / cellW) + 1
+            return true
+        end
+    end
+
+    -- 2. Ongoing Drag / Mouse Move
+    if self.isDragging and not isUp then
+        local dx = posX - self.dragStartX
+        local dy = posY - self.dragStartY
+        if math.abs(dx) > 0.003 or math.abs(dy) > 0.003 then
+            self.hasMoved = true
+        end
+
+        if self.hasMoved then
+            local rawX = self.dragInitialHudX + dx
+            local rawY = self.dragInitialHudY + dy
+            local screenMargin = 0.003
+            rawX = math.max(screenMargin, math.min(1.0 - self.width - screenMargin, rawX))
+            rawY = math.max(screenMargin, math.min(1.0 - self.height - screenMargin, rawY))
+
+            local dockX, dockY, dockW = self:getDockedPosition()
+            local uiScale = self.uiScale or 1.0
+            local snapRadiusX = 0.048 * uiScale
+            local snapRadiusY = 0.038 * uiScale
+
+            if math.abs(rawX - dockX) <= snapRadiusX and math.abs(rawY - dockY) <= snapRadiusY then
+                self.isNearDock = true
+            else
+                self.isNearDock = false
+            end
+
+            self.x = rawX
+            self.y = rawY
+        end
+        return true
+    end
+
+    -- 3. Mouse Button Up (Release)
+    if self.isDragging and isUp then
+        self.isDragging = false
+        if not self.hasMoved then
+            -- Stationary click without drag: cycle cell metric (zero flicker/border)
+            self:handleCellClick(self.clickCell or 1)
+        else
+            -- Drag release: commit new position or snap back to automatic dock
+            if self.isNearDock then
+                self.isSnapped = true
+                local dockX, dockY = self:getDockedPosition()
+                self.x = dockX
+                self.y = dockY
+                if self.settings then
+                    self.settings.hudPosX = nil
+                    self.settings.hudPosY = nil
+                end
+            else
+                self.isSnapped = false
+                if self.settings then
+                    self.settings.hudPosX = self.x
+                    self.settings.hudPosY = self.y
+                end
+            end
+            if g_realisticHarvestManager and g_realisticHarvestManager.settingsManager and self.settings then
+                g_realisticHarvestManager.settingsManager:saveClientSettings(self.settings)
+            end
+        end
+        self.hasMoved = false
+        self.isNearDock = false
+        return true
     end
 
     return false

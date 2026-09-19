@@ -14,14 +14,12 @@
         <text name="rhm_difficulty" text="Складність"/>
         <text name="rhm_difficulty_motor" text="Обмеження Потужності"/>
         <text name="rhm_difficulty_motor_short" text="Потужність"/>
-        <text name="rhm_difficulty_motor_long" text="Визначає додаткову потужність двигуна. Аркада = +100%, Норма = +35%, Реалізм = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Визначає фізику навантаження двигуна. Аркада = Вимкнено (без перевантаження), Норма = +35% запасу потужності, Реалізм = 100% реалістична фізика."/>
         <text name="rhm_difficulty_loss" text="Штраф за Втрати"/>
         <text name="rhm_difficulty_loss_short" text="Втрати"/>
-        <text name="rhm_difficulty_loss_long"><![CDATA[
-            Визначає суворість втрат при перевантаженні. Реалізм = Високий штраф.
-        ]]></text>
+        <text name="rhm_difficulty_loss_long" text="Визначає втрати врожаю. Аркада = 0% (без втрат), Норма = стандартні втрати, Реалізм = підвищені втрати (200%)."/>
         <text name="rhm_diff_1" text="Аркада"/>
-        <text name="rhm_difficulty_long" text="Аркада: високі ліміти (+100%). Норма: збалансована фізика (+35%). Реалізм: точна симуляція (0%)."/>
+        <text name="rhm_difficulty_long" text="Аркада: без перевантаження та втрат (ваніль). Норма: збалансована фізика (+35%). Реалізм: точна симуляція (0%)."/>
         <text name="rhm_diff_2" text="Звичайна"/>
         <text name="rhm_diff_3" text="Реалістична"/>
         <text name="rhm_show_yield" text="Монітор врожайності"/>
@@ -222,6 +220,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - СЕНСОРИ"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - ТЕЛЕМЕТРІЯ"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="АРКАДА"/>
         <text name="rhm_ui_card_engine_load" text="НАВАНТАЖЕННЯ ДВИГУНА"/>
         <text name="rhm_ui_card_efficiency" text="ЕФЕКТИВНІСТЬ (ККД)"/>
         <text name="rhm_ui_card_predicted_loss" text="ОЧІКУВАНІ ВТРАТИ"/>

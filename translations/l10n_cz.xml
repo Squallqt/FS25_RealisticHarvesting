@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Obtížnost"/>
         <text name="rhm_difficulty_motor" text="Výkon motoru"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Určuje dostupnou výkonovou rezervu motoru. Arkáda = +100%, Normální = +35%, Realistická = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Určuje fyziku zatížení motoru. Arkáda = Vypnuto (bez přetížení), Normální = +35% výkonové rezervy, Realistická = 100% autentická fyzika."/>
         <text name="rhm_difficulty_loss" text="Ztráta úrody"/>
         <text name="rhm_difficulty_loss_short" text="Ztráta"/>
-        <text name="rhm_difficulty_loss_long" text="Určuje závažnost ztráty."/>
+        <text name="rhm_difficulty_loss_long" text="Určuje ztráty plodin. Arkáda = 0% (žádné ztráty), Normální = standardní ztráty, Realistická = zvýšené ztráty (200%)."/>
         <text name="rhm_diff_1" text="Arkáda"/>
-        <text name="rhm_difficulty_long" text="Arkáda: Vysoké limity (+100%). Normální: Vyvážená fyzika (+35%). Realistická: Čistá simulace (0%)."/>
+        <text name="rhm_difficulty_long" text="Arkáda: Bez přetížení a ztrát (čistá vanilla). Normální: Vyvážená fyzika (+35%). Realistická: Čistá simulace (0%)."/>
         <text name="rhm_diff_2" text="Normální"/>
         <text name="rhm_diff_3" text="Realistická"/>
         <text name="rhm_show_yield" text="Zobrazit monitor výnosu"/>
@@ -213,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENZORY"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARKÁDA"/>
         <text name="rhm_ui_card_engine_load" text="ZATÍŽENÍ MOTORU"/>
         <text name="rhm_ui_card_efficiency" text="EFEKTIVITA"/>
         <text name="rhm_ui_card_predicted_loss" text="ODHADOVANÁ ZTRÁTA"/>

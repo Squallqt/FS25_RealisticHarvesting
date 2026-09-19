@@ -561,8 +561,11 @@ function RHM_NotificationManager:update(dt, combineVehicle)
         return
     end
 
+    local isArcadeMotor = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+    local isArcadeLoss = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyLoss == 1)
+
     -- TRIGGER 2: Engine Overload (> 98%)
-    if not self.seenTutorials["OVERLOAD"] and isHarvesting and load >= 98 then
+    if not isArcadeMotor and not self.seenTutorials["OVERLOAD"] and isHarvesting and load >= 98 then
         local title = g_i18n:hasText("rhm_tut_overload_title") and g_i18n:getText("rhm_tut_overload_title") or "ENGINE OVERLOAD"
         local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. In extreme overloads, the threshing unit may clog."
         self:showNotification(title, msg, 0, true, "OVERLOAD")
@@ -570,7 +573,7 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     end
 
     -- TRIGGER 3: Excessive Crop Loss (> 1.5%)
-    if not self.seenTutorials["LOSS"] and isHarvesting and cropLoss > 1.5 then
+    if not isArcadeLoss and not self.seenTutorials["LOSS"] and isHarvesting and cropLoss > 1.5 then
         local title = g_i18n:hasText("rhm_tut_loss_title") and g_i18n:getText("rhm_tut_loss_title") or "CROP LOSS"
         local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press Shift+K to load an optimal factory preset."
         self:showNotification(title, msg, 0, true, "LOSS")

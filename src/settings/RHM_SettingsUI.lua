@@ -280,8 +280,7 @@ function RHMSettingsUI.inject(settings)
             settings.showMoisture, function(val) settings.showMoisture = val; settings:save() end)
     end
 
-    RHMSettingsUI.loadWarnOption = addBinaryRow(settingsPage, generalLayout, "show_loadwarn", "rhm_show_load_warn_short", "rhm_show_load_warn_long",
-        settings.showLoadWarnings, function(val) settings.showLoadWarnings = val; settings:save() end)
+
 
     RHMSettingsUI.tutorialsOption = addBinaryRow(settingsPage, generalLayout, "enable_tutorials", "rhm_setting_enableTutorials", "rhm_setting_enableTutorials_long",
         settings.enableTutorials, function(val) settings.enableTutorials = val; settings:save() end)
@@ -314,12 +313,13 @@ function RHMSettingsUI.inject(settings)
             settings:save()
         end)
 
-    local volumeOptions = {"50%", "75%", "100%", "125%", "150%"}
-    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
-    local currentVolIndex = 3
-    if settings.soundVolume then
+    local volumeOptions = {"0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"}
+    local volumeValues = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00}
+    local currentVolIndex = 11
+    if settings.soundVolume ~= nil then
+        local clamped = math.min(1.0, math.max(0.0, tonumber(settings.soundVolume) or 1.0))
         for idx, val in ipairs(volumeValues) do
-            if math.abs(settings.soundVolume - val) < 0.12 then
+            if math.abs(clamped - val) < 0.05 then
                 currentVolIndex = idx
                 break
             end
@@ -331,6 +331,25 @@ function RHMSettingsUI.inject(settings)
         function(idx)
             settings.soundVolume = volumeValues[idx] or 1.0
             settings:save()
+
+            -- EN: Play audio preview beep so player immediately hears the volume level
+            -- UA: Програємо тестовий біп, щоб гравець одразу почув рівень гучності
+            if settings.soundVolume > 0.01 and rhm_Combine and rhm_Combine.playAlarmSample then
+                local vehicle = g_currentMission and g_currentMission.controlledVehicle
+                if not (vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.samples and vehicle.spec_rhm_Combine.samples.overloadAlarm) then
+                    if g_currentMission and g_currentMission.vehicles then
+                        for _, v in ipairs(g_currentMission.vehicles) do
+                            if v.spec_rhm_Combine and v.spec_rhm_Combine.samples and v.spec_rhm_Combine.samples.overloadAlarm then
+                                vehicle = v
+                                break
+                            end
+                        end
+                    end
+                end
+                if vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.samples and vehicle.spec_rhm_Combine.samples.overloadAlarm then
+                    rhm_Combine.playAlarmSample(vehicle, vehicle.spec_rhm_Combine, settings.soundVolume)
+                end
+            end
         end)
 
     if settingsPage.gameSettingsLayout then
@@ -374,18 +393,19 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.prodOption,        settings.showProductivity  and 2 or 1, false)
     setOpt(RHMSettingsUI.cropLossVisOption, settings.showCropLoss      and 2 or 1, false)
     setOpt(RHMSettingsUI.moistureVisOption, settings.showMoisture      and 2 or 1, false)
-    setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
+
     setOpt(RHMSettingsUI.tutorialsOption,      (settings.enableTutorials ~= false) and 2 or 1, false)
     setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
 
     local currentAlarmMode = settings.alarmMode or (settings.enableAlarmSound == false and 3 or 1)
     if currentAlarmMode < 1 or currentAlarmMode > 3 then currentAlarmMode = 1 end
     setOpt(RHMSettingsUI.alarmSoundOption, currentAlarmMode, false)
-    local volIdx = 3
-    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
-    if settings.soundVolume then
+    local volIdx = 11
+    local volumeValues = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00}
+    if settings.soundVolume ~= nil then
+        local clamped = math.min(1.0, math.max(0.0, tonumber(settings.soundVolume) or 1.0))
         for idx, val in ipairs(volumeValues) do
-            if math.abs(settings.soundVolume - val) < 0.12 then
+            if math.abs(clamped - val) < 0.05 then
                 volIdx = idx
                 break
             end

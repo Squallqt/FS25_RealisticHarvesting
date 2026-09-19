@@ -698,6 +698,31 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
             if fDesc and fDesc.name then
                 local fNameUpper = fDesc.name:upper()
                 local canonical = self:getCanonicalCropName(fNameUpper)
+
+                -- EN: When chopped into forage/chaff, standing corn (MAIZE/CORN) is MAIZE_FORAGE, NOT grain MAIZE!
+                -- UA: При подрібненні на сінаж/силос, кукурудза (MAIZE/CORN) — це MAIZE_FORAGE, а НЕ зернова кукурудза!
+                if canonical == "MAIZE" or canonical == "CORN" or fNameUpper == "MAIZE" or fNameUpper == "CORN" then
+                    return "MAIZE_FORAGE"
+                end
+
+                -- EN: Standing grass/meadow chopped into chaff -> GRASS
+                -- UA: Стояча трава при прямому косінні на силос -> GRASS
+                if canonical == "GRASS" or fNameUpper == "GRASS" or fNameUpper == "MEADOW" or fNameUpper == "TALLGRASS" then
+                    return "GRASS"
+                end
+
+                -- EN: Lucerne / Alfalfa / Clover chopped into chaff
+                -- UA: Люцерна / конюшина при подрібненні
+                if canonical == "ALFALFA" or canonical == "LUCERNE" or fNameUpper == "ALFALFA" or fNameUpper == "LUCERNE" or fNameUpper == "CLOVER" then
+                    return "ALFALFA"
+                end
+
+                -- EN: Whole-crop cereals (WHEAT, BARLEY, OAT, RYE, TRITICALE, etc.) chopped into GPS/CHAFF -> MAIZE_FORAGE
+                -- UA: Зернові культури прямого скошування на силос (GPS) -> MAIZE_FORAGE
+                if canonical == "WHEAT" or canonical == "BARLEY" or canonical == "OAT" or canonical == "RYE" or canonical == "TRITICALE" or canonical == "SPELT" or canonical == "MILLET" then
+                    return "MAIZE_FORAGE"
+                end
+
                 if self.validMapCrops and (self.validMapCrops[canonical] or self.validMapCrops[fNameUpper]) then
                     return canonical
                 end

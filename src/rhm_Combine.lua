@@ -757,6 +757,13 @@ function rhm_Combine:addCutterArea(superFunc, ...)
 
         local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, effectiveInputFruitType)
 
+        -- EN: Forage harvester guard: Forage harvesters chop biomass and NEVER harvest grain MAIZE or grain CORN.
+        -- UA: Захист для силосозбиральних комбайнів: вони рубають біомасу і НІКОЛИ не збирають зернову кукурудзу (MAIZE/CORN).
+        local machineType = (spec.combineMemory and spec.combineMemory.machineType) or spec.machineType or "grain"
+        if machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+            cropName = "MAIZE_FORAGE"
+        end
+
         -- EN: CHAFF and SILAGE map to MAIZE_FORAGE in the DB — correct for corn silage but WRONG for
         --     direct grass/meadow silage (same output fill types in FS). That used factor ~0.30 and felt like
         --     unlimited speed (~15 km/h). Disambiguate using the combine's INPUT fruit from the cutter.
@@ -806,6 +813,9 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --     Ключова різниця: прямий різ завжди має inputFruitType (напр. GRASS), підбирач має inputFruitType=nil.
         --     getForageFeedMode() може помилитись коли підбирач не має spec_pickup, тому inputFruitType — головний сигнал.
         if cropName and spec.combineMemory and spec.combineMemory.machineType == "forage" then
+            if cropName == "MAIZE" or cropName == "CORN" then
+                cropName = "MAIZE_FORAGE"
+            end
             local isPickupMode = isPickup or (effectiveInputFruitType == nil or effectiveInputFruitType == 0)
             
             if not isPickupMode then
@@ -843,6 +853,9 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         local tankCropName = nil
         if tankFillLevel > 50 and tankFillType and tankFillType ~= FillType.UNKNOWN then
             tankCropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+            if machineType == "forage" and (tankCropName == "MAIZE" or tankCropName == "CORN") then
+                tankCropName = "MAIZE_FORAGE"
+            end
         end
 
         if tankCropName then
@@ -1469,18 +1482,52 @@ function rhm_Combine.playAlarmSample(vehicle, spec, soundVolMultiplier)
     local alarmSample = spec.samples and spec.samples.overloadAlarm
     if not alarmSample then return end
 
-    -- EN: Consistent, comfortable buzzer volume both inside and outside the cabin
-    -- UA: Однаковий, комфортний рівень гучності зумера як всередині кабіни, так і ззовні
-    local alarmVol = 0.85 * soundVolMultiplier
+    if soundVolMultiplier == nil and g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+    end
+    soundVolMultiplier = tonumber(soundVolMultiplier) or 1.0
 
-    if g_soundManager.setSampleVolume then
+    -- EN: If muted (0%), do not trigger playback
+    -- UA: Якщо звук вимкнено (0%), не відтворюємо семпл
+    if soundVolMultiplier <= 0.01 then
+        return
+    end
+
+    -- EN: Consistent buzzer volume scaled by player's setting (0.0 to 1.0)
+    -- UA: Стабільний рівень гучності зумера, масштабований налаштуванням гравця (0.0 до 1.0)
+    local alarmVol = math.min(1.0, math.max(0.0, 0.85 * soundVolMultiplier))
+
+    -- EN: Update sample volume properties directly
+    -- UA: Безпосередньо оновлюємо параметри гучності в таблиці семпла
+    alarmSample.volume = alarmVol
+    if alarmSample.volumeIndoor ~= nil then
+        alarmSample.volumeIndoor = alarmVol
+    end
+    if alarmSample.volumeOutdoor ~= nil then
+        alarmSample.volumeOutdoor = alarmVol
+    end
+
+    if g_soundManager and g_soundManager.setSampleVolume then
         pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
     end
     if alarmSample.soundSample and type(setSampleVolume) == "function" then
         pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
     end
 
+    if g_soundManager and g_soundManager.stopSample then
+        pcall(function() g_soundManager:stopSample(alarmSample) end)
+    end
+
     pcall(function() g_soundManager:playSample(alarmSample) end)
+
+    -- EN: Enforce channel volume after playSample triggers
+    -- UA: Закріплюємо гучність аудіоканалу відразу після старту playSample
+    if alarmSample.soundSample and type(setSampleVolume) == "function" then
+        pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+    end
+    if g_soundManager and g_soundManager.setSampleVolume then
+        pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+    end
 end
 
 function rhm_Combine:updateSounds(dt)
@@ -1499,8 +1546,8 @@ function rhm_Combine:updateSounds(dt)
         elseif s.enableAlarmSound == false then
             alarmMode = 3
         end
-        if s.soundVolume then
-            soundVolMultiplier = s.soundVolume
+        if s.soundVolume ~= nil then
+            soundVolMultiplier = tonumber(s.soundVolume) or 1.0
         end
     end
 
@@ -1512,10 +1559,19 @@ function rhm_Combine:updateSounds(dt)
                        or (self.rootVehicle.getIsControlled and self.rootVehicle:getIsControlled())
     end
 
-    local isTurnedOn = self:getIsTurnedOn()
+    local isTurnedOn = false
+    if self.getIsTurnedOn then
+        isTurnedOn = self:getIsTurnedOn()
+    end
+    if not isTurnedOn and self.spec_combine and self.spec_combine.isThreshing then
+        isTurnedOn = true
+    end
+    if not isTurnedOn and self.rootVehicle and self.rootVehicle.getIsTurnedOn then
+        isTurnedOn = self.rootVehicle:getIsTurnedOn()
+    end
 
-    -- If alarm disabled, player not in vehicle, or combine turned off: stop active sounds
-    if alarmMode == 3 or not isPlayerEntered or not isTurnedOn then
+    -- If alarm disabled, muted (0%), player not in vehicle, or combine turned off: stop active sounds
+    if alarmMode == 3 or soundVolMultiplier <= 0.01 or not isPlayerEntered or not isTurnedOn then
         if spec.samples.overloadAlarm then
             pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
         end
@@ -1861,8 +1917,15 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.tonPerHour = spec.loadCalculator:getTonPerHour()
         spec.data.litersPerHour = spec.loadCalculator:getLitersPerHour() -- NEW: Volume flow
         spec.data.hectaresPerHour = spec.loadCalculator:getHectaresPerHour() -- NEW: Area rate (ha/h)
-        spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
-        spec.data.targetSpeed = spec.data.recommendedSpeed
+        local isArcade = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+        if isArcade then
+            spec.data.load = 0
+            spec.data.recommendedSpeed = 0
+            spec.data.targetSpeed = 0
+        else
+            spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
+            spec.data.targetSpeed = spec.data.recommendedSpeed
+        end
         -- NEW: Yield Monitor Data
         spec.data.yield = spec.loadCalculator.currentYield or 0
     end
@@ -1892,6 +1955,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 end
                 if tankFillType and tankFillType ~= FillType.UNKNOWN then
                     local tankCrop = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+                    if spec.combineMemory and spec.combineMemory.machineType == "forage" and (tankCrop == "MAIZE" or tankCrop == "CORN") then
+                        tankCrop = "MAIZE_FORAGE"
+                    end
                     if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
                         rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
                         rhm_Combine.onCropTypeChanged(self, tankCrop)
@@ -1983,36 +2049,37 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 local speedLimitEnabled = settings and settings.enableSpeedLimit
                 local isArcade = settings and settings.difficultyMotor == 1 -- DIFFICULTY_ARCADE
 
-                local ceiling = spec.loadCalculator.genuineSpeedLimit
                 if (not speedLimitEnabled) or isArcade then
-                    -- If speed limiting is disabled (or Arcade), restore the original ceiling if known.
-                    if ceiling and ceiling > 0 then
-                        currentLimit = ceiling
+                    -- EN: In Arcade mode or when speed limiting is disabled, RHM never limits or touches the motor.
+                    --     Restore unconstrained limit so modded harvesters can run at any speed (e.g. 100 km/h).
+                    -- UA: В режимі Аркада або з вимкненим лімітом RHM взагалі не чіпає мотор.
+                    --     Скидаємо обмеження, щоб комбайни з інших модів могли рухатися з будь-якою швидкістю (напр. 100 км/год).
+                    if spec._rhmLastMotorSpeedLimit ~= nil then
+                        motor:setSpeedLimit(math.huge)
+                        spec._rhmLastMotorSpeedLimit = nil
                     end
                 else
-                    -- Otherwise cap at the original ceiling so we never exceed the game's max working speed.
+                    local ceiling = spec.loadCalculator.genuineSpeedLimit
                     if ceiling and ceiling > 0 then
                         currentLimit = math.min(currentLimit, ceiling)
                     end
-                end
 
-                if currentLimit and currentLimit > 0 then
-                    -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
-                    -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
-                    local prev = spec._rhmLastMotorSpeedLimit
-                    if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
-                        spec._rhmLastMotorSpeedLimit = currentLimit
-                        motor:setSpeedLimit(currentLimit)
+                    if currentLimit and currentLimit > 0 and currentLimit ~= math.huge then
+                        -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
+                        -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
+                        local prev = spec._rhmLastMotorSpeedLimit
+                        if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
+                            spec._rhmLastMotorSpeedLimit = currentLimit
+                            motor:setSpeedLimit(currentLimit)
+                        end
                     end
                 end
             end
         end
     end
     
-    -- EN: OVERLOAD WARNING: Server determines level (0=normal, 1=HIGH 120%+, 2=CRITICAL 150%+).
-    --     Displayed to whoever controls the combine — in SP that's the server; in DS it flows via streams.
-    -- UA: ПОПЕРЕДЖЕННЯ ПЕРЕВАНТАЖЕННЯ: Сервер визначає рівень (0=норма, 1=ВИСОК. 120%+, 2=КРИТИЧ. 150%+).
-    --     Відображається тому хто керує комбайном — у SP це сервер; у DS приходить через потоки.
+    -- EN: OVERLOAD LEVEL: Server calculates level for network sync (0=normal, 1=HIGH 120%+, 2=CRITICAL 150%+).
+    -- UA: РІВЕНЬ ПЕРЕВАНТАЖЕННЯ: Сервер обраховує рівень для мережевої синхронізації.
     if self.isServer and spec.data then
         local load = spec.data.load
         if load >= 150 then
@@ -2023,38 +2090,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.overloadLevel = 0
         end
     end
-    
-    -- WARNING DISPLAY: показуємо завжди в того хто керує комбайном
-    -- в SP: isServer=true і getIsControlled()=true — працює
-    -- в DS client: isServer=false і overloadLevel приходить через stream — працює
-    -- FIX: деякі DLC/мод-транспорти (напр. NH 8040) можуть не мати getIsControlled
-    local isControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
-    if spec.data and isControlled then
-        local level = spec.data.overloadLevel or 0
-        local now = g_currentMission.time
-        spec._lastOverloadWarn = spec._lastOverloadWarn or 0
-        
-        local warnInterval = nil
-        local warnText = nil
-        
-        if level == 2 then
-            warnInterval = 5000
-            warnText = g_i18n:getText("rhm_warn_overload_critical")
-        elseif level == 1 then
-            warnInterval = 8000
-            warnText = g_i18n:getText("rhm_warn_overload_high")
-        else
-            spec._lastOverloadWarn = 0
-        end
-        
-        if warnText and (now - spec._lastOverloadWarn) >= warnInterval then
-            spec._lastOverloadWarn = now
-            if g_realisticHarvestManager.settings.showLoadWarnings then
-                g_currentMission:showBlinkingWarning(warnText, 3000)
-            end
-        end
-    end
-    -- === END OVERLOAD WARNING ===
     
     -- EN: MULTIPLAYER: Throttled dirty flag raising — only sync when data has changed significantly
     --     or at least once per second. Sensitivity thresholds reduce network traffic.

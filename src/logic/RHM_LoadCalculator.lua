@@ -1112,16 +1112,28 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     end
 
     -- 7. RESULTING ENGINE LOAD
-    local loadRatio = pTotal / math.max(1.0, effectiveEngineHp)
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
 
-    -- Smooth engineLoad transitions
-    if not isActivelyHarvesting and not isCutterActive then
-        self.engineLoad = 0
-    elseif self.engineLoad == 0 then
-        self.engineLoad = math.min(0.60, loadRatio)
+    if isArcade then
+        -- EN: In Arcade mode, engine load is completely removed (0.0%).
+        -- UA: В режимі Аркада навантаження двигуна повністю прибране (0.0%).
+        self.engineLoad = 0.0
+        return
     else
-        local loadSmoothing = 0.35
-        self.engineLoad = (1 - loadSmoothing) * loadRatio + loadSmoothing * self.engineLoad
+        local loadRatio = pTotal / math.max(1.0, effectiveEngineHp)
+
+        -- Smooth engineLoad transitions
+        if not isActivelyHarvesting and not isCutterActive then
+            self.engineLoad = 0
+        elseif self.engineLoad == 0 then
+            self.engineLoad = math.min(0.60, loadRatio)
+        else
+            local loadSmoothing = 0.35
+            self.engineLoad = (1 - loadSmoothing) * loadRatio + loadSmoothing * self.engineLoad
+        end
     end
 
     -- Store diagnostic telemetry
@@ -1144,6 +1156,15 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         (vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0) or
         (vehicle.movingDirection and vehicle.movingDirection < 0)
     ) then
+        return
+    end
+
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        self.speedLimit = math.huge
         return
     end
 
@@ -1312,11 +1333,25 @@ end
 
 ---EN: Returns current engine load factor / UA: Повертає поточне навантаження двигуна
 function RHM_LoadCalculator:getEngineLoad()
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        return 0.0
+    end
     return self.engineLoad * 100
 end
 
 ---EN: Returns calculated speed limit target / UA: Повертає остаточний ліміт швидкості
 function RHM_LoadCalculator:getSpeedLimit()
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        return math.huge
+    end
     return self.speedLimit or 0
 end
 
@@ -1469,19 +1504,35 @@ end
 function RHM_LoadCalculator:updateSettingsImpact()
     self.settingsEfficiency = 1.0
     self.settingsLoss = 0
+
+    local isArcadeMotor = false
+    local isArcadeLoss = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcadeMotor = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+        isArcadeLoss = (g_realisticHarvestManager.settings.difficultyLoss == 1)
+    end
+
+    if isArcadeMotor and isArcadeLoss then
+        -- EN: In full Arcade mode, 100% combine efficiency and 0% settings loss
+        -- UA: В повному режимі Аркада 100% ефективність комбайну та 0% втрат від налаштувань
+        return
+    end
+
     if self.combineMemory and self.combineMemory.currentCrop then
         self.currentCrop = self.combineMemory.currentCrop
     end
     if not self.combineMemory or not self.currentCrop then return end
     local effPenalty, lossPenalty, _ = self.combineMemory:checkSettingsForCrop(self.currentCrop)
     
-    local penalty = math.max(0.0, effPenalty or 0)
-    self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
+    if not isArcadeMotor then
+        local penalty = math.max(0.0, effPenalty or 0)
+        self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
+    end
     
     -- EN: Forage harvesters (silage choppers) produce no grain losses — all crop goes to tank/trailer.
     -- UA: Силосні комбайни не мають втрат зерна — весь врожай йде в бак/причеп.
     local machineType = self.combineMemory.machineType
-    if machineType == "forage" then
+    if machineType == "forage" or isArcadeLoss then
         self.settingsLoss = 0
     else
         self.settingsLoss = math.max(0.0, lossPenalty or 0)
@@ -1558,6 +1609,16 @@ function RHM_LoadCalculator:calculateWearLoss(vehicle)
 end
 
 function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
+    -- EN: In Arcade Loss mode, strictly 0% total loss
+    -- UA: В режимі втрат Аркада 0% загальних втрат
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyLoss == 1 then
+        self.cropLoss = 0
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
+        return 0
+    end
+
     -- EN: Forage and Cotton harvesters never have crop loss — bypass all calculations.
     -- UA: Силосні та бавовняні комбайни ніколи не мають втрат врожаю — пропускаємо всі розрахунки.
     if self.combineMemory and (self.combineMemory.machineType == "forage" or self.combineMemory.machineType == "cotton") then

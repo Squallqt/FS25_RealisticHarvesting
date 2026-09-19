@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Zorluk"/>
         <text name="rhm_difficulty_motor" text="Motor Güç Limiti"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Mevcut ekstra motor gücünü belirler. Arcade = +%100, Normal = +%35, Gerçekçi = %0."/>
+        <text name="rhm_difficulty_motor_long" text="Motor yükü fiziğini belirler. Arcade = Devre dışı (aşırı yük yok), Normal = +%35 güç rezervi, Gerçekçi = %100 özgün fizik."/>
         <text name="rhm_difficulty_loss" text="Ürün Kaybı"/>
         <text name="rhm_difficulty_loss_short" text="Kayıp"/>
-        <text name="rhm_difficulty_loss_long" text="Hatalı ayarlar durumunda ürün kaybı cezasını belirler."/>
+        <text name="rhm_difficulty_loss_long" text="Ürün kayıplarını belirler. Arcade = %0 (ürün kaybı yok), Normal = standart kayıplar, Gerçekçi = artırılmış kayıplar (%200)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Yüksek limitler (+%100). Normal: Dengeli fizik (+%35). Gerçekçi: Saf simülasyon (%0)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Aşırı yük veya kayıp yok (saf vanilla). Normal: Dengeli fizik (+%35). Gerçekçi: Saf simülasyon (%0)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Gerçekçi"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -211,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORLER"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRI"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTOR YÜKÜ"/>
         <text name="rhm_ui_card_efficiency" text="VERİMLİLİK"/>
         <text name="rhm_ui_card_predicted_loss" text="TAHMİNİ KAYIP"/>

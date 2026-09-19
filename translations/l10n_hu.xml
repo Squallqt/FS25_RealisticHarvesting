@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Nehézség"/>
         <text name="rhm_difficulty_motor" text="Motorteljesítmény"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Meghatározza a plusz motorteljesítményt. Arcade = +100%, Normál = +35%, Realisztikus = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Meghatározza a motorterhelés fizikáját. Arcade = Kikapcsolva (nincs túlterhelés), Normál = +35% tartalék, Realisztikus = 100% autentikus fizika."/>
         <text name="rhm_difficulty_loss" text="Termésveszteség"/>
         <text name="rhm_difficulty_loss_short" text="Veszteség"/>
-        <text name="rhm_difficulty_loss_long" text="Meghatározza a veszteség súlyosságát."/>
+        <text name="rhm_difficulty_loss_long" text="Meghatározza a termésveszteséget. Arcade = 0% (nincs veszteség), Normál = alapértelmezett veszteség, Realisztikus = megnövelt veszteség (200%)."/>
         <text name="rhm_diff_1" text="Árkád"/>
-        <text name="rhm_difficulty_long" text="Arcade: Magas határok (+100%). Normál: Kiegyensúlyozott fizika (+35%). Realisztikus: Tiszta szimuláció (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Nincs túlterhelés vagy termésveszteség (tiszta vanilla). Normál: Kiegyensúlyozott fizika (+35%). Realisztikus: Tiszta szimuláció (0%)."/>
         <text name="rhm_diff_2" text="Normál"/>
         <text name="rhm_diff_3" text="Realisztikus"/>
         <text name="rhm_show_yield" text="Hozammonitor megjelenítése"/>
@@ -213,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - ERZEKELOK"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTORTERHELÉS"/>
         <text name="rhm_ui_card_efficiency" text="HATÉKONYSÁG"/>
         <text name="rhm_ui_card_predicted_loss" text="VÁRHATÓ VESZTESÉG"/>

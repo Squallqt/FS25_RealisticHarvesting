@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Сложность"/>
         <text name="rhm_difficulty_motor" text="Мощность двигателя"/>
         <text name="rhm_difficulty_motor_short" text="Мотор"/>
-        <text name="rhm_difficulty_motor_long" text="Определяет дополнительную мощность двигателя. Аркада = +100%, Норма = +35%, Реализм = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Определяет физику нагрузки двигателя. Аркада = Отключено (без перегрузок), Норма = +35% запаса мощности, Реализм = 100% реалистичная физика."/>
         <text name="rhm_difficulty_loss" text="Потеря урожая"/>
         <text name="rhm_difficulty_loss_short" text="Потеря"/>
-        <text name="rhm_difficulty_loss_long" text="Определяет строгость потерь."/>
+        <text name="rhm_difficulty_loss_long" text="Определяет потери урожая. Аркада = 0% (без потерь), Норма = стандартные потери, Реализм = повышенные потери (200%)."/>
         <text name="rhm_diff_1" text="Аркада"/>
-        <text name="rhm_difficulty_long" text="Аркада: высокие лимиты (+100%). Норма: сбалансированная физика (+35%). Реализм: чистая симуляция (0%)."/>
+        <text name="rhm_difficulty_long" text="Аркада: без перегрузок и потерь (чистая ваниль). Норма: сбалансированная физика (+35%). Реализм: чистая симуляция (0%)."/>
         <text name="rhm_diff_2" text="Обычная"/>
         <text name="rhm_diff_3" text="Реалистичная"/>
         <text name="rhm_show_yield" text="Монитор урожайности"/>
@@ -215,6 +215,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - СЕНСОРЫ"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - ТЕЛЕМЕТРИЯ"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="АРКАДА"/>
         <text name="rhm_ui_card_engine_load" text="НАГРУЗКА ДВИГАТЕЛЯ"/>
         <text name="rhm_ui_card_efficiency" text="ЭФФЕКТИВНОСТЬ"/>
         <text name="rhm_ui_card_predicted_loss" text="ПРОГНОЗ ПОТЕРЬ"/>

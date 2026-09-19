@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Schwierigkeit"/>
         <text name="rhm_difficulty_motor" text="Motorleistung"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Bestimmt die zusätzliche Motorleistung. Arcade = +100%, Normal = +35%, Realistisch = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Bestimmt die Motorlast-Physik. Arcade = Deaktiviert (keine Überlast), Normal = +35% Leistungsreserve, Realistisch = 100% authentische Physik."/>
         <text name="rhm_difficulty_loss" text="Ernteverlust"/>
         <text name="rhm_difficulty_loss_short" text="Verlust"/>
-        <text name="rhm_difficulty_loss_long" text="Bestimmt die Schwere des Ernteverlusts."/>
+        <text name="rhm_difficulty_loss_long" text="Bestimmt die Ernteverluste. Arcade = 0% (keine Verluste), Normal = Standardverluste, Realistisch = erhöhte Verluste (200%)."/>
         <text name="rhm_diff_1" text="Arkade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Hohe Limits (+100%). Normal: Ausgewogene Physik (+35%). Realistisch: Reine Simulation (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Keine Überlast oder Ernteverluste (reines Vanilla). Normal: Ausgewogene Physik (+35%). Realistisch: Reine Simulation (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Realistisch"/>
         <text name="rhm_show_yield" text="Ertragsmonitor anzeigen"/>
@@ -213,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="STUFE 2 - SENSOREN"/>
         <text name="rhm_ui_tier3_monitor" text="STUFE 3 - MONITOR"/>
         <text name="rhm_ui_tier4_opti" text="STUFE 4 - KI-OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTORLAST"/>
         <text name="rhm_ui_card_efficiency" text="EFFIZIENZ"/>
         <text name="rhm_ui_card_predicted_loss" text="ERWARTETER VERLUST"/>

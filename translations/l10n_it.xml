@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Difficoltà"/>
         <text name="rhm_difficulty_motor" text="Potenza del motore"/>
         <text name="rhm_difficulty_motor_short" text="Motore"/>
-        <text name="rhm_difficulty_motor_long" text="Determina la potenza extra disponibile. Arcade = +100%, Normale = +35%, Realistico = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determina la fisica del carico motore. Arcade = Disattivato (nessun sovraccarico), Normale = +35% di potenza extra, Realistico = 100% fisica autentica."/>
         <text name="rhm_difficulty_loss" text="Perdita raccolto"/>
         <text name="rhm_difficulty_loss_short" text="Perdita"/>
-        <text name="rhm_difficulty_loss_long" text="Determina la gravità della perdita."/>
+        <text name="rhm_difficulty_loss_long" text="Determina le perdite di raccolto. Arcade = 0% (nessuna perdita), Normale = perdite standard, Realistico = perdite aumentate (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Limiti alti (+100%). Normale: Fisica bilanciata (+35%). Realistico: Simulazione pura (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Nessun sovraccarico o perdita (puro vanilla). Normale: Fisica bilanciata (+35%). Realistico: Simulazione pura (0%)."/>
         <text name="rhm_diff_2" text="Normale"/>
         <text name="rhm_diff_3" text="Realistica"/>
         <text name="rhm_show_yield" text="Mostra monitor di rendimento"/>
@@ -213,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORI"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="CARICO MOTORE"/>
         <text name="rhm_ui_card_efficiency" text="EFFICIENZA"/>
         <text name="rhm_ui_card_predicted_loss" text="PERDITA PREVISTA"/>

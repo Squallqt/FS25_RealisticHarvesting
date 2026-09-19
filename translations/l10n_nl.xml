@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Moeilijkheidsgraad"/>
         <text name="rhm_difficulty_motor" text="Motorvermogen Limiet"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Bepaalt het extra motorvermogen. Arcade = +100%, Normaal = +35%, Realistisch = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Bepaalt de motorbelastingsfysica. Arcade = Uitgeschakeld (geen overbelasting), Normaal = +35% vermogensreserve, Realistisch = 100% authentieke fysica."/>
         <text name="rhm_difficulty_loss" text="Oogstverlies"/>
         <text name="rhm_difficulty_loss_short" text="Verlies"/>
-        <text name="rhm_difficulty_loss_long" text="Bepaalt de strengheid van gewasverliezen bij onjuiste instellingen."/>
+        <text name="rhm_difficulty_loss_long" text="Bepaalt de oogstverliezen. Arcade = 0% (geen verlies), Normaal = standaard verliezen, Realistisch = verhoogde verliezen (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Hoge limieten (+100%). Normaal: Gebalanceerde fysica (+35%). Realistisch: Pure simulatie (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Geen overbelasting of oogstverlies (puur vanilla). Normaal: Gebalanceerde fysica (+35%). Realistisch: Pure simulatie (0%)."/>
         <text name="rhm_diff_2" text="Normaal"/>
         <text name="rhm_diff_3" text="Realistisch"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -211,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSOREN"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTORBELASTING"/>
         <text name="rhm_ui_card_efficiency" text="EFFICIËNTIE"/>
         <text name="rhm_ui_card_predicted_loss" text="VERWACHT VERLIES"/>
