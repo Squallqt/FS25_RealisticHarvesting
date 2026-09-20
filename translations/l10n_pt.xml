@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Dificuldade"/>
         <text name="rhm_difficulty_motor" text="Potência do motor"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Determina a reserva de potência extra do motor. Arcade = +100%, Normal = +35%, Realista = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determina a física de carga do motor. Arcade = Desativado (sem sobrecarga), Normal = +35% de reserva, Realista = 100% física autêntica."/>
         <text name="rhm_difficulty_loss" text="Perda de colheita"/>
         <text name="rhm_difficulty_loss_short" text="Perda"/>
-        <text name="rhm_difficulty_loss_long" text="Determina a gravidade da perda."/>
+        <text name="rhm_difficulty_loss_long" text="Determina as perdas de colheita. Arcade = 0% (sem perdas), Normal = perdas padrão, Realista = perdas aumentadas (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Limites altos (+100%). Normal: Física balanceada (+35%). Realista: Simulação pura (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Sem sobrecarga nem perdas (puro vanilla). Normal: Física balanceada (+35%). Realista: Simulação pura (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Realista"/>
         <text name="rhm_show_yield" text="Mostrar monitor de rendimento"/>
@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long" text="Toca alarme na cabine quando a máquina estiver sobrecarregada ou exceder os limites de perda."/>
         <text name="rhm_section_audio" text="Realistic Harvesting - Áudio"/>
         <text name="rhm_alarm_sounds_short" text="Alarme Sonoro de Sobrecarga"/>
-        <text name="rhm_alarm_sounds_long" text="Toca um alarme sonoro na cabine com carga crítica (98%+) ou perdas elevadas (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modo do alarme sonoro na cabine com sobrecarga severa (105%+) ou perdas elevadas (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligente (3 bipes)"/>
+        <text name="rhm_alarm_mode_continuous" text="Contínuo"/>
+        <text name="rhm_alarm_mode_off" text="Desativado"/>
         <text name="rhm_sound_volume_short" text="Volume dos Sons"/>
         <text name="rhm_sound_volume_long" text="Ajusta o volume do alarme sonoro de sobrecarga na cabine."/>
         <text name="rhm_target_load" text="Carga Alvo"/>
@@ -104,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Rolos Alimentadores"/>
         <text name="rhm_ui_root_roller" text="Rolos de Limpeza"/>
         <text name="rhm_ui_root_feeder" text="Esteira Elevadora"/>
+        <text name="rhm_ui_grape_shaker" text="Velocidade dos sacudidores"/>
+        <text name="rhm_ui_olive_shaker" text="Velocidade dos batedores"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocidade da esteira"/>
+        <text name="rhm_ui_grape_fan" text="Exaustores de limpeza"/>
         <text name="rhm_units_short" text="Unidades"/>
         <text name="rhm_units_long" text="Escolha o sistema de medição (velocidade, massa, área)"/>
         <text name="rhm_unit_metric" text="Métrico (km/h, t/h, ha)"/>
@@ -117,7 +124,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Ligue a plataforma de corte!"/>
         <text name="rhm_warn_overload_high" text="Colheitadeira sobrecarregada! Reduza a velocidade."/>
         <text name="rhm_warn_overload_critical" text="COLHEITADEIRA CRITICAMENTE SOBRECARREGADA! Perdas graves!"/>
-        <text name="rhm_configuration_title" text="Eletrônica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemas Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanica basica"/>
         <text name="rhm_package_sensor" text="Tier 2: Pacote de sensores"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria e monitoramento"/>
@@ -167,7 +174,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Desgaste Mecânico e Facas Cegas"/>
+        <text name="rhm_help_loss_3" text="O desgaste dos equipamentos degrada consideravelmente a eficiência da colheita. Facas cegas debulham espigas e vagens prematuramente (até +3% de perdas e +15% de arrasto na TDP). Rotor de trilha e peneiras desgastados deixam escapar grãos não separados (até +3% de perdas). A manutenção regular na oficina elimina essas perdas."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -202,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORES"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="CARGA DO MOTOR"/>
         <text name="rhm_ui_card_efficiency" text="EFICIÊNCIA"/>
         <text name="rhm_ui_card_predicted_loss" text="PERDA ESTIMADA"/>
@@ -240,7 +250,7 @@
         <text name="rhm_setting_enableTutorials" text="Dicas de tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Mostra dicas interativas e orientações durante a colheita."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / Clique esq.)"/>
-        <text name="rhm_tut_welcome_title" text="Colheita Realista"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Bem-vindo ao Realistic Harvesting! A velocidade ajusta-se dinamicamente à carga do motor, densidade e plataforma. Abra o terminal com (Shift direito + K)."/>
         <text name="rhm_tut_overload_title" text="Sobrecarga do Motor"/>
         <text name="rhm_tut_overload_msg" text="O motor está sob esforço extremo! A transmissão hidrostática desacelera para evitar entupimento do cilindro. Levante a plataforma ou reduza a largura de corte."/>
@@ -252,5 +262,10 @@
         <text name="rhm_tut_headland_msg" text="Ao levantar a plataforma na cabeceira, a colheitadeira memoriza a velocidade de trabalho para retomar a passada seguinte com suavidade."/>
         <text name="rhm_tut_upgrade_title" text="Melhorias da Colheitadeira"/>
         <text name="rhm_tut_upgrade_msg" text="Máquinas básicas exigem calibração manual. Instale Kit de Sensores (Nível 2), Monitor de Produtividade (Nível 3) ou IA Opti-Harvest (Nível 4) na oficina."/>
+        <text name="rhm_setting_wear_loss_short" text="Perdas por Desgaste Mecânico"/>
+        <text name="rhm_setting_wear_loss_long" text="Simula perdas de grãos causadas pelo desgaste das máquinas. Facas cegas debulham as plantas (até +3% de perdas e +15% de arrasto). Rotor e peneiras desgastados derrubam grãos não trilhados (até +3% de perdas)."/>
+        <text name="rhm_ui_wear_loss" text="Perda por Desgaste"/>
+        <text name="rhm_ui_cutter_wear" text="Desgaste da Plataforma"/>
+        <text name="rhm_ui_combine_wear" text="Desgaste da Trilhadora"/>
     </texts>
 </l10n>

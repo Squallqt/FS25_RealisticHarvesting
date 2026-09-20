@@ -29,3 +29,7 @@ crop_test_summary.*
 crop_test_records.xml
 scratch/
 sim_*
+
+# Local Development Tracking (KB Rule 7 - strictly excluded from Git)
+DEV_CHANGELOG.md
+

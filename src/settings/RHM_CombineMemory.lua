@@ -165,6 +165,9 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     if not cropName or cropName == "" then
         cropName = self.currentCrop
     end
+    if self.machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+        cropName = "MAIZE_FORAGE"
+    end
     if not cropName then
         return false
     end
@@ -216,9 +219,9 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
             local retainedText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_ai_settings_retained")) and g_i18n:getText("rhm_ai_settings_retained") or "Manual Settings Retained"
             local msg = string.format("%s (%s)", retainedText, tostring(cropTitle))
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM [AI]", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting [AI]", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", "RHM [AI]: " .. msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", "Realistic Harvesting [AI]: " .. msg, -1)
             end
         end
 
@@ -281,16 +284,16 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
             local btnText = (g_i18n and g_i18n.hasText and g_i18n:hasText("rhm_gui_btn_load_preset")) and g_i18n:getText("rhm_gui_btn_load_preset") or "Loaded Profile"
             local msg = string.format("%s (%s)", btnText, tostring(cropTitle))
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM [AI]", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting [AI]", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", "RHM [AI]: " .. msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", "Realistic Harvesting [AI]: " .. msg, -1)
             end
         end
 
         -- In multiplayer, notify clients of updated helper settings
         if self.combine and g_server then
             local spec = self.combine.spec_rhm_Combine
-            if spec and spec.settingsDirtyFlag then
+            if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                 self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
             end
         end
@@ -403,7 +406,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
             RHM_NotificationManager.INSTANCE:showNotification(title, msg, 4000)
         elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-            g_currentMission.hud:showInGameMessage("RHM", title .. ": " .. msg, -1)
+            g_currentMission.hud:showInGameMessage("Realistic Harvesting", title .. ": " .. msg, -1)
         end
     end
 
@@ -419,7 +422,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
     -- In multiplayer, notify clients of updated helper settings
     if self.combine and g_server then
         local spec = self.combine.spec_rhm_Combine
-        if spec and spec.settingsDirtyFlag then
+        if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
             self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
         end
     end
@@ -445,9 +448,9 @@ function RHM_CombineMemory:requestAutoSettings()
     if not self.currentCrop then
         local text = g_i18n:hasText("rhm_msg_auto_need_crop") and g_i18n:getText("rhm_msg_auto_need_crop") or "Opti-Harvest AI: Harvest a few meters to begin auto-calibration!"
         if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-            RHM_NotificationManager.INSTANCE:showNotification("RHM", text, 4000)
+            RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", text, 4000)
         elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-            g_currentMission.hud:showInGameMessage("RHM", text, -1)
+            g_currentMission.hud:showInGameMessage("Realistic Harvesting", text, -1)
         end
         return
     end
@@ -474,9 +477,9 @@ function RHM_CombineMemory:requestAutoSettings()
     local formatStr = g_i18n:hasText("rhm_msg_auto_calibrated") and g_i18n:getText("rhm_msg_auto_calibrated") or "Opti-Harvest AI: Auto-calibrated for %s!"
     local msg = string.format(formatStr, tostring(cropTitle))
     if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-        RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+        RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
     elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-        g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+        g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
     end
 end
 
@@ -551,6 +554,9 @@ end
 --     Повертає окремо штрафи за ефективність (швидкість) і втрати врожаю, плюс таблицю попереджень.
 --     Подача/Ротор впливають на ефективність (пропускну здатність), Вентилятор/Решета — на втрати (якість очищення).
 function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarnings)
+    if self.machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+        cropName = "MAIZE_FORAGE"
+    end
     if not context and self.combine and self.combine.spec_rhm_Combine then
         local rhmSpec = self.combine.spec_rhm_Combine
         self._cachedContext = self._cachedContext or {}
@@ -612,11 +618,34 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarning
             -- UA: Направляємо штраф до відповідного фізичного ефекту залежно від параметру.
             local isForage = (self.machineType == "forage")
             local isRoot   = (self.machineType == "root")
+            local isGrapeOrOlive = (self.machineType == "grape" or self.machineType == "olive")
 
             if isForage or isRoot then
                 -- EN: All params on forage/root affect only efficiency (no grain to lose)
                 efficiencyScore = efficiencyScore + score
                 effParamCount = effParamCount + 1
+            elseif isGrapeOrOlive then
+                -- EN: GRAPE/OLIVE:
+                --     rotor (shakers): under-shaking leaves fruit on vine; over-shaking crushes fruit & increases drag
+                --     fan (extractors): over-suction pulls berries/olives into fan exhaust (direct crop loss)
+                --     feeder (conveyor): bucket speed governs flow capacity (efficiency)
+                if param == "rotor" then
+                    efficiencyScore = efficiencyScore + (score * 0.5)
+                    lossScore = lossScore + (score * 0.5)
+                    effParamCount = effParamCount + 0.5
+                    lossParamCount = lossParamCount + 0.5
+                elseif param == "fan" then
+                    lossScore = lossScore + score
+                    lossParamCount = lossParamCount + 1
+                elseif param == "feeder" then
+                    efficiencyScore = efficiencyScore + score
+                    effParamCount = effParamCount + 1
+                else
+                    efficiencyScore = efficiencyScore + (score * 0.5)
+                    lossScore = lossScore + (score * 0.5)
+                    effParamCount = effParamCount + 0.5
+                    lossParamCount = lossParamCount + 0.5
+                end
             elseif param == "rotor" or param == "concave" then
                 -- EN: GRAIN: rotor/concave control threshing → primarily efficiency
                 efficiencyScore = efficiencyScore + score
@@ -788,6 +817,10 @@ function RHM_CombineMemory:switchCrop(newCropName)
         newCropName = RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
     end
 
+    if self.machineType == "forage" and (newCropName == "MAIZE" or newCropName == "CORN") then
+        newCropName = "MAIZE_FORAGE"
+    end
+
     -- EN: Normalize alias to active map crop name if needed (e.g. LINSEED -> FLAX if map uses FLAX)
     -- UA: Нормалізуємо аліас до активної назви культури карти якщо потрібно (напр. LINSEED -> FLAX якщо карта має FLAX)
     if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.validMapCrops then
@@ -829,7 +862,7 @@ function RHM_CombineMemory:switchCrop(newCropName)
             g_client:getServerConnection():sendEvent(event)
         elseif g_server then
             local spec = self.combine.spec_rhm_Combine
-            if spec and spec.settingsDirtyFlag then
+            if spec and spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                 self.combine:raiseDirtyFlags(spec.settingsDirtyFlag)
             end
         end
@@ -958,7 +991,7 @@ function RHM_CombineMemory:updateAutoTrim(dt)
         end
     end
 
-    if changed and self.combine and rhmSpec.settingsDirtyFlag then
+    if changed and self.combine and rhmSpec and rhmSpec.settingsDirtyFlag and type(rhmSpec.settingsDirtyFlag) == "number" then
         self.combine:raiseDirtyFlags(rhmSpec.settingsDirtyFlag)
     end
 end

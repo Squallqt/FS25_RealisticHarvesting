@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Dificultad"/>
         <text name="rhm_difficulty_motor" text="Potencia del motor"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Determina la reserva de potencia adicional. Arcade = +100%, Normal = +35%, Realista = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determina la física de carga del motor. Arcade = Desactivado (sin sobrecarga), Normal = +35% de reserva de potencia, Realista = 100% física auténtica."/>
         <text name="rhm_difficulty_loss" text="Pérdida de cultivo"/>
         <text name="rhm_difficulty_loss_short" text="Pérdida"/>
-        <text name="rhm_difficulty_loss_long" text="Determina la severidad de la pérdida."/>
+        <text name="rhm_difficulty_loss_long" text="Determina las pérdidas de cosecha. Arcade = 0% (sin pérdidas), Normal = pérdidas estándar, Realista = pérdidas aumentadas (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Límites altos (+100%). Normal: Física equilibrada (+35%). Realista: Simulación pura (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Sin sobrecarga ni pérdidas (vainilla pura). Normal: Física equilibrada (+35%). Realista: Simulación pura (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Realista"/>
         <text name="rhm_show_yield" text="Mostrar monitor de rendimiento"/>
@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Reproducir alarmas de cabina y sonidos de esfuerzo de la trilladora cuando la cosechadora se sobrecarga o pierde grano.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Zumbador de sobrecarga"/>
-        <text name="rhm_alarm_sounds_long" text="Activa un zumbador electrónico en cabina en caso de carga crítica (98%+) o pérdidas elevadas (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modo del zumbador en cabina ante sobrecarga severa (105%+) o pérdidas elevadas (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligente (3 pitidos)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuo"/>
+        <text name="rhm_alarm_mode_off" text="Desactivado"/>
         <text name="rhm_sound_volume_short" text="Volumen de sonido"/>
         <text name="rhm_sound_volume_long" text="Ajusta el volumen del zumbador de alarma de sobrecarga en cabina."/>
         <text name="rhm_target_load" text="Carga Objetivo"/>
@@ -106,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Rodillos de alimentación"/>
         <text name="rhm_ui_root_roller" text="Rodillos de limpieza"/>
         <text name="rhm_ui_root_feeder" text="Cinta de criba"/>
+        <text name="rhm_ui_grape_shaker" text="Frecuencia sacudidores"/>
+        <text name="rhm_ui_olive_shaker" text="Velocidad batidores"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocidad transportador"/>
+        <text name="rhm_ui_grape_fan" text="Extractores de hojas"/>
         <text name="rhm_units_short" text="Unidades"/>
         <text name="rhm_units_long" text="Elija el sistema de medición (velocidad, masa, área)"/>
         <text name="rhm_unit_metric" text="Métrico (km/h, t/h, ha)"/>
@@ -115,11 +122,11 @@
         <text name="rhm_loss_low" text="BAJO"/>
         <text name="rhm_loss_med" text="MEDIO"/>
         <text name="rhm_loss_high" text="ALTO"/>
-        <text name="rhm_warning_turn_on_combine" text="Â¡Encienda primero la cosechadora!"/>
-        <text name="rhm_warning_turn_on_cutter" text="Â¡Encienda el cabezal!"/>
+        <text name="rhm_warning_turn_on_combine" text="¡Encienda primero la cosechadora!"/>
+        <text name="rhm_warning_turn_on_cutter" text="¡Encienda el cabezal!"/>
         <text name="rhm_warn_overload_high" text="Cosechadora sobrecargada! Reduce la velocidad."/>
         <text name="rhm_warn_overload_critical" text="COSECHADORA CRÍTICAMENTE SOBRECARGADA! Graves pérdidas!"/>
-        <text name="rhm_configuration_title" text="Electrónica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemas Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanica basica"/>
         <text name="rhm_package_sensor" text="Tier 2: Paquete de sensores"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria y monitor"/>
@@ -169,7 +176,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Desgaste mecánico y cuchillas desafiladas"/>
+        <text name="rhm_help_loss_3" text="El desgaste del equipo reduce notablemente la calidad de la cosecha. Las cuchillas desafiladas desgranan las espigas y vainas en pie (hasta un +3% de pérdidas y +15% de resistencia de la TDF). Un rotor de trilla y cribas desgastados pierden grano sin separar (hasta un +3% de pérdidas). El mantenimiento regular en el taller elimina estas pérdidas."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -204,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORES"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="CARGA MOTOR"/>
         <text name="rhm_ui_card_efficiency" text="EFICIENCIA"/>
         <text name="rhm_ui_card_predicted_loss" text="PÉRDIDA ESTIMADA"/>
@@ -242,7 +252,7 @@
         <text name="rhm_setting_enableTutorials" text="Consejos de tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Muestra consejos interactivos durante la cosecha."/>
         <text name="rhm_ui_btn_close_notification" text="Aceptar (Intro / Clic izq.)"/>
-        <text name="rhm_tut_welcome_title" text="Cosecha Realista"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="¡Bienvenido a Realistic Harvesting! La velocidad se regula según carga del motor, densidad del cultivo y cabezal. Abre la terminal con (Shift dcha + K)."/>
         <text name="rhm_tut_overload_title" text="Sobrecarga del Motor"/>
         <text name="rhm_tut_overload_msg" text="¡El motor está bajo gran esfuerzo! La transmisión hidrostática reduce la velocidad para evitar atascos en el cilindro. Eleva el cabezal o reduce el ancho de trabajo."/>
@@ -254,5 +264,10 @@
         <text name="rhm_tut_headland_msg" text="Al levantar el cabezal en la cabecera, la cosechadora recuerda tu velocidad de trabajo para volver a acelerar de manera suave en la siguiente pasada."/>
         <text name="rhm_tut_upgrade_title" text="Mejoras de Cosechadora"/>
         <text name="rhm_tut_upgrade_msg" text="Las máquinas básicas requieren ajuste manual. Equipa Sensores (Nivel 2), Monitor de Rendimiento (Nivel 3) o IA Opti-Harvest (Nivel 4) en el taller."/>
+        <text name="rhm_setting_wear_loss_short" text="Pérdidas por desgaste mecánico"/>
+        <text name="rhm_setting_wear_loss_long" text="Simula pérdidas de grano por desgaste de la maquinaria. Cuchillas desafiladas desgranan las plantas (hasta +3% de pérdidas y +15% de resistencia). Cilindro y cribas desgastados tiran grano sin trillar (hasta +3% de pérdidas)."/>
+        <text name="rhm_ui_wear_loss" text="Pérdida por desgaste"/>
+        <text name="rhm_ui_cutter_wear" text="Desgaste del cabezal"/>
+        <text name="rhm_ui_combine_wear" text="Desgaste de la trilladora"/>
     </texts>
 </l10n>

@@ -23,24 +23,15 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     self.settingsManager = RHMSettingsManager.new()
     self.settings = RHMSettings.new(self.settingsManager)
 
+    -- EN: Expose public API through manager instance
+    -- UA: Надаємо доступ до публічного API через екземпляр менеджера
+    self.api = RHM_Api
+
     self.savedCameraRotatableInfo = {} -- EN: Stores camera rotatability before cursor mode / UA: Зберігає стан камери до режиму курсора
 
-    -- EN: PREPEND to class onFrameOpen so our elements are in the layout BEFORE the base game
-    --     computes positions. appendedFunction runs too late (after the frame is already drawn).
-    -- UA: PREPEND до класу onFrameOpen — наші елементи потрапляють в layout ДО того як гра
-    --     рахує позиції. appendedFunction запускається занадто пізно (кадр вже намальований).
-    if mission:getIsClient() and g_gui then
-        local settings = self.settings
-        InGameMenuSettingsFrame.onFrameOpen = Utils.prependedFunction(
-            InGameMenuSettingsFrame.onFrameOpen,
-            function(settingsPage)
-                pcall(function()
-                    RHMSettingsUI.inject(settings)
-                    RHMSettingsUI.refreshUI(settings)
-                end)
-            end
-        )
-    end
+    -- EN: Multi-layer settings hooking to guarantee injection even with mods like FS25_ScandinavianCurrencies.
+    -- UA: Багаторівневі хуки налаштувань для гарантованої ін'єкції навіть при наявності модів на кшталт FS25_ScandinavianCurrencies.
+    self:setupSettingsHooks()
 
     -- EN: Console commands are always registered (server and client need them).
     -- UA: Консольні команди реєструються завжди (і сервер, і клієнт їх потребують).
@@ -55,7 +46,7 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     -- UA: Створюємо перетягуваний HUD (тільки клієнт, відображає живі дані).
     if mission:getIsClient() then
         if RHM_NotificationManager then
-            self.notificationManager = RHM_NotificationManager.new(modDirectory)
+            self.notificationManager = RHM_NotificationManager.new(modDirectory, self.settings)
             RHM_NotificationManager.INSTANCE = self.notificationManager
         end
 
@@ -108,9 +99,79 @@ function RHM_RealisticHarvestManager:toggleHUD()
     end
 end
 
+---EN: Sets up hooks for InGameMenu and SettingsFrame to inject RHM settings.
+---    Uses a multi-layered hooking strategy (InGameMenu.onMenuOpened, class onFrameOpen,
+---EN: Sets up hooks for InGameMenu and SettingsFrame to inject RHM settings.
+---    Hooks InGameMenu.onMenuOpened (matching the resilient pattern of mods like AdditionalContracts)
+---    and InGameMenuSettingsFrame.onFrameOpen (class-level).
+---    Strictly avoids overriding pageSettings.onFrameOpen on the instance to prevent shadowing class methods
+---    and breaking other mods like FS25_additionalGameSettings.
+---UA: Налаштовує хуки для InGameMenu та SettingsFrame для ін'єкції налаштувань RHM.
+---    Хукає InGameMenu.onMenuOpened (патерн як у AdditionalContracts) та InGameMenuSettingsFrame.onFrameOpen на рівні класу.
+---    Суворо уникає перезапису pageSettings.onFrameOpen на рівні екземпляра, щоб не тінити методи класу
+---    і не ламати сторонні моди, такі як FS25_additionalGameSettings.
+function RHM_RealisticHarvestManager:setupSettingsHooks()
+    if not (self.mission and self.mission:getIsClient() and g_gui) then
+        return
+    end
+
+    local settings = self.settings
+
+    local function ensureAdditionalGameSettings()
+        if g_additionalSettingsManager and g_additionalSettingsManager.settingsPage then
+            pcall(function()
+                if g_additionalSettingsManager.settingsPage.updateAlternating then
+                    g_additionalSettingsManager.settingsPage:updateAlternating()
+                end
+            end)
+        end
+    end
+
+    local function onSettingsFrameOpen(settingsPage)
+        pcall(function()
+            RHMSettingsUI.inject(settings)
+            RHMSettingsUI.refreshUI(settings)
+            ensureAdditionalGameSettings()
+        end)
+    end
+
+    -- 1. Hook InGameMenu.onMenuOpened (Global menu hook, completely immune to pageSettings shadowing)
+    if InGameMenu and InGameMenu.onMenuOpened and not self._inGameMenuOpenedHooked then
+        InGameMenu.onMenuOpened = Utils.appendedFunction(
+            InGameMenu.onMenuOpened,
+            function(menu)
+                pcall(function()
+                    RHMSettingsUI.inject(settings)
+                    RHMSettingsUI.refreshUI(settings)
+                    ensureAdditionalGameSettings()
+                end)
+            end
+        )
+        self._inGameMenuOpenedHooked = true
+    end
+
+    -- 2. Hook InGameMenuSettingsFrame.onFrameOpen (Class-level hook)
+    if InGameMenuSettingsFrame and InGameMenuSettingsFrame.onFrameOpen and not self._settingsFrameClassHooked then
+        InGameMenuSettingsFrame.onFrameOpen = Utils.prependedFunction(
+            InGameMenuSettingsFrame.onFrameOpen,
+            onSettingsFrameOpen
+        )
+        self._settingsFrameClassHooked = true
+    end
+end
+
 -- EN: Called after the mission finishes loading. Initializes HUD overlay assets (textures, positions).
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
+    self:setupSettingsHooks()
+
+    if self.mission and self.mission:getIsClient() then
+        pcall(function()
+            RHMSettingsUI.inject(self.settings)
+            RHMSettingsUI.refreshUI(self.settings)
+        end)
+    end
+
     if self.notificationManager then
         self.notificationManager:load()
     end
@@ -299,6 +360,12 @@ function RHM_RealisticHarvestManager:draw()
         return
     end
 
+    -- EN: Notification and tutorial panel drawn independently over HUD
+    -- UA: Панель сповіщень та підказок малюється незалежно поверх HUD
+    if self.notificationManager then
+        self.notificationManager:draw()
+    end
+
     local combineVehicle = self.lastActiveCombine
     if not (self.hud and combineVehicle) then
         return
@@ -313,12 +380,6 @@ function RHM_RealisticHarvestManager:draw()
 
     if self.settings and self.settings.showHUD then
         self.hud:draw()
-    end
-
-    -- EN: Notification and tutorial panel drawn independently over HUD
-    -- UA: Панель сповіщень та підказок малюється незалежно поверх HUD
-    if self.notificationManager then
-        self.notificationManager:draw()
     end
 end
 
@@ -388,8 +449,8 @@ function RHM_RealisticHarvestManager:keyEvent(unicode, sym, modifier, isDown)
 end
 
 -- ============================================================================
--- EN: PUBLIC API FOR THIRD-PARTY MODS
--- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ
+-- EN: PUBLIC API FOR THIRD-PARTY MODS (DELEGATED TO RHM_Api)
+-- UA: ПУБЛІЧНИЙ API ДЛЯ СТОРОННІХ МОДІВ (ДЕЛЕГУЄТЬСЯ ДО RHM_Api)
 -- ============================================================================
 
 ---EN: Returns current feed-rate engine load (0 to 100+ %) for a given vehicle or active combine.
@@ -397,9 +458,11 @@ end
 ---@param vehicle table|nil Optional vehicle object. If nil, uses currently controlled vehicle.
 ---@return number engineLoad Current load percentage (0.0 if not harvesting or not an RHM combine).
 function RHM_RealisticHarvestManager:getEngineLoad(vehicle)
+    if RHM_Api and RHM_Api.getEngineLoad then
+        return RHM_Api.getEngineLoad(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return 0.0 end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator:getEngineLoad() or 0.0
@@ -407,14 +470,28 @@ function RHM_RealisticHarvestManager:getEngineLoad(vehicle)
     return 0.0
 end
 
+---EN: Returns normalized engine load factor strictly clamped between 0.0 and 1.0 (for ADS / wear mods).
+---UA: Повертає нормалізоване навантаження двигуна строго від 0.0 до 1.0 (для модів зносу ADS).
+---@param vehicle table|nil
+---@return number normalizedLoad (0.0 .. 1.0)
+function RHM_RealisticHarvestManager:getNormalizedEngineLoad(vehicle)
+    if RHM_Api and RHM_Api.getNormalizedEngineLoad then
+        return RHM_Api.getNormalizedEngineLoad(vehicle)
+    end
+    local raw = self:getEngineLoad(vehicle)
+    return math.max(0.0, math.min(1.0, raw / 100.0))
+end
+
 ---EN: Checks if a vehicle is an active combine managed by Realistic Harvesting.
 ---UA: Перевіряє чи є транспорт активним комбайном під керуванням Realistic Harvesting.
 ---@param vehicle table|nil
 ---@return boolean
 function RHM_RealisticHarvestManager:isRHMActive(vehicle)
+    if RHM_Api and RHM_Api.isRHMActive then
+        return RHM_Api.isRHMActive(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return false end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     return (combine ~= nil and combine.spec_rhm_Combine ~= nil)
 end
@@ -424,9 +501,11 @@ end
 ---@param vehicle table|nil
 ---@return table|nil
 function RHM_RealisticHarvestManager:getVehicleData(vehicle)
+    if RHM_Api and RHM_Api.getTelemetry then
+        return RHM_Api.getTelemetry(vehicle)
+    end
     local target = vehicle or self:getControlledVehicle()
     if not target then return nil end
-
     local combine = findCombineInHierarchy(target.rootVehicle or target)
     if combine and combine.spec_rhm_Combine then
         return combine.spec_rhm_Combine.data

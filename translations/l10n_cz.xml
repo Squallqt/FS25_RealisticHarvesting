@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Obtížnost"/>
         <text name="rhm_difficulty_motor" text="Výkon motoru"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Určuje dostupnou výkonovou rezervu motoru. Arkáda = +100%, Normální = +35%, Realistická = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Určuje fyziku zatížení motoru. Arkáda = Vypnuto (bez přetížení), Normální = +35% výkonové rezervy, Realistická = 100% autentická fyzika."/>
         <text name="rhm_difficulty_loss" text="Ztráta úrody"/>
         <text name="rhm_difficulty_loss_short" text="Ztráta"/>
-        <text name="rhm_difficulty_loss_long" text="Určuje závažnost ztráty."/>
+        <text name="rhm_difficulty_loss_long" text="Určuje ztráty plodin. Arkáda = 0% (žádné ztráty), Normální = standardní ztráty, Realistická = zvýšené ztráty (200%)."/>
         <text name="rhm_diff_1" text="Arkáda"/>
-        <text name="rhm_difficulty_long" text="Arkáda: Vysoké limity (+100%). Normální: Vyvážená fyzika (+35%). Realistická: Čistá simulace (0%)."/>
+        <text name="rhm_difficulty_long" text="Arkáda: Bez přetížení a ztrát (čistá vanilla). Normální: Vyvážená fyzika (+35%). Realistická: Čistá simulace (0%)."/>
         <text name="rhm_diff_2" text="Normální"/>
         <text name="rhm_diff_3" text="Realistická"/>
         <text name="rhm_show_yield" text="Zobrazit monitor výnosu"/>
@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Přehrávat realistický alarm v kabině a zvuky namáhání mlátičky při přetížení kombajnu nebo ztrátách zrna.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Zvuk"/>
         <text name="rhm_alarm_sounds_short" text="Bzučák přetížení"/>
-        <text name="rhm_alarm_sounds_long" text="Spustí zvukový bzučák v kabině při kritickém zatížení (98%+) nebo vysokých ztrátách (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Režim zvukového bzučáku v kabině při silném přetížení (105%+) nebo vysokých ztrátách (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Chytrý (3 pípnutí)"/>
+        <text name="rhm_alarm_mode_continuous" text="Nepřetržitý"/>
+        <text name="rhm_alarm_mode_off" text="Vypnuto"/>
         <text name="rhm_sound_volume_short" text="Hlasitost zvuku"/>
         <text name="rhm_sound_volume_long" text="Nastavuje hlasitost bzučáku alarmu přetížení v kabině."/>
         <text name="rhm_target_load" text="Cílové zatížení"/>
@@ -106,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Vkládací válce"/>
         <text name="rhm_ui_root_roller" text="Čisticí válce"/>
         <text name="rhm_ui_root_feeder" text="Prosévací pás"/>
+        <text name="rhm_ui_grape_shaker" text="Rychlost vytřásadel"/>
+        <text name="rhm_ui_olive_shaker" text="Rychlost mlátidel"/>
+        <text name="rhm_ui_grape_conveyor" text="Rychlost dopravníku"/>
+        <text name="rhm_ui_grape_fan" text="Čisticí ventilátory"/>
         <text name="rhm_units_short" text="Jednotky"/>
         <text name="rhm_units_long" text="Vyberte měrný systém (rychlost, hmotnost, plocha)"/>
         <text name="rhm_unit_metric" text="Metrický (km/h, t/h, ha)"/>
@@ -115,11 +122,11 @@
         <text name="rhm_loss_low" text="NÍZKÉ"/>
         <text name="rhm_loss_med" text="STŘEDNÍ"/>
         <text name="rhm_loss_high" text="VYSOKÉ"/>
-        <text name="rhm_warning_turn_on_combine" text="Nejprve zapnÄ›te kombajn!"/>
-        <text name="rhm_warning_turn_on_cutter" text="ZapnÄ›te Å¾acÃ­ liÅ¡tu!"/>
+        <text name="rhm_warning_turn_on_combine" text="Nejprve zapněte kombajn!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Zapněte žací lištu!"/>
         <text name="rhm_warn_overload_high" text="Kombajn přetížen! Snižte rychlost."/>
         <text name="rhm_warn_overload_critical" text="KOMBAJN KRITICKY PŘETÍŽEN! Vážné ztráty sklizně!"/>
-        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_configuration_title" text="Systémy Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Zakladni mechanika"/>
         <text name="rhm_package_sensor" text="Tier 2: Balicek senzoru"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetrie a monitorovani"/>
@@ -169,7 +176,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mechanické opotřebení a tupé nože"/>
+        <text name="rhm_help_loss_3" text="Opotřebení techniky výrazně snižuje kvalitu sklizně. Tupé nože žací lišty vyklepávají klasy a lusky (až +3% ztrát a +15% odporu vývodového hřídele). Opotřebovaný mláticí buben a síta ztrácejí nevymlácené zrno (až +3% ztrát). Pravidelný servis v dílně těmto ztrátám zcela předchází."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -204,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENZORY"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARKÁDA"/>
         <text name="rhm_ui_card_engine_load" text="ZATÍŽENÍ MOTORU"/>
         <text name="rhm_ui_card_efficiency" text="EFEKTIVITA"/>
         <text name="rhm_ui_card_predicted_loss" text="ODHADOVANÁ ZTRÁTA"/>
@@ -242,7 +252,7 @@
         <text name="rhm_setting_enableTutorials" text="Tipy a nápověda"/>
         <text name="rhm_setting_enableTutorials_long" text="Zobrazovat interaktivní nápovědu a tipy během sklizně."/>
         <text name="rhm_ui_btn_close_notification" text="Rozumím (Enter / LMB)"/>
-        <text name="rhm_tut_welcome_title" text="Realistická Sklizeň"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Vítejte v Realistic Harvesting! Rychlost sklízeče se dynamicky řídí zatížením motoru, hustotou porostu a lištou. Otevřete terminál pomocí (Pravý Shift + K)."/>
         <text name="rhm_tut_overload_title" text="Přetížení Motoru"/>
         <text name="rhm_tut_overload_msg" text="Motor pracuje na hranici výkonu! Hydrostatický pohon zpomaluje stroj, aby zabránil ucpání mláticího bubnu. Přizvedněte lištu nebo snižte záběr."/>
@@ -254,5 +264,10 @@
         <text name="rhm_tut_headland_msg" text="Při zvednutí lišty na souvrati si sklízeč pamatuje pracovní rychlost. Do nového řádku se plynule rozjede bez škubání."/>
         <text name="rhm_tut_upgrade_title" text="Vylepšení Sklízeče"/>
         <text name="rhm_tut_upgrade_msg" text="Základní sklízeč vyžaduje ruční ladění. V dílně můžete nainstalovat Senzory (Úroveň 2), Monitor Výnosu (Úroveň 3) nebo Autopilot Opti-Harvest AI (Úroveň 4)."/>
+        <text name="rhm_setting_wear_loss_short" text="Ztráty opotřebením techniky"/>
+        <text name="rhm_setting_wear_loss_long" text="Simuluje ztráty zrna způsobené opotřebením stroje. Tupé nože lišty vyklepávají zrno (až +3% ztrát a +15% odporu). Opotřebovaný buben a síta propouštějí nevymlácené zrno (až +3% ztrát)."/>
+        <text name="rhm_ui_wear_loss" text="Ztráta opotřebením"/>
+        <text name="rhm_ui_cutter_wear" text="Opotřebení lišty"/>
+        <text name="rhm_ui_combine_wear" text="Opotřebení mlátičky"/>
     </texts>
 </l10n>

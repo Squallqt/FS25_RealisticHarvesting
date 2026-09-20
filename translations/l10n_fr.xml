@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Difficulté"/>
         <text name="rhm_difficulty_motor" text="Puissance moteur"/>
         <text name="rhm_difficulty_motor_short" text="Moteur"/>
-        <text name="rhm_difficulty_motor_long" text="Détermine la réserve de puissance moteur. Arcade = +100%, Normal = +35%, Réaliste = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Détermine la physique de charge moteur. Arcade = Désactivé (sans surcharge), Normal = +35% de réserve, Réaliste = 100% physique authentique."/>
         <text name="rhm_difficulty_loss" text="Perte de récolte"/>
         <text name="rhm_difficulty_loss_short" text="Perte"/>
-        <text name="rhm_difficulty_loss_long" text="Détermine la sévérité de la perte."/>
+        <text name="rhm_difficulty_loss_long" text="Détermine les pertes de récolte. Arcade = 0% (aucune perte), Normal = pertes standard, Réaliste = pertes augmentées (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Limites élevées (+100%). Normal: Physique équilibrée (+35%). Réaliste: Simulation pure (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Sans surcharge ni perte (pur vanilla). Normal: Physique équilibrée (+35%). Réaliste: Simulation pure (0%)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Réaliste"/>
         <text name="rhm_show_yield" text="Afficher le moniteur de rendement"/>
@@ -83,7 +83,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Émettre une alarme de cabine et des bruits de batteur lorsque la moissonneuse est surchargée ou subit des pertes.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Avertisseur de surcharge"/>
-        <text name="rhm_alarm_sounds_long" text="Active un avertisseur sonore en cabine en cas de charge critique (98%+) ou de pertes élevées (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Mode de l'avertisseur sonore en cabine en cas de surcharge sévère (105%+) ou de pertes élevées (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Intelligent (3 bips)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continu"/>
+        <text name="rhm_alarm_mode_off" text="Désactivé"/>
         <text name="rhm_sound_volume_short" text="Volume sonore"/>
         <text name="rhm_sound_volume_long" text="Règle le volume de l'avertisseur sonore de surcharge en cabine."/>
         <text name="rhm_target_load" text="Charge Cible"/>
@@ -108,6 +111,10 @@
         <text name="rhm_ui_forage_feeder" text="Rouleaux d'alimentation"/>
         <text name="rhm_ui_root_roller" text="Rouleaux de nettoyage"/>
         <text name="rhm_ui_root_feeder" text="Tapis cribleur"/>
+        <text name="rhm_ui_grape_shaker" text="Vitesse secoueurs"/>
+        <text name="rhm_ui_olive_shaker" text="Vitesse batteurs"/>
+        <text name="rhm_ui_grape_conveyor" text="Vitesse convoyeur"/>
+        <text name="rhm_ui_grape_fan" text="Turbines d'aspiration"/>
         <text name="rhm_units_short" text="Unités"/>
         <text name="rhm_units_long" text="Choisissez le système de mesure (vitesse, masse, superficie)"/>
         <text name="rhm_unit_metric" text="Métrique (km/h, t/h, ha)"/>
@@ -121,7 +128,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Allumez la barre de coupe !"/>
         <text name="rhm_warn_overload_high" text="Moissonneuse surchargée ! Réduisez la vitesse."/>
         <text name="rhm_warn_overload_critical" text="MOISSONNEUSE SURCHARGÉE CRITIQUEMENT ! Grosses pertes !"/>
-        <text name="rhm_configuration_title" text="RHM Électronique"/>
+        <text name="rhm_configuration_title" text="Systèmes Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Mecanique de base"/>
         <text name="rhm_package_sensor" text="Tier 2: Pack Capteurs"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetrie &amp; Moniteur"/>
@@ -171,7 +178,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Usure mécanique &amp; Lames émoussées"/>
+        <text name="rhm_help_loss_3" text="L'usure du matériel dégrade sensiblement l'efficacité de la récolte. Des lames de coupe émoussées égrènent les épis et les gousses sur pied (jusqu'à +3% de perte et +15% de résistance PDF). Un batteur et des grilles usés laissent échapper du grain non séparé (jusqu'à +3% de perte). Un entretien régulier à l'atelier évite ces pertes."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -206,6 +215,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - CAPTEURS"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="CHARGE MOTEUR"/>
         <text name="rhm_ui_card_efficiency" text="EFFICACITÉ"/>
         <text name="rhm_ui_card_predicted_loss" text="PERTE ESTIMÉE"/>
@@ -244,7 +254,7 @@
         <text name="rhm_setting_enableTutorials" text="Astuces et didacticiel"/>
         <text name="rhm_setting_enableTutorials_long" text="Affiche des astuces interactives et des conseils lors de la récolte."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Entrée / Clic gauche)"/>
-        <text name="rhm_tut_welcome_title" text="Récolte Réaliste"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Bienvenue dans Realistic Harvesting ! La vitesse s&apos;ajuste selon la charge moteur, la densité et la barre de coupe. Consultez votre HUD et ouvrez le terminal avec (Maj droite + K)."/>
         <text name="rhm_tut_overload_title" text="Surcharge Moteur"/>
         <text name="rhm_tut_overload_msg" text="Le moteur est sous forte contrainte ! La transmission hydrostatique ralentit pour éviter le bourrage du batteur. Relevez la coupe ou réduisez la largeur travaillée."/>
@@ -256,5 +266,10 @@
         <text name="rhm_tut_headland_msg" text="En relevant la barre de coupe en bout de champ, la vitesse de récolte est mémorisée. Vous reprendrez la ligne suivante de façon fluide sans à-coups."/>
         <text name="rhm_tut_upgrade_title" text="Améliorations Batteuse"/>
         <text name="rhm_tut_upgrade_msg" text="Les batteuses de base nécessitent des réglages manuels. Améliorez l&apos;électronique à l&apos;atelier : Capteurs (Niveau 2), Télémétrie (Niveau 3) ou IA Opti-Harvest (Niveau 4)."/>
+        <text name="rhm_setting_wear_loss_short" text="Pertes dues à l'usure"/>
+        <text name="rhm_setting_wear_loss_long" text="Simule les pertes de grains causées par l'usure du matériel. Des lames émoussées égrènent les cultures (jusqu'à +3% de perte et +15% de traînée). Un batteur et des grilles usés laissent échapper du grain (jusqu'à +3% de perte)."/>
+        <text name="rhm_ui_wear_loss" text="Perte par usure"/>
+        <text name="rhm_ui_cutter_wear" text="Usure de la barre de coupe"/>
+        <text name="rhm_ui_combine_wear" text="Usure du batteur"/>
     </texts>
 </l10n>

@@ -124,15 +124,18 @@ end
 function RHMSettingsUI.inject(settings)
     if RHMSettingsUI.injected then return end
 
-    local inGameMenu = g_gui.screenControllers[InGameMenu]
+    local inGameMenu = (g_gui and g_gui.screenControllers and g_gui.screenControllers[InGameMenu]) or g_inGameMenu
     if not inGameMenu then
-        Logging.error("RHM: InGameMenu controller not found!")
         return
     end
 
     local settingsPage = inGameMenu.pageSettings
     if not settingsPage then
-        Logging.error("RHM: pageSettings not found!")
+        return
+    end
+
+    local gameLayout = settingsPage.gameSettingsLayout
+    if not gameLayout then
         return
     end
 
@@ -144,7 +147,6 @@ function RHMSettingsUI.inject(settings)
 
     -- EN: Target layouts (where options are injected in FS25 settings UI).
     -- UA: куди саме вставляти наші рядки в UI налаштувань.
-    local gameLayout = settingsPage.gameSettingsLayout
     local generalLayout = settingsPage.generalSettingsLayout or settingsPage.generalLayout or gameLayout
     if not generalLayout then
         Logging.warning("RHM: generalSettingsLayout not found; using gameSettingsLayout as fallback.")
@@ -226,6 +228,18 @@ function RHMSettingsUI.inject(settings)
     if aiTuningOpt and aiTuningOpt.setDisabled then aiTuningOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.aiTuningOption = aiTuningOpt
 
+    local wearLossOpt = addBinaryRow(settingsPage, gameLayout, "wear_loss", "rhm_setting_wear_loss_short", "rhm_setting_wear_loss_long",
+        settings.enableWearLoss ~= false,
+        function(val)
+            if not settings:canChangeServerSettings() then return end
+            settings.enableWearLoss = val; settings:save()
+            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
+                RHM_SettingsSync:sendToClients(settings)
+            end
+        end)
+    if wearLossOpt and wearLossOpt.setDisabled then wearLossOpt:setDisabled(not isAdmin) end
+    RHMSettingsUI.wearLossOption = wearLossOpt
+
     if RHM_MoistureAdapter and RHM_MoistureAdapter.isActive then
         local moistureEnableOpt = addBinaryRow(settingsPage, gameLayout, "moisture_enable", "rhm_moisture_enable_short", "rhm_moisture_enable_long",
             settings.enableMoisture,
@@ -266,8 +280,7 @@ function RHMSettingsUI.inject(settings)
             settings.showMoisture, function(val) settings.showMoisture = val; settings:save() end)
     end
 
-    RHMSettingsUI.loadWarnOption = addBinaryRow(settingsPage, generalLayout, "show_loadwarn", "rhm_show_load_warn_short", "rhm_show_load_warn_long",
-        settings.showLoadWarnings, function(val) settings.showLoadWarnings = val; settings:save() end)
+
 
     RHMSettingsUI.tutorialsOption = addBinaryRow(settingsPage, generalLayout, "enable_tutorials", "rhm_setting_enableTutorials", "rhm_setting_enableTutorials_long",
         settings.enableTutorials, function(val) settings.enableTutorials = val; settings:save() end)
@@ -284,15 +297,29 @@ function RHMSettingsUI.inject(settings)
     -- === SECTION: Audio / Звук ===
     addSection(settingsPage, "rhm_section_audio", generalLayout)
 
-    RHMSettingsUI.alarmSoundOption = addBinaryRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
-        settings.enableAlarmSound ~= false, function(val) settings.enableAlarmSound = val; settings:save() end)
+    local alarmModeOptions = {
+        g_i18n:hasText("rhm_alarm_mode_smart") and g_i18n:getText("rhm_alarm_mode_smart") or "Smart (3 Beeps)",
+        g_i18n:hasText("rhm_alarm_mode_continuous") and g_i18n:getText("rhm_alarm_mode_continuous") or "Continuous",
+        g_i18n:hasText("rhm_alarm_mode_off") and g_i18n:getText("rhm_alarm_mode_off") or "Off"
+    }
+    local currentAlarmMode = settings.alarmMode or (settings.enableAlarmSound == false and 3 or 1)
+    if currentAlarmMode < 1 or currentAlarmMode > 3 then currentAlarmMode = 1 end
 
-    local volumeOptions = {"50%", "75%", "100%", "125%", "150%"}
-    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
-    local currentVolIndex = 3
-    if settings.soundVolume then
+    RHMSettingsUI.alarmSoundOption = addMultiRow(settingsPage, generalLayout, "alarm_sounds", "rhm_alarm_sounds_short", "rhm_alarm_sounds_long",
+        alarmModeOptions, currentAlarmMode,
+        function(idx)
+            settings.alarmMode = idx
+            settings.enableAlarmSound = (idx ~= 3)
+            settings:save()
+        end)
+
+    local volumeOptions = {"0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"}
+    local volumeValues = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00}
+    local currentVolIndex = 11
+    if settings.soundVolume ~= nil then
+        local clamped = math.min(1.0, math.max(0.0, tonumber(settings.soundVolume) or 1.0))
         for idx, val in ipairs(volumeValues) do
-            if math.abs(settings.soundVolume - val) < 0.12 then
+            if math.abs(clamped - val) < 0.05 then
                 currentVolIndex = idx
                 break
             end
@@ -304,6 +331,25 @@ function RHMSettingsUI.inject(settings)
         function(idx)
             settings.soundVolume = volumeValues[idx] or 1.0
             settings:save()
+
+            -- EN: Play audio preview beep so player immediately hears the volume level
+            -- UA: Програємо тестовий біп, щоб гравець одразу почув рівень гучності
+            if settings.soundVolume > 0.01 and rhm_Combine and rhm_Combine.playAlarmSample then
+                local vehicle = g_currentMission and g_currentMission.controlledVehicle
+                if not (vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.samples and vehicle.spec_rhm_Combine.samples.overloadAlarm) then
+                    if g_currentMission and g_currentMission.vehicles then
+                        for _, v in ipairs(g_currentMission.vehicles) do
+                            if v.spec_rhm_Combine and v.spec_rhm_Combine.samples and v.spec_rhm_Combine.samples.overloadAlarm then
+                                vehicle = v
+                                break
+                            end
+                        end
+                    end
+                end
+                if vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.samples and vehicle.spec_rhm_Combine.samples.overloadAlarm then
+                    rhm_Combine.playAlarmSample(vehicle, vehicle.spec_rhm_Combine, settings.soundVolume)
+                end
+            end
         end)
 
     if settingsPage.gameSettingsLayout then
@@ -336,6 +382,7 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.difficultyLossOption,  settings.difficultyLoss,  not isAdmin)
     setOpt(RHMSettingsUI.speedLimitOption,      settings.enableSpeedLimit and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.cropLossOption,        settings.enableCropLoss   and 2 or 1, not isAdmin)
+    setOpt(RHMSettingsUI.wearLossOption,        (settings.enableWearLoss ~= false) and 2 or 1, not isAdmin)
     setOpt(RHMSettingsUI.aiTuningOption,        settings.aiHelperTuning or 1,        not isAdmin)
     setOpt(RHMSettingsUI.moistureEnableOption,  settings.enableMoisture   and 2 or 1, not isAdmin)
 
@@ -346,16 +393,19 @@ function RHMSettingsUI.refreshUI(settings)
     setOpt(RHMSettingsUI.prodOption,        settings.showProductivity  and 2 or 1, false)
     setOpt(RHMSettingsUI.cropLossVisOption, settings.showCropLoss      and 2 or 1, false)
     setOpt(RHMSettingsUI.moistureVisOption, settings.showMoisture      and 2 or 1, false)
-    setOpt(RHMSettingsUI.loadWarnOption,       settings.showLoadWarnings         and 2 or 1, false)
+
     setOpt(RHMSettingsUI.tutorialsOption,      (settings.enableTutorials ~= false) and 2 or 1, false)
     setOpt(RHMSettingsUI.unitOption,           settings.unitSystem,                               false)
 
-    setOpt(RHMSettingsUI.alarmSoundOption,    (settings.enableAlarmSound ~= false) and 2 or 1, false)
-    local volIdx = 3
-    local volumeValues = {0.50, 0.75, 1.00, 1.25, 1.50}
-    if settings.soundVolume then
+    local currentAlarmMode = settings.alarmMode or (settings.enableAlarmSound == false and 3 or 1)
+    if currentAlarmMode < 1 or currentAlarmMode > 3 then currentAlarmMode = 1 end
+    setOpt(RHMSettingsUI.alarmSoundOption, currentAlarmMode, false)
+    local volIdx = 11
+    local volumeValues = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00}
+    if settings.soundVolume ~= nil then
+        local clamped = math.min(1.0, math.max(0.0, tonumber(settings.soundVolume) or 1.0))
         for idx, val in ipairs(volumeValues) do
-            if math.abs(settings.soundVolume - val) < 0.12 then
+            if math.abs(clamped - val) < 0.05 then
                 volIdx = idx
                 break
             end

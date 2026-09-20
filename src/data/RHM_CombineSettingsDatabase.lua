@@ -23,6 +23,8 @@ RHM_CombineSettingsDatabase.machineParams = {
     forage  = { "fan", "rotor", "feeder" },
     root    = { "fan", "rotor", "feeder" },
     cotton  = { "fan", "rotor", "feeder" },
+    grape   = { "rotor", "feeder", "fan" },
+    olive   = { "rotor", "feeder", "fan" },
 }
 
 ---L10n key overrides for parameter labels per machine type
@@ -49,6 +51,16 @@ RHM_CombineSettingsDatabase.machineParamLabels = {
         fan    = "rhm_ui_fan_speed",
         rotor  = "rhm_ui_picker_speed",  -- Picker/spindle
         feeder = "rhm_ui_feeder_speed",
+    },
+    grape = {
+        rotor  = "rhm_ui_grape_shaker",   -- Shaker rods / Струшувачі
+        feeder = "rhm_ui_grape_conveyor", -- Bucket conveyor / Конвеєр
+        fan    = "rhm_ui_grape_fan",      -- Extractor fans / Очисні вентилятори
+    },
+    olive = {
+        rotor  = "rhm_ui_olive_shaker",   -- Shaker beaters / Бітери струшування
+        feeder = "rhm_ui_grape_conveyor", -- Bucket conveyor / Конвеєр
+        fan    = "rhm_ui_grape_fan",      -- Extractor fans / Очисні вентилятори
     },
 }
 
@@ -103,6 +115,10 @@ RHM_CombineSettingsDatabase.canonicalCropNames = {
     ["FABABEAN"]        = "BEANS",
     ["FIELD_BEAN"]      = "BEANS",
     ["STRAW"]           = "STRAW_WINDROW",
+    ["GRAPES"]          = "GRAPE",
+    ["OLIVES"]          = "OLIVE",
+    ["WHITEGRAPE"]      = "GRAPE",
+    ["REDGRAPE"]        = "GRAPE",
 }
 
 ---EN: Returns the canonical internal crop name for any given alias or variation.
@@ -213,6 +229,10 @@ RHM_CombineSettingsDatabase.crops = {
 
     -- Бавовник (machineType = "cotton")
     ["COTTON"] = { machineType = "cotton", group = "cotton", fillType = safeFillType(FillType.COTTON) },
+
+    -- Виноград та Оливки (machineType = "grape" / "olive")
+    ["GRAPE"]  = { machineType = "grape", group = "grape", fillType = safeFillType(FillType.GRAPE) },
+    ["OLIVE"]  = { machineType = "olive", group = "olive", fillType = safeFillType(FillType.OLIVE) },
 }
 
 -- Ensure alias crop keys directly point to the same table reference to avoid divergent state
@@ -223,6 +243,10 @@ RHM_CombineSettingsDatabase.crops["OATS"] = RHM_CombineSettingsDatabase.crops["O
 RHM_CombineSettingsDatabase.crops["FLAX"] = RHM_CombineSettingsDatabase.crops["LINSEED"]
 RHM_CombineSettingsDatabase.crops["LUCERNE"] = RHM_CombineSettingsDatabase.crops["ALFALFA"]
 RHM_CombineSettingsDatabase.crops["LUCERNE_WINDROW"] = RHM_CombineSettingsDatabase.crops["ALFALFA_WINDROW"]
+RHM_CombineSettingsDatabase.crops["GRAPES"] = RHM_CombineSettingsDatabase.crops["GRAPE"]
+RHM_CombineSettingsDatabase.crops["OLIVES"] = RHM_CombineSettingsDatabase.crops["OLIVE"]
+RHM_CombineSettingsDatabase.crops["WHITEGRAPE"] = RHM_CombineSettingsDatabase.crops["GRAPE"]
+RHM_CombineSettingsDatabase.crops["REDGRAPE"] = RHM_CombineSettingsDatabase.crops["GRAPE"]
 
 ---EN: Dynamically derives physical optimal settings for any crop (vanilla or modded) using FS25 properties & ASABE standards.
 ---UA: Динамічно розраховує фізичні оптимальні налаштування для будь-якої культури за властивостями FS25 та стандартами ASABE.
@@ -366,6 +390,22 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
             rotor  = {optimal = 70, min = 50, max = 90, tolerance = 10},
             feeder = {optimal = 60, min = 40, max = 80, tolerance = 10},
             moistureLimit = 10,
+        }
+
+    elseif machineType == "grape" then
+        template = {
+            fan    = {optimal = 60, min = 40, max = 80, tolerance = 8},
+            rotor  = {optimal = 55, min = 35, max = 75, tolerance = 8},
+            feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
+            moistureLimit = 75,
+        }
+
+    elseif machineType == "olive" then
+        template = {
+            fan    = {optimal = 65, min = 45, max = 85, tolerance = 8},
+            rotor  = {optimal = 60, min = 40, max = 80, tolerance = 8},
+            feeder = {optimal = 60, min = 40, max = 80, tolerance = 8},
+            moistureLimit = 60,
         }
 
     else
@@ -658,6 +698,31 @@ function RHM_CombineSettingsDatabase:getCropNameFromFillType(fillType, inputFrui
             if fDesc and fDesc.name then
                 local fNameUpper = fDesc.name:upper()
                 local canonical = self:getCanonicalCropName(fNameUpper)
+
+                -- EN: When chopped into forage/chaff, standing corn (MAIZE/CORN) is MAIZE_FORAGE, NOT grain MAIZE!
+                -- UA: При подрібненні на сінаж/силос, кукурудза (MAIZE/CORN) — це MAIZE_FORAGE, а НЕ зернова кукурудза!
+                if canonical == "MAIZE" or canonical == "CORN" or fNameUpper == "MAIZE" or fNameUpper == "CORN" then
+                    return "MAIZE_FORAGE"
+                end
+
+                -- EN: Standing grass/meadow chopped into chaff -> GRASS
+                -- UA: Стояча трава при прямому косінні на силос -> GRASS
+                if canonical == "GRASS" or fNameUpper == "GRASS" or fNameUpper == "MEADOW" or fNameUpper == "TALLGRASS" then
+                    return "GRASS"
+                end
+
+                -- EN: Lucerne / Alfalfa / Clover chopped into chaff
+                -- UA: Люцерна / конюшина при подрібненні
+                if canonical == "ALFALFA" or canonical == "LUCERNE" or fNameUpper == "ALFALFA" or fNameUpper == "LUCERNE" or fNameUpper == "CLOVER" then
+                    return "ALFALFA"
+                end
+
+                -- EN: Whole-crop cereals (WHEAT, BARLEY, OAT, RYE, TRITICALE, etc.) chopped into GPS/CHAFF -> MAIZE_FORAGE
+                -- UA: Зернові культури прямого скошування на силос (GPS) -> MAIZE_FORAGE
+                if canonical == "WHEAT" or canonical == "BARLEY" or canonical == "OAT" or canonical == "RYE" or canonical == "TRITICALE" or canonical == "SPELT" or canonical == "MILLET" then
+                    return "MAIZE_FORAGE"
+                end
+
                 if self.validMapCrops and (self.validMapCrops[canonical] or self.validMapCrops[fNameUpper]) then
                     return canonical
                 end
@@ -1298,7 +1363,10 @@ function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, veh
 
     local function tryAddCrop(cropName, cropData)
         if cropData.machineType ~= machineType then
-            return
+            local isGrapeOlivePair = (machineType == "grape" or machineType == "olive") and (cropData.machineType == "grape" or cropData.machineType == "olive")
+            if not isGrapeOlivePair then
+                return
+            end
         end
         local canonical = self:getCanonicalCropName(cropName)
         if self.validMapCrops and not (self.validMapCrops[cropName] or self.validMapCrops[canonical]) then

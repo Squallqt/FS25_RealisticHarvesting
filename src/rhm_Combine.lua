@@ -222,6 +222,22 @@ if not rhm_Combine._nexatHookApplied then
     )
     rhm_log("RHM [Combine]: RHM: [NEXAT] Global Vehicle.onRegisterActionEvents hook applied.")
 end
+
+---EN: Safely gets or lazy-initializes RHM_CombineMemory to guarantee it is never nil.
+---UA: Безпечно повертає або ліниво ініціалізує RHM_CombineMemory для гарантії захисту від nil.
+function rhm_Combine.getOrInitCombineMemory(vehicle)
+    if not vehicle then return nil end
+    local spec = vehicle.spec_rhm_Combine
+    if not spec then return nil end
+    if not spec.combineMemory and RHM_CombineMemory then
+        local mType = spec.machineType or "grain"
+        spec.combineMemory = RHM_CombineMemory.new(vehicle, mType)
+        if spec.loadCalculator then
+            spec.loadCalculator.combineMemory = spec.combineMemory
+        end
+    end
+    return spec.combineMemory
+end
 -- ============================================================================
 
 -- EN: Called when the combine vehicle is loaded. Creates and wires up all subsystems:
@@ -246,6 +262,8 @@ function rhm_Combine:onLoad(savegame)
             tostring(self:getFullName()), tostring(specName))
         return
     end
+
+    spec.isRhmCombine = true
     
     -- Синхронізація дебаг-прапорця з основним менеджером — тепер просто rhm_log()
     rhm_log(string.format("RHM [Combine]: RHM: onLoad called for %s (has savegame: %s)", 
@@ -298,8 +316,12 @@ function rhm_Combine:onLoad(savegame)
     -- UA: 1. Перевіряємо категорію магазину (головний авторитет для класифікації техніки)
     local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
     local category = storeItem and storeItem.categoryName or ""
+    local fullName = (self.getFullName and self:getFullName()) or ""
 
-    if category == "combines" or category == "combineVehicles" or category == "harvesters" then
+    if fullName:upper():find("NEXCO") or (self.configFileName and self.configFileName:lower():find("nexco")) then
+        -- NEXAT NEXCO combine module is a grain combine harvester
+        machineType = "grain"
+    elseif category == "combines" or category == "combineVehicles" or category == "harvesters" then
         -- Grain combine harvesters: always grain, regardless of custom hopper fill types
         machineType = "grain"
     elseif category == "forageHarvesters" or category == "forageHarvesting" then
@@ -311,6 +333,14 @@ function rhm_Combine:onLoad(savegame)
        or category == "vegetableVehicles" or category == "vegetableHarvesting"
        or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
         machineType = "root"
+    elseif category == "grapeVehicles" or category == "grapeHarvesting" then
+        if fullName:upper():find("OLIVE") or (self.configFileName and self.configFileName:lower():find("olive")) then
+            machineType = "olive"
+        else
+            machineType = "grape"
+        end
+    elseif category == "oliveVehicles" or category == "oliveHarvesting" then
+        machineType = "olive"
     else
         -- EN: 2. Fallback for unclassified / mod vehicles without standard store category
         -- UA: 2. Запасна перевірка для модової техніки без стандартної категорії магазину
@@ -329,7 +359,10 @@ function rhm_Combine:onLoad(savegame)
             local hasGrainFill = false
             local hasRootFill = false
             local hasCottonFill = false
-            local fillUnits = self:getFillUnits()
+            local hasGrapeFill = false
+            local hasOliveFill = false
+            local fillUnits = (type(self.getFillUnits) == "function" and self:getFillUnits()) 
+                           or (self.spec_fillUnit and self.spec_fillUnit.fillUnits)
             if fillUnits then
                 for _, fillUnit in ipairs(fillUnits) do
                     if fillUnit.supportedFillTypes then
@@ -350,6 +383,10 @@ function rhm_Combine:onLoad(savegame)
                                         hasRootFill = true
                                     elseif name == "COTTON" then
                                         hasCottonFill = true
+                                    elseif name:find("GRAPE") then
+                                        hasGrapeFill = true
+                                    elseif name:find("OLIVE") then
+                                        hasOliveFill = true
                                     end
                                 end
                             end
@@ -365,6 +402,16 @@ function rhm_Combine:onLoad(savegame)
                 machineType = "cotton"
             elseif hasRootFill then
                 machineType = "root"
+            elseif hasGrapeFill and not hasOliveFill then
+                machineType = "grape"
+            elseif hasOliveFill and not hasGrapeFill then
+                machineType = "olive"
+            elseif hasGrapeFill and hasOliveFill then
+                if fullName:upper():find("OLIVE") or (self.configFileName and self.configFileName:lower():find("olive")) then
+                    machineType = "olive"
+                else
+                    machineType = "grape"
+                end
             elseif sc and sc.allowThreshingDuringRain and self.spec_pipe ~= nil and self.spec_cutter == nil then
                 machineType = "forage"
             else
@@ -381,7 +428,6 @@ function rhm_Combine:onLoad(savegame)
         tostring(sc and sc.allowThreshingDuringRain),
         tostring(self.spec_fruitPreparer ~= nil)))
 
-
     -- EN: Create the combine memory system for current settings. Link it to RHM_LoadCalculator
     --     so that setting adjustments affect the live load and loss calculations.
     -- UA: Створюємо систему пам'яті для поточних налаштувань. Підключаємо до RHM_LoadCalculator
@@ -397,7 +443,9 @@ function rhm_Combine:onLoad(savegame)
         return
     end
     
-    spec.loadCalculator.combineMemory = spec.combineMemory
+    if spec.loadCalculator then
+        spec.loadCalculator.combineMemory = spec.combineMemory
+    end
     rhm_log("RHM [Combine]: RHM: [OK] Combine RHMSettings System initialized")
 
     
@@ -431,9 +479,12 @@ function rhm_Combine:onLoad(savegame)
     -- MULTIPLAYER: Dirty flags для роздільної синхронізації
     -- spec.dataDirtyFlag: часто оновлювана телеметрія (throttle)
     -- spec.settingsDirtyFlag: зміни налаштувань RHM_CombineMemory (тільки при зміні)
-    spec.dataDirtyFlag = self:getNextDirtyFlag()
-    spec.settingsDirtyFlag = self:getNextDirtyFlag()
-    spec.dirtyFlag = spec.dataDirtyFlag -- Fallback if needed
+    if type(self.getNextDirtyFlag) == "function" then
+        spec.dataDirtyFlag = self:getNextDirtyFlag()
+        spec.settingsDirtyFlag = self:getNextDirtyFlag()
+    end
+    spec.settingsDirtyFlag = spec.settingsDirtyFlag or spec.dataDirtyFlag
+    spec.dirtyFlag = spec.dataDirtyFlag or spec.settingsDirtyFlag
     
     -- Тротлінг мережевих оновлень (MP/DS)
     spec.lastDataUpdateTime = 0
@@ -515,8 +566,11 @@ function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
     
     local spec = self.spec_rhm_Combine
     if spec and actualAdded and type(actualAdded) == "number" and actualAdded > 0 then
-        -- Рахуємо тільки якщо ми активно косимо (lastRawArea > 0)
-        if spec.lastRawArea and spec.lastRawArea > 0 then
+        -- Рахуємо якщо ми активно косимо (lastRawArea > 0) або це увімкнений виноградо/оливкозбиральний комбайн
+        local isGrapeOrOlive = (spec.machineType == "grape" or spec.machineType == "olive" 
+            or (spec.combineMemory and (spec.combineMemory.machineType == "grape" or spec.combineMemory.machineType == "olive")))
+        local isHarvestingActive = (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
+        if isHarvestingActive then
             -- EN: Cotton Harvester fix: Ignore massive instant internal transfers (e.g. spool unloading)
             -- UA: Фікс бавовняних комбайнів: ігноруємо масивні миттєві внутрішні переміщення (напр. розвантаження котушки)
             local isMassiveTransfer = false
@@ -703,6 +757,13 @@ function rhm_Combine:addCutterArea(superFunc, ...)
 
         local cropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(outputFillType, effectiveInputFruitType)
 
+        -- EN: Forage harvester guard: Forage harvesters chop biomass and NEVER harvest grain MAIZE or grain CORN.
+        -- UA: Захист для силосозбиральних комбайнів: вони рубають біомасу і НІКОЛИ не збирають зернову кукурудзу (MAIZE/CORN).
+        local machineType = (spec.combineMemory and spec.combineMemory.machineType) or spec.machineType or "grain"
+        if machineType == "forage" and (cropName == "MAIZE" or cropName == "CORN") then
+            cropName = "MAIZE_FORAGE"
+        end
+
         -- EN: CHAFF and SILAGE map to MAIZE_FORAGE in the DB — correct for corn silage but WRONG for
         --     direct grass/meadow silage (same output fill types in FS). That used factor ~0.30 and felt like
         --     unlimited speed (~15 km/h). Disambiguate using the combine's INPUT fruit from the cutter.
@@ -752,6 +813,9 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         --     Ключова різниця: прямий різ завжди має inputFruitType (напр. GRASS), підбирач має inputFruitType=nil.
         --     getForageFeedMode() може помилитись коли підбирач не має spec_pickup, тому inputFruitType — головний сигнал.
         if cropName and spec.combineMemory and spec.combineMemory.machineType == "forage" then
+            if cropName == "MAIZE" or cropName == "CORN" then
+                cropName = "MAIZE_FORAGE"
+            end
             local isPickupMode = isPickup or (effectiveInputFruitType == nil or effectiveInputFruitType == 0)
             
             if not isPickupMode then
@@ -789,6 +853,9 @@ function rhm_Combine:addCutterArea(superFunc, ...)
         local tankCropName = nil
         if tankFillLevel > 50 and tankFillType and tankFillType ~= FillType.UNKNOWN then
             tankCropName = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+            if machineType == "forage" and (tankCropName == "MAIZE" or tankCropName == "CORN") then
+                tankCropName = "MAIZE_FORAGE"
+            end
         end
 
         if tankCropName then
@@ -805,7 +872,8 @@ function rhm_Combine:addCutterArea(superFunc, ...)
             --     partially overlaps two crop types and flips between them each tick.
             -- UA: Визначаємо зміну культури з 2-секундним захистом від дребезгу щоб уникнути
             --     переключення коли жатка частково перекриває два типи культур і перемикає між ними кожен тік.
-            if cropName ~= spec.combineMemory.currentCrop then
+            local memory = spec.combineMemory or rhm_Combine.getOrInitCombineMemory(self)
+            if memory and cropName ~= memory.currentCrop then
                 if tankCropName then
                     -- EN: Hopper has grain -> instant authoritative switch without debounce delay!
                     -- UA: У бункері є зерно -> миттєве авторитетне перемикання без затримки дребезгу!
@@ -860,6 +928,25 @@ end
 --     updates the active crop and triggers network sync without altering physical settings.
 --     Does NOT set currentCrop directly — switchCrop handles all state transitions.
 ---EN: Checks if the vehicle is currently operated by an AI helper or Courseplay.
+---EN: Resolves the motorized carrier (self or root/attacher tractor) for modular systems like NEXAT.
+---UA: Визначає тяговий засіб (себе або кореневий/причіпний тягач) для модульних систем на кшталт NEXAT.
+function rhm_Combine.getMotorizedCarrier(vehicle)
+    if not vehicle then return nil end
+    if vehicle.spec_motorized and vehicle.spec_motorized.motor then
+        return vehicle
+    end
+    local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+    if root and root.spec_motorized and root.spec_motorized.motor then
+        return root
+    end
+    local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+    if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+        return attacher
+    end
+    return vehicle
+end
+
+---EN: Checks if combine is currently driven by an AI worker or Courseplay.
 ---UA: Перевіряє чи комбайном зараз керує наймит або Courseplay.
 function rhm_Combine.isAiWorkerActive(vehicle)
     if not vehicle then return false end
@@ -871,6 +958,20 @@ function rhm_Combine.isAiWorkerActive(vehicle)
     end
     if vehicle.cp and (vehicle.cp.isDriving or vehicle.cp.isFieldWorkActive) then
         return true
+    end
+
+    -- Check root or attacher carrier for modular/trailed combines (e.g. NEXAT carrier)
+    local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+    if root and root ~= vehicle then
+        if root.getIsAIActive and root:getIsAIActive() then return true end
+        if root.getIsCpActive and root:getIsCpActive() then return true end
+        if root.cp and (root.cp.isDriving or root.cp.isFieldWorkActive) then return true end
+    end
+    local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+    if attacher and attacher ~= vehicle and attacher ~= root then
+        if attacher.getIsAIActive and attacher:getIsAIActive() then return true end
+        if attacher.getIsCpActive and attacher:getIsCpActive() then return true end
+        if attacher.cp and (attacher.cp.isDriving or attacher.cp.isFieldWorkActive) then return true end
     end
     return false
 end
@@ -924,10 +1025,10 @@ function rhm_Combine:onCropTypeChanged(newCropName)
     -- EN: Sync crop change and settings to clients in multiplayer.
     -- UA: Синхронізуємо зміну культури та налаштувань для клієнтів у мультиплеєрі.
     if self.isServer then
-        if spec.settingsDirtyFlag then
+        if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
             self:raiseDirtyFlags(spec.settingsDirtyFlag)
         end
-        if spec.dirtyFlag then
+        if spec.dirtyFlag and type(spec.dirtyFlag) == "number" then
             self:raiseDirtyFlags(spec.dirtyFlag)
         end
     end
@@ -970,6 +1071,26 @@ function rhm_Combine.getIsVehicleReversing(vehicle)
             return true
         elseif revDir > 0 and axis < -0.05 then
             return true
+        end
+    end
+
+    -- 5. Carrier check for modular implements (e.g. NEXCO attached to NEXAT)
+    if not (vehicle.spec_motorized and vehicle.spec_motorized.motor) and not vehicle.spec_drivable then
+        local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle())
+        if root and root ~= vehicle then
+            if root.getIsDrivingBackward and root:getIsDrivingBackward() then return true end
+            if root.getDrivingDirection and root:getDrivingDirection() < 0 then return true end
+            if root.movingDirection and root.movingDirection < 0 then return true end
+            if root.spec_motorized and root.spec_motorized.motor then
+                local motor = root.spec_motorized.motor
+                if motor.currentDirection and motor.currentDirection < 0 then return true end
+            end
+            if root.spec_drivable then
+                local revDir = root.spec_drivable.reverserDirection or 1
+                local axis = root.spec_drivable.axisForward or 0
+                if revDir < 0 and axis > 0.05 then return true
+                elseif revDir > 0 and axis < -0.05 then return true end
+            end
         end
     end
     
@@ -1046,6 +1167,15 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
         local spec_cutter = self.spec_cutter
         if self:getIsTurnedOn()
             and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
+            cutterIsWorking = true
+        end
+    end
+
+    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
+    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
+    if not cutterIsWorking and (spec.machineType == "grape" or spec.machineType == "olive"
+        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
+        if self:getIsTurnedOn() then
             cutterIsWorking = true
         end
     end
@@ -1346,6 +1476,60 @@ function rhm_Combine:updateWarnings(dt)
 end
 
 ---Update audio feedback for engine/thresher load and crop loss (Client Side)
+---EN: Plays the overload alarm sample with consistent cabin and exterior volume.
+---UA: Програє звук зумера перевантаження з однаковою гучністю як у кабіні, так і ззовні.
+function rhm_Combine.playAlarmSample(vehicle, spec, soundVolMultiplier)
+    local alarmSample = spec.samples and spec.samples.overloadAlarm
+    if not alarmSample then return end
+
+    if soundVolMultiplier == nil and g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+    end
+    soundVolMultiplier = tonumber(soundVolMultiplier) or 1.0
+
+    -- EN: If muted (0%), do not trigger playback
+    -- UA: Якщо звук вимкнено (0%), не відтворюємо семпл
+    if soundVolMultiplier <= 0.01 then
+        return
+    end
+
+    -- EN: Consistent buzzer volume scaled by player's setting (0.0 to 1.0)
+    -- UA: Стабільний рівень гучності зумера, масштабований налаштуванням гравця (0.0 до 1.0)
+    local alarmVol = math.min(1.0, math.max(0.0, 0.85 * soundVolMultiplier))
+
+    -- EN: Update sample volume properties directly
+    -- UA: Безпосередньо оновлюємо параметри гучності в таблиці семпла
+    alarmSample.volume = alarmVol
+    if alarmSample.volumeIndoor ~= nil then
+        alarmSample.volumeIndoor = alarmVol
+    end
+    if alarmSample.volumeOutdoor ~= nil then
+        alarmSample.volumeOutdoor = alarmVol
+    end
+
+    if g_soundManager and g_soundManager.setSampleVolume then
+        pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+    end
+    if alarmSample.soundSample and type(setSampleVolume) == "function" then
+        pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+    end
+
+    if g_soundManager and g_soundManager.stopSample then
+        pcall(function() g_soundManager:stopSample(alarmSample) end)
+    end
+
+    pcall(function() g_soundManager:playSample(alarmSample) end)
+
+    -- EN: Enforce channel volume after playSample triggers
+    -- UA: Закріплюємо гучність аудіоканалу відразу після старту playSample
+    if alarmSample.soundSample and type(setSampleVolume) == "function" then
+        pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
+    end
+    if g_soundManager and g_soundManager.setSampleVolume then
+        pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
+    end
+end
+
 function rhm_Combine:updateSounds(dt)
     local spec = self.spec_rhm_Combine
     if not spec or not spec.samples then
@@ -1353,14 +1537,17 @@ function rhm_Combine:updateSounds(dt)
     end
 
     -- Check user settings
-    local alarmEnabled = true
+    local alarmMode = 1 -- 1 = Smart (3 beeps), 2 = Continuous, 3 = Off
     local soundVolMultiplier = 1.0
     if g_realisticHarvestManager and g_realisticHarvestManager.settings then
-        if g_realisticHarvestManager.settings.enableAlarmSound == false then
-            alarmEnabled = false
+        local s = g_realisticHarvestManager.settings
+        if s.alarmMode then
+            alarmMode = s.alarmMode
+        elseif s.enableAlarmSound == false then
+            alarmMode = 3
         end
-        if g_realisticHarvestManager.settings.soundVolume then
-            soundVolMultiplier = g_realisticHarvestManager.settings.soundVolume
+        if s.soundVolume ~= nil then
+            soundVolMultiplier = tonumber(s.soundVolume) or 1.0
         end
     end
 
@@ -1372,48 +1559,82 @@ function rhm_Combine:updateSounds(dt)
                        or (self.rootVehicle.getIsControlled and self.rootVehicle:getIsControlled())
     end
 
-    local isTurnedOn = self:getIsTurnedOn()
+    local isTurnedOn = false
+    if self.getIsTurnedOn then
+        isTurnedOn = self:getIsTurnedOn()
+    end
+    if not isTurnedOn and self.spec_combine and self.spec_combine.isThreshing then
+        isTurnedOn = true
+    end
+    if not isTurnedOn and self.rootVehicle and self.rootVehicle.getIsTurnedOn then
+        isTurnedOn = self.rootVehicle:getIsTurnedOn()
+    end
 
-    -- If alarm disabled, player not in vehicle, or combine turned off: stop active sounds
-    if not alarmEnabled or not isPlayerEntered or not isTurnedOn then
+    -- If alarm disabled, muted (0%), player not in vehicle, or combine turned off: stop active sounds
+    if alarmMode == 3 or soundVolMultiplier <= 0.01 or not isPlayerEntered or not isTurnedOn then
         if spec.samples.overloadAlarm then
             pcall(function() g_soundManager:stopSample(spec.samples.overloadAlarm) end)
         end
         spec._rhmAlarmTimer = 1500
+        spec._rhmAlarmBurstCount = 0
+        spec._rhmAlarmPauseTimer = 0
         return
     end
 
     local load = (spec.data and spec.data.load) or 0
     local loss = (spec.data and spec.data.cropLoss) or 0
 
-    -- Cabin Warning Alarm / Buzzer (Overload >= 98% or Crop Loss >= 4.0%)
-    if alarmEnabled and (load >= 98 or loss >= 4.0) and spec.samples.overloadAlarm then
-        spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
-        if spec._rhmAlarmTimer >= 2200 then
-            spec._rhmAlarmTimer = 0
-            
-            local alarmSample = spec.samples.overloadAlarm
-            local isCameraInside = true
-            if self.getActiveCamera then
-                local cam = self:getActiveCamera()
-                if cam and cam.isInside ~= nil then
-                    isCameraInside = cam.isInside
-                end
-            end
-            local camAlarmBoost = isCameraInside and 1.0 or 1.20
-            local alarmVol = 2.4 * soundVolMultiplier * camAlarmBoost
+    -- Cabin Warning Alarm / Buzzer (Overload >= 105% or Crop Loss >= 5.0% with Tier 2+ loss sensors)
+    local hasLossSensor = (spec.packageLevel or 1) >= 2
+    local isLossAlarm = hasLossSensor and (loss >= 5.0)
+    local isOverloadAlarm = (load >= 105)
+    local isAlarmCondition = (isOverloadAlarm or isLossAlarm)
 
-            if g_soundManager.setSampleVolume then
-                pcall(function() g_soundManager:setSampleVolume(alarmSample, alarmVol) end)
-            end
-            if alarmSample.soundSample and type(setSampleVolume) == "function" then
-                pcall(function() setSampleVolume(alarmSample.soundSample, alarmVol) end)
-            end
-            
-            pcall(function() g_soundManager:playSample(alarmSample) end)
+    if not isAlarmCondition then
+        -- Hysteresis reset: clear pulse tracking once machine operates safely below 100% load & <4.0% loss
+        if load < 100 and loss < 4.0 then
+            spec._rhmAlarmBurstCount = 0
+            spec._rhmAlarmPauseTimer = 0
+            spec._rhmAlarmTimer = 1500
         end
-    else
-        spec._rhmAlarmTimer = 1500
+        return
+    end
+
+    if not spec.samples.overloadAlarm then
+        return
+    end
+
+    spec._rhmAlarmTimer = (spec._rhmAlarmTimer or 0) + dt
+
+    if alarmMode == 1 then
+        -- SMART MODE: 3 beeps burst, then 18-second pause reminder
+        spec._rhmAlarmBurstCount = spec._rhmAlarmBurstCount or 0
+        spec._rhmAlarmPauseTimer = spec._rhmAlarmPauseTimer or 0
+
+        if spec._rhmAlarmPauseTimer > 0 then
+            spec._rhmAlarmPauseTimer = spec._rhmAlarmPauseTimer - dt
+            return
+        end
+
+        -- Interval between beeps in burst: 1800ms
+        if spec._rhmAlarmTimer >= 1800 then
+            spec._rhmAlarmTimer = 0
+            spec._rhmAlarmBurstCount = spec._rhmAlarmBurstCount + 1
+
+            rhm_Combine.playAlarmSample(self, spec, soundVolMultiplier)
+
+            if spec._rhmAlarmBurstCount >= 3 then
+                -- 3 beeps completed -> pause for 18 seconds before a single gentle reminder
+                spec._rhmAlarmPauseTimer = 18000
+                spec._rhmAlarmBurstCount = 2 -- next time, only 1 reminder beep
+            end
+        end
+    elseif alarmMode == 2 then
+        -- CONTINUOUS MODE: beeps every 2.4s as long as condition persists
+        if spec._rhmAlarmTimer >= 2400 then
+            spec._rhmAlarmTimer = 0
+            rhm_Combine.playAlarmSample(self, spec, soundVolMultiplier)
+        end
     end
 end
 
@@ -1452,8 +1673,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- EN: Thresher off or reversing — release motor limit and reset load calculation.
         -- UA: Молотарка вимкнена або рухається назад — відпускаємо ліміт мотора і скидаємо навантаження.
         if spec._rhmLastMotorSpeedLimit ~= nil then
-            if self.spec_motorized and self.spec_motorized.motor then
-                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            local motorObj = rhm_Combine.getMotorizedCarrier(self)
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                motorObj.spec_motorized.motor:setSpeedLimit(math.huge)
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
@@ -1469,7 +1691,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.targetSpeed = spec.loadCalculator:getSpeedLimit() or 0
         end
         spec.isSpeedLimitActive = false
-        self:raiseDirtyFlags(spec.dataDirtyFlag)
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+            self:raiseDirtyFlags(spec.dataDirtyFlag)
+        end
         return
     end
     
@@ -1500,6 +1724,15 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             cutterIsTurnedOn = true
         end
     end
+
+    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
+    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
+    if not cutterIsTurnedOn and (spec.machineType == "grape" or spec.machineType == "olive"
+        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
+        if self:getIsTurnedOn() then
+            cutterIsTurnedOn = true
+        end
+    end
     
     if not cutterIsTurnedOn then
         -- EN: Preserve cruise speed before reset if active so headland turns don't wipe memory
@@ -1520,8 +1753,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
         -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
         if spec._rhmLastMotorSpeedLimit ~= nil then
-            if self.spec_motorized and self.spec_motorized.motor then
-                self.spec_motorized.motor:setSpeedLimit(math.huge)
+            local motorObj = rhm_Combine.getMotorizedCarrier(self)
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                motorObj.spec_motorized.motor:setSpeedLimit(math.huge)
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
@@ -1529,6 +1763,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         if spec.data then
             spec.data.load = 0 
             spec.data.cropLoss = 0
+            spec.data.cutterWearLoss = 0
+            spec.data.combineWearLoss = 0
+            spec.data.totalWearLoss = 0
             spec.data.tonPerHour = 0
             spec.data.litersPerHour = 0
             spec.data.yield = 0
@@ -1540,7 +1777,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         
         -- EN: Sync reset to clients so their HUD clears too.
         -- UA: Синхронізуємо скидання на клієнти щоб їх HUD теж очистився.
-        self:raiseDirtyFlags(spec.dataDirtyFlag)
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+            self:raiseDirtyFlags(spec.dataDirtyFlag)
+        end
         
         return
     end
@@ -1599,7 +1838,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --     This makes crop loss visible as a real reduction in tank fill level.
     -- UA: Застосовуємо фізичні втрати врожаю: видаляємо втрачене зерно з fill unit на сервері.
     --     Це робить втрати врожаю видимими як реальне зменшення рівня наповнення бункера.
-    local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss()
+    local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss(self)
 
     if liters > 0 and self.isServer then
         -- EN: Calculate total crop loss including settings deviation penalty.
@@ -1609,12 +1848,18 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         
         if cropLoss > 0 and g_realisticHarvestManager and g_realisticHarvestManager.settings then
             if g_realisticHarvestManager.settings.enableCropLoss then
-                local lossRatio = cropLoss / 100
+                -- EN: Subtract only speed overload and settings loss physically from the tank.
+                --     Mechanical wear loss is already reduced natively by FS25 GIANTS yield logic.
+                -- UA: Віднімаємо з бункера лише фізичні втрати від перевантаження та налаштувань.
+                --     Втрати від зносу вже нативно зменшені логікою врожайності FS25 GIANTS.
+                local wearLossPct = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+                local physicalLossPct = math.max(0, cropLoss - wearLossPct)
+                local lossRatio = physicalLossPct / 100
                 local lostLiters = liters * lossRatio
                 
                 local fillUnitIndex = spec.lastFillUnitIndex or (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
                 local spec_fillUnit = self.spec_fillUnit
-                if spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
+                if lostLiters > 0.001 and spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
                     self:addFillUnitFillLevel(
                         self:getOwnerFarmId(),
                         fillUnitIndex,
@@ -1664,11 +1909,23 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.moisture = moisture or 0
         spec.data.load = spec.loadCalculator:getEngineLoad()
         spec.data.cropLoss = totalCropLossThisTick
+        spec.data.cutterWearLoss = spec.loadCalculator.cutterWearLoss or 0
+        spec.data.combineWearLoss = spec.loadCalculator.combineWearLoss or 0
+        spec.data.totalWearLoss = spec.loadCalculator.totalWearLoss or 0
+        spec.data.cutterDamage = spec.loadCalculator.lastCutterDamage or 0
+        spec.data.combineDamage = spec.loadCalculator.lastCombineDamage or 0
         spec.data.tonPerHour = spec.loadCalculator:getTonPerHour()
         spec.data.litersPerHour = spec.loadCalculator:getLitersPerHour() -- NEW: Volume flow
         spec.data.hectaresPerHour = spec.loadCalculator:getHectaresPerHour() -- NEW: Area rate (ha/h)
-        spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
-        spec.data.targetSpeed = spec.data.recommendedSpeed
+        local isArcade = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+        if isArcade then
+            spec.data.load = 0
+            spec.data.recommendedSpeed = 0
+            spec.data.targetSpeed = 0
+        else
+            spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
+            spec.data.targetSpeed = spec.data.recommendedSpeed
+        end
         -- NEW: Yield Monitor Data
         spec.data.yield = spec.loadCalculator.currentYield or 0
     end
@@ -1698,6 +1955,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 end
                 if tankFillType and tankFillType ~= FillType.UNKNOWN then
                     local tankCrop = RHM_CombineSettingsDatabase:getCropNameFromFillType(tankFillType)
+                    if spec.combineMemory and spec.combineMemory.machineType == "forage" and (tankCrop == "MAIZE" or tankCrop == "CORN") then
+                        tankCrop = "MAIZE_FORAGE"
+                    end
                     if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
                         rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
                         rhm_Combine.onCropTypeChanged(self, tankCrop)
@@ -1712,7 +1972,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             if currentCrop and currentCrop ~= "" and spec._lastAiTunedCrop ~= currentCrop then
                 spec._lastAiTunedCrop = currentCrop
                 spec.combineMemory:applyAiWorkerTuning(currentCrop)
-                if spec.settingsDirtyFlag then
+                if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
                     self:raiseDirtyFlags(spec.settingsDirtyFlag)
                 end
             end
@@ -1773,48 +2033,53 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --  - AI vehicles
     --  - player-controlled vehicles (so in-cab cruise reacts to load)
     if self.isServer and cutterIsTurnedOn and not isReversing then
+        local motorObj = rhm_Combine.getMotorizedCarrier(self)
         local isAI = rhm_Combine.isAiWorkerActive(self)
-        local isPlayerControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
+        local isPlayerControlled = (type(self.getIsControlled) == "function" and self:getIsControlled())
+        if not isPlayerControlled and motorObj ~= self and type(motorObj.getIsControlled) == "function" then
+            isPlayerControlled = motorObj:getIsControlled()
+        end
 
         if isAI or isPlayerControlled then
-            if self.spec_motorized and self.spec_motorized.motor then
-                local motor = self.spec_motorized.motor
+            if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+                local motor = motorObj.spec_motorized.motor
                 local currentLimit = spec.loadCalculator:getSpeedLimit()
 
                 local settings = g_realisticHarvestManager and g_realisticHarvestManager.settings
                 local speedLimitEnabled = settings and settings.enableSpeedLimit
                 local isArcade = settings and settings.difficultyMotor == 1 -- DIFFICULTY_ARCADE
 
-                local ceiling = spec.loadCalculator.genuineSpeedLimit
                 if (not speedLimitEnabled) or isArcade then
-                    -- If speed limiting is disabled (or Arcade), restore the original ceiling if known.
-                    if ceiling and ceiling > 0 then
-                        currentLimit = ceiling
+                    -- EN: In Arcade mode or when speed limiting is disabled, RHM never limits or touches the motor.
+                    --     Restore unconstrained limit so modded harvesters can run at any speed (e.g. 100 km/h).
+                    -- UA: В режимі Аркада або з вимкненим лімітом RHM взагалі не чіпає мотор.
+                    --     Скидаємо обмеження, щоб комбайни з інших модів могли рухатися з будь-якою швидкістю (напр. 100 км/год).
+                    if spec._rhmLastMotorSpeedLimit ~= nil then
+                        motor:setSpeedLimit(math.huge)
+                        spec._rhmLastMotorSpeedLimit = nil
                     end
                 else
-                    -- Otherwise cap at the original ceiling so we never exceed the game's max working speed.
+                    local ceiling = spec.loadCalculator.genuineSpeedLimit
                     if ceiling and ceiling > 0 then
                         currentLimit = math.min(currentLimit, ceiling)
                     end
-                end
 
-                if currentLimit and currentLimit > 0 then
-                    -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
-                    -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
-                    local prev = spec._rhmLastMotorSpeedLimit
-                    if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
-                        spec._rhmLastMotorSpeedLimit = currentLimit
-                        motor:setSpeedLimit(currentLimit)
+                    if currentLimit and currentLimit > 0 and currentLimit ~= math.huge then
+                        -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
+                        -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
+                        local prev = spec._rhmLastMotorSpeedLimit
+                        if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
+                            spec._rhmLastMotorSpeedLimit = currentLimit
+                            motor:setSpeedLimit(currentLimit)
+                        end
                     end
                 end
             end
         end
     end
     
-    -- EN: OVERLOAD WARNING: Server determines level (0=normal, 1=HIGH 120%+, 2=CRITICAL 150%+).
-    --     Displayed to whoever controls the combine — in SP that's the server; in DS it flows via streams.
-    -- UA: ПОПЕРЕДЖЕННЯ ПЕРЕВАНТАЖЕННЯ: Сервер визначає рівень (0=норма, 1=ВИСОК. 120%+, 2=КРИТИЧ. 150%+).
-    --     Відображається тому хто керує комбайном — у SP це сервер; у DS приходить через потоки.
+    -- EN: OVERLOAD LEVEL: Server calculates level for network sync (0=normal, 1=HIGH 120%+, 2=CRITICAL 150%+).
+    -- UA: РІВЕНЬ ПЕРЕВАНТАЖЕННЯ: Сервер обраховує рівень для мережевої синхронізації.
     if self.isServer and spec.data then
         local load = spec.data.load
         if load >= 150 then
@@ -1825,38 +2090,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.overloadLevel = 0
         end
     end
-    
-    -- WARNING DISPLAY: показуємо завжди в того хто керує комбайном
-    -- в SP: isServer=true і getIsControlled()=true — працює
-    -- в DS client: isServer=false і overloadLevel приходить через stream — працює
-    -- FIX: деякі DLC/мод-транспорти (напр. NH 8040) можуть не мати getIsControlled
-    local isControlled = type(self.getIsControlled) == "function" and self:getIsControlled()
-    if spec.data and isControlled then
-        local level = spec.data.overloadLevel or 0
-        local now = g_currentMission.time
-        spec._lastOverloadWarn = spec._lastOverloadWarn or 0
-        
-        local warnInterval = nil
-        local warnText = nil
-        
-        if level == 2 then
-            warnInterval = 5000
-            warnText = g_i18n:getText("rhm_warn_overload_critical")
-        elseif level == 1 then
-            warnInterval = 8000
-            warnText = g_i18n:getText("rhm_warn_overload_high")
-        else
-            spec._lastOverloadWarn = 0
-        end
-        
-        if warnText and (now - spec._lastOverloadWarn) >= warnInterval then
-            spec._lastOverloadWarn = now
-            if g_realisticHarvestManager.settings.showLoadWarnings then
-                g_currentMission:showBlinkingWarning(warnText, 3000)
-            end
-        end
-    end
-    -- === END OVERLOAD WARNING ===
     
     -- EN: MULTIPLAYER: Throttled dirty flag raising — only sync when data has changed significantly
     --     or at least once per second. Sensitivity thresholds reduce network traffic.
@@ -1898,7 +2131,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 spec.lastSyncedData.overloadLevel = data.overloadLevel
                 spec.lastSyncedData.moisture = data.moisture
                 
-                self:raiseDirtyFlags(spec.dataDirtyFlag)
+                if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" then
+                    self:raiseDirtyFlags(spec.dataDirtyFlag)
+                end
             end
         end
     end

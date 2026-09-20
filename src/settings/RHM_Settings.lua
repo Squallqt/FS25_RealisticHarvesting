@@ -35,6 +35,12 @@ RHMSettings.UNIT_METRIC = 1     -- EN: km/h, t/h, ha / UA: км/год, т/го�
 RHMSettings.UNIT_IMPERIAL = 2   -- EN: mph, ton/h, acres / UA: миль/год, тон/год, акри
 RHMSettings.UNIT_BUSHELS = 3    -- EN: mph, bu/h, acres / UA: миль/год, бушелі/год, акри
 
+-- EN: Alarm buzzer mode constants.
+-- UA: Константи режиму кабінного зумера перевантаження.
+RHMSettings.ALARM_MODE_SMART = 1       -- EN: Smart 3-beep alert + pause / UA: Розумний сигнал (3 імпульси + пауза)
+RHMSettings.ALARM_MODE_CONTINUOUS = 2  -- EN: Continuous beeping under overload / UA: Безперервний сигнал при перевантаженні
+RHMSettings.ALARM_MODE_OFF = 3         -- EN: Disabled / UA: Вимкнено
+
 -- EN: Creates and initializes a new RHMSettings instance with default values.
 -- UA: Створює та ініціалізує новий екземпляр RHMSettings зі значеннями за замовчуванням.
 function RHMSettings.new(manager)
@@ -51,13 +57,15 @@ function RHMSettings.new(manager)
     -- UA: Прапорці перемикання функцій (серверні, глобальні для всіх гравців).
     self.enableSpeedLimit = true
     self.enableCropLoss = true
+    self.enableWearLoss = true
     self.enableMoisture = true
     self.showHUD = true
     self.showYield = true
     self.showSpeedometer = true
     self.enableIndependentLaunch = true -- EN: Separate header start enabled by default / UA: Окремий запуск жатки увімкнено за замовчуванням
+    self.alarmMode = RHMSettings.ALARM_MODE_SMART -- EN: Alarm mode (1=Smart, 2=Continuous, 3=Off) / UA: Режим зумера
     self.enableAlarmSound = true        -- EN: Cabin overload buzzer alarm / UA: Кабінний зумер перевантаження
-    self.soundVolume = 1.0              -- EN: Sound volume scale (0.5 to 1.5) / UA: Рівень гучності звуків (0.5 до 1.5)
+    self.soundVolume = 1.0              -- EN: Sound volume scale (0.0 to 1.0, 0% to 100%) / UA: Рівень гучності звуків (0.0 до 1.0, 0% до 100%)
     self.enableTutorials = true         -- EN: First-time onboarding tutorial hints / UA: Навчальні підказки для новачків
 
     -- EN: HUD visibility toggles (client-side, per-player).
@@ -105,7 +113,7 @@ end
 --     Застосовується до розрахованого відсотка втрат в RHM_LoadCalculator.
 function RHMSettings:getLossMultiplier()
     if self.difficultyLoss == RHMSettings.DIFFICULTY_ARCADE then
-        return 0.5 -- EN: Reduced losses for casual play / UA: Зменшені втрати для казуальної гри
+        return 0.0 -- EN: Zero losses in Arcade mode / UA: Нульові втрати в режимі Аркада
     elseif self.difficultyLoss == RHMSettings.DIFFICULTY_REALISTIC then
         return 2.0 -- EN: Doubled losses for realism / UA: Подвоєні втрати для реалізму
     else
@@ -218,6 +226,7 @@ function RHMSettings:resetToDefaults()
     self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
     self.enableSpeedLimit = true
     self.enableCropLoss = true
+    self.enableWearLoss = true
     self.enableMoisture = true
     self.showHUD = true
     self.showYield = true
@@ -230,6 +239,9 @@ function RHMSettings:resetToDefaults()
     self.showLoadWarnings = true
     self.enableIndependentLaunch = true
     self.enableTutorials = true
+    self.alarmMode = RHMSettings.ALARM_MODE_SMART
+    self.enableAlarmSound = true
+    self.soundVolume = 1.0
     self.hudOffsetX = 0
     self.hudOffsetY = 350
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD
@@ -238,6 +250,21 @@ function RHMSettings:resetToDefaults()
     self:saveAndSync()
 
     rhm_log("RHM [RHMSettings]: RHM: RHMSettings reset to defaults")
+end
+
+---EN: Gets whether wear-based crop loss is enabled
+---UA: Повертає чи увімкнено втрати від зносу техніки
+function RHMSettings:getEnableWearLoss()
+    return self.enableWearLoss ~= false
+end
+
+---EN: Sets whether wear-based crop loss is enabled
+---UA: Встановлює чи увімкнено втрати від зносу техніки
+function RHMSettings:setEnableWearLoss(enabled)
+    self.enableWearLoss = enabled
+    if self.save then
+        self:save()
+    end
 end
 
 ---EN: Gets whether tutorial hints are enabled

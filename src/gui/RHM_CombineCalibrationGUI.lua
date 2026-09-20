@@ -46,64 +46,67 @@ function RHMCombineCalibrationGUI.new(modDirectory)
     self.isOpen = false
     self.isCursorActive = false
 
-    -- In-cab terminal layout
+    -- In-cab tablet layout (Tactile Field Terminal)
     self.ui = {
         x = 0.60, y = 0.35,
-        w = 0.38, h = 0.55,
-        margin       = 0.010,
+        w = 0.392, h = 0.55,
+        margin       = 0.009,
         headerHeight = 0.038,
         statsHeight  = 0.032,
         lineHeight   = 0.036,
         sectionGap   = 0.020,
         fontSize     = 0.0125,
-        titleSize    = 0.0150,
+        titleSize    = 0.0145,
         sectionSize  = 0.0115,
         statusSize   = 0.0095,
         buttonW      = 0.017,
         buttonH      = 0.017,
+        bezelSide    = 0.0025,
+        bezelBottom  = 0.0038,
+        bezelTop     = 0.0038,
 
-        -- Deep obsidian carbon glass palette (neutral dark, subtle translucency)
+        -- Authentic frosted glass palette (unified with RHM Draggable HUD, game HUD, and Notifications)
         colors = {
-            outerRim       = {0.20, 0.22, 0.25, 0.35}, -- 1px metallic rim
-            bezel          = {0.06, 0.07, 0.08, 0.85}, -- Titanium outer frame (translucent)
-            bg             = {0.018, 0.020, 0.024, 0.82}, -- Deep obsidian dark glass (translucent field view)
-            header         = {0.040, 0.045, 0.052, 0.88}, -- Dark status bar
-            headerAccent   = {0.18, 0.78, 0.42, 0.85}, -- Emerald harvest accent line
-            sectionBg      = {0.030, 0.035, 0.042, 0.80}, -- Carbon strip for section headers
-            sectionNotch   = {0.18, 0.78, 0.42, 0.95}, -- Emerald accent mark on section headers
-            statsCardBg    = {0.015, 0.018, 0.022, 0.75}, -- Recessed telemetry card background
-            statsCardBorder= {1.00, 1.00, 1.00, 0.08},
-            separator      = {1.00, 1.00, 1.00, 0.06},
+            outerBorder    = {1.00, 1.00, 1.00, 0.10}, -- 1px subtle glass edge
+            bg             = {0.012, 0.015, 0.020, 0.68}, -- Smoked semi-transparent glass base
+            header         = {0.0, 0.0, 0.0, 0.0}, -- Seamless with body glass
+            headerAccent   = {0.529, 0.706, 0.0, 1.0}, -- Authentic game HUD green accent line
+            sectionBg      = {0.0, 0.0, 0.0, 0.0}, -- Transparent, seamless with body glass
+            sectionNotch   = {0.529, 0.706, 0.0, 1.0}, -- Authentic game HUD green notch
+            statsCardBg    = {0.005, 0.008, 0.012, 0.45}, -- Recessed frosted telemetry card background
+            statsCardBorder= {1.00, 1.00, 1.00, 0.12},
+            separator      = {1.00, 1.00, 1.00, 0.10},
             paramRowHover  = {1.00, 1.00, 1.00, 0.025},
 
             -- Tactile Slider Colors
-            trackGroove    = {0.012, 0.015, 0.018, 0.85}, -- Deep recessed groove
-            trackBorder    = {0.060, 0.065, 0.075, 0.80},
+            trackGroove    = {0.0, 0.0, 0.0, 0.50}, -- Deep recessed groove
+            trackBorder    = {1.00, 1.00, 1.00, 0.10},
             trackTick      = {1.00, 1.00, 1.00, 0.12},
-            trackOptimal   = {0.12, 0.65, 0.35, 0.45}, -- Glowing green sweet spot band
-            trackOptimalBorder = {0.20, 0.85, 0.50, 0.70},
-            trackCenterNotch   = {0.30, 1.00, 0.60, 0.95},
+            trackOptimal   = {0.529, 0.706, 0.0, 0.45}, -- Game HUD green sweet spot band
+            trackOptimalBorder = {0.529, 0.706, 0.0, 0.70},
+            trackCenterNotch   = {0.529, 0.706, 0.0, 0.95},
             trackThumb     = {0.94, 0.95, 0.97, 1.00}, -- Brushed metallic silver
             trackThumbHover= {1.00, 1.00, 1.00, 1.00},
-            trackFill      = {0.18, 0.80, 0.45, 0.85}, -- Emerald fill
-            trackFillWarn  = {0.95, 0.72, 0.18, 0.85}, -- Warm amber fill
-            trackFillErr   = {0.90, 0.24, 0.24, 0.85}, -- Alert ruby red fill
+            trackFill      = {0.529, 0.706, 0.0, 0.88}, -- Game HUD green fill
+            trackFillWarn  = {0.95, 0.72, 0.18, 0.88}, -- Warm amber fill
+            trackFillErr   = {0.90, 0.24, 0.24, 0.88}, -- Alert ruby red fill
 
             text           = {0.94, 0.95, 0.97, 1.00},
-            textDim        = {0.60, 0.63, 0.68, 1.00},
-            success        = {0.20, 0.85, 0.48, 1.00}, -- Crisp emerald green
+            textDim        = {0.70, 0.73, 0.78, 1.00},
+            success        = {0.529, 0.706, 0.0, 1.00}, -- Authentic game HUD green
             warning        = {0.95, 0.72, 0.18, 1.00}, -- Warm amber
             error          = {0.90, 0.24, 0.24, 1.00}, -- Alert red
 
-            button         = {0.055, 0.060, 0.070, 0.85},
-            buttonBorder   = {1.00, 1.00, 1.00, 0.08},
-            buttonHover    = {0.12, 0.14, 0.16, 0.95},
-            buttonAuto     = {0.08, 0.42, 0.24, 0.90}, -- Rich emerald pill
-            buttonAutoBorder={0.20, 0.85, 0.50, 0.85},
-            buttonAutoHover= {0.12, 0.55, 0.32, 1.00},
-            buttonReset    = {0.14, 0.07, 0.07, 0.85},
-            buttonResetBorder={0.35, 0.10, 0.10, 0.50},
-            buttonResetHover={0.38, 0.10, 0.10, 1.00},
+            button         = {0.04, 0.04, 0.05, 0.65}, -- Dark graphite monochrome
+            buttonBorder   = {1.00, 1.00, 1.00, 0.12},
+            buttonHover    = {0.12, 0.14, 0.16, 0.85},
+            buttonHoverBorder = {0.529, 0.706, 0.0, 0.70}, -- Game green outline hover
+            buttonAuto     = {0.20, 0.28, 0.04, 0.85}, -- Deep olive green pill
+            buttonAutoBorder={0.529, 0.706, 0.0, 0.88},
+            buttonAutoHover= {0.30, 0.42, 0.06, 0.95},
+            buttonReset    = {0.04, 0.04, 0.05, 0.65}, -- Restrained dark graphite
+            buttonResetBorder={0.85, 0.28, 0.28, 0.45}, -- Subtle terracotta red border
+            buttonResetHover={0.35, 0.10, 0.10, 0.75}, -- Warm amber-red on hover
         }
     }
 
@@ -136,6 +139,25 @@ function RHMCombineCalibrationGUI.new(modDirectory)
         self.overlay:setUVs({0.758, 0.062, 0.758, 0.937, 0.867, 0.062, 0.867, 0.937})
     end
 
+    local panelTexturePath = Utils.getFilename("textures/panelRounded.dds", self.modDirectory)
+    self.roundedOverlay = Overlay.new(panelTexturePath, 0, 0, 1, 1)
+
+    local pxUVs = {
+        topLeft     = {  0,  0,  5,  5 },
+        top         = {  5,  0, 54,  5 },
+        topRight    = { 59,  0,  5,  5 },
+        left        = {  0,  5,  5, 54 },
+        center      = {  5,  5, 54, 54 },
+        right       = { 59,  5,  5, 54 },
+        bottomLeft  = {  0, 59,  5,  5 },
+        bottom      = {  5, 59, 54,  5 },
+        bottomRight = { 59, 59,  5,  5 }
+    }
+    self.roundedUVs = {}
+    for key, coords in pairs(pxUVs) do
+        self.roundedUVs[key] = GuiUtils.getUVs(coords, {64, 64})
+    end
+
     return self
 end
 
@@ -144,6 +166,11 @@ function RHMCombineCalibrationGUI:delete()
         self.overlay:delete()
         self.overlay = nil
     end
+    if self.roundedOverlay then
+        self.roundedOverlay:delete()
+        self.roundedOverlay = nil
+    end
+    self.roundedUVs = nil
 end
 
 function RHMCombineCalibrationGUI:toggle(vehicle)
@@ -266,6 +293,8 @@ function RHMCombineCalibrationGUI:open(vehicle)
                            or (mType == "root" and "POTATO")
                            or (mType == "forage" and "MAIZE_FORAGE")
                            or (mType == "cotton" and "COTTON")
+                           or (mType == "grape" and "GRAPE")
+                           or (mType == "olive" and "OLIVE")
             if preferred then
                 for _, c in ipairs(mapCrops) do
                     if c == preferred then
@@ -365,6 +394,39 @@ end
 function RHMCombineCalibrationGUI:update(dt)
     if not self.isOpen then return end
 
+    -- Keep mouse cursor explicitly visible while calibration GUI is open
+    if g_inputBinding and g_inputBinding.setShowMouseCursor then
+        g_inputBinding:setShowMouseCursor(true)
+    end
+
+    -- Keep camera rotation and translation blocked while GUI is open
+    local vehicle = self.controllerVehicle or (g_realisticHarvestManager and g_realisticHarvestManager:getControlledVehicle()) or self.activeVehicle
+    local camTarget = (vehicle and vehicle.spec_enterable and vehicle)
+                   or (self.activeVehicle and self.activeVehicle.spec_enterable and self.activeVehicle)
+    if camTarget and camTarget.spec_enterable and camTarget.spec_enterable.cameras then
+        for _, camera in pairs(camTarget.spec_enterable.cameras) do
+            camera.isRotatable = false
+            camera.allowTranslation = false
+        end
+    end
+
+    -- Suppress IC active controller while calibration GUI is open
+    if g_currentMission and g_currentMission.interactiveControl then
+        if g_currentMission.interactiveControl.activeController ~= nil then
+            if type(g_currentMission.interactiveControl.setActiveInteractiveController) == "function" then
+                g_currentMission.interactiveControl:setActiveInteractiveController(nil)
+            end
+        end
+    end
+
+    -- Keep VMC cursor overlay suppressed while calibration GUI is open
+    if VehicleMouseCursor ~= nil and VehicleMouseCursor._cursorGui ~= nil then
+        if VehicleMouseCursor._cursorGui.isOpen then
+            VehicleMouseCursor._cursorGui.isOpen = false
+        end
+        VehicleMouseCursor._cursorOwned = false
+    end
+
     if not self.activeVehicle then
         self:close()
         return
@@ -450,6 +512,18 @@ function RHMCombineCalibrationGUI:draw()
         local packageLevel = spec.packageLevel or 1
         local actualStatsHeight = (packageLevel >= 3) and (ui.statsHeight + ui.margin * 0.4) or 0
 
+        local screenW = g_screenWidth or 1920
+        local screenH = g_screenHeight or 1080
+        local pixelW = 1.0 / screenW
+        local pixelH = 1.0 / screenH
+
+        local bezelSide = math.max(4 * pixelW, 0.0025)
+        local bezelBottom = math.max(4 * pixelH, 0.0038)
+        local bezelTop = math.max(4 * pixelH, 0.0038)
+        ui.bezelSide = bezelSide
+        ui.bezelBottom = bezelBottom
+        ui.bezelTop = bezelTop
+
         local dynamicH = ui.headerHeight
                        + actualStatsHeight
                        + ui.lineHeight + 0.004 -- crop row
@@ -458,78 +532,301 @@ function RHMCombineCalibrationGUI:draw()
                        + (ui.lineHeight * 2.1) -- action buttons
                        + ui.margin * 3.0
 
-        ui.h = dynamicH
+        ui.h = dynamicH + bezelBottom + bezelTop
         if not self.hasCustomPosition then
             -- EN: Cleanly offset below the base game top-right clock/money bar (bar bottom ≈ 0.920).
             --     Leaves ~40px breathing margin from the top HUD and ~70px above the speedometer.
             -- UA: Чистий відступ нижче верхньої смуги годинника/грошей базової гри (низ смуги ≈ 0.920).
             --     Залишає ~40px відступу від верхнього HUD та ~70px над спідометром.
             local topY = 0.880
-            ui.y = topY - dynamicH
+            ui.y = topY - ui.h
             ui.x = 1.0 - ui.w - 0.016
         end
     else
-        ui.h = 0.50
+        local screenW = g_screenWidth or 1920
+        local screenH = g_screenHeight or 1080
+        local pixelW = 1.0 / screenW
+        local pixelH = 1.0 / screenH
+        local bezelSide = math.max(4 * pixelW, 0.0025)
+        local bezelBottom = math.max(4 * pixelH, 0.0038)
+        local bezelTop = math.max(4 * pixelH, 0.0038)
+        ui.bezelSide = bezelSide
+        ui.bezelBottom = bezelBottom
+        ui.bezelTop = bezelTop
+
+        ui.h = 0.50 + bezelBottom + bezelTop
         if not self.hasCustomPosition then
             ui.y = 0.38
             ui.x = 1.0 - ui.w - 0.016
         end
     end
 
-    local x, y = ui.x, ui.y
-    local w, h = ui.w, ui.h
+    local tabletX, tabletY = ui.x, ui.y
+    local tabletW, tabletH = ui.w, ui.h
 
-    -- ── Outer Metallic Rim & Obsidian Glass Panel ───────────────────────────
-    local rimW = 0.0012
-    self:drawRect(x - rimW * 2, y - rimW * 2, w + rimW * 4, h + rimW * 4, ui.colors.outerRim)
-    self:drawRect(x - rimW, y - rimW, w + rimW * 2, h + rimW * 2, ui.colors.bezel)
-    self:drawRect(x, y, w, h, ui.colors.bg)
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local pixelW = 1.0 / screenW
+    local pixelH = 1.0 / screenH
 
-    -- ── Terminal Status Header ──────────────────────────────────────────────
+    -- Inner Display Bounds (The glass screen inside the sleek bezel)
+    local x = tabletX + (ui.bezelSide or 0.0025)
+    local y = tabletY + (ui.bezelBottom or 0.0038)
+    local w = tabletW - ((ui.bezelSide or 0.0025) * 2)
+    local h = tabletH - (ui.bezelBottom or 0.0038) - (ui.bezelTop or 0.0038)
+
+    -- ── 1. Outer Tablet Chassis (Sleek Minimalist Bezel - Clean, No Camera/LED) ──
+    local caseBg = {0.045, 0.048, 0.054, 0.98} -- Premium dark matte chassis
+    self:drawPanelBackground(tabletX, tabletY, tabletW, tabletH, caseBg)
+    self:drawBorder(tabletX, tabletY, tabletW, tabletH, {0.16, 0.18, 0.22, 0.60}, 1)
+
+    -- ── 2. Inner Recessed Touchscreen Display Glass (Smoked Acrylic & Edge Refraction) ──
+    self:drawPanelBackground(x, y, w, h, ui.colors.bg)
+
+    -- Glass Refraction Edge Highlights & Sub-surface Chamfer
+    self:drawRect(x + pixelW, y + h - pixelH, w - 2 * pixelW, pixelH, {1.0, 1.0, 1.0, 0.22}) -- Top specular rim
+    self:drawRect(x, y + pixelH, pixelW, h - 2 * pixelH, {1.0, 1.0, 1.0, 0.12})              -- Left ambient rim
+    self:drawRect(x + w - pixelW, y, pixelW, h, {0.0, 0.0, 0.0, 0.50})                       -- Right inner bezel shadow
+    self:drawRect(x, y, w, pixelH, {0.0, 0.0, 0.0, 0.65})                                    -- Bottom inner bezel shadow
+    self:drawBorder(x + 1.5 * pixelW, y + 1.5 * pixelH, w - 3 * pixelW, h - 3 * pixelH, {1.0, 1.0, 1.0, 0.04}, 1) -- Sub-surface glass thickness
+
+    -- ── Terminal Status Header (Inside Display) ──────────────────────────────
     local headerY = y + h - ui.headerHeight
     self:drawRect(x, headerY, w, ui.headerHeight, ui.colors.header)
-    self:drawRect(x, headerY, w, 0.0015, ui.colors.headerAccent)
+    self:drawRect(x, headerY, w, 1.5 * pixelH, ui.colors.headerAccent)
 
-    -- Tier Badge & Combine Model
+    -- Tier Badge
     local packageLevel = (spec and spec.packageLevel) or 1
     local tierConfigs = {
-        [1] = { label = g_i18n:hasText("rhm_ui_tier1_manual") and g_i18n:getText("rhm_ui_tier1_manual") or "TIER 1 - MANUAL",  bg = {0.10, 0.11, 0.13, 0.90}, text = {0.68, 0.70, 0.74, 1.0} },
-        [2] = { label = g_i18n:hasText("rhm_ui_tier2_sensors") and g_i18n:getText("rhm_ui_tier2_sensors") or "TIER 2 - SENSORS", bg = {0.18, 0.12, 0.04, 0.90}, text = {0.95, 0.72, 0.18, 1.0} },
-        [3] = { label = g_i18n:hasText("rhm_ui_tier3_monitor") and g_i18n:getText("rhm_ui_tier3_monitor") or "TIER 3 - MONITOR", bg = {0.04, 0.16, 0.08, 0.90}, text = {0.20, 0.85, 0.45, 1.0} },
-        [4] = { label = g_i18n:hasText("rhm_ui_tier4_opti") and g_i18n:getText("rhm_ui_tier4_opti") or "TIER 4 - AI OPTI", bg = {0.04, 0.18, 0.22, 0.90}, text = {0.18, 0.82, 0.92, 1.0} }
+        [1] = { label = g_i18n:hasText("rhm_ui_tier1_manual") and g_i18n:getText("rhm_ui_tier1_manual") or "TIER 1 - MANUAL",  bg = {0.08, 0.09, 0.10, 0.85}, border = {1.0, 1.0, 1.0, 0.12}, text = {0.70, 0.72, 0.76, 1.0} },
+        [2] = { label = g_i18n:hasText("rhm_ui_tier2_sensors") and g_i18n:getText("rhm_ui_tier2_sensors") or "TIER 2 - SENSORS", bg = {0.12, 0.10, 0.04, 0.85}, border = {0.95, 0.72, 0.18, 0.60}, text = {0.95, 0.72, 0.18, 1.0} },
+        [3] = { label = g_i18n:hasText("rhm_ui_tier3_monitor") and g_i18n:getText("rhm_ui_tier3_monitor") or "TIER 3 - MONITOR", bg = {0.08, 0.12, 0.04, 0.85}, border = {0.529, 0.706, 0.0, 0.60}, text = {0.529, 0.706, 0.0, 1.0} },
+        [4] = { label = g_i18n:hasText("rhm_ui_tier4_opti") and g_i18n:getText("rhm_ui_tier4_opti") or "TIER 4 - AI OPTI", bg = {0.05, 0.06, 0.07, 0.90}, border = {0.529, 0.706, 0.0, 0.80}, text = {1.0, 1.0, 1.0, 1.0} }
     }
     local tier = tierConfigs[math.min(4, math.max(1, packageLevel))] or tierConfigs[1]
 
-    local badgeW = 0.065
-    local badgeH = 0.017
+    local badgeW = 0.058
+    local badgeH = 0.018
     local badgeX = x + ui.margin
     local badgeY = headerY + (ui.headerHeight - badgeH) * 0.5
     self:drawRect(badgeX, badgeY, badgeW, badgeH, tier.bg)
-    self:drawRect(badgeX, badgeY, badgeW, 0.0006, tier.text)
+    self:drawBorder(badgeX, badgeY, badgeW, badgeH, tier.border or tier.text, 1)
     setTextAlignment(RenderText.ALIGN_CENTER)
     setTextBold(true)
     setTextColor(unpack(tier.text))
     renderText(badgeX + badgeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, tier.label)
 
-    -- Combine Brand & Model
-    local vName = self.activeVehicle and self.activeVehicle:getName() or "COMBINE"
-    setTextAlignment(RenderText.ALIGN_LEFT)
-    setTextColor(unpack(ui.colors.text))
-    local titleX = badgeX + badgeW + 0.008
-    renderText(titleX, headerY + ui.headerHeight * 0.32, ui.titleSize, string.upper(vName))
+    local isArcade = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+    local nextHeaderBadgeX = badgeX + badgeW
+    if isArcade then
+        local arcadeW = 0.046
+        local arcadeX = badgeX + badgeW + 0.004
+        self:drawRect(arcadeX, badgeY, arcadeW, badgeH, {0.05, 0.12, 0.04, 0.85})
+        self:drawBorder(arcadeX, badgeY, arcadeW, badgeH, {0.529, 0.706, 0.0, 0.80}, 1)
+        local arcadeLabel = g_i18n:hasText("rhm_ui_arcade_badge") and g_i18n:getText("rhm_ui_arcade_badge") or "ARCADE"
+        setTextAlignment(RenderText.ALIGN_CENTER)
+        setTextBold(true)
+        setTextColor(0.529, 0.706, 0.0, 1.0)
+        renderText(arcadeX + arcadeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, arcadeLabel)
+        nextHeaderBadgeX = arcadeX + arcadeW
+    end
 
-    -- Circular Close [✕] Button
+    -- Close Button [X] (Top Right)
     local closeBtnW = 0.018
-    local closeBtnH = ui.headerHeight * 0.60
+    local closeBtnH = 0.018
     local closeBtnX = x + w - ui.margin - closeBtnW
     local closeBtnY = headerY + (ui.headerHeight - closeBtnH) * 0.5
     self:drawButton(closeBtnX, closeBtnY, closeBtnW, closeBtnH, "X", function()
         self:close()
-    end, {0.22, 0.08, 0.08, 0.85})
+    end)
+
+    -- Cutter Working Width Telemetry
+    local v = self.activeVehicle
+    local cutterWidth = 0
+
+    local function resolveCutterWidth(obj)
+        if not obj then return 0 end
+        local w = 0
+        if obj.getWorkingWidth then
+            local raw = obj:getWorkingWidth()
+            if raw and tonumber(raw) and tonumber(raw) > 0 then
+                w = tonumber(raw)
+            end
+        end
+        if w == 0 and obj.spec_cutter and obj.spec_cutter.workingWidth then
+            local raw = obj.spec_cutter.workingWidth
+            if raw and tonumber(raw) and tonumber(raw) > 0 then
+                w = tonumber(raw)
+            end
+        end
+        if w == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+            local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+            if item and item.specs and item.specs.workingWidth then
+                local rawW = tostring(item.specs.workingWidth)
+                local parsed = tonumber(string.match(rawW, "%d+%.?%d*"))
+                if parsed and parsed > 0 then
+                    w = parsed
+                end
+            end
+        end
+        if w == 0 and obj.xmlFile and obj.xmlFile.getValue then
+            local rawW = obj.xmlFile:getValue("vehicle.storeData.specs.workingWidth")
+            if rawW then
+                local parsed = tonumber(string.match(tostring(rawW), "%d+%.?%d*"))
+                if parsed and parsed > 0 then
+                    w = parsed
+                end
+            end
+        end
+        if w == 0 and obj.spec_workArea and obj.spec_workArea.workAreas then
+            for _, wa in pairs(obj.spec_workArea.workAreas) do
+                if wa.start and wa.width then
+                    local sx, _, sz = getWorldTranslation(wa.start)
+                    local wx, _, wz = getWorldTranslation(wa.width)
+                    local areaWidth = MathUtil.vector2Length(wx - sx, wz - sz)
+                    if areaWidth > w then w = areaWidth end
+                end
+            end
+        end
+        return w
+    end
+
+    if spec and spec.loadCalculator and spec.loadCalculator.lastHeaderWidth and spec.loadCalculator.lastHeaderWidth > 0 then
+        cutterWidth = spec.loadCalculator.lastHeaderWidth
+    end
+
+    if cutterWidth == 0 and v and v.spec_combine and v.spec_combine.attachedCutters then
+        for cutter, _ in pairs(v.spec_combine.attachedCutters) do
+            local cw = resolveCutterWidth(cutter)
+            if cw > cutterWidth then cutterWidth = cw end
+        end
+    end
+
+    if cutterWidth == 0 and v and v.getAttachedImplements then
+        for _, imp in pairs(v:getAttachedImplements()) do
+            local obj = imp.object
+            if obj then
+                local cw = resolveCutterWidth(obj)
+                if cw > cutterWidth then cutterWidth = cw end
+                if obj.getAttachedImplements then
+                    for _, subImp in pairs(obj:getAttachedImplements()) do
+                        local subObj = subImp.object
+                        if subObj then
+                            local subCw = resolveCutterWidth(subObj)
+                            if subCw > cutterWidth then cutterWidth = subCw end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if cutterWidth == 0 and v and (v.spec_cutter ~= nil or v.spec_forageCutter ~= nil) then
+        cutterWidth = resolveCutterWidth(v)
+    end
+
+    local widthStr = (cutterWidth and cutterWidth > 0) and string.format("%.1f m", cutterWidth) or "—"
+
+    -- Engine Horsepower Telemetry
+    local engineHp = nil
+    if v and v._rhm_engineHp and v._rhm_engineHp > 0 then
+        engineHp = v._rhm_engineHp
+    elseif spec and spec.loadCalculator and spec.loadCalculator.getEnginePowerHp then
+        engineHp = spec.loadCalculator:getEnginePowerHp(v)
+    end
+    if not engineHp and v then
+        local motorObj = v
+        if not (v.spec_motorized and v.spec_motorized.motor) then
+            local root = v.rootVehicle or (v.getRootVehicle and v:getRootVehicle())
+            if root and root.spec_motorized and root.spec_motorized.motor then
+                motorObj = root
+            else
+                local attacher = v.attacherVehicle or (v.getAttacherVehicle and v:getAttacherVehicle())
+                if attacher and attacher.spec_motorized and attacher.spec_motorized.motor then
+                    motorObj = attacher
+                end
+            end
+        end
+        if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+            local motor = motorObj.spec_motorized.motor
+            if motor.maxMotorPower and tonumber(motor.maxMotorPower) and tonumber(motor.maxMotorPower) > 0 then
+                engineHp = tonumber(motor.maxMotorPower) * 1.35962
+            elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
+                engineHp = tonumber(motor.peakMotorPower) * 1.35962
+            elseif motor.getHp then
+                engineHp = motor:getHp()
+            end
+        end
+    end
+    local hpStr = engineHp and string.format("%.0f HP", engineHp) or "—"
+
+    -- Telemetry Badges (Cutter Width & Horsepower)
+    local infoCapsuleH = 0.018
+    local infoCapsuleY = headerY + (ui.headerHeight - infoCapsuleH) * 0.5
+
+    -- 1. Cutter Width Capsule
+    local cwBoxW = 0.046
+    local cwBoxX = closeBtnX - 0.005 - cwBoxW
+    self:drawRect(cwBoxX, infoCapsuleY, cwBoxW, infoCapsuleH, {0.02, 0.025, 0.03, 0.85})
+    self:drawBorder(cwBoxX, infoCapsuleY, cwBoxW, infoCapsuleH, {0.529, 0.706, 0.0, 0.50}, 1)
+    setTextAlignment(RenderText.ALIGN_CENTER)
+    setTextBold(true)
+    setTextColor(0.529, 0.706, 0.0, 1.0)
+    renderText(cwBoxX + cwBoxW * 0.5, infoCapsuleY + 0.004, ui.fontSize * 0.82, widthStr)
+
+    -- 2. Engine HP Capsule
+    local hpBoxW = 0.048
+    local hpBoxX = cwBoxX - 0.004 - hpBoxW
+    self:drawRect(hpBoxX, infoCapsuleY, hpBoxW, infoCapsuleH, {0.02, 0.025, 0.03, 0.85})
+    self:drawBorder(hpBoxX, infoCapsuleY, hpBoxW, infoCapsuleH, {0.95, 0.72, 0.18, 0.50}, 1)
+    setTextAlignment(RenderText.ALIGN_CENTER)
+    setTextBold(true)
+    setTextColor(0.95, 0.72, 0.18, 1.0)
+    renderText(hpBoxX + hpBoxW * 0.5, infoCapsuleY + 0.004, ui.fontSize * 0.82, hpStr)
+
+    -- Full Machine Name: Brand + Model (Positioned between Tier badge and HP capsule)
+    local fullVehicleName = nil
+    if v and v.getFullName then
+        fullVehicleName = v:getFullName()
+    end
+    if not fullVehicleName or fullVehicleName == "" then
+        local brandName = ""
+        local brandIndex = (v and v.getBrand and v:getBrand()) or (v and v.brand)
+        if brandIndex and g_brandManager and g_brandManager.getBrandByIndex then
+            local b = g_brandManager:getBrandByIndex(brandIndex)
+            if b and b.title then brandName = b.title end
+        elseif v and v.getBrandName then
+            brandName = v:getBrandName() or ""
+        end
+        local rawModel = v and v:getName() or "COMBINE"
+        if brandName ~= "" and not rawModel:upper():find(brandName:upper(), 1, true) then
+            fullVehicleName = brandName .. " " .. rawModel
+        else
+            fullVehicleName = rawModel
+        end
+    end
+
+    setTextAlignment(RenderText.ALIGN_LEFT)
+    setTextBold(true)
+    setTextColor(unpack(ui.colors.text))
+    local titleX = (nextHeaderBadgeX or (badgeX + badgeW)) + 0.007
+    local maxTitleW = hpBoxX - titleX - 0.006
+    local titleSize = ui.titleSize
+    local fullUpper = string.upper(fullVehicleName)
+    local textW = getTextWidth(titleSize, fullUpper)
+    if textW and textW > maxTitleW and textW > 0 then
+        titleSize = math.max(ui.fontSize * 0.85, titleSize * (maxTitleW / textW))
+    end
+    renderText(titleX, headerY + ui.headerHeight * 0.32, titleSize, fullUpper)
 
     local cy = headerY - ui.margin * 0.5
 
-    if not self.activeVehicle or not spec or not spec.combineMemory then
+    local memory = spec and spec.combineMemory
+    if not memory and self.activeVehicle and rhm_Combine and rhm_Combine.getOrInitCombineMemory then
+        memory = rhm_Combine.getOrInitCombineMemory(self.activeVehicle)
+    end
+
+    if not self.activeVehicle or not spec or not memory then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextColor(unpack(ui.colors.textDim))
         local notInitText = g_i18n:hasText("rhm_ui_combine_not_init") and g_i18n:getText("rhm_ui_combine_not_init") or "Combine not initialized"
@@ -538,8 +835,7 @@ function RHMCombineCalibrationGUI:draw()
         return
     end
 
-    local memory = spec.combineMemory
-    local machineType = spec.machineType or "grain"
+    local machineType = spec.machineType or (memory and memory.machineType) or "grain"
 
     -- ── Tier 3+ Live Telemetry Cards ────────────────────────────────────────
     if packageLevel >= 3 then
@@ -557,12 +853,20 @@ function RHMCombineCalibrationGUI:draw()
             local context = self:getHarvestContext(machineType)
             effPenalty, lossPenalty, _ = memory:checkSettingsForCrop(memory.currentCrop, context)
         end
+        local isArcadeMotor = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyMotor == 1)
+        local isArcadeLoss = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyLoss == 1)
+        if isArcadeMotor then
+            effPenalty = 0
+        end
+        if isArcadeLoss then
+            lossPenalty = 0
+        end
         local isForage = (machineType == "forage")
 
         -- Card 1: Engine Load
         local cx1 = startX
         self:drawRect(cx1, cy, cardW, cardH, ui.colors.statsCardBg)
-        self:drawRect(cx1, cy + cardH - 0.0006, cardW, 0.0006, ui.colors.statsCardBorder)
+        self:drawBorder(cx1, cy, cardW, cardH, ui.colors.statsCardBorder, 1)
         local loadColor = (load > 95) and ui.colors.error or ((load > 80) and ui.colors.warning or ui.colors.success)
         local cardLoadText = g_i18n:hasText("rhm_ui_card_engine_load") and g_i18n:getText("rhm_ui_card_engine_load") or "ENGINE LOAD"
         setTextBold(true)
@@ -575,7 +879,7 @@ function RHMCombineCalibrationGUI:draw()
         -- Card 2: Speed Efficiency
         local cx2 = cx1 + cardW + cardGap
         self:drawRect(cx2, cy, cardW, cardH, ui.colors.statsCardBg)
-        self:drawRect(cx2, cy + cardH - 0.0006, cardW, 0.0006, ui.colors.statsCardBorder)
+        self:drawBorder(cx2, cy, cardW, cardH, ui.colors.statsCardBorder, 1)
         local speedVal = math.max(0, effPenalty)
         local speedColor = (speedVal <= 0.05) and ui.colors.success or ((speedVal <= 2.0) and ui.colors.warning or ui.colors.error)
         local speedPrefix = (speedVal <= 0.05) and "" or "-"
@@ -588,7 +892,7 @@ function RHMCombineCalibrationGUI:draw()
         -- Card 3: Predicted Loss
         local cx3 = cx2 + cardW + cardGap
         self:drawRect(cx3, cy, cardW, cardH, ui.colors.statsCardBg)
-        self:drawRect(cx3, cy + cardH - 0.0006, cardW, 0.0006, ui.colors.statsCardBorder)
+        self:drawBorder(cx3, cy, cardW, cardH, ui.colors.statsCardBorder, 1)
         local cardLossText = g_i18n:hasText("rhm_ui_card_predicted_loss") and g_i18n:getText("rhm_ui_card_predicted_loss") or "PREDICTED LOSS"
         setTextColor(unpack(ui.colors.textDim))
         renderText(cx3 + cardW * 0.5, cy + cardH * 0.56, ui.statusSize * 0.85, cardLossText)
@@ -596,10 +900,23 @@ function RHMCombineCalibrationGUI:draw()
             setTextColor(unpack(ui.colors.textDim))
             renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, "N/A")
         else
-            local displayLoss = math.max(0, lossPenalty)
+            local settingsLoss = math.max(0, lossPenalty)
+            local wearLoss = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+            local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
+            if not isWearEnabled or isArcadeLoss then
+                wearLoss = 0
+            end
+            local displayLoss = settingsLoss + wearLoss
             local lossColor = (displayLoss <= 0.05) and ui.colors.success or ((displayLoss <= 2.0) and ui.colors.warning or ui.colors.error)
             setTextColor(unpack(lossColor))
-            renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%.1f%%", displayLoss))
+            if wearLoss > 0.05 then
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.22, ui.fontSize * 0.90, string.format("%.1f%%", displayLoss))
+                local wearLabel = g_i18n:hasText("rhm_ui_wear_loss") and g_i18n:getText("rhm_ui_wear_loss") or "Wear"
+                setTextColor(unpack(ui.colors.warning))
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.06, ui.statusSize * 0.85, string.format("+%.1f%% %s", wearLoss, wearLabel))
+            else
+                renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, string.format("%.1f%%", displayLoss))
+            end
         end
 
         setTextBold(false)
@@ -627,8 +944,8 @@ function RHMCombineCalibrationGUI:draw()
     local cropName = getLocalizedCropName(memory.currentCrop)
     local cropBoxW = 0.135
     local cropBoxX = cropNavX + arrowW + 0.004
-    self:drawRect(cropBoxX, cy + 0.004, cropBoxW, ui.buttonH + 0.004, {0.04, 0.045, 0.05, 0.90})
-    self:drawRect(cropBoxX, cy + 0.004, cropBoxW, 0.0006, {1.0, 1.0, 1.0, 0.08})
+    self:drawRect(cropBoxX, cy + 0.004, cropBoxW, ui.buttonH + 0.004, {0.0, 0.0, 0.0, 0.50})
+    self:drawBorder(cropBoxX, cy + 0.004, cropBoxW, ui.buttonH + 0.004, {1.0, 1.0, 1.0, 0.12}, 1)
     setTextBold(true)
     setTextAlignment(RenderText.ALIGN_CENTER)
     setTextColor(unpack(ui.colors.text))
@@ -648,10 +965,10 @@ function RHMCombineCalibrationGUI:draw()
         local btnAutoText = g_i18n:hasText("rhm_ui_btn_ai_auto") and g_i18n:getText("rhm_ui_btn_ai_auto") or "AI AUTO-CALIB"
         self:drawButton(autoBtnX, cy + 0.004, autoBtnW, autoBtnH, btnAutoText, function()
             memory:requestAutoSettings()
-        end, ui.colors.buttonAuto)
-        self:drawRect(autoBtnX, cy + 0.004, autoBtnW, 0.0008, ui.colors.buttonAutoBorder)
+        end, ui.colors.buttonAuto, ui.colors.buttonAutoBorder)
     else
         self:drawRect(autoBtnX, cy + 0.004, autoBtnW, autoBtnH, {0.05, 0.055, 0.065, 0.85})
+        self:drawBorder(autoBtnX, cy + 0.004, autoBtnW, autoBtnH, {1.0, 1.0, 1.0, 0.10}, 1)
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextBold(true)
         setTextColor(0.40, 0.42, 0.46, 1.0)
@@ -664,15 +981,15 @@ function RHMCombineCalibrationGUI:draw()
             callback = function()
                 local msg = g_i18n:hasText("rhm_msg_req_tier4") and g_i18n:getText("rhm_msg_req_tier4") or "Requires Opti-Harvest AI (Tier 4)"
                 if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                    RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
                 elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                    g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
                 end
             end
         })
     end
 
-    self:drawRect(x + ui.margin, cy - 0.004, w - ui.margin * 2, 0.001, ui.colors.separator)
+    self:drawRect(x + ui.margin, cy - 0.004, w - ui.margin * 2, pixelH, ui.colors.separator)
     cy = cy - ui.margin * 0.3
 
     -- ── Parameter Sections ──────────────────────────────────────────────────
@@ -740,7 +1057,7 @@ function RHMCombineCalibrationGUI:draw()
     self:drawParameterRow(x + ui.margin, cy, secW, "targetEngineLoad", loadLabel, memory, ui, machineType, packageLevel)
 
     cy = cy - ui.margin * 0.8
-    self:drawRect(x + ui.margin, cy, w - ui.margin * 2, 0.001, ui.colors.separator)
+    self:drawRect(x + ui.margin, cy, w - ui.margin * 2, pixelH, ui.colors.separator)
     cy = cy - ui.margin * 0.6
 
     -- ── Action Buttons ──────────────────────────────────────────────────────
@@ -763,11 +1080,11 @@ function RHMCombineCalibrationGUI:draw()
                 msg = g_i18n:hasText("rhm_msg_profile_not_found") and g_i18n:getText("rhm_msg_profile_not_found") or "No saved profile found for this crop"
             end
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
-        end, {0.08, 0.10, 0.12, 0.95})
+        end)
 
         local btnSaveText = g_i18n:hasText("rhm_ui_btn_save_profile") and g_i18n:getText("rhm_ui_btn_save_profile") or "SAVE PROFILE"
         self:drawButton(x + w - ui.margin - actionBtnW, cy, actionBtnW, 0.026, btnSaveText, function()
@@ -780,12 +1097,12 @@ function RHMCombineCalibrationGUI:draw()
                 local formatStr = g_i18n:hasText("rhm_msg_profile_saved") and g_i18n:getText("rhm_msg_profile_saved") or "Saved Profile: %s"
                 local msg = string.format(formatStr, tostring(cropTitle))
                 if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                    RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                    RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
                 elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                    g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                    g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
                 end
             end
-        end, {0.08, 0.10, 0.12, 0.95})
+        end)
     else
         local btnLoadLockText = g_i18n:hasText("rhm_ui_btn_load_locked") and g_i18n:getText("rhm_ui_btn_load_locked") or "LOAD (LOCKED)"
         self:drawButton(x + ui.margin, cy, actionBtnW, 0.026, btnLoadLockText, function()
@@ -793,11 +1110,11 @@ function RHMCombineCalibrationGUI:draw()
                      or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
                      or "Profiles require Sensors Package (Tier 2)"
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
-        end, {0.05, 0.055, 0.065, 0.70})
+        end, {0.04, 0.04, 0.05, 0.45}, {1.0, 1.0, 1.0, 0.06})
 
         local btnSaveLockText = g_i18n:hasText("rhm_ui_btn_save_locked") and g_i18n:getText("rhm_ui_btn_save_locked") or "SAVE (LOCKED)"
         self:drawButton(x + w - ui.margin - actionBtnW, cy, actionBtnW, 0.026, btnSaveLockText, function()
@@ -805,11 +1122,11 @@ function RHMCombineCalibrationGUI:draw()
                      or (g_i18n:hasText("rhm_msg_req_tier3") and g_i18n:getText("rhm_msg_req_tier3"))
                      or "Profiles require Sensors Package (Tier 2)"
             if RHM_NotificationManager and RHM_NotificationManager.INSTANCE then
-                RHM_NotificationManager.INSTANCE:showNotification("RHM", msg, 4000)
+                RHM_NotificationManager.INSTANCE:showNotification("Realistic Harvesting", msg, 4000)
             elseif g_currentMission and g_currentMission.hud and g_currentMission.hud.showInGameMessage then
-                g_currentMission.hud:showInGameMessage("RHM", msg, -1)
+                g_currentMission.hud:showInGameMessage("Realistic Harvesting", msg, -1)
             end
-        end, {0.05, 0.055, 0.065, 0.70})
+        end, {0.04, 0.04, 0.05, 0.45}, {1.0, 1.0, 1.0, 0.06})
     end
 
     cy = cy - ui.lineHeight * 1.0
@@ -817,7 +1134,7 @@ function RHMCombineCalibrationGUI:draw()
     local resetBtnText = g_i18n:hasText("rhm_ui_btn_reset_defaults") and g_i18n:getText("rhm_ui_btn_reset_defaults") or "RESET TO FACTORY DEFAULTS"
     self:drawButton(x + ui.margin, cy, resetBtnW, 0.026, resetBtnText, function()
         memory:requestResetSettings()
-    end, ui.colors.buttonReset)
+    end, ui.colors.buttonReset, ui.colors.buttonResetBorder)
 
     -- ── Scroll Wheel Handling ───────────────────────────────────────────────
     if self.lastScrollTimeStamp + self.scrollDelayMs < g_time then
@@ -888,32 +1205,30 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
     -- Determine colors & status text based on Tier progression
     local valColor = ui.colors.text
     local statusText = ""
-    local statusColor = ui.colors.textDim
-    local pillBg = {0.04, 0.045, 0.05, 0.80}
-    local pillBorder = {1.0, 1.0, 1.0, 0.10}
+    local statusColor = {1.0, 1.0, 1.0, 1.0} -- Pure crisp white text (Option 1A)
+    local pillBg = {0.0, 0.0, 0.0, 0.55} -- Dark translucent glass
+    local pillBorder = {1.0, 1.0, 1.0, 0.12}
     local fillColor = ui.colors.trackFill
 
     if packageLevel >= 2 and hasOptimal and param ~= "targetEngineLoad" then
+        pillBg = {0.0, 0.0, 0.0, 0.55}
         if isOptimal then
             valColor = ui.colors.success
             statusText = g_i18n:hasText("rhm_ui_status_optimal") and g_i18n:getText("rhm_ui_status_optimal") or "OPTIMAL"
-            statusColor = ui.colors.success
-            pillBg = {0.02, 0.14, 0.06, 0.85}
-            pillBorder = {0.20, 0.85, 0.48, 0.50}
+            statusColor = {1.0, 1.0, 1.0, 1.0}
+            pillBorder = {0.529, 0.706, 0.0, 0.80} -- Authentic game HUD green border
             fillColor = ui.colors.trackFill
         else
             local deviation = math.abs(val - optimal) - tolerance
             if deviation > 20 then
                 valColor = ui.colors.error
-                statusColor = ui.colors.error
-                pillBg = {0.16, 0.03, 0.03, 0.85}
-                pillBorder = {0.90, 0.24, 0.24, 0.50}
+                statusColor = {1.0, 1.0, 1.0, 1.0}
+                pillBorder = {0.90, 0.24, 0.24, 0.80} -- Restrained alert red border
                 fillColor = ui.colors.trackFillErr
             else
                 valColor = ui.colors.warning
-                statusColor = ui.colors.warning
-                pillBg = {0.16, 0.10, 0.02, 0.85}
-                pillBorder = {0.95, 0.72, 0.18, 0.50}
+                statusColor = {1.0, 1.0, 1.0, 1.0}
+                pillBorder = {0.95, 0.72, 0.18, 0.80} -- Warm amber border
                 fillColor = ui.colors.trackFillWarn
             end
             local lowText = g_i18n:hasText("rhm_ui_status_low") and g_i18n:getText("rhm_ui_status_low") or "LOW"
@@ -937,20 +1252,17 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
     local valBoxH = 0.018
     local valBoxY = y + (ui.lineHeight - valBoxH) * 0.5
     self:drawRect(valBoxX, valBoxY, valBoxW, valBoxH, {0.018, 0.020, 0.024, 0.90})
-    self:drawRect(valBoxX, valBoxY, valBoxW, 0.0006, {1.0, 1.0, 1.0, 0.08})
+    self:drawBorder(valBoxX, valBoxY, valBoxW, valBoxH, {1.0, 1.0, 1.0, 0.10}, 1)
 
     setTextAlignment(RenderText.ALIGN_CENTER)
     setTextColor(unpack(valColor))
     renderText(valBoxX + valBoxW * 0.5, valBoxY + 0.004, ui.fontSize * 0.92, displayStr)
 
-    -- ── Status Pill Capsule (Option 1) ─────────────────────────────────────
+    -- ── Status Pill Capsule (Option 1A) ────────────────────────────────────
     if statusText ~= "" and packageLevel >= 2 then
         local pillY = y + (ui.lineHeight - pillH) * 0.5
         self:drawRect(pillX, pillY, pillW, pillH, pillBg)
-        self:drawRect(pillX, pillY, pillW, 0.0006, pillBorder)
-        self:drawRect(pillX, pillY + pillH - 0.0006, pillW, 0.0006, pillBorder)
-        self:drawRect(pillX, pillY, 0.0006, pillH, pillBorder)
-        self:drawRect(pillX + pillW - 0.0006, pillY, 0.0006, pillH, pillBorder)
+        self:drawBorder(pillX, pillY, pillW, pillH, pillBorder, 1)
 
         setTextBold(true)
         setTextAlignment(RenderText.ALIGN_CENTER)
@@ -963,8 +1275,8 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
     local trackY = y + (ui.lineHeight - trackH) * 0.5
 
     -- Outer Groove Border & Slot
-    self:drawRect(sliderStartX - 0.0006, trackY - 0.0006, sliderW + 0.0012, trackH + 0.0012, ui.colors.trackBorder)
     self:drawRect(sliderStartX, trackY, sliderW, trackH, ui.colors.trackGroove)
+    self:drawBorder(sliderStartX, trackY, sliderW, trackH, ui.colors.trackBorder, 1)
 
     -- Gauge Tick Notches (0%, 25%, 50%, 75%, 100%)
     for step = 0, 4 do
@@ -979,7 +1291,7 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
         local bandStartX = sliderStartX + (optMin / 100) * sliderW
         local bandW = ((optMax - optMin) / 100) * sliderW
         self:drawRect(bandStartX, trackY, bandW, trackH, ui.colors.trackOptimal)
-        self:drawRect(bandStartX, trackY, bandW, 0.0006, ui.colors.trackOptimalBorder)
+        self:drawBorder(bandStartX, trackY, bandW, trackH, ui.colors.trackOptimalBorder, 1)
 
         -- Bright center sweet-spot pin
         local centerPinX = sliderStartX + (optimal / 100) * sliderW
@@ -997,8 +1309,8 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
     local thumbY = trackY + (trackH - thumbH) * 0.5
 
     -- Thumb drop shadow & border
-    self:drawRect(thumbX - 0.0006, thumbY - 0.0006, thumbW + 0.0012, thumbH + 0.0012, {0.02, 0.02, 0.02, 0.95})
     self:drawRect(thumbX, thumbY, thumbW, thumbH, (isRowHovered or self.draggingSlider) and ui.colors.trackThumbHover or ui.colors.trackThumb)
+    self:drawBorder(thumbX, thumbY, thumbW, thumbH, {0.02, 0.02, 0.02, 0.95}, 1)
 
     -- Thumb center indicator groove
     self:drawRect(thumbX + thumbW * 0.5 - 0.0004, thumbY + 0.002, 0.0008, thumbH - 0.004, isOptimal and {0.18, 0.80, 0.45, 1.0} or {0.30, 0.35, 0.40, 1.0})
@@ -1063,59 +1375,184 @@ function RHMCombineCalibrationGUI:drawParameterRow(x, y, w, param, label, memory
     end)
 end
 
-function RHMCombineCalibrationGUI:drawButton(x, y, w, h, text, callback, colorOverride)
+function RHMCombineCalibrationGUI:drawButton(x, y, w, h, text, callback, colorOverride, borderOverride)
     local isHovered = self:checkHover(x, y, w, h)
     local bgColor
+    local borderColor = borderOverride or self.ui.colors.buttonBorder
 
-    if colorOverride then
-        bgColor = isHovered and {
-            colorOverride[1] * 1.3,
-            colorOverride[2] * 1.3,
-            colorOverride[3] * 1.3,
-            colorOverride[4]
-        } or colorOverride
+    if text == "X" then
+        if isHovered then
+            bgColor = {0.35, 0.08, 0.08, 0.85}
+            borderColor = {0.95, 0.35, 0.35, 0.85}
+        else
+            bgColor = {0.05, 0.05, 0.06, 0.65}
+            borderColor = {1.0, 1.0, 1.0, 0.12}
+        end
+    elseif colorOverride then
+        if isHovered and colorOverride == self.ui.colors.buttonReset and self.ui.colors.buttonResetHover then
+            bgColor = self.ui.colors.buttonResetHover
+            borderColor = {0.95, 0.35, 0.35, 0.75}
+        elseif isHovered then
+            bgColor = {
+                math.min(1.0, colorOverride[1] * 1.4),
+                math.min(1.0, colorOverride[2] * 1.4),
+                math.min(1.0, colorOverride[3] * 1.4),
+                math.min(1.0, (colorOverride[4] or 0.8) * 1.15)
+            }
+            if borderOverride then
+                borderColor = {
+                    math.min(1.0, borderOverride[1] * 1.4),
+                    math.min(1.0, borderOverride[2] * 1.4),
+                    math.min(1.0, borderOverride[3] * 1.4),
+                    math.min(1.0, (borderOverride[4] or 0.8) * 1.2)
+                }
+            end
+        else
+            bgColor = colorOverride
+        end
     elseif isHovered then
         bgColor = self.ui.colors.buttonHover
+        borderColor = self.ui.colors.buttonHoverBorder or {0.529, 0.706, 0.0, 0.70}
     else
         bgColor = self.ui.colors.button
     end
 
     self:drawRect(x, y, w, h, bgColor)
-    self:drawRect(x, y, w, 0.0006, self.ui.colors.buttonBorder)
+    self:drawBorder(x, y, w, h, borderColor, 1)
 
     setTextAlignment(RenderText.ALIGN_CENTER)
     setTextBold(true)
 
     if isHovered then
         if text == "+" then
-            setTextColor(0.20, 0.85, 0.48, 1.0)
+            setTextColor(0.529, 0.706, 0.0, 1.0)
         elseif text == "-" then
             setTextColor(0.95, 0.35, 0.35, 1.0)
+        elseif text == "X" then
+            setTextColor(1.0, 1.0, 1.0, 1.0)
         else
             setTextColor(1.0, 1.0, 1.0, 1.0)
         end
     else
         if text == "+" or text == "-" then
             setTextColor(0.70, 0.74, 0.80, 1.0)
-        elseif colorOverride then
-            setTextColor(unpack(self.ui.colors.text))
+        elseif text == "X" then
+            setTextColor(0.85, 0.88, 0.92, 1.0)
         else
             setTextColor(unpack(self.ui.colors.textDim))
         end
     end
 
-    renderText(x + w * 0.5, y + h * 0.5 - self.ui.fontSize * 0.40, self.ui.fontSize, text)
+    local btnFontSize = (text == "X") and (self.ui.fontSize * 1.15) or self.ui.fontSize
+    local offsetY = (text == "X") and (btnFontSize * 0.35) or (self.ui.fontSize * 0.38)
+    renderText(x + w * 0.5, y + h * 0.5 - offsetY, btnFontSize, text)
     setTextBold(false)
 
     table.insert(self.buttons, {x=x, y=y, w=w, h=h, callback=callback})
 end
 
+function RHMCombineCalibrationGUI:drawPanelBackground(x, y, w, h, color)
+    if not self.roundedOverlay or not self.roundedUVs then return end
+
+    local c = color or self.ui.colors.bg
+    local r = c[1] or 0.0
+    local g = c[2] or 0.0
+    local b = c[3] or 0.0
+    local a = c[4] or 0.86
+
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local snappedX = math.floor(x * screenW + 0.5) / screenW
+    local snappedY = math.floor(y * screenH + 0.5) / screenH
+    local snappedW = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local snappedH = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+
+    local cornerW = math.min(math.floor((6 / screenW) * screenW + 0.5) / screenW, snappedW * 0.5)
+    local cornerH = math.min(math.floor((6 / screenH) * screenH + 0.5) / screenH, snappedH * 0.5)
+
+    local leftX = snappedX
+    local centerX = snappedX + cornerW
+    local rightX = snappedX + snappedW - cornerW
+    local bottomY = snappedY
+    local centerY = snappedY + cornerH
+    local topY = snappedY + snappedH - cornerH
+    local centerW = math.max(rightX - centerX, 0)
+    local centerH = math.max(topY - centerY, 0)
+
+    local overlay = self.roundedOverlay
+    overlay:setColor(r, g, b, a)
+
+    local function renderSlice(sx, sy, sw, sh, uvs)
+        if sw <= 0 or sh <= 0 or not uvs then return end
+        overlay:setPosition(sx, sy)
+        overlay:setDimension(sw, sh)
+        overlay:setUVs(uvs)
+        overlay:render()
+    end
+
+    local uvs = self.roundedUVs
+    renderSlice(leftX, bottomY, cornerW, cornerH, uvs.bottomLeft)
+    renderSlice(centerX, bottomY, centerW, cornerH, uvs.bottom)
+    renderSlice(rightX, bottomY, cornerW, cornerH, uvs.bottomRight)
+
+    renderSlice(leftX, centerY, cornerW, centerH, uvs.left)
+    renderSlice(centerX, centerY, centerW, centerH, uvs.center)
+    renderSlice(rightX, centerY, cornerW, centerH, uvs.right)
+
+    renderSlice(leftX, topY, cornerW, cornerH, uvs.topLeft)
+    renderSlice(centerX, topY, centerW, cornerH, uvs.top)
+    renderSlice(rightX, topY, cornerW, cornerH, uvs.topRight)
+end
+
 function RHMCombineCalibrationGUI:drawRect(x, y, w, h, color)
-    if not self.overlay then return end
+    if not self.overlay or not color then return end
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local px = math.floor(x * screenW + 0.5) / screenW
+    local py = math.floor(y * screenH + 0.5) / screenH
+    local pw = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local ph = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+
     local r, g, b, a = unpack(color)
-    self.overlay:setPosition(x, y)
-    self.overlay:setDimension(w, h)
+    self.overlay:setPosition(px, py)
+    self.overlay:setDimension(pw, ph)
     self.overlay:setColor(r, g, b, a or 1.0)
+    self.overlay:render()
+end
+
+function RHMCombineCalibrationGUI:drawBorder(x, y, w, h, color, thicknessPx)
+    if not self.overlay or not color then return end
+    thicknessPx = thicknessPx or 1
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local px = math.floor(x * screenW + 0.5) / screenW
+    local py = math.floor(y * screenH + 0.5) / screenH
+    local pw = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local ph = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+    local tW = thicknessPx / screenW
+    local tH = thicknessPx / screenH
+
+    local r, g, b, a = unpack(color)
+    self.overlay:setColor(r, g, b, a or 1.0)
+
+    -- Bottom
+    self.overlay:setPosition(px, py)
+    self.overlay:setDimension(pw, tH)
+    self.overlay:render()
+
+    -- Top
+    self.overlay:setPosition(px, py + ph - tH)
+    self.overlay:setDimension(pw, tH)
+    self.overlay:render()
+
+    -- Left
+    self.overlay:setPosition(px, py)
+    self.overlay:setDimension(tW, ph)
+    self.overlay:render()
+
+    -- Right
+    self.overlay:setPosition(px + pw - tW, py)
+    self.overlay:setDimension(tW, ph)
     self.overlay:render()
 end
 
@@ -1246,10 +1683,21 @@ function RHMCombineCalibrationGUI:mouseEvent(posX, posY, isDown, isUp, button)
             end
         end
 
-        -- Check dragging tablet by header (outside close [X] button)
-        local headerY = self.ui.y + self.ui.h - self.ui.headerHeight
-        if posY >= headerY and posY <= (self.ui.y + self.ui.h) and
-           posX >= self.ui.x and posX <= (self.ui.x + self.ui.w) then
+        -- Check dragging tablet by outer bezel frame or header bar (outside buttons)
+        local isBezelOrHeader = false
+        if posX >= self.ui.x and posX <= (self.ui.x + self.ui.w) and
+           posY >= self.ui.y and posY <= (self.ui.y + self.ui.h) then
+            local headerY = self.ui.y + self.ui.h - self.ui.headerHeight - (self.ui.bezelTop or 0.0038)
+            if posY >= headerY then
+                isBezelOrHeader = true
+            elseif posX <= self.ui.x + (self.ui.bezelSide or 0.0025) or
+                   posX >= self.ui.x + self.ui.w - (self.ui.bezelSide or 0.0025) or
+                   posY <= self.ui.y + (self.ui.bezelBottom or 0.0038) then
+                isBezelOrHeader = true
+            end
+        end
+
+        if isBezelOrHeader then
             self.isDraggingTablet = true
             self.dragOffsetTabletX = posX - self.ui.x
             self.dragOffsetTabletY = posY - self.ui.y

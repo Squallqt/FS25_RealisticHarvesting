@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Zorluk"/>
         <text name="rhm_difficulty_motor" text="Motor Güç Limiti"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Mevcut ekstra motor gücünü belirler. Arcade = +%100, Normal = +%35, Gerçekçi = %0."/>
+        <text name="rhm_difficulty_motor_long" text="Motor yükü fiziğini belirler. Arcade = Devre dışı (aşırı yük yok), Normal = +%35 güç rezervi, Gerçekçi = %100 özgün fizik."/>
         <text name="rhm_difficulty_loss" text="Ürün Kaybı"/>
         <text name="rhm_difficulty_loss_short" text="Kayıp"/>
-        <text name="rhm_difficulty_loss_long" text="Hatalı ayarlar durumunda ürün kaybı cezasını belirler."/>
+        <text name="rhm_difficulty_loss_long" text="Ürün kayıplarını belirler. Arcade = %0 (ürün kaybı yok), Normal = standart kayıplar, Gerçekçi = artırılmış kayıplar (%200)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Yüksek limitler (+%100). Normal: Dengeli fizik (+%35). Gerçekçi: Saf simülasyon (%0)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Aşırı yük veya kayıp yok (saf vanilla). Normal: Dengeli fizik (+%35). Gerçekçi: Saf simülasyon (%0)."/>
         <text name="rhm_diff_2" text="Normal"/>
         <text name="rhm_diff_3" text="Gerçekçi"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Ses"/>
         <text name="rhm_alarm_sounds_short" text="Aşırı Yük Alarmı"/>
-        <text name="rhm_alarm_sounds_long" text="Kritik yükte (%98+) veya yüksek kayıpta (&gt;%4) kabin içinde elektronik ikaz sesi çalar."/>
+        <text name="rhm_alarm_sounds_long" text="Aşırı motor yükünde (%105+) veya yüksek ürün kaybında (&gt;%5) kabin ikaz modu."/>
+        <text name="rhm_alarm_mode_smart" text="Akıllı (3 bip)"/>
+        <text name="rhm_alarm_mode_continuous" text="Sürekli"/>
+        <text name="rhm_alarm_mode_off" text="Kapalı"/>
         <text name="rhm_sound_volume_short" text="Ses Seviyesi"/>
         <text name="rhm_sound_volume_long" text="Kabin içi aşırı yük alarm ses seviyesini ayarlar."/>
         <text name="rhm_target_load" text="Target Engine Load"/>
@@ -104,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Feed Rolls"/>
         <text name="rhm_ui_root_roller" text="Cleaning Rollers"/>
         <text name="rhm_ui_root_feeder" text="Elevator Web"/>
+        <text name="rhm_ui_grape_shaker" text="Sarsıcı Hızı"/>
+        <text name="rhm_ui_olive_shaker" text="Çırpıcı Hızı"/>
+        <text name="rhm_ui_grape_conveyor" text="Konveyör Hızı"/>
+        <text name="rhm_ui_grape_fan" text="Temizleme Fanları"/>
         <text name="rhm_units_short" text="Birim Sistemi"/>
         <text name="rhm_units_long" text="Metrik, emperyal veya kile birimini seçin."/>
         <text name="rhm_unit_metric" text="Metrik (km/s, t/ha)"/>
@@ -113,11 +120,11 @@
         <text name="rhm_loss_low" text="LOW"/>
         <text name="rhm_loss_med" text="MED"/>
         <text name="rhm_loss_high" text="HIGH"/>
-        <text name="rhm_warning_turn_on_combine" text="Ã–nce biÃ§erdÃ¶veri Ã§alÄ±ÅŸtÄ±rÄ±n!"/>
-        <text name="rhm_warning_turn_on_cutter" text="BiÃ§erdÃ¶ver tablasÄ±nÄ± Ã§alÄ±ÅŸtÄ±rÄ±n!"/>
+        <text name="rhm_warning_turn_on_combine" text="Önce biçerdöveri çalıştırın!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Biçerdöver tablasını çalıştırın!"/>
         <text name="rhm_warn_overload_high" text="Combine overloaded! Reduce speed to minimize crop losses."/>
         <text name="rhm_warn_overload_critical" text="COMBINE CRITICALLY OVERLOADED! Severe crop losses occurring!"/>
-        <text name="rhm_configuration_title" text="RHM Electronics"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Sistemleri"/>
         <text name="rhm_package_standard" text="Tier 1: Temel Mekanik"/>
         <text name="rhm_package_sensor" text="Tier 2: Sensor Paketi"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetri ve Izleme"/>
@@ -167,7 +174,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mekanik Aşınma ve Körelmiş Bıçaklar"/>
+        <text name="rhm_help_loss_3" text="Ekipman aşınması hasat verimini önemli ölçüde düşürür. Körelmiş tabla bıçakları başakları ve baklaları döker (en fazla +%3 kayıp ve +%15 PTO sürtünmesi). Aşınmış dövücü tambur ve elekler ayrılmamış daneleri yere döker (en fazla +%3 kayıp). Atölyede düzenli bakım bu kayıpları önler."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -202,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORLER"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRI"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTOR YÜKÜ"/>
         <text name="rhm_ui_card_efficiency" text="VERİMLİLİK"/>
         <text name="rhm_ui_card_predicted_loss" text="TAHMİNİ KAYIP"/>
@@ -240,7 +250,7 @@
         <text name="rhm_setting_enableTutorials" text="Eğitim İpuçları"/>
         <text name="rhm_setting_enableTutorials_long" text="Hasat sırasında etkileşimli eğitim ipuçları gösterir."/>
         <text name="rhm_ui_btn_close_notification" text="Tamam (Enter / Sol Tık)"/>
-        <text name="rhm_tut_welcome_title" text="Gerçekçi Hasat"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Realistic Harvesting&apos;e hoş geldiniz! Biçerdöver hızı motor yükü, ürün yoğunluğu ve tabla genişliğine göre dinamik belirlenir. (Sağ Shift + K) ile kalibrasyon terminalini açın."/>
         <text name="rhm_tut_overload_title" text="Motor Aşırı Yükü"/>
         <text name="rhm_tut_overload_msg" text="Motor aşırı zorlanıyor! Hidrostatik şanzıman batörün tıkanmasını önlemek için hızı yavaşlatır. Tablayı biraz kaldırın veya biçme genişliğini azaltın."/>
@@ -252,5 +262,10 @@
         <text name="rhm_tut_headland_msg" text="Tarla sonunda tablayı kaldırdığınızda biçerdöver çalışma hızını hatırlar. Yeni sıraya girerken sarsıntısız bir şekilde aynı hıza ulaşır."/>
         <text name="rhm_tut_upgrade_title" text="Biçerdöver Yükseltmeleri"/>
         <text name="rhm_tut_upgrade_msg" text="Temel biçerdöverler manuel ayar gerektirir. Atölyeden Sensör Kiti (Aşama 2), Verim Monitörü (Aşama 3) veya Opti-Harvest AI Otopilot (Aşama 4) taktırabilirsiniz."/>
+        <text name="rhm_setting_wear_loss_short" text="Mekanik Aşınma Kayıpları"/>
+        <text name="rhm_setting_wear_loss_long" text="Ekipman aşınmasından kaynaklanan dane kayıplarını simüle eder. Körelmiş bıçaklar başakları döker (en fazla +%3 kayıp ve +%15 direnç). Aşınmış tambur ve elekler dane döker (en fazla +%3 kayıp)."/>
+        <text name="rhm_ui_wear_loss" text="Aşınma Kaybı"/>
+        <text name="rhm_ui_cutter_wear" text="Tabla Aşınması"/>
+        <text name="rhm_ui_combine_wear" text="Biçerdöver Aşınması"/>
     </texts>
 </l10n>

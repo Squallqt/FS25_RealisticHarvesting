@@ -50,6 +50,10 @@ function RHMDraggableHUD.new(modDirectory, settings)
     self.bgBotOverlay = nil
     self.icons = {}
 
+    self.isDragging = false
+    self.hasMoved = false
+    self.isNearDock = false
+
     return self
 end
 
@@ -62,26 +66,27 @@ function RHMDraggableHUD:load()
     self.height = 0.042 * self.uiScale
     self.width  = 0.172 * self.uiScale
 
-    -- 1. Load authentic Precision Farming background texture & slices
-    self.uiElementsPath = self.modDirectory .. "textures/ui_elements.dds"
-    local texSize = {1024, 512}
+    -- 1. Load authentic FS25 rounded panel texture
+    if not self.roundedOverlay then
+        local panelTexturePath = self.modDirectory .. "textures/panelRounded.dds"
+        self.roundedOverlay = Overlay.new(panelTexturePath, 0, 0, 1, 1)
 
-    -- Exact 3-part slices from PF ui_elements.xml:
-    -- shortcutBox_top:    uvs="7px 250px 330px 8px"
-    -- shortcutBox_middle: uvs="7px 270px 330px 8px"
-    -- shortcutBox_bottom: uvs="7px 292px 330px 8px"
-    local topUVs = GuiUtils.getUVs({7, 250, 330, 8}, texSize)
-    local midUVs = GuiUtils.getUVs({7, 270, 330, 8}, texSize)
-    local botUVs = GuiUtils.getUVs({7, 292, 330, 8}, texSize)
-
-    self.bgTopOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if topUVs then self.bgTopOverlay:setUVs(topUVs) end
-
-    self.bgMidOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if midUVs then self.bgMidOverlay:setUVs(midUVs) end
-
-    self.bgBotOverlay = Overlay.new(self.uiElementsPath, 0, 0, 1, 1)
-    if botUVs then self.bgBotOverlay:setUVs(botUVs) end
+        local pxUVs = {
+            topLeft     = {  0,  0,  5,  5 },
+            top         = {  5,  0, 54,  5 },
+            topRight    = { 59,  0,  5,  5 },
+            left        = {  0,  5,  5, 54 },
+            center      = {  5,  5, 54, 54 },
+            right       = { 59,  5,  5, 54 },
+            bottomLeft  = {  0, 59,  5,  5 },
+            bottom      = {  5, 59, 54,  5 },
+            bottomRight = { 59, 59,  5,  5 }
+        }
+        self.roundedUVs = {}
+        for key, coords in pairs(pxUVs) do
+            self.roundedUVs[key] = GuiUtils.getUVs(coords, {64, 64})
+        end
+    end
 
     -- 2. Solid 1x1 overlay for dividers and underline indicators
     self.iconAtlasPath = self.modDirectory .. "textures/hud_icons.dds"
@@ -91,7 +96,18 @@ function RHMDraggableHUD:load()
         self.rectOverlay:setUVs(self.bgUVs)
     end
 
-    self.x, self.y, self.width = self:getDockedPosition()
+    local dockX, dockY, dockW = self:getDockedPosition()
+    if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+        self.x = self.settings.hudPosX
+        self.y = self.settings.hudPosY
+        self.width = dockW
+        self.isSnapped = false
+    else
+        self.x = dockX
+        self.y = dockY
+        self.width = dockW
+        self.isSnapped = true
+    end
 
     self:loadIcons(self.uiScale)
 
@@ -137,16 +153,33 @@ end
 -- Frame tracking for dynamic HUD docking
 local rhm_currentDrawFrame = 0
 local rhm_hooksInitialized = false
+local rhm_activeInputHelpDisplay = nil
+local rhm_extraPrintCountThisFrame = 0
+local rhm_lastExtraPrintCount = 0
 
 local function rhm_initHudHooks()
     if rhm_hooksInitialized then return end
     rhm_hooksInitialized = true
 
-    -- Prepend to FSBaseMission.draw to increment frame counter before any HUD elements draw
+    -- Prepend to Mission00.draw / FSBaseMission.draw to increment frame counter and intercept extra print texts
+    local function rhm_onPreDraw(mission)
+        rhm_currentDrawFrame = rhm_currentDrawFrame + 1
+        if mission and not mission.rhm_extraPrintHooked and mission.addExtraPrintText then
+            mission.rhm_extraPrintHooked = true
+            local origAddExtra = mission.addExtraPrintText
+            mission.addExtraPrintText = function(mSelf, text, ...)
+                rhm_extraPrintCountThisFrame = rhm_extraPrintCountThisFrame + 1
+                return origAddExtra(mSelf, text, ...)
+            end
+        end
+        rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
+        rhm_extraPrintCountThisFrame = 0
+    end
+    if Mission00 and Mission00.draw then
+        Mission00.draw = Utils.prependedFunction(Mission00.draw, rhm_onPreDraw)
+    end
     if FSBaseMission and FSBaseMission.draw then
-        FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, function(mission)
-            rhm_currentDrawFrame = rhm_currentDrawFrame + 1
-        end)
+        FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, rhm_onPreDraw)
     end
 
     -- Hook Precision Farming combine HUD extension
@@ -157,6 +190,31 @@ local function rhm_initHudHooks()
             self.rhm_lastBottomX = (self.backgroundBottom and self.backgroundBottom.x) or posX
             self.rhm_lastWidth = self.displayWidth
             self.rhm_lastDrawFrame = rhm_currentDrawFrame
+            return ret
+        end)
+    end
+
+    -- Hook InputHelpDisplay main draw to capture active instance, count pending extra texts, and track baseline bottom Y
+    if InputHelpDisplay and InputHelpDisplay.draw then
+        InputHelpDisplay.draw = Utils.overwrittenFunction(InputHelpDisplay.draw, function(self, superFunc, offsetX, offsetY)
+            rhm_activeInputHelpDisplay = self
+            self.rhm_frameHelpMinY = nil
+
+            -- EN: Count pending extra help texts before draw() processes and empties the table.
+            -- UA: Рахуємо очікувані додаткові тексти до того, як draw() їх відрендерить та очистить таблицю.
+            local pendingExtra = 0
+            if self.extraHelpTexts then
+                for _ in pairs(self.extraHelpTexts) do
+                    pendingExtra = pendingExtra + 1
+                end
+            end
+            self.rhm_lastExtraHelpCount = pendingExtra
+
+            local ret = superFunc(self, offsetX, offsetY)
+
+            self.rhm_lastDrawFrame = rhm_currentDrawFrame
+            self.rhm_baseHelpBottomY = self.rhm_frameHelpMinY
+
             return ret
         end)
     end
@@ -175,17 +233,29 @@ local function rhm_initHudHooks()
     if InputHelpDisplay and InputHelpDisplay.drawInputHelpElement then
         InputHelpDisplay.drawInputHelpElement = Utils.overwrittenFunction(InputHelpDisplay.drawInputHelpElement, function(self, superFunc, posX, posY, helpElement, ignoreComboButtons)
             local retY = superFunc(self, posX, posY, helpElement, ignoreComboButtons)
-            self.rhm_lastHelpBottomY = retY
+            local currentBottom = retY or (posY - (self.lineBg and self.lineBg.height or 0.024))
+            if currentBottom and currentBottom > 0.01 and currentBottom < 0.99 then
+                if not self.rhm_frameHelpMinY or currentBottom < self.rhm_frameHelpMinY then
+                    self.rhm_frameHelpMinY = currentBottom
+                end
+            end
+            self.rhm_lastHelpBottomY = currentBottom
             self.rhm_lastHelpFrame = rhm_currentDrawFrame
             return retY
         end)
     end
 
-    -- Hook InputHelpDisplay extra text
+    -- Hook InputHelpDisplay extra text (control groups, warnings, mod extras)
     if InputHelpDisplay and InputHelpDisplay.drawExtraText then
         InputHelpDisplay.drawExtraText = Utils.overwrittenFunction(InputHelpDisplay.drawExtraText, function(self, superFunc, posX, posY, text)
             local retY = superFunc(self, posX, posY, text)
-            self.rhm_lastHelpBottomY = retY
+            local currentBottom = retY or (posY - (self.lineBg and self.lineBg.height or 0.024))
+            if currentBottom and currentBottom > 0.01 and currentBottom < 0.99 then
+                if not self.rhm_frameHelpMinY or currentBottom < self.rhm_frameHelpMinY then
+                    self.rhm_frameHelpMinY = currentBottom
+                end
+            end
+            self.rhm_lastHelpBottomY = currentBottom
             self.rhm_lastHelpFrame = rhm_currentDrawFrame
             return retY
         end)
@@ -208,20 +278,109 @@ local function getPfHudExtension(vehicle)
     return nil
 end
 
+local function rhm_getExtraHelpLinesCount(vehicle, ch)
+    local count = 0
+
+    -- 1. Check live queued extraHelpTexts counted at start of InputHelpDisplay.draw
+    if ch and ch.rhm_lastExtraHelpCount and ch.rhm_lastExtraHelpCount > 0 then
+        count = math.max(count, ch.rhm_lastExtraHelpCount)
+    end
+
+    -- 2. Check live extra texts captured this frame via g_currentMission:addExtraPrintText hook
+    if rhm_extraPrintCountThisFrame and rhm_extraPrintCountThisFrame > 0 then
+        count = math.max(count, rhm_extraPrintCountThisFrame)
+    elseif rhm_lastExtraPrintCount and rhm_lastExtraPrintCount > 0 then
+        count = math.max(count, rhm_lastExtraPrintCount)
+    end
+
+    -- 3. Check live extraPrintTexts table on mission if engine exposes it
+    if g_currentMission and g_currentMission.extraPrintTexts and #g_currentMission.extraPrintTexts > 0 then
+        count = math.max(count, #g_currentMission.extraPrintTexts)
+    end
+
+    -- 4. Check active vehicle and attached implements for active control groups
+    local v = vehicle or (g_currentMission and g_currentMission.controlledVehicle)
+    if v ~= nil then
+        local checkedVehicles = {}
+        local function checkVeh(veh)
+            if not veh or checkedVehicles[veh] then return end
+            checkedVehicles[veh] = true
+
+            if veh.spec_cylindered then
+                local sc = veh.spec_cylindered
+                local numNames = (sc.controlGroupNames and #sc.controlGroupNames) or 0
+                local numGroups = (sc.controlGroups and #sc.controlGroups) or 0
+                local hasMultiple = (numNames > 1) or (numGroups > 1)
+                local isGroupActive = (sc.currentControlGroupIndex ~= nil and sc.currentControlGroupIndex ~= 0)
+                if hasMultiple and isGroupActive then
+                    count = math.max(count, 1)
+                end
+            end
+
+            if veh.getAttachedImplements then
+                local implements = veh:getAttachedImplements()
+                if implements then
+                    for _, impl in ipairs(implements) do
+                        if impl.object then
+                            checkVeh(impl.object)
+                        end
+                    end
+                end
+            end
+        end
+
+        checkVeh(v)
+        if v.rootVehicle and v.rootVehicle ~= v then
+            checkVeh(v.rootVehicle)
+        end
+    end
+
+    return count
+end
+
+local function rhm_getInputHelpDisplay()
+    if rhm_activeInputHelpDisplay ~= nil then
+        return rhm_activeInputHelpDisplay
+    end
+    if g_currentMission and g_currentMission.hud then
+        local hud = g_currentMission.hud
+        return hud.inputHelpDisplay or hud.inputHelp or hud.controlsHelp or hud.helpDisplay
+    end
+    return nil
+end
+
 ---EN: Computes the docked position directly beneath the Precision Farming shortcut box or F1 ControlsHelp menu.
 ---UA: Обчислює позицію стикування безпосередньо під смугою Precision Farming або меню довідки F1 (ControlsHelp).
 function RHMDraggableHUD:getDockedPosition()
     rhm_initHudHooks()
 
+    -- Lazy hook Mission00.draw once mission is created
+    if not RHMDraggableHUD.mission00Hooked and Mission00 and Mission00.draw then
+        RHMDraggableHUD.mission00Hooked = true
+        Mission00.draw = Utils.prependedFunction(Mission00.draw, function(mission)
+            rhm_currentDrawFrame = rhm_currentDrawFrame + 1
+            if mission and not mission.rhm_extraPrintHooked and mission.addExtraPrintText then
+                mission.rhm_extraPrintHooked = true
+                local origAddExtra = mission.addExtraPrintText
+                mission.addExtraPrintText = function(mSelf, text, ...)
+                    rhm_extraPrintCountThisFrame = rhm_extraPrintCountThisFrame + 1
+                    return origAddExtra(mSelf, text, ...)
+                end
+            end
+            rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
+            rhm_extraPrintCountThisFrame = 0
+        end)
+    end
+
     local uiScale = self.uiScale or 1.0
     local defaultX = 0.016 * uiScale
     local defaultW = 0.172 * uiScale
 
-    local ch = g_currentMission and g_currentMission.hud and g_currentMission.hud.controlsHelp
+    local ch = rhm_getInputHelpDisplay()
     local spacing = (ch and ch.lineOffsetY) or (0.0030 * uiScale)
 
-    local chX = (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
-    local chW = (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
+    local chX = (ch and ch.lineBg and ch.lineBg.x) or (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
+    local chW = (ch and ch.lineBg and ch.lineBg.width) or (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
 
     -- Lazy hook PF if it was loaded into the global scope after initialization
     if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
@@ -236,57 +395,120 @@ function RHMDraggableHUD:getDockedPosition()
         end)
     end
 
-    -- 1. Check Precision Farming HUD Extension on the active combine
-    local pfExt = getPfHudExtension(self.vehicle)
-    if pfExt then
-        -- Method A: Hook recorded draw in the current frame (real-time dynamic ground truth)
-        if pfExt.rhm_lastDrawFrame == rhm_currentDrawFrame and pfExt.rhm_lastBottomY then
-            local pfX = pfExt.rhm_lastBottomX or defaultX
-            local pfY = pfExt.rhm_lastBottomY
-            local pfW = pfExt.rhm_lastWidth or defaultW
-            local dockY = pfY - spacing - self.height
-            return pfX, dockY, pfW
-        end
+    local currentVeh = self.vehicle or (g_currentMission and g_currentMission.controlledVehicle)
 
-        -- Method B: Fallback check of backgroundBottom overlay position (if hook missed or initial render)
-        if pfExt.backgroundBottom and pfExt.backgroundBottom.y and pfExt.backgroundBottom.y > 0.05 and pfExt.backgroundBottom.y < 0.95 then
-            local pfX = pfExt.backgroundBottom.x or defaultX
-            local pfY = pfExt.backgroundBottom.y
-            local pfW = pfExt.displayWidth or defaultW
-            local dockY = pfY - spacing - self.height
-            return pfX, dockY, pfW
-        end
-    end
-
-    -- 2. Precision Farming is not active/drawing: Check F1 Help Menu elements
     local isF1Open = false
     if g_gameSettings and g_gameSettings.getValue then
         isF1Open = (g_gameSettings:getValue("showHelpMenu") == true)
     end
+    if ch and ch.getVisible then
+        isF1Open = isF1Open and ch:getVisible()
+    end
+
+    -- 1. Check Precision Farming HUD Extension on the active combine
+    local pfExt = getPfHudExtension(currentVeh)
+    if pfExt then
+        local pfX = nil
+        local pfY = nil
+        local pfW = nil
+
+        -- Method A: Hook recorded draw in the current frame (real-time dynamic ground truth)
+        if pfExt.rhm_lastDrawFrame == rhm_currentDrawFrame and pfExt.rhm_lastBottomY then
+            pfX = pfExt.rhm_lastBottomX or defaultX
+            pfY = pfExt.rhm_lastBottomY
+            pfW = pfExt.rhm_lastWidth or defaultW
+        -- Method B: Fallback check of backgroundBottom overlay position (if hook missed or initial render)
+        elseif pfExt.backgroundBottom and pfExt.backgroundBottom.y and pfExt.backgroundBottom.y > 0.05 and pfExt.backgroundBottom.y < 0.95 then
+            pfX = pfExt.backgroundBottom.x or defaultX
+            pfY = pfExt.backgroundBottom.y
+            pfW = pfExt.displayWidth or defaultW
+        end
+
+        if pfY then
+            -- EN: Extra print texts (control groups, warnings) are only drawn by the engine when F1 is OPEN!
+            -- UA: Додаткові тексти (контрольні групи) малюються движком тільки тоді, коли меню F1 ВІДКРИТЕ!
+            if isF1Open then
+                local extraLines = rhm_getExtraHelpLinesCount(currentVeh, ch)
+                if extraLines > 0 then
+                    local itemH = (ch and ch.lineBg and ch.lineBg.height) or (ch and ch.entryHeight) or (ch and ch.lineHeight) or (0.0260 * uiScale)
+                    local rowSpacing = (ch and ch.lineOffsetY) or spacing or (0.0030 * uiScale)
+                    pfY = pfY - (extraLines * (itemH + rowSpacing))
+                end
+            end
+
+            local dockY = pfY - spacing - self.height
+
+            -- Overflow Guard: if F1 + PF + extras is extremely tall, dock to the right
+            local minSafeY = 0.015 * uiScale
+            if dockY < minSafeY then
+                if pfY < (minSafeY + self.height + spacing) then
+                    local sideX = (pfX or chX) + (pfW or chW) + (0.008 * uiScale)
+                    local sideY = math.min(0.85 * uiScale, ((ch and ch.getY and ch:getY()) or (ch and ch.y) or 0.85) - self.height)
+                    return sideX, sideY, (pfW or chW)
+                else
+                    dockY = minSafeY
+                end
+            end
+
+            return pfX or chX, dockY, pfW or chW
+        end
+    end
+
+    -- 2. Precision Farming is not active/drawing: Check F1 Help Menu elements
 
     if isF1Open and ch then
         -- F1 Help Menu is OPEN:
-        -- Hook recorded bottom of the lowest help entry drawn this frame:
-        if ch.rhm_lastHelpFrame == rhm_currentDrawFrame and ch.rhm_lastHelpBottomY then
-            local dockY = ch.rhm_lastHelpBottomY - spacing - self.height
-            return chX, dockY, chW
+        local helpBottomY = nil
+
+        -- Priority 1: Base bottom of regular help entries (from drawInputHelpElement / drawVehicleSchema)
+        if ch.rhm_baseHelpBottomY and ch.rhm_baseHelpBottomY > 0.02 and ch.rhm_baseHelpBottomY < 0.98 then
+            helpBottomY = ch.rhm_baseHelpBottomY
+        elseif ch.rhm_lastHelpBottomY and ch.rhm_lastHelpBottomY > 0.02 and ch.rhm_lastHelpBottomY < 0.98 then
+            helpBottomY = ch.rhm_lastHelpBottomY
         end
 
-        -- Fallback if hook hasn't run yet
-        local numItems = 0
-        if ch.helpList and ch.helpList.items then
-            numItems = #ch.helpList.items
-        elseif ch.helpList and ch.helpList.entries then
-            numItems = #ch.helpList.entries
-        elseif ch.entries then
-            numItems = #ch.entries
-        else
-            numItems = 13
+        -- Priority 2: Fallback calculation based on item count
+        if not helpBottomY then
+            local numItems = 0
+            if ch.helpList and ch.helpList.items then
+                numItems = #ch.helpList.items
+            elseif ch.helpList and ch.helpList.entries then
+                numItems = #ch.helpList.entries
+            elseif ch.entries then
+                numItems = #ch.entries
+            else
+                numItems = 13
+            end
+            local itemH = 0.0260 * uiScale
+            local listTopY = 0.816 * uiScale
+            helpBottomY = math.max(0.12, listTopY - (numItems * itemH))
         end
-        local itemH = 0.0260 * uiScale
-        local listTopY = 0.816 * uiScale
-        local helpBottomY = math.max(0.18, listTopY - (numItems * itemH))
-        local dockY = helpBottomY - self.height - spacing
+
+        -- EN: Account for extra print texts below the F1 menu (e.g. control groups like Pipe/Door/Ladder, mode alerts)
+        -- UA: Враховуємо додаткові тексти під меню F1 (контрольні групи на зразок труби/дверей/драбини, сповіщення)
+        local currentVeh = self.vehicle or (g_currentMission and g_currentMission.controlledVehicle)
+        local extraLines = rhm_getExtraHelpLinesCount(currentVeh, ch)
+        if extraLines > 0 then
+            local itemH = (ch.lineBg and ch.lineBg.height) or (ch.entryHeight) or (ch.lineHeight) or (0.0260 * uiScale)
+            local rowSpacing = (ch.lineOffsetY) or spacing or (0.0030 * uiScale)
+            helpBottomY = helpBottomY - (extraLines * (itemH + rowSpacing))
+        end
+
+        local dockY = helpBottomY - spacing - self.height
+
+        -- Overflow Guard: if F1 is extremely tall and would push HUD off screen bottom,
+        -- position HUD to the right side of F1 instead of clipping off screen
+        local minSafeY = 0.015 * uiScale
+        if dockY < minSafeY then
+            if helpBottomY < (minSafeY + self.height + spacing) then
+                local sideX = chX + chW + (0.008 * uiScale)
+                local sideY = math.min(0.85 * uiScale, ((ch.getY and ch:getY()) or ch.y or 0.85) - self.height)
+                return sideX, sideY, chW
+            else
+                dockY = minSafeY
+            end
+        end
+
         return chX, dockY, chW
     else
         -- F1 Help Menu is CLOSED:
@@ -300,7 +522,7 @@ function RHMDraggableHUD:getDockedPosition()
         local schemaBottomY = 0.878
         if ch then
             local chY = (ch.getY and ch:getY()) or ch.y
-            if chY and chY > 0.80 and chY < 0.98 then
+            if chY and chY > 0.70 and chY < 0.98 then
                 schemaBottomY = chY
             end
         end
@@ -310,12 +532,19 @@ function RHMDraggableHUD:getDockedPosition()
 end
 
 function RHMDraggableHUD:getPosition()
+    if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+        return self.settings.hudPosX, self.settings.hudPosY
+    end
     return self:getDockedPosition()
 end
 
 function RHMDraggableHUD:setPosition(x, y)
     self.x = x
     self.y = y
+    if self.settings then
+        self.settings.hudPosX = x
+        self.settings.hudPosY = y
+    end
 end
 
 function RHMDraggableHUD:setVehicle(vehicle)
@@ -354,6 +583,59 @@ function RHMDraggableHUD:update(dt)
     self.data.speed            = vehicle:getLastSpeed() or 0
 end
 
+function RHMDraggableHUD:drawPanelBackground(x, y, w, h, color)
+    if not self.roundedOverlay or not self.roundedUVs then return end
+
+    local c = color or {0.0, 0.0, 0.0, 0.72}
+    local r = c[1] or 0.0
+    local g = c[2] or 0.0
+    local b = c[3] or 0.0
+    local a = c[4] or 0.72
+
+    local screenW = g_screenWidth or 1920
+    local screenH = g_screenHeight or 1080
+    local snappedX = math.floor(x * screenW + 0.5) / screenW
+    local snappedY = math.floor(y * screenH + 0.5) / screenH
+    local snappedW = math.max(math.floor(w * screenW + 0.5) / screenW, 1 / screenW)
+    local snappedH = math.max(math.floor(h * screenH + 0.5) / screenH, 1 / screenH)
+
+    local cornerW = math.min(math.floor((6 / screenW) * screenW + 0.5) / screenW, snappedW * 0.5)
+    local cornerH = math.min(math.floor((6 / screenH) * screenH + 0.5) / screenH, snappedH * 0.5)
+
+    local leftX = snappedX
+    local centerX = snappedX + cornerW
+    local rightX = snappedX + snappedW - cornerW
+    local bottomY = snappedY
+    local centerY = snappedY + cornerH
+    local topY = snappedY + snappedH - cornerH
+    local centerW = math.max(rightX - centerX, 0)
+    local centerH = math.max(topY - centerY, 0)
+
+    local overlay = self.roundedOverlay
+    overlay:setColor(r, g, b, a)
+
+    local function renderSlice(sx, sy, sw, sh, uvs)
+        if sw <= 0 or sh <= 0 or not uvs then return end
+        overlay:setPosition(sx, sy)
+        overlay:setDimension(sw, sh)
+        overlay:setUVs(uvs)
+        overlay:render()
+    end
+
+    local uvs = self.roundedUVs
+    renderSlice(leftX, bottomY, cornerW, cornerH, uvs.bottomLeft)
+    renderSlice(centerX, bottomY, centerW, cornerH, uvs.bottom)
+    renderSlice(rightX, bottomY, cornerW, cornerH, uvs.bottomRight)
+
+    renderSlice(leftX, centerY, cornerW, centerH, uvs.left)
+    renderSlice(centerX, centerY, centerW, centerH, uvs.center)
+    renderSlice(rightX, centerY, cornerW, centerH, uvs.right)
+
+    renderSlice(leftX, topY, cornerW, cornerH, uvs.topLeft)
+    renderSlice(centerX, topY, centerW, cornerH, uvs.top)
+    renderSlice(rightX, topY, cornerW, cornerH, uvs.topRight)
+end
+
 function RHMDraggableHUD:drawRect(x, y, w, h, r, g, b, a)
     if not self.rectOverlay then return end
     self.rectOverlay:setPosition(x, y)
@@ -362,49 +644,80 @@ function RHMDraggableHUD:drawRect(x, y, w, h, r, g, b, a)
     self.rectOverlay:render()
 end
 
+function RHMDraggableHUD:drawBorder(x, y, w, h, r, g, b, a, thickness)
+    local t = thickness or (0.0010 * (self.uiScale or 1.0))
+    self:drawRect(x, y, w, t, r, g, b, a)
+    self:drawRect(x, y + h - t, w, t, r, g, b, a)
+    self:drawRect(x, y + t, t, h - 2 * t, r, g, b, a)
+    self:drawRect(x + w - t, y + t, t, h - 2 * t, r, g, b, a)
+end
+
+function RHMDraggableHUD:drawDockSnapPlaceholder(dockX, dockY, dockW, dockH)
+    if not self.roundedOverlay or not self.roundedUVs then return end
+
+    local uiScale = self.uiScale or 1.0
+    local padX = 0.0035 * uiScale
+    local padY = 0.0025 * uiScale
+    local slotX = dockX - padX
+    local slotY = dockY - padY
+    local slotW = dockW + (padX * 2)
+    local slotH = (dockH or self.height) + (padY * 2)
+
+    local pulse = 0.85 + 0.15 * math.sin((g_time or 0) * 0.008)
+    local r = 0.529 * pulse
+    local g = 0.706 * pulse
+    local b = 0.0
+
+    -- 1. Outer rounded rectangle in magnetic green
+    self:drawPanelBackground(slotX, slotY, slotW, slotH, {r, g, b, 0.88})
+
+    -- 2. Inner rounded cutout (creates a crisp rounded outline with soft glowing fill)
+    local thickness = 0.0012 * uiScale
+    local inX = slotX + thickness
+    local inY = slotY + thickness
+    local inW = slotW - (thickness * 2)
+    local inH = slotH - (thickness * 2)
+    self:drawPanelBackground(inX, inY, inW, inH, {0.04, 0.08, 0.02, 0.60})
+end
+
 function RHMDraggableHUD:draw()
     if not g_currentMission:getIsClient() then return end
     if not self.settings.showHUD then return end
     if not self.vehicle then return end
 
-    if not self.bgTopOverlay then
+    if not self.roundedOverlay then
         self:load()
     end
-    if not self.bgTopOverlay then return end
+    if not self.roundedOverlay then return end
 
     -- Update docked coordinates dynamically each frame to track F1 toggle & PF movement
     local dockX, dockY, dockW = self:getDockedPosition()
-    self.x = dockX
-    self.y = dockY
     self.width = dockW
+
+    if not self.isDragging then
+        if self.settings and self.settings.hudPosX ~= nil and self.settings.hudPosY ~= nil then
+            self.x = self.settings.hudPosX
+            self.y = self.settings.hudPosY
+            self.isSnapped = false
+        else
+            self.x = dockX
+            self.y = dockY
+            self.isSnapped = true
+        end
+    end
+
+    -- 1. If currently dragging AND in auto-snap zone: illuminate the target dock slot with rounded outline
+    if self.isDragging and self.hasMoved and self.isNearDock then
+        self:drawDockSnapPlaceholder(dockX, dockY, dockW, self.height)
+    end
 
     local x = self.x
     local y = self.y
     local w = self.width
     local h = self.height
 
-    -- ── Authentic Precision Farming Background ───────────────────────────────
-    -- Rendered via the 3 authentic PF slices from ui_elements.dds:
-    -- shortcutBox_top, shortcutBox_middle, shortcutBox_bottom (matching rounded caps)
-    -- Tinted with deep dark obsidian glass color (0.028, 0.030, 0.036, 0.88)
-    local capH = 0.0075 * self.uiScale
-    local midH = math.max(0.001, h - capH * 2)
-    local bgR, bgG, bgB, bgA = 0.028, 0.030, 0.036, 0.88
-
-    self.bgTopOverlay:setPosition(x, y + h - capH)
-    self.bgTopOverlay:setDimension(w, capH)
-    self.bgTopOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgTopOverlay:render()
-
-    self.bgMidOverlay:setPosition(x, y + capH)
-    self.bgMidOverlay:setDimension(w, midH)
-    self.bgMidOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgMidOverlay:render()
-
-    self.bgBotOverlay:setPosition(x, y)
-    self.bgBotOverlay:setDimension(w, capH)
-    self.bgBotOverlay:setColor(bgR, bgG, bgB, bgA)
-    self.bgBotOverlay:render()
+    -- 2. Authentic FS25 Translucent Rounded Background for HUD
+    self:drawPanelBackground(x, y, w, h, {0.0, 0.0, 0.0, 0.72})
 
     -- ── Build 4-Column PF-Style Stacked Cells ───────────────────────────────
     local cells = self:buildActiveCells()
@@ -425,7 +738,7 @@ function RHMDraggableHUD:draw()
 
         -- Thin vertical divider between cells (exact PF style)
         if i < numCells then
-            self:drawRect(cellEndX - borderW, y + 0.007 * self.uiScale, borderW, h - 0.014 * self.uiScale, 1.0, 1.0, 1.0, 0.18)
+            self:drawRect(cellEndX - borderW, y + 0.007 * self.uiScale, borderW, h - 0.014 * self.uiScale, 1.0, 1.0, 1.0, 0.12)
         end
 
         -- Icon (vertically centered on the left of cell)
@@ -535,13 +848,24 @@ function RHMDraggableHUD:buildActiveCells()
     else
         local curSpeed = self.data.speed or 0
         local targetSpeed = (self.data.recommendedSpeed and self.data.recommendedSpeed > 0) and self.data.recommendedSpeed or (self.data.targetSpeed or 0)
-        local unitText = "km/h"
+        -- EN: Convert speed value and unit label to the active unit system (km/h → mph for Imperial/Bushels).
+        -- UA: Конвертуємо значення та підпис швидкості відповідно до активної системи одиниць.
+        local dispSpeed = curSpeed
+        local speedUnit = "km/h"
+        if RHM_UnitConverter then
+            dispSpeed, speedUnit = RHM_UnitConverter.convertSpeed(curSpeed, unitSystem)
+        end
+        local unitText = speedUnit
         if targetSpeed and targetSpeed > 0.5 then
-            unitText = string.format("/ %.1f km/h", targetSpeed)
+            local dispTarget = targetSpeed
+            if RHM_UnitConverter then
+                dispTarget = RHM_UnitConverter.convertSpeed(targetSpeed, unitSystem)
+            end
+            unitText = string.format("/ %.1f %s", dispTarget, speedUnit)
         end
         table.insert(cells, {
             iconName = "speed",
-            numStr = string.format("%.1f", curSpeed),
+            numStr = string.format("%.1f", dispSpeed),
             unitStr = unitText,
             color = {0.98, 0.98, 0.98, 1.0}
         })
@@ -588,8 +912,19 @@ function RHMDraggableHUD:buildActiveCells()
     if self.settings.showProductivity then
         if self.displayModes.cell4 == "hectaresPerHour" then
             local haVal = self.data.hectaresPerHour or 0
-            local valStr = (haVal <= 0.05 and (self.data.speed or 0) < 0.5) and "0.0" or string.format("%.1f", haVal)
-            local unitLabel = g_i18n:hasText("rhm_unit_ha_per_hour") and g_i18n:getText("rhm_unit_ha_per_hour") or "ha/h"
+            -- EN: Convert area from ha to ac for Imperial/Bushels unit systems.
+            -- UA: Конвертуємо площу з га в акри для систем Imperial/Bushels.
+            local dispArea = haVal
+            local areaUnit = "ha/h"
+            if RHM_UnitConverter then
+                local areaVal, areaSuffix = RHM_UnitConverter.convertArea(haVal, unitSystem)
+                dispArea = areaVal
+                -- EN: Append "/h" to the area suffix ("ha" → "ha/h", "ac" → "ac/h").
+                -- UA: Додаємо "/h" до суфіксу площі ("га" → "га/год", "акр" → "акр/год").
+                areaUnit = areaSuffix .. "/h"
+            end
+            local valStr = (dispArea <= 0.05 and (self.data.speed or 0) < 0.5) and "0.0" or string.format("%.1f", dispArea)
+            local unitLabel = areaUnit
             table.insert(cells, {
                 iconName = "yield",
                 numStr = valStr,
@@ -632,7 +967,7 @@ function RHMDraggableHUD:getLoadColors(load)
         local c = {0.95, 0.80, 0.20, 0.95}
         return {0.98, 0.98, 0.98, 1.0}, c
     else
-        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, {0.529, 0.706, 0.0, 1.0}
     end
 end
 
@@ -645,7 +980,7 @@ function RHMDraggableHUD:getLossColors(loss)
         local c = {0.95, 0.80, 0.20, 0.95}
         return {0.98, 0.98, 0.98, 1.0}, c
     else
-        return {0.98, 0.98, 0.98, 1.0}, {0.25, 0.85, 0.45, 0.95}
+        return {0.98, 0.98, 0.98, 1.0}, {0.529, 0.706, 0.0, 1.0}
     end
 end
 
@@ -655,13 +990,7 @@ function RHMDraggableHUD:isMouseOver(posX, posY)
            posY >= self.y and posY <= (self.y + self.height)
 end
 
-function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
-    if not isDown or button ~= 1 then return false end
-    if not self:isMouseOver(posX, posY) then return false end
-
-    local cellW = self.width / 4
-    local clickedCol = math.floor((posX - self.x) / cellW) + 1
-
+function RHMDraggableHUD:handleCellClick(clickedCol)
     if clickedCol == 4 then
         -- Toggle between tons/h and ha/h
         if self.displayModes.cell4 == "tonPerHour" then
@@ -699,6 +1028,91 @@ function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
             end
             return true
         end
+    end
+    return false
+end
+
+function RHMDraggableHUD:mouseEvent(posX, posY, isDown, isUp, button)
+    -- 1. Mouse Button Down (LMB): initiate drag or potential click
+    local isLMB = (button == 1) or (Input and button == Input.MOUSE_BUTTON_LEFT)
+    if isDown and isLMB then
+        if self:isMouseOver(posX, posY) then
+            self.isDragging = true
+            self.dragStartX = posX
+            self.dragStartY = posY
+            self.dragInitialHudX = self.x
+            self.dragInitialHudY = self.y
+            self.hasMoved = false
+            self.isNearDock = false
+            local cellW = self.width / 4
+            self.clickCell = math.floor((posX - self.x) / cellW) + 1
+            return true
+        end
+    end
+
+    -- 2. Ongoing Drag / Mouse Move
+    if self.isDragging and not isUp then
+        local dx = posX - self.dragStartX
+        local dy = posY - self.dragStartY
+        if math.abs(dx) > 0.003 or math.abs(dy) > 0.003 then
+            self.hasMoved = true
+        end
+
+        if self.hasMoved then
+            local rawX = self.dragInitialHudX + dx
+            local rawY = self.dragInitialHudY + dy
+            local screenMargin = 0.003
+            rawX = math.max(screenMargin, math.min(1.0 - self.width - screenMargin, rawX))
+            rawY = math.max(screenMargin, math.min(1.0 - self.height - screenMargin, rawY))
+
+            local dockX, dockY, dockW = self:getDockedPosition()
+            local uiScale = self.uiScale or 1.0
+            local snapRadiusX = 0.048 * uiScale
+            local snapRadiusY = 0.038 * uiScale
+
+            if math.abs(rawX - dockX) <= snapRadiusX and math.abs(rawY - dockY) <= snapRadiusY then
+                self.isNearDock = true
+            else
+                self.isNearDock = false
+            end
+
+            self.x = rawX
+            self.y = rawY
+        end
+        return true
+    end
+
+    -- 3. Mouse Button Up (Release)
+    if self.isDragging and isUp then
+        self.isDragging = false
+        if not self.hasMoved then
+            -- Stationary click without drag: cycle cell metric (zero flicker/border)
+            self:handleCellClick(self.clickCell or 1)
+        else
+            -- Drag release: commit new position or snap back to automatic dock
+            if self.isNearDock then
+                self.isSnapped = true
+                local dockX, dockY = self:getDockedPosition()
+                self.x = dockX
+                self.y = dockY
+                if self.settings then
+                    self.settings.hudPosX = nil
+                    self.settings.hudPosY = nil
+                end
+            else
+                self.isSnapped = false
+                if self.settings then
+                    self.settings.hudPosX = self.x
+                    self.settings.hudPosY = self.y
+                end
+            end
+            if g_realisticHarvestManager and g_realisticHarvestManager.settingsManager and self.settings then
+                g_realisticHarvestManager.settingsManager:saveClientSettings(self.settings)
+            end
+        end
+        self.hasMoved = false
+        self.isNearDock = false
+        return true
     end
 
     return false

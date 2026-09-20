@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Moeilijkheidsgraad"/>
         <text name="rhm_difficulty_motor" text="Motorvermogen Limiet"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Bepaalt het extra motorvermogen. Arcade = +100%, Normaal = +35%, Realistisch = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Bepaalt de motorbelastingsfysica. Arcade = Uitgeschakeld (geen overbelasting), Normaal = +35% vermogensreserve, Realistisch = 100% authentieke fysica."/>
         <text name="rhm_difficulty_loss" text="Oogstverlies"/>
         <text name="rhm_difficulty_loss_short" text="Verlies"/>
-        <text name="rhm_difficulty_loss_long" text="Bepaalt de strengheid van gewasverliezen bij onjuiste instellingen."/>
+        <text name="rhm_difficulty_loss_long" text="Bepaalt de oogstverliezen. Arcade = 0% (geen verlies), Normaal = standaard verliezen, Realistisch = verhoogde verliezen (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Hoge limieten (+100%). Normaal: Gebalanceerde fysica (+35%). Realistisch: Pure simulatie (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Geen overbelasting of oogstverlies (puur vanilla). Normaal: Gebalanceerde fysica (+35%). Realistisch: Pure simulatie (0%)."/>
         <text name="rhm_diff_2" text="Normaal"/>
         <text name="rhm_diff_3" text="Realistisch"/>
         <text name="rhm_show_yield" text="Show Yield Monitor"/>
@@ -79,7 +79,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Play realistic cabin alarm and thresher strain sounds when the combine is overloaded or exceeding crop loss limits.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Overbelastingsalarm"/>
-        <text name="rhm_alarm_sounds_long" text="Laat een zoemer in de cabine klinken bij kritieke belasting (98%+) of hoog verlies (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modus van de zoemer in de cabine bij zware overbelasting (105%+) of hoog verlies (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Slim (3 pieptonen)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continu"/>
+        <text name="rhm_alarm_mode_off" text="Uit"/>
         <text name="rhm_sound_volume_short" text="Geluidsvolume"/>
         <text name="rhm_sound_volume_long" text="Past het volume van de overbelastingszoemer in de cabine aan."/>
         <text name="rhm_target_load" text="Target Engine Load"/>
@@ -104,6 +107,10 @@
         <text name="rhm_ui_forage_feeder" text="Feed Rolls"/>
         <text name="rhm_ui_root_roller" text="Cleaning Rollers"/>
         <text name="rhm_ui_root_feeder" text="Elevator Web"/>
+        <text name="rhm_ui_grape_shaker" text="Schudsnelheid"/>
+        <text name="rhm_ui_olive_shaker" text="Slaagbalksnelheid"/>
+        <text name="rhm_ui_grape_conveyor" text="Transportsnelheid"/>
+        <text name="rhm_ui_grape_fan" text="Reinigingsblazers"/>
         <text name="rhm_units_short" text="Eenhedensysteem"/>
         <text name="rhm_units_long" text="Selecteer metrisch, imperiaal of bushels."/>
         <text name="rhm_unit_metric" text="Metrisch (km/u, t/ha)"/>
@@ -117,7 +124,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Zet het maaibord aan!"/>
         <text name="rhm_warn_overload_high" text="Combine overloaded! Reduce speed to minimize crop losses."/>
         <text name="rhm_warn_overload_critical" text="COMBINE CRITICALLY OVERLOADED! Severe crop losses occurring!"/>
-        <text name="rhm_configuration_title" text="RHM Electronics"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Systemen"/>
         <text name="rhm_package_standard" text="Tier 1: Basis mechanica"/>
         <text name="rhm_package_sensor" text="Tier 2: Sensorpakket"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetrie &amp; monitoring"/>
@@ -167,7 +174,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mechanische slijtage &amp; Botte messen"/>
+        <text name="rhm_help_loss_3" text="Slijtage van apparatuur vermindert de oogstkwaliteit aanzienlijk. Botte maaibalkmessen slaan aren en peulen stuk (tot +3% verlies en +15% aftakasweerstand). Een versleten dorstrommel en zeven verliezen ongescheiden graan (tot +3% verlies). Regelmatig onderhoud in de werkplaats voorkomt deze verliezen."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -202,6 +211,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSOREN"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIE"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTORBELASTING"/>
         <text name="rhm_ui_card_efficiency" text="EFFICIËNTIE"/>
         <text name="rhm_ui_card_predicted_loss" text="VERWACHT VERLIES"/>
@@ -240,7 +250,7 @@
         <text name="rhm_setting_enableTutorials" text="Tutorial-tips"/>
         <text name="rhm_setting_enableTutorials_long" text="Toon interactieve tips en instructies tijdens het oogsten."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / Linksklik)"/>
-        <text name="rhm_tut_welcome_title" text="Realistisch Oogsten"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Welkom bij Realistic Harvesting! Snelheid past zich dynamisch aan op motorbelasting, gewas en maaibord. Druk op (Rechter Shift + K) voor het kalibratieterminal."/>
         <text name="rhm_tut_overload_title" text="Motoroverbelasting"/>
         <text name="rhm_tut_overload_msg" text="De motor staat onder zware belasting! De hydrostaat remt af om verstopping van de trommel te voorkomen. Hef het maaibord of verminder de maaibreedte."/>
@@ -252,5 +262,10 @@
         <text name="rhm_tut_headland_msg" text="Bij het heffen van het maaibord op de wendakker onthoudt de combine de werksnelheid, waardoor de volgende baan soepel en schokvrij start."/>
         <text name="rhm_tut_upgrade_title" text="Combine Upgrades"/>
         <text name="rhm_tut_upgrade_msg" text="Basis combines vereisen handmatige instelling. Upgrade naar Sensorpakket (Tier 2), Opbrengstmonitor (Tier 3) of Opti-Harvest AI (Tier 4) bij de dealer."/>
+        <text name="rhm_setting_wear_loss_short" text="Mechanische slijtageverliezen"/>
+        <text name="rhm_setting_wear_loss_long" text="Simuleert graanverlies door slijtage van de machine. Botte messen slaan aren stuk (tot +3% verlies en +15% weerstand). Versleten dorstrommels en zeven verliezen graan (tot +3% verlies)."/>
+        <text name="rhm_ui_wear_loss" text="Slijtageverlies"/>
+        <text name="rhm_ui_cutter_wear" text="Maaibalkslijtage"/>
+        <text name="rhm_ui_combine_wear" text="Dorserslijtage"/>
     </texts>
 </l10n>

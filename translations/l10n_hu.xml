@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Nehézség"/>
         <text name="rhm_difficulty_motor" text="Motorteljesítmény"/>
         <text name="rhm_difficulty_motor_short" text="Motor"/>
-        <text name="rhm_difficulty_motor_long" text="Meghatározza a plusz motorteljesítményt. Arcade = +100%, Normál = +35%, Realisztikus = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Meghatározza a motorterhelés fizikáját. Arcade = Kikapcsolva (nincs túlterhelés), Normál = +35% tartalék, Realisztikus = 100% autentikus fizika."/>
         <text name="rhm_difficulty_loss" text="Termésveszteség"/>
         <text name="rhm_difficulty_loss_short" text="Veszteség"/>
-        <text name="rhm_difficulty_loss_long" text="Meghatározza a veszteség súlyosságát."/>
+        <text name="rhm_difficulty_loss_long" text="Meghatározza a termésveszteséget. Arcade = 0% (nincs veszteség), Normál = alapértelmezett veszteség, Realisztikus = megnövelt veszteség (200%)."/>
         <text name="rhm_diff_1" text="Árkád"/>
-        <text name="rhm_difficulty_long" text="Arcade: Magas határok (+100%). Normál: Kiegyensúlyozott fizika (+35%). Realisztikus: Tiszta szimuláció (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Nincs túlterhelés vagy termésveszteség (tiszta vanilla). Normál: Kiegyensúlyozott fizika (+35%). Realisztikus: Tiszta szimuláció (0%)."/>
         <text name="rhm_diff_2" text="Normál"/>
         <text name="rhm_diff_3" text="Realisztikus"/>
         <text name="rhm_show_yield" text="Hozammonitor megjelenítése"/>
@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Reális fülkeriasztás és cséplési feszültséghangok lejátszása túlterhelés vagy veszteség esetén.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Hangok"/>
         <text name="rhm_alarm_sounds_short" text="Túlterhelési hangjelzés"/>
-        <text name="rhm_alarm_sounds_long" text="Megszólaltat egy elektronikus berregőt a fülkében kritikus terhelésnél (98%+) vagy magas veszteségnél (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Fülke berregő üzemmódja erős túlterhelésnél (105%+) vagy magas veszteségnél (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Okos (3 sípolás)"/>
+        <text name="rhm_alarm_mode_continuous" text="Folyamatos"/>
+        <text name="rhm_alarm_mode_off" text="Kikapcsolva"/>
         <text name="rhm_sound_volume_short" text="Hangerő"/>
         <text name="rhm_sound_volume_long" text="Beállítja a fülkében lévő túlterhelési hangjelzés (berregő) hangerejét."/>
         <text name="rhm_target_load" text="Cél Motorterhelés"/>
@@ -106,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Behúzóhengerek"/>
         <text name="rhm_ui_root_roller" text="Tisztítóhengerek"/>
         <text name="rhm_ui_root_feeder" text="Felhordószalag"/>
+        <text name="rhm_ui_grape_shaker" text="Rázószerkezet sebessége"/>
+        <text name="rhm_ui_olive_shaker" text="Verődob sebessége"/>
+        <text name="rhm_ui_grape_conveyor" text="Szállítószalag sebessége"/>
+        <text name="rhm_ui_grape_fan" text="Tisztító ventilátorok"/>
         <text name="rhm_units_short" text="Mértékegységek"/>
         <text name="rhm_units_long" text="Mérési rendszer kiválasztása (sebesség, tömeg, terület)"/>
         <text name="rhm_unit_metric" text="Metrikus (km/h, t/h, ha)"/>
@@ -115,11 +122,11 @@
         <text name="rhm_loss_low" text="ALACSONY"/>
         <text name="rhm_loss_med" text="KÖZEPES"/>
         <text name="rhm_loss_high" text="MAGAS"/>
-        <text name="rhm_warning_turn_on_combine" text="ElÅ‘szÃ¶r a kombÃ¡jnt kapcsolja be!"/>
-        <text name="rhm_warning_turn_on_cutter" text="Kapcsolja be a vÃ¡gÃ³asztalt!"/>
+        <text name="rhm_warning_turn_on_combine" text="Először a kombájnt kapcsolja be!"/>
+        <text name="rhm_warning_turn_on_cutter" text="Kapcsolja be a vágóasztalt!"/>
         <text name="rhm_warn_overload_high" text="A kombájn túlterhelt! Csökkentse a sebességet."/>
         <text name="rhm_warn_overload_critical" text="A KOMBÁJN KRITIKUSAN TÚLTERHELT! Súlyos termésveszteség!"/>
-        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_configuration_title" text="Realistic Harvesting Rendszerek"/>
         <text name="rhm_package_standard" text="Tier 1: Alap mechanika"/>
         <text name="rhm_package_sensor" text="Tier 2: Erzekelo keszlet"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria es monitor"/>
@@ -169,7 +176,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Mechanikai kopás és tompa pengék"/>
+        <text name="rhm_help_loss_3" text="A gép kopása jelentősen rontja a betakarítás minőségét. A vágóasztal tompa pengéi kipergetik a kalászokat és hüvelyeket (akár +3% veszteség és +15% TLT-ellenállás). A kopott cséplődob és a rosták elhullajtják a tisztítatlan szemet (akár +3% veszteség). A műhelyben végzett rendszeres karbantartás megszünteti ezeket a veszteségeket."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -204,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - ERZEKELOK"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="MOTORTERHELÉS"/>
         <text name="rhm_ui_card_efficiency" text="HATÉKONYSÁG"/>
         <text name="rhm_ui_card_predicted_loss" text="VÁRHATÓ VESZTESÉG"/>
@@ -242,7 +252,7 @@
         <text name="rhm_setting_enableTutorials" text="Oktató tippek"/>
         <text name="rhm_setting_enableTutorials_long" text="Interaktív tippek és útmutatók megjelenítése aratás közben."/>
         <text name="rhm_ui_btn_close_notification" text="Értem (Enter / Bal kattintás)"/>
-        <text name="rhm_tut_welcome_title" text="Realisztikus Betakarítás"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Üdvözöljük a Realistic Harvesting-ben! A kombájn sebességét a motorterhelés, a terméssűrűség és a vágóasztal határozza meg. Nyissa meg a terminált a (Jobb Shift + K) billentyűvel."/>
         <text name="rhm_tut_overload_title" text="Motortúlterhelés"/>
         <text name="rhm_tut_overload_msg" text="A motor a határon dolgozik! A hidrosztatikus hajtás lelassítja a gépet a cséplődob eltömődésének megelőzésére. Emelje meg az asztalt vagy csökkentse a szélességet."/>
@@ -254,5 +264,10 @@
         <text name="rhm_tut_headland_msg" text="A vágóasztal felemelésekor a kombájn megjegyzi az aratási sebességet. A következő sorban simán és rángatás nélkül gyorsul vissza."/>
         <text name="rhm_tut_upgrade_title" text="Kombájn Fejlesztések"/>
         <text name="rhm_tut_upgrade_msg" text="Az alapkombájn kézi finomhangolást igényel. Szereljen be Szenzorkészletet (2. szint), Hozammérőt (3. szint) vagy Opti-Harvest AI robotpilótát (4. szint) a műhelyben."/>
+        <text name="rhm_setting_wear_loss_short" text="Mechanikai kopási veszteségek"/>
+        <text name="rhm_setting_wear_loss_long" text="Szimulálja a berendezés kopásából eredő szemveszteséget. A tompa vágópengék kipergetik a szemeket (akár +3% veszteség és +15% ellenállás). A kopott cséplődob és a rosták szemet veszítenek (akár +3% veszteség)."/>
+        <text name="rhm_ui_wear_loss" text="Kopási veszteség"/>
+        <text name="rhm_ui_cutter_wear" text="Vágóasztal kopása"/>
+        <text name="rhm_ui_combine_wear" text="Cséplőgép kopása"/>
     </texts>
 </l10n>

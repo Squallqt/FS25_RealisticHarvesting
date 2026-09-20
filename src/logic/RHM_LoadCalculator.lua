@@ -36,6 +36,11 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- Crop loss and productivity
     self.cropLoss = 0  -- EN: Current crop loss (%) / UA: Поточні втрати врожаю (%)
+    self.cutterWearLoss = 0   -- EN: Loss from cutterbar knife wear (%) / UA: Втрати від зносу жатки (%)
+    self.combineWearLoss = 0  -- EN: Loss from thresher wear (%) / UA: Втрати від зносу комбайна (%)
+    self.totalWearLoss = 0    -- EN: Total mechanical wear loss (%) / UA: Сумарні втрати від зносу (%)
+    self.lastCutterDamage = 0 -- EN: Cached cutter damage (0..1) / UA: Кешований знос жатки
+    self.lastCombineDamage = 0 -- EN: Cached combine damage (0..1) / UA: Кешований знос комбайна
     self.tonPerHour = 0  -- EN: Yield in T/h / UA: Продуктивність в Т/год
     self.litersPerHour = 0  -- EN: Yield in L/h / UA: Продуктивність в Л/год
     self.hectaresPerHour = 0 -- EN: Area rate in ha/h / UA: Продуктивність в га/год
@@ -121,7 +126,8 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == motorConfigIndex and motorObj._rhm_engineHp > 0 then
+    local carrierConfigIndex = (motorObj.configurations and tonumber(motorObj.configurations.motor)) or motorConfigIndex
+    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == carrierConfigIndex and motorObj._rhm_engineHp > 0 then
         vehicle._rhm_engineHp = motorObj._rhm_engineHp
         vehicle._rhm_engineHpConfig = motorConfigIndex
         return motorObj._rhm_engineHp
@@ -129,34 +135,89 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
 
     local resolvedHp = nil
 
-    -- 1. Check VehicleMotor properties if runtime engine exposes them
-    if motorObj.spec_motorized and motorObj.spec_motorized.motor then
-        local motor = motorObj.spec_motorized.motor
-        if motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
-            resolvedHp = tonumber(motor.hp)
-        elseif motor.getPeakMotorPower then
-            local kw = motor:getPeakMotorPower()
-            if kw and tonumber(kw) and tonumber(kw) > 0 then
-                resolvedHp = tonumber(kw) * 1.35962
+    -- 2. Check official GIANTS engine shop specification method (Motorized.getSpecValuePower)
+    -- This correctly resolves encrypted DLC vehicles (e.g. NEXAT Pack) where XMLFile cannot inspect files.
+    if Motorized and Motorized.getSpecValuePower and motorObj.spec_motorized and motorObj.configFileName and g_storeManager then
+        local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
+        if storeItem then
+            local configs = motorObj.configurations or {}
+            -- Try with returnValues = true (returns raw minPower, maxPower in HP)
+            local okVal, p1, p2 = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, true)
+            if okVal and p2 and tonumber(p2) and tonumber(p2) > 0 then
+                resolvedHp = tonumber(p2)
+            elseif okVal and p1 and tonumber(p1) and tonumber(p1) > 0 then
+                resolvedHp = tonumber(p1)
+            else
+                -- Try with returnValues = false (returns formatted string, e.g. "809 kW / 1100 hp" or "1100 hp")
+                local okStr, pStr = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, false)
+                if okStr and type(pStr) == "string" then
+                    local hpVal = pStr:match("(%d+[%d%,%.]*)%s*[Hh][Pp]") 
+                               or pStr:match("(%d+[%d%,%.]*)%s*[Cc][Hh]")
+                               or pStr:match("(%d+[%d%,%.]*)%s*л%.%s*с")
+                               or pStr:match("(%d+[%d%,%.]*)%s*[Pp][Ss]")
+                    if hpVal then
+                        resolvedHp = tonumber(hpVal:gsub(",", "."))
+                    else
+                        local kwVal = pStr:match("(%d+[%d%,%.]*)%s*[Kk][Ww]") or pStr:match("(%d+[%d%,%.]*)%s*к[Вв][Тт]")
+                        if kwVal then
+                            resolvedHp = tonumber(kwVal:gsub(",", ".")) * 1.35962
+                        end
+                    end
+                end
             end
+        end
+    end
+
+    -- 3. Check VehicleMotor runtime engine instance properties
+    if not resolvedHp and motorObj.spec_motorized and motorObj.spec_motorized.motor then
+        local motor = motorObj.spec_motorized.motor
+        -- In GIANTS Engine 10 (FS25) VehicleMotor:new assigns self.maxMotorPower (in kW)
+        if motor.maxMotorPower and tonumber(motor.maxMotorPower) and tonumber(motor.maxMotorPower) > 0 then
+            resolvedHp = tonumber(motor.maxMotorPower) * 1.35962
         elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
             resolvedHp = tonumber(motor.peakMotorPower) * 1.35962
+        elseif motor.motorPeakPower and tonumber(motor.motorPeakPower) and tonumber(motor.motorPeakPower) > 0 then
+            resolvedHp = tonumber(motor.motorPeakPower) * 1.35962
+        elseif motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
+            resolvedHp = tonumber(motor.hp)
         elseif motor.motorPower and tonumber(motor.motorPower) and tonumber(motor.motorPower) > 0 then
             resolvedHp = tonumber(motor.motorPower) * 1.35962
+        elseif motor.maxPower and tonumber(motor.maxPower) and tonumber(motor.maxPower) > 0 then
+            resolvedHp = tonumber(motor.maxPower) * 1.35962
         end
-    end
 
-    if not resolvedHp and motorObj.getMotor and type(motorObj.getMotor) == "function" then
-        local motor = motorObj:getMotor()
-        if motor and motor.getPeakMotorPower then
-            local kw = motor:getPeakMotorPower()
-            if kw and tonumber(kw) and tonumber(kw) > 0 then
-                resolvedHp = tonumber(kw) * 1.35962
+        -- Check methods if variables were private
+        if not resolvedHp then
+            if motor.getMaxMotorPower then
+                local kw = motor:getMaxMotorPower()
+                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
+            elseif motor.getPeakMotorPower then
+                local kw = motor:getPeakMotorPower()
+                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
+            elseif motor.getHp then
+                local hp = motor:getHp()
+                if hp and tonumber(hp) and tonumber(hp) > 0 then resolvedHp = tonumber(hp) end
             end
         end
     end
 
-    -- 2. Inspect vehicle XML via XMLFile for exact motorConfiguration hp or storeData specs
+    -- 4. Check in-memory spec_motorized.motorConfigurations table
+    if not resolvedHp and motorObj.spec_motorized and motorObj.spec_motorized.motorConfigurations then
+        local cfgs = motorObj.spec_motorized.motorConfigurations
+        local cfg = cfgs[carrierConfigIndex] or cfgs[1]
+        if cfg then
+            if cfg.hp and tonumber(cfg.hp) and tonumber(cfg.hp) > 0 then
+                resolvedHp = tonumber(cfg.hp)
+            elseif cfg.maxMotorPower and tonumber(cfg.maxMotorPower) and tonumber(cfg.maxMotorPower) > 0 then
+                resolvedHp = tonumber(cfg.maxMotorPower) * 1.35962
+            elseif cfg.power and tonumber(cfg.power) and tonumber(cfg.power) > 0 then
+                local p = tonumber(cfg.power)
+                resolvedHp = (p > 900) and p or (p * 1.35962)
+            end
+        end
+    end
+
+    -- 5. Inspect vehicle XML via XMLFile for unencrypted mod/basegame files
     if not resolvedHp and motorObj.configFileName then
         local xmlFile = nil
         local schema = (Vehicle and Vehicle.xmlSchema) or nil
@@ -169,7 +230,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         if xmlFile then
             local hp = nil
             if xmlFile.getInt then
-                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                hp = xmlFile:getInt(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1))
                 if not hp or hp <= 0 then
                     hp = xmlFile:getInt("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
                 end
@@ -177,7 +238,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                     hp = xmlFile:getInt("vehicle.storeData.specs.power")
                 end
             elseif xmlFile.getValue and XMLValueType then
-                hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1), XMLValueType.INT)
+                hp = xmlFile:getValue(string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1), XMLValueType.INT)
                 if not hp or hp <= 0 then
                     hp = xmlFile:getValue("vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp", XMLValueType.INT)
                 end
@@ -185,7 +246,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                     hp = xmlFile:getValue("vehicle.storeData.specs.power", XMLValueType.INT)
                 end
             elseif getXMLInt then
-                hp = getXMLInt(xmlFile, string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", motorConfigIndex - 1))
+                hp = getXMLInt(xmlFile, string.format("vehicle.motorized.motorConfigurations.motorConfiguration(%d)#hp", carrierConfigIndex - 1))
                 if not hp or hp <= 0 then
                     hp = getXMLInt(xmlFile, "vehicle.motorized.motorConfigurations.motorConfiguration(0)#hp")
                 end
@@ -206,18 +267,36 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    -- 3. Fallback to Store Item specs (instant table lookup)
+    -- 6. Direct storeItem.specs fallback
     if not resolvedHp and motorObj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
         local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
-        if storeItem and storeItem.specs and storeItem.specs.power then
-            local p = tonumber(storeItem.specs.power)
-            if p and p > 0 then
-                resolvedHp = p
+        if storeItem and storeItem.specs then
+            if storeItem.specs.power and tonumber(storeItem.specs.power) and tonumber(storeItem.specs.power) > 0 then
+                resolvedHp = tonumber(storeItem.specs.power)
+            elseif storeItem.specs.neededPower and tonumber(storeItem.specs.neededPower) and tonumber(storeItem.specs.neededPower) > 0 then
+                resolvedHp = tonumber(storeItem.specs.neededPower)
             end
         end
     end
 
-    -- 4. Check basePerfMass back-calculation if cached
+    -- 7. Signature recognition for known modular carrier platforms (NEXAT)
+    -- Dual 550 HP engines = 1100 HP total system rating
+    if not resolvedHp or resolvedHp <= 400 then
+        local brandName = ""
+        if motorObj.getBrandName then brandName = motorObj:getBrandName() or "" end
+        local rawName = (motorObj.getName and motorObj:getName()) or ""
+        local fullName = (motorObj.getFullName and motorObj:getFullName()) or ""
+        local vehBrand = ""
+        if vehicle.getBrandName then vehBrand = vehicle:getBrandName() or "" end
+        local vehName = (vehicle.getName and vehicle:getName()) or ""
+        local vehFull = (vehicle.getFullName and vehicle:getFullName()) or ""
+        local sig = string.format("%s %s %s %s %s %s", brandName, rawName, fullName, vehBrand, vehName, vehFull):upper()
+        if sig:find("NEXAT") or sig:find("NEXCO") then
+            resolvedHp = 1100
+        end
+    end
+
+    -- 8. Check basePerfMass back-calculation if cached
     if not resolvedHp and self.basePerfMass and self.basePerfMass > 0 then
         resolvedHp = math.max(150, self.basePerfMass * 3.6 * 5.2)
     end
@@ -226,7 +305,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     vehicle._rhm_engineHp = resolvedHp
     vehicle._rhm_engineHpConfig = motorConfigIndex
     motorObj._rhm_engineHp = resolvedHp
-    motorObj._rhm_engineHpConfig = motorConfigIndex
+    motorObj._rhm_engineHpConfig = carrierConfigIndex
 
     rhm_log(string.format("RHM [RHM_LoadCalculator]: Detected engine power for %s: %.0f HP (config #%d)", 
         motorObj.getFullName and motorObj:getFullName() or "Harvester", resolvedHp, motorConfigIndex))
@@ -304,10 +383,12 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         local isCutter = (obj.spec_cutter ~= nil or obj.spec_forageHarvesterCutter ~= nil 
                        or obj.spec_forageCutter ~= nil or obj.spec_pickup ~= nil)
 
-        -- In trailed setups (e.g. Grimme Rootster on a tractor), the harvester implement itself consumes PTO power
-        local isTrailedHarvester = (obj ~= motorCarrier and obj.spec_combine ~= nil)
+        -- In trailed setups (e.g. Grimme Rootster on a tractor), a separate harvester implement consumes PTO power.
+        -- Must NOT be the vehicle running RHM itself (e.g. NEXCO modular harvester).
+        local isTrailedHarvester = (obj ~= motorCarrier and obj ~= vehicle and obj.spec_combine ~= nil)
+        local isGrapeOrOliveMachine = (obj == vehicle and self.combineMemory and (self.combineMemory.machineType == "grape" or self.combineMemory.machineType == "olive"))
 
-        if isCutter or isTrailedHarvester then
+        if isCutter or isTrailedHarvester or isGrapeOrOliveMachine then
             cutterCount = cutterCount + 1
 
             -- Check active state
@@ -407,13 +488,15 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                     width = tonumber(item.specs.workingWidth) or width
                 end
             end
-            if width == 0 then
+            if width > 0 then
+                self.lastHeaderWidth = width
+            else
                 width = 6.0
             end
 
             local minHpPerM = 7.5 -- Standard grain/draper cutter (7.5 HP/m - matches GIANTS neededMaxPtoPower)
             if isForageCutter then
-                minHpPerM = 50.0 -- High-speed rotary forage cutter (Kemper/XCollect)
+                minHpPerM = 20.0 -- High-speed rotary forage cutter (Kemper/XCollect: ~18-20 HP/m)
             elseif isPickup then
                 minHpPerM = 15.0 -- Windrow pickup reel
             elseif isTrailedHarvester then
@@ -445,8 +528,8 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
         end
     end
 
-    -- If self-propelled machine with built-in cutter and no separate PTO consumer was registered:
-    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil) then
+    -- If self-propelled machine with built-in cutter/shaker and no separate PTO consumer was registered:
+    if headerHp == 0 and vehicle == motorCarrier and (vehicle.spec_cutter ~= nil or vehicle.getWorkingWidth ~= nil or vehicle.spec_combine ~= nil) then
         local width = 0
         if vehicle.getWorkingWidth then
             local w = vehicle:getWorkingWidth()
@@ -461,10 +544,15 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                 width = tonumber(item.specs.workingWidth) or width
             end
         end
-        if width == 0 then
-            width = 3.0
-        end
+
         local cropUpper = (self.currentCrop and string.upper(self.currentCrop)) or ""
+        local isGrapeOrOlive = (cropUpper:find("GRAPE") or cropUpper:find("OLIVE")
+            or (self.combineMemory and (self.combineMemory.machineType == "grape" or self.combineMemory.machineType == "olive")))
+
+        if width == 0 then
+            width = isGrapeOrOlive and 2.5 or 3.0
+        end
+
         local fruitTypeIndex = vehicle.spec_combine and vehicle.spec_combine.lastValidInputFruitType
         if (not cropUpper or cropUpper == "" or cropUpper == "UNKNOWN") and fruitTypeIndex and fruitTypeIndex ~= 0 and g_fruitTypeManager then
             local fruitTypeDesc = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
@@ -472,9 +560,21 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
                 cropUpper = string.upper(fruitTypeDesc.name)
             end
         end
+
         local isStripper = (cropUpper:find("BEAN") or cropUpper:find("PEA") or cropUpper:find("SPINACH"))
-        local hpPerMeter = isStripper and 28.0 or 22.0
+        local hpPerMeter = 22.0
+        if isStripper then
+            hpPerMeter = 28.0
+        elseif isGrapeOrOlive then
+            hpPerMeter = 14.0 -- Shaker tunnel rods and extractor turbines (~35 HP total)
+        end
         headerHp = width * hpPerMeter
+        self.lastHeaderWidth = width
+
+        if vehicle.getIsTurnedOn and vehicle:getIsTurnedOn() then
+            isCutterActive = true
+            cutterCount = math.max(1, cutterCount)
+        end
     end
 
     maxWorkingSpeed = maxWorkingSpeed or self.vanillaWorkingSpeed or (self.genuineSpeedLimit > 0 and self.genuineSpeedLimit) or 10.0
@@ -527,7 +627,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         if cropName:find("POPLAR") or cropName:find("WOOD") then
             baseESpec = 10.0 -- Poplar wood chipping: high-resistance wood cutting drum
         elseif cropName:find("MAIZE") or cropName:find("CORN") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
-            baseESpec = 2.35 -- Whole corn silage: heavy biomass + corn cracker roller mills
+            baseESpec = 2.10 -- Whole corn silage: heavy biomass + corn cracker roller mills (ASABE EP496)
         elseif cropName:find("GRASS") or cropName:find("MEADOW") or cropName:find("ALFALFA") or cropName:find("LUCERNE") or cropName:find("CLOVER") then
             if isPickup then
                 baseESpec = 1.8 -- Swath pickup: pre-mowed windrow, low cutter resistance
@@ -586,9 +686,9 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         baseESpec = 4.8 -- Heavy stalk base cutter, dual billet chopper drums, high-power extractor fans
 
     -- 5. GRAPES & OLIVES (Specialized straddle harvesters)
-    elseif cropName:find("GRAPE") then
+    elseif machineType == "grape" or cropName:find("GRAPE") then
         baseESpec = 3.8 -- Shaker rod frequency, sorting belts, destemmer
-    elseif cropName:find("OLIVE") then
+    elseif machineType == "olive" or cropName:find("OLIVE") then
         baseESpec = 2.6 -- Olive shaker beaters, leaf blowers
 
     -- 6. GRAIN COMBINE HARVESTERS (Grain tank stream processing)
@@ -690,7 +790,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
     if machineType == "root" then
         alpha = 0.12
         minFactor = 0.75
-    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" then
+    elseif machineType == "forage" or machineType == "cotton" or machineType == "sugarcane" or machineType == "grape" or machineType == "olive" then
         alpha = 0.15
         minFactor = 0.75
     end
@@ -741,6 +841,8 @@ function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
 
     local isForage = (machineType == "forage" or category:find("forage") ~= nil)
     local isRoot = (machineType == "root" or category:find("beet") ~= nil or category:find("potato") ~= nil or category:find("vegetable") ~= nil)
+    local isCotton = (machineType == "cotton" or category:find("cotton") ~= nil)
+    local isGrapeOrOlive = (machineType == "grape" or machineType == "olive" or category:find("grape") ~= nil or category:find("olive") ~= nil)
 
     -- Nominal throughput at 100% processing load (t/h)
     local nominalTph = 0
@@ -748,6 +850,10 @@ function RHM_LoadCalculator:getBasePerformanceFromPower(vehicle)
         nominalTph = hp / 2.1 -- ~2.1 HP per t/h
     elseif isRoot then
         nominalTph = hp / 0.75 -- ~0.75 HP per t/h
+    elseif isCotton then
+        nominalTph = hp / 18.0 -- ~18 HP per t/h for cotton
+    elseif isGrapeOrOlive then
+        nominalTph = hp / 3.2 -- ~3.2 HP per t/h for grape/olive picking & shaking
     else
         nominalTph = hp / 5.2 -- ~5.2 HP per t/h for grain
     end
@@ -944,9 +1050,11 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
 
         -- Header power consumption (scales with ground speed)
         if headerHp > 0 then
-            local speedKmh = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
-            local speedRatio = math.min(1.2, math.max(0.0, speedKmh / math.max(1.0, maxWorkingSpeed)))
-            pHeader = headerHp * (0.20 + 0.80 * speedRatio)
+            local currentSpeed = (vehicle and vehicle.getLastSpeed and vehicle:getLastSpeed()) or self.speedLimit or 7.0
+            local refSpeed = math.max(1.0, maxWorkingSpeed or 10.0)
+            local speedRatio = math.min(1.0, math.max(0.0, currentSpeed / refSpeed))
+            local dullCutterFactor = 1.0 + 0.15 * math.max(0.0, math.min(1.0, self.lastCutterDamage or 0))
+            pHeader = headerHp * (0.20 + 0.80 * speedRatio) * dullCutterFactor
         end
     end
 
@@ -1004,16 +1112,28 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
     end
 
     -- 7. RESULTING ENGINE LOAD
-    local loadRatio = pTotal / math.max(1.0, effectiveEngineHp)
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
 
-    -- Smooth engineLoad transitions
-    if not isActivelyHarvesting and not isCutterActive then
-        self.engineLoad = 0
-    elseif self.engineLoad == 0 then
-        self.engineLoad = math.min(0.60, loadRatio)
+    if isArcade then
+        -- EN: In Arcade mode, engine load is completely removed (0.0%).
+        -- UA: В режимі Аркада навантаження двигуна повністю прибране (0.0%).
+        self.engineLoad = 0.0
+        return
     else
-        local loadSmoothing = 0.35
-        self.engineLoad = (1 - loadSmoothing) * loadRatio + loadSmoothing * self.engineLoad
+        local loadRatio = pTotal / math.max(1.0, effectiveEngineHp)
+
+        -- Smooth engineLoad transitions
+        if not isActivelyHarvesting and not isCutterActive then
+            self.engineLoad = 0
+        elseif self.engineLoad == 0 then
+            self.engineLoad = math.min(0.60, loadRatio)
+        else
+            local loadSmoothing = 0.35
+            self.engineLoad = (1 - loadSmoothing) * loadRatio + loadSmoothing * self.engineLoad
+        end
     end
 
     -- Store diagnostic telemetry
@@ -1036,6 +1156,15 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         (vehicle.getDrivingDirection and vehicle:getDrivingDirection() < 0) or
         (vehicle.movingDirection and vehicle.movingDirection < 0)
     ) then
+        return
+    end
+
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        self.speedLimit = math.huge
         return
     end
 
@@ -1204,11 +1333,25 @@ end
 
 ---EN: Returns current engine load factor / UA: Повертає поточне навантаження двигуна
 function RHM_LoadCalculator:getEngineLoad()
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        return 0.0
+    end
     return self.engineLoad * 100
 end
 
 ---EN: Returns calculated speed limit target / UA: Повертає остаточний ліміт швидкості
 function RHM_LoadCalculator:getSpeedLimit()
+    local isArcade = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcade = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+    end
+    if isArcade then
+        return math.huge
+    end
     return self.speedLimit or 0
 end
 
@@ -1252,6 +1395,9 @@ function RHM_LoadCalculator:reset()
     self.currentAvgMass = 0
     self.engineLoad = 0
     self.cropLoss = 0
+    self.cutterWearLoss = 0
+    self.combineWearLoss = 0
+    self.totalWearLoss = 0
     local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
     local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
     local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
@@ -1358,30 +1504,128 @@ end
 function RHM_LoadCalculator:updateSettingsImpact()
     self.settingsEfficiency = 1.0
     self.settingsLoss = 0
+
+    local isArcadeMotor = false
+    local isArcadeLoss = false
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        isArcadeMotor = (g_realisticHarvestManager.settings.difficultyMotor == 1)
+        isArcadeLoss = (g_realisticHarvestManager.settings.difficultyLoss == 1)
+    end
+
+    if isArcadeMotor and isArcadeLoss then
+        -- EN: In full Arcade mode, 100% combine efficiency and 0% settings loss
+        -- UA: В повному режимі Аркада 100% ефективність комбайну та 0% втрат від налаштувань
+        return
+    end
+
     if self.combineMemory and self.combineMemory.currentCrop then
         self.currentCrop = self.combineMemory.currentCrop
     end
     if not self.combineMemory or not self.currentCrop then return end
     local effPenalty, lossPenalty, _ = self.combineMemory:checkSettingsForCrop(self.currentCrop)
     
-    local penalty = math.max(0.0, effPenalty or 0)
-    self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
+    if not isArcadeMotor then
+        local penalty = math.max(0.0, effPenalty or 0)
+        self.settingsEfficiency = math.max(0.25, 1.0 - (penalty / 100.0))
+    end
     
     -- EN: Forage harvesters (silage choppers) produce no grain losses — all crop goes to tank/trailer.
     -- UA: Силосні комбайни не мають втрат зерна — весь врожай йде в бак/причеп.
     local machineType = self.combineMemory.machineType
-    if machineType == "forage" then
+    if machineType == "forage" or isArcadeLoss then
         self.settingsLoss = 0
     else
         self.settingsLoss = math.max(0.0, lossPenalty or 0)
     end
 end
 
-function RHM_LoadCalculator:calculateTotalCropLoss()
+---EN: Calculates crop loss contribution from cutterbar and thresher mechanical wear
+---UA: Розраховує додаткові втрати врожаю від механічного зносу жатки та молотарки
+function RHM_LoadCalculator:calculateWearLoss(vehicle)
+    if not g_realisticHarvestManager or not g_realisticHarvestManager.settings then
+        return 0, 0, 0
+    end
+    -- Check if wear loss calculation is enabled
+    if g_realisticHarvestManager.settings.enableWearLoss == false then
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
+        return 0, 0, 0
+    end
+
+    local cutterDamage = 0
+    local combineDamage = 0
+
+    if vehicle then
+        if vehicle.getDamageAmount then
+            combineDamage = vehicle:getDamageAmount() or 0
+        end
+
+        -- Find attached cutter damage
+        local spec_combine = vehicle.spec_combine
+        local spec_cutter = vehicle.spec_cutter
+        if spec_combine and spec_combine.attachedCutters then
+            for cutter, _ in pairs(spec_combine.attachedCutters) do
+                if cutter and cutter.getDamageAmount then
+                    cutterDamage = math.max(cutterDamage, cutter:getDamageAmount() or 0)
+                end
+            end
+        end
+        -- If combine itself has cutter spec (self-propelled mower/cutter)
+        if spec_cutter and vehicle.getDamageAmount then
+            cutterDamage = math.max(cutterDamage, vehicle:getDamageAmount() or 0)
+        end
+    end
+
+    self.lastCutterDamage = cutterDamage
+    self.lastCombineDamage = combineDamage
+
+    -- 1. Cutter Wear Loss:
+    -- Deadzone: first 15% wear produces 0 loss (normal blade sharpness)
+    -- Scaling: remaining wear (0.15 .. 1.00) produces up to 3.0% loss (blunt knives shattering grain)
+    local cutterLoss = 0
+    if cutterDamage > 0.15 then
+        local effCutterDmg = (cutterDamage - 0.15) / 0.85
+        cutterLoss = math.min(3.0, effCutterDmg * 3.0)
+    end
+
+    -- 2. Combine Thresher Wear Loss:
+    -- Deadzone: first 20% wear produces 0 loss
+    -- Scaling: remaining wear (0.20 .. 1.00) produces up to 3.0% loss (worn rasp bars, sieves, concave)
+    local combineLoss = 0
+    if combineDamage > 0.20 then
+        local effCombineDmg = (combineDamage - 0.20) / 0.80
+        combineLoss = math.min(3.0, effCombineDmg * 3.0)
+    end
+
+    -- 3. Total Wear Loss (capped at 6.0%)
+    local totalWear = math.min(6.0, cutterLoss + combineLoss)
+
+    self.cutterWearLoss = cutterLoss
+    self.combineWearLoss = combineLoss
+    self.totalWearLoss = totalWear
+
+    return totalWear, cutterLoss, combineLoss
+end
+
+function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
+    -- EN: In Arcade Loss mode, strictly 0% total loss
+    -- UA: В режимі втрат Аркада 0% загальних втрат
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.difficultyLoss == 1 then
+        self.cropLoss = 0
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
+        return 0
+    end
+
     -- EN: Forage and Cotton harvesters never have crop loss — bypass all calculations.
     -- UA: Силосні та бавовняні комбайни ніколи не мають втрат врожаю — пропускаємо всі розрахунки.
     if self.combineMemory and (self.combineMemory.machineType == "forage" or self.combineMemory.machineType == "cotton") then
         self.cropLoss = 0
+        self.cutterWearLoss = 0
+        self.combineWearLoss = 0
+        self.totalWearLoss = 0
         return 0
     end
     if self.combineMemory and self.combineMemory.currentCrop then
@@ -1392,7 +1636,13 @@ function RHM_LoadCalculator:calculateTotalCropLoss()
     end
     local baseLoss = self:calculateCropLoss()
     local settingsAddedLoss = self.settingsLoss or 0
-    local totalLoss = baseLoss + settingsAddedLoss
+    local wearLoss = 0
+    if vehicle then
+        wearLoss = self:calculateWearLoss(vehicle)
+    else
+        wearLoss = self.totalWearLoss or 0
+    end
+    local totalLoss = baseLoss + settingsAddedLoss + wearLoss
     totalLoss = math.min(totalLoss, 50)
     self.cropLoss = totalLoss
     return totalLoss

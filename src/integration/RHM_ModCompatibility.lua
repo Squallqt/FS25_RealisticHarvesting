@@ -67,8 +67,32 @@ function RHM_ModCompatibility.hookInteractiveControl()
             )
         end
 
+        if type(InteractiveControl.setMissionActiveController) == "function" then
+            InteractiveControl.setMissionActiveController = Utils.overwrittenFunction(
+                InteractiveControl.setMissionActiveController,
+                function(self, superFunc, activeController)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return superFunc(self, nil)
+                    end
+                    return superFunc(self, activeController)
+                end
+            )
+        end
+
         RHM_ModCompatibility.isICHooked = true
         rhm_log("RHM [Compat]: Successfully hooked FS25_interactiveControl.")
+    end
+
+    if InteractiveControlManager ~= nil and type(InteractiveControlManager.onActionEventExecute) == "function" then
+        InteractiveControlManager.onActionEventExecute = Utils.overwrittenFunction(
+            InteractiveControlManager.onActionEventExecute,
+            function(self, superFunc, ...)
+                if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                    return
+                end
+                return superFunc(self, ...)
+            end
+        )
     end
 end
 
@@ -78,16 +102,43 @@ function RHM_ModCompatibility.hookVehicleMouseCursor()
         return
     end
 
-    if VMC_CursorOverlayGui ~= nil and type(VMC_CursorOverlayGui.open) == "function" then
-        VMC_CursorOverlayGui.open = Utils.overwrittenFunction(
-            VMC_CursorOverlayGui.open,
-            function(self, superFunc, vehicle)
-                if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
-                    return false
+    if VMC_CursorOverlayGui ~= nil then
+        if type(VMC_CursorOverlayGui.open) == "function" then
+            VMC_CursorOverlayGui.open = Utils.overwrittenFunction(
+                VMC_CursorOverlayGui.open,
+                function(self, superFunc, vehicle)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return false
+                    end
+                    return superFunc(self, vehicle)
                 end
-                return superFunc(self, vehicle)
-            end
-        )
+            )
+        end
+
+        if type(VMC_CursorOverlayGui.mouseEvent) == "function" then
+            VMC_CursorOverlayGui.mouseEvent = Utils.overwrittenFunction(
+                VMC_CursorOverlayGui.mouseEvent,
+                function(self, superFunc, posX, posY, isDown, isUp, button)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return false
+                    end
+                    return superFunc(self, posX, posY, isDown, isUp, button)
+                end
+            )
+        end
+
+        if type(VMC_CursorOverlayGui.draw) == "function" then
+            VMC_CursorOverlayGui.draw = Utils.overwrittenFunction(
+                VMC_CursorOverlayGui.draw,
+                function(self, superFunc, ...)
+                    if g_realisticHarvestManager and g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        return
+                    end
+                    return superFunc(self, ...)
+                end
+            )
+        end
+
         RHM_ModCompatibility.isVMCHooked = true
         rhm_log("RHM [Compat]: Successfully hooked FS25_headTrackICextension (VMC_CursorOverlayGui).")
     end
@@ -103,6 +154,9 @@ function RHM_ModCompatibility.onCalibrationGUIOpened()
     if g_currentMission and g_currentMission.interactiveControl then
         if type(g_currentMission.interactiveControl.setActiveInteractiveController) == "function" then
             g_currentMission.interactiveControl:setActiveInteractiveController(nil)
+        end
+        if type(g_currentMission.interactiveControl.unregisterActionEvents) == "function" then
+            g_currentMission.interactiveControl:unregisterActionEvents()
         end
     end
 

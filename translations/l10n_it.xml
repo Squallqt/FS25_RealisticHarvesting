@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Difficoltà"/>
         <text name="rhm_difficulty_motor" text="Potenza del motore"/>
         <text name="rhm_difficulty_motor_short" text="Motore"/>
-        <text name="rhm_difficulty_motor_long" text="Determina la potenza extra disponibile. Arcade = +100%, Normale = +35%, Realistico = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Determina la fisica del carico motore. Arcade = Disattivato (nessun sovraccarico), Normale = +35% di potenza extra, Realistico = 100% fisica autentica."/>
         <text name="rhm_difficulty_loss" text="Perdita raccolto"/>
         <text name="rhm_difficulty_loss_short" text="Perdita"/>
-        <text name="rhm_difficulty_loss_long" text="Determina la gravità della perdita."/>
+        <text name="rhm_difficulty_loss_long" text="Determina le perdite di raccolto. Arcade = 0% (nessuna perdita), Normale = perdite standard, Realistico = perdite aumentate (200%)."/>
         <text name="rhm_diff_1" text="Arcade"/>
-        <text name="rhm_difficulty_long" text="Arcade: Limiti alti (+100%). Normale: Fisica bilanciata (+35%). Realistico: Simulazione pura (0%)."/>
+        <text name="rhm_difficulty_long" text="Arcade: Nessun sovraccarico o perdita (puro vanilla). Normale: Fisica bilanciata (+35%). Realistico: Simulazione pura (0%)."/>
         <text name="rhm_diff_2" text="Normale"/>
         <text name="rhm_diff_3" text="Realistica"/>
         <text name="rhm_show_yield" text="Mostra monitor di rendimento"/>
@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Riproduci allarmi in cabina e suoni di sforzo del battitore quando la mietitrebbia è sovraccarica o subisce perdite.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Audio"/>
         <text name="rhm_alarm_sounds_short" text="Cicalino di sovraccarico"/>
-        <text name="rhm_alarm_sounds_long" text="Attiva un cicalino in cabina in caso di carico critico (98%+) o perdite elevate (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Modalità cicalino in cabina in caso di forte sovraccarico (105%+) o perdite elevate (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Intelligente (3 segnali)"/>
+        <text name="rhm_alarm_mode_continuous" text="Continuo"/>
+        <text name="rhm_alarm_mode_off" text="Disattivato"/>
         <text name="rhm_sound_volume_short" text="Volume del suono"/>
         <text name="rhm_sound_volume_long" text="Regola il volume del cicalino di allarme sovraccarico in cabina."/>
         <text name="rhm_target_load" text="Carico Target"/>
@@ -106,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Rulli di alimentazione"/>
         <text name="rhm_ui_root_roller" text="Rulli di pulizia"/>
         <text name="rhm_ui_root_feeder" text="Nastro elevatore"/>
+        <text name="rhm_ui_grape_shaker" text="Velocità scuotitori"/>
+        <text name="rhm_ui_olive_shaker" text="Velocità battitori"/>
+        <text name="rhm_ui_grape_conveyor" text="Velocità convogliatore"/>
+        <text name="rhm_ui_grape_fan" text="Ventole di aspirazione"/>
         <text name="rhm_units_short" text="Unità"/>
         <text name="rhm_units_long" text="Scegli il sistema di misurazione (velocità, massa, area)"/>
         <text name="rhm_unit_metric" text="Metrico (km/h, t/h, ha)"/>
@@ -119,7 +126,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Accendi la testata!"/>
         <text name="rhm_warn_overload_high" text="Mietitrebbia sovraccarica! Ridurre la velocità."/>
         <text name="rhm_warn_overload_critical" text="MIETITREBBIA CRITICAMENTE SOVRACCARICA! Gravi perdite!"/>
-        <text name="rhm_configuration_title" text="Elettronica RHM"/>
+        <text name="rhm_configuration_title" text="Sistemi Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Tier 1: Meccanica di base"/>
         <text name="rhm_package_sensor" text="Tier 2: Pacchetto sensori"/>
         <text name="rhm_package_yield" text="Tier 3: Telemetria e monitoraggio"/>
@@ -169,7 +176,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Usura meccanica e lame consumate"/>
+        <text name="rhm_help_loss_3" text="L'usura dell'attrezzatura riduce sensibilmente la qualità della raccolta. Le lame usurate della barra sgranano spighe e baccelli (fino a +3% di perdite e +15% di carico PTO). Battitore e crivelli usurati disperdono granella non separata (fino a +3% di perdite). Una regolare manutenzione in officina previene queste perdite."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -204,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="TIER 2 - SENSORI"/>
         <text name="rhm_ui_tier3_monitor" text="TIER 3 - TELEMETRIA"/>
         <text name="rhm_ui_tier4_opti" text="TIER 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="CARICO MOTORE"/>
         <text name="rhm_ui_card_efficiency" text="EFFICIENZA"/>
         <text name="rhm_ui_card_predicted_loss" text="PERDITA PREVISTA"/>
@@ -242,7 +252,7 @@
         <text name="rhm_setting_enableTutorials" text="Suggerimenti tutorial"/>
         <text name="rhm_setting_enableTutorials_long" text="Mostra suggerimenti interattivi durante la raccolta."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Invio / Clic sx)"/>
-        <text name="rhm_tut_welcome_title" text="Raccolta Realistica"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Benvenuto in Realistic Harvesting! La velocità dipende dal carico del motore, dalla densità del raccolto e dalla barra. Apri il terminale con (Shift destro + K)."/>
         <text name="rhm_tut_overload_title" text="Sovraccarico Motore"/>
         <text name="rhm_tut_overload_msg" text="Il motore è sotto forte sforzo! La trasmissione idrostatica rallenta la mietitrebbia per evitare l&apos;ingolfamento del battitore. Solleva la barra o riduci la presa."/>
@@ -254,5 +264,10 @@
         <text name="rhm_tut_headland_msg" text="Alzando la barra a fine campo, la trebbia memorizza la velocità di lavoro per riprendere la passata successiva in modo fluido."/>
         <text name="rhm_tut_upgrade_title" text="Aggiornamenti Trebbia"/>
         <text name="rhm_tut_upgrade_msg" text="Le macchine base richiedono regolazione manuale. Installa Kit Sensori (Livello 2), Monitor di Resa (Livello 3) o IA Opti-Harvest (Livello 4) in officina."/>
+        <text name="rhm_setting_wear_loss_short" text="Perdite da usura meccanica"/>
+        <text name="rhm_setting_wear_loss_long" text="Simula perdite di granella dovute all'usura della macchina. Lame smussate sgranano le spighe (fino a +3% di perdite e +15% di sforzo). Battitore e crivelli usurati disperdono granella (fino a +3% di perdite)."/>
+        <text name="rhm_ui_wear_loss" text="Perdita da usura"/>
+        <text name="rhm_ui_cutter_wear" text="Usura barra di taglio"/>
+        <text name="rhm_ui_combine_wear" text="Usura trebbiatrice"/>
     </texts>
 </l10n>

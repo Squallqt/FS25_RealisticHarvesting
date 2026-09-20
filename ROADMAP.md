@@ -1,122 +1,114 @@
-# � Development Roadmap
+# 🗺️ Realistic Harvesting — Development Roadmap
 
 > **Help shape the future of Realistic Harvesting!**
-> Submit your ideas and feedback on [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues).
+> Submit your ideas, feedback, and feature requests on [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues).
 
 ---
 
-## 📜 Version History (Changelog)
-
-### v1.4.2.0 (Current)
-**New Features:**
-*   **Pickup Header / Swath Support:** Automatic detection of pickup/swath headers (`lastValidInputFruitType == 0`). Applies a **0.75x engine load multiplier**, simulating lower resistance compared to windrowing.
-*   **High-Precision Calibration:** Complete overhaul of all crop factors (20+ types) based on real-world high-efficiency throughput targets and technical manuals (e.g., John Deere/Case IH field guides).
-*   **Multiplayer Sync Fix:** Resolved "AUTO" button desync on dedicated servers. GUI actions are now server-authoritative.
-*   **Per-Crop Highlighting:** GUI now highlights "Optimal" values (Green) based on precise technical tolerances for each crop.
-*   **Lentil & Chickpea:** Individual presets added for pulses based on actual harvester manual settings (High fan, low rotor).
-*   **Forage Harvester Realism:** Adjusted forage harvester capacity (coefficient 0.051) to match real-world tonnage (~400 t/hr silage).
-*   **Savegame Reliability:** Fixed "Path not registered" errors in Dedicated Server logs with redundant schema registration.
-
-**Fixed:**
-*   **Multiplayer Desync:** Fixed "flicker" effect where client settings were reverted by the server shortly after change.
-*   **Duplicate l10n Entries:** Removed duplicate strings in `modDesc.xml` that caused engine warnings.
-*   **Lentil Template Missing:** Added the missing technical template for Lentils to the database.
-
-**Improved:**
-*   **Crop Factors Rebalanced** — `SPINACH`: 0.3→**3.0**, `GREENBEAN`: 0.8→**2.5** for realistic engine load on vegetable harvesters.
-*   **Localization:** All GUI text strings (title, buttons, labels, hints) now use `g_i18n` with full translations across all 10 languages.
-*   **CHAFF, GRASS, SILAGE, COTTON** added to `fillTypeMapping` for complete auto-detection coverage.
-
-### v1.4.1.0
-**Fixed:**
-*   **DLC Compatibility:** Fixed game crash `attempt to call missing method 'getIsControlled'` when using Highland DLC equipment (NH 8040 + Holaras tools). Added a safe nil guard before calling the method.
-*   **Courseplay — Second Combine Stuck at 10 km/h:** Removed incorrect `movingDirection` check from `getSpeedLimit()`. Courseplay speed workaround now only activates when the cutter is actually harvesting.
-*   **AUTO Mode on Dedicated Servers:** AUTO mode now stores a pending state when crop is not yet detected. Settings are applied automatically on the first harvest instead of resetting to 50.
-*   **NEXAT — Calibration Menu Not Opening:** `CombineCalibrationGUI:open()` now searches for the combine vehicle (with `spec_rhm_Combine`) in the full vehicle hierarchy before opening, correctly handling modular NEXAT setups.
-
-### v1.4.0.0
-**New Features:**
-*   **Combine Calibration:** Full manual control over Fan Speed, Rotor Speed, Sieve Openings, and Feeder House.
-*   **Settings Penalty:** Incorrect calibration now causes crop loss (displayed in HUD).
-*   **Profile System:** Save and load custom settings profiles for different crops/conditions.
-*   **GUI:** Interactive graphical menu (RShift+K) to manage settings and profiles.
-*   **AUTO Imperfection:** AUTO mode now applies a slight random deviation (1-10 units) — skilled manual tuning can outperform it!
-*   **Unified Loss Math:** Same penalty formula for AUTO and MANUAL modes — no more zero-loss bypass.
-*   **Savegame Fix:** Combine calibration now correctly saves and restores from `vehicles.xml`.
-*   **Dedicated Server Ready:** Auto-crop detection is server-side only; each vehicle keeps its own calibration profile.
-*   **Settings Consolidation:** All mod settings (server + client) now stored in `modSettings/` folder.
-
-### v1.3.2.0
-**New Features:**
-*   **Physical Crop Loss System:** Crop losses now physically reduce the amount of grain collected in the bunker!
-*   **95% Load Threshold:** Losses start at 95% engine load (previously 100%) for earlier feedback.
-*   **Progressive Loss Formula:** Higher overload results in exponentially more loss for realistic penalties.
-*   **Difficulty Impact:** Arcade/Normal/Realistic settings now directly control crop loss severity.
-
-### v1.3.1.0
-**New Features:**
-*   **Independent Header Control:** Threshing and cutter can now be started independently (option in settings: "Enable Independent Header Control").
-*   **New Draggable HUD:** Completely redesigned HUD with Courseplay-style interaction (Right Click to toggle cursor, Left Click drag to move).
-*   **HUD Customization:** Toggle individual HUD elements (Yield, Load, Speed, Loss, Productivity) and choose between Metric/Imperial/Bushels units.
-*   **HUD Reset Logic:** All metrics (yield, productivity, recommended speed) now reset instantly when the cutter is lifted or disabled.
-*   **Settings Reorganization:** Settings menu split into "Simulation" and "HUD & Visuals" sections for better clarity.
-
-### v1.3.0.0
-**Fixed:**
-*   **Settings Persistence:** Resolved critical bug where Difficulty (Motor/Loss) settings were not saving between sessions.
-*   **Settings Storage:** Migrated settings to `modSettings/` directory for global persistence across all savegames.
-*   **Yield Monitor:** Fixed incorrect yield values; now accurate within ±5% with realistic noise fluctuation.
-*   **Throughput Indicator:** Fixed `T/h` indicator to correctly display real-time harvesting rate.
-*   **HUD Position:** Adjusted HUD placement higher on screen for better visibility.
-*   **Nexat Compatibility:** Fixed HUD visibility issues with the modular Nexat system.
-*   **Cutter Detection:** Improved logic to only limit speed when header is actually working (not just attached/lifted).
-
-**Changed:**
-*   **Mass-Based Calculation:** Switched engine load logic from theoretical area to **actual harvested mass** for consistent realism.
-*   **Conservative Start:** Implemented 7 km/h initial speed limit to prevent immediate overload on start.
-*   **Crop Factors:** Rebalanced resistance values for all crop types based on real-world data.
-*   **Performance:** Optimized core load calculation scripts for smoother gameplay.
-
-### v1.2.1.0
-*   **Fixed:** Productivity calculation displaying values 1000x too low.
-*   **Improved:** Mass-to-volume conversion accuracy using actual game density values.
-
-### v1.2.0.0
-*   **New Feature:** Added support for Cotton Harvesters.
-*   **New Feature:** Added partial support for Forage Harvesters.
-*   **Fixed:** Multiplayer synchronization issues.
-*   **Fixed:** Settings menu conflicts with other mods.
-*   **Improved:** Unit System display toggles (Imperial/Metric).
-
-### v1.1.0.0
-*   **New Feature:** "Reset Settings" button in menu footer (Key: X).
-*   **UX:** Added side descriptions (tooltips) for all settings.
-*   **Localization:** Full translation support for 10 languages (EN, DE, FR, PL, ES, IT, CZ, PT-BR, UK, RU).
-*   **Fixed:** Improved settings menu stability.
-
-### v1.0.0.0
-*   Initial Release.
+## 🌟 Vision & Goal
+Realistic Harvesting transforms combine harvesters in Farming Simulator 25 into living, breathing agricultural machines. Through physics-based engine load modeling, authentic throughput limits, equipment degradation, calibration systems, and detailed telemetry, our goal is to deliver the ultimate harvester simulation experience.
 
 ---
 
-## 🚀 Future Plans
+## ✅ Completed Milestones
 
-Based on community feedback and suggestions, here is the plan for future updates.
+The following features have been successfully designed, implemented, and released:
 
-### Phase 1: Core Mechanics & Refinement (Next)
-*   **Pickup Header Improved Support:** Better handling for windrow harvesting (grass/straw) with accurate load calculations.
-*   **No-Bunker Machine Loss Exemption:** Automatically disable calibration crop loss penalty for machines that don't have a bunker — specifically forage harvesters (blow directly into trailer) and root crop diggers (transfer via elevator to trailer). For these machines, "losing grain" is not a meaningful concept — only speed (engine load) matters.
-
-### Phase 2: Advanced Realism Features
-*   **Realistic Weather Integration:**
-    *   *Upcoming Support:* Direct integration with the **Realistic Weather** mod.
-    *   *Features:* Moisture, air humidity, and rain will affect crop resistance, threshing difficulty, and clogging risks.
-*   **"Combine Jamming" (Verstopfung):** Simulated combine blockage when severely overloaded.
-
-### Phase 3: The "Operator" Update (Long Term)
-*   **Store Customization - Automation:**
-    *   *Idea:* Buyable "Auto-Combine" module in the shop. Casual players can buy automation to handle settings, while enthusiasts can save money by setting it manually.
+*   [x] **Physics-Based Dynamic Engine Load Engine:** Real-time power balance modeling ($P_{total} = P_{base} + P_{header}(v) + P_{process} + P_{soil}$) replacing artificial scripted caps.
+*   [x] **Dynamic Hydrostatic Speed Limiter:** Smooth exponential speed controller preventing drum stall while maintaining optimal equilibrium harvesting speeds.
+*   [x] **Physical & Visual Crop Loss System:** Exponential crop loss penalties that physically deduct grain from the hopper upon severe overload or improper settings.
+*   [x] **Interactive In-Cab Calibration Terminal (Shift + K):** Modern touchscreen terminal for real-time adjustments of fan speed, rotor RPM, concave clearance, and sieves with dynamic map crop extraction.
+*   [x] **4-Tier Electronics Progression:** Shop-configurable upgrade packages from basic Manual Combine to Sensors, Telemetry Monitor, and Opti-Harvest AI.
+*   [x] **Multi-Tier AI Worker & Courseplay Auto-Tuning:** Dynamic field speed and calibration tuning for AI helpers without game freezes.
+*   [x] **Swathing & Pickup Header Integration:** Full support for pickup headers with realistic reduced cutting resistance ($0.75\times$ load factor).
+*   [x] **Full Harvester Category Coverage:** Dedicated physical processing models for Grain, Forage, Root Crops (potatoes, beets, carrots, parsnips, vegetables), Cotton, and Sugarcane.
+*   [x] **Viticulture & Orchard System (Grapes & Olives):** Full support for self-propelled straddle harvesters (New Holland Braud, Grégoire) with 3-parameter viticulture controls (Shaker rods, Bucket conveyor, Extractor fans) and integrated shaker tunnel physics.
+*   [x] **Mechanical Equipment Wear Loss System:** Realistic yield penalties and header drag modeling from blunt cutterbar knives and worn thresher rasp bars with zero double-deduction.
+*   [x] **Smart Cabin Overload Buzzer & Acoustic Balancing:** 3-pulse alert pattern with 18-second reminder pause and uniform volume inside and outside the cab.
+*   [x] **Dedicated Public Integration API (`RHM_Api.lua`):** Safe, zero-friction read-only telemetry API for third-party mods (ADS, Courseplay, AutoDrive, EnhancedVehicle, dashboards).
+*   [x] **Full Multiplayer & Dedicated Server Synchronization:** Server-authoritative physics, dirty flag bitmasks, and persistent client/server XML configs.
+*   [x] **Universal 15-Language Localization:** Native translation strings for all supported languages.
 
 ---
 
-*Notes: This roadmap is subject to change based on technical feasibility and user feedback.*
+## 🚀 Active & Future Development Milestones
+
+Based on community feedback and core realism targets, the following major systems are planned:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           UPCOMING MILESTONES                               │
+├───────────────────────────────┬─────────────────────────────────────────────┤
+│ 1. Harvest History & Trip UI  │ Field trip odometer, loss causes, seasons   │
+│ 2. Machine Types & Dynamics   │ Walker vs Single-Rotor vs Twin-Rotor/Hybrid │
+│ 3. Feeder Clogging System     │ Slip clutch, reverse feed, hard blockage    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Milestone 1: Harvest History & Field Analytics Terminal (Trip Computer)
+*A dedicated statistical terminal inspired by modern combine monitors (e.g. John Deere Operations Center, Claas TELEMATICS, Case IH AFS Connect, ADS / MoistureSystem interfaces).*
+
+*   **Dedicated Analytics GUI Window:**
+    *   Accessible via hotkey or in-game tablet tab.
+    *   Clean, modern dashboard displaying comprehensive harvest records.
+*   **Active Fleet Overview:**
+    *   List of all harvesters currently or previously operated on the farm.
+    *   Total operating hours under load, total hectares harvested, and lifetime throughput.
+*   **Crop-Specific Breakdown:**
+    *   Volume harvested (liters, bushels, metric tons) broken down by crop type.
+    *   Average field yield ($t/ha$, $bu/ac$) and average harvesting speed ($km/h$).
+*   **Transparent Loss Cause Breakdown:**
+    *   Detailed accounting of lost yield with exact causal attribution:
+        *   **Throughput & Speed Overload Loss** (driving too fast for crop density).
+        *   **Calibration & Settings Loss** (suboptimal fan, concave, or sieve adjustments).
+        *   **Moisture & Dew Loss** (harvesting during high moisture conditions).
+        *   **Mechanical Wear Loss** (blunt knife sections and worn rasp bars).
+*   **Field & Seasonal Trip Computer (Resettable Odometer):**
+    *   Operates like a trip meter in a modern car.
+    *   **"Reset Field Trip" button**: Operator resets the trip meter when entering a new field.
+    *   Instantly tracks: Field Area ($ha$), Harvested Mass ($t$), Fuel Used ($L$), Average Load (%), Total Losses ($t$ and %), and Total Harvesting Time.
+    *   Allows comparing operator efficiency across different fields and seasons.
+
+---
+
+### Milestone 2: Harvester Architecture & Model-Specific Dynamics
+*Differentiating combine performance based on physical threshing architecture and manufacturer systems.*
+
+*   **Threshing System Architecture Classes:**
+    *   **Conventional Straw Walkers (Клавішні соломотряси):**
+        *   *Examples:* Claas Tucano/Trion Walker, John Deere T-Series, Deutz-Fahr C-Series.
+        *   *Characteristics:* Gentle on straw, lower power requirement on dry crop, highly sensitive to hilly terrain and massive straw volume.
+    *   **Single Axial Rotor (Однороторні):**
+        *   *Examples:* Case IH Axial-Flow, John Deere S-Series, New Holland CR Single.
+        *   *Characteristics:* Superb grain quality and high capacity on dry corn, sunflowers, and cereals; higher power drag and plugging risk in wet, green straw.
+    *   **Twin-Rotor & Hybrid Systems (Двороторні та Гібридні APS):**
+        *   *Examples:* Claas Lexion APS Synflow Hybrid, New Holland CR Twin Rotor, Fendt IDEAL.
+        *   *Characteristics:* Extreme throughput capacity and high separation force under damp conditions; higher base fuel consumption and engine power requirements.
+*   **Model-Specific Tuning & Brand Profiles:**
+    *   Individual moisture tolerance and crop flow curves tailored to real-world machine specs.
+    *   Slope sensitivity modeling: combines without 3D/4D sieve leveling suffer higher sieve losses on steep slopes.
+
+---
+
+### Milestone 3: Feederhouse & Drum Clogging System (Verstopfung)
+*Fully integrated, interactive header and threshing drum plugging mechanics when severely overworking equipment.*
+
+*   **Physical Clogging Accumulation:**
+    *   Operating deep in the red zone ($>105\text{--}115\%$ load), slug feeding from uneven windrows, or hitting heavy damp patches progressively builds feederhouse blockage ($0\text{--}100\%$).
+*   **Slip Clutch Warning (Пробуксовка запобіжної муфти):**
+    *   Feeder slip clutch ratchets when torque exceeds safe thresholds, producing authentic mechanical acoustic chatter (`slipClutch` sound).
+    *   Cutterbar and reel stop spinning while the engine continues to run.
+*   **Hydraulic Feederhouse Reversing (Реверс похилої камери):**
+    *   Operator stops the machine, shifts to reverse feed (holding reverse key), and slowly expels the plugged crop wad back onto the header table or ground.
+    *   Reversed crop is deposited onto the ground as a pickable swath.
+*   **Hard Blockage & Manual Clear On-Foot:**
+    *   Premature restart under heavy residual plug ($>30\%$) or severe sudden stall triggers a mechanical hard lock.
+    *   Requires the operator to dismount, walk to the front of the cutterbar/pickup, and manually clear the obstruction with a clearing tool before restarting.
+*   **AI Safety & Automation:**
+    *   AI helpers and Courseplay dynamically regulate speed to prevent plugging, with full configurable safety exemptions.
+
+---
+
+*Note: This roadmap reflects active development priorities and may be adjusted based on community feedback, technical feasibility, and GIANTS Engine updates.*

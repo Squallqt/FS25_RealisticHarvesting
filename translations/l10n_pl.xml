@@ -14,12 +14,12 @@
         <text name="rhm_difficulty" text="Trudność"/>
         <text name="rhm_difficulty_motor" text="Moc silnika"/>
         <text name="rhm_difficulty_motor_short" text="Silnik"/>
-        <text name="rhm_difficulty_motor_long" text="Określa dostępny zapas mocy silnika. Zręcznościowy = +100%, Normalny = +35%, Realistyczny = 0%."/>
+        <text name="rhm_difficulty_motor_long" text="Określa fizykę obciążenia silnika. Zręcznościowy = Wyłączone (brak przeciążeń), Normalny = +35% zapasu mocy, Realistyczny = 100% autentyczna fizyka."/>
         <text name="rhm_difficulty_loss" text="Strata plonów"/>
         <text name="rhm_difficulty_loss_short" text="Strata"/>
-        <text name="rhm_difficulty_loss_long" text="Określa dotkliwość strat."/>
+        <text name="rhm_difficulty_loss_long" text="Określa straty plonów. Zręcznościowy = 0% (brak strat), Normalny = standardowe straty, Realistyczny = zwiększone straty (200%)."/>
         <text name="rhm_diff_1" text="Zręcznościowy"/>
-        <text name="rhm_difficulty_long" text="Arkada: wysokie limity (+100%). Normalna: zbalansowana fizyka (+35%). Realistyczna: czysta symulacja (0%)."/>
+        <text name="rhm_difficulty_long" text="Arkada: Brak przeciążeń i strat (czysta wanilia). Normalna: Zbalansowana fizyka (+35%). Realistyczna: Czysta symulacja (0%)."/>
         <text name="rhm_diff_2" text="Normalna"/>
         <text name="rhm_diff_3" text="Realistyczna"/>
         <text name="rhm_show_yield" text="Pokaż monitor plonów"/>
@@ -81,7 +81,10 @@
         <text name="rhm_overload_sounds_long"><![CDATA[Odtwarzaj realistyczny alarm kabinowy i dźwięki obciążenia młocarni przy przeciążeniu kombajnu lub stratach ziarna.]]></text>
         <text name="rhm_section_audio" text="Realistic Harvesting - Dźwięk"/>
         <text name="rhm_alarm_sounds_short" text="Brzęczyk przeciążenia"/>
-        <text name="rhm_alarm_sounds_long" text="Włącza elektroniczny brzęczyk w kabinie przy krytycznym obciążeniu (98%+) lub wysokich stratach (&gt;4%)."/>
+        <text name="rhm_alarm_sounds_long" text="Tryb brzęczyka w kabinie przy silnym przeciążeniu (105%+) lub wysokich stratach (&gt;5%)."/>
+        <text name="rhm_alarm_mode_smart" text="Inteligentny (3 sygnały)"/>
+        <text name="rhm_alarm_mode_continuous" text="Ciągły"/>
+        <text name="rhm_alarm_mode_off" text="Wyłączony"/>
         <text name="rhm_sound_volume_short" text="Głośność dźwięków"/>
         <text name="rhm_sound_volume_long" text="Reguluje głośność brzęczyka alarmu przeciążenia w kabinie."/>
         <text name="rhm_target_load" text="Docelowe obciążenie"/>
@@ -106,6 +109,10 @@
         <text name="rhm_ui_forage_feeder" text="Walce wciągające"/>
         <text name="rhm_ui_root_roller" text="Rolki czyszczące"/>
         <text name="rhm_ui_root_feeder" text="Taśma odsiewająca"/>
+        <text name="rhm_ui_grape_shaker" text="Prędkość otrząsaczy"/>
+        <text name="rhm_ui_olive_shaker" text="Prędkość bijaków"/>
+        <text name="rhm_ui_grape_conveyor" text="Prędkość przenośnika"/>
+        <text name="rhm_ui_grape_fan" text="Wentylatory czyszczące"/>
         <text name="rhm_units_short" text="Jednostki"/>
         <text name="rhm_units_long" text="Wybierz system pomiarowy (prędkość, masa, powierzchnia)"/>
         <text name="rhm_unit_metric" text="Metryczny (km/h, t/h, ha)"/>
@@ -119,7 +126,7 @@
         <text name="rhm_warning_turn_on_cutter" text="Włącz heder!"/>
         <text name="rhm_warn_overload_high" text="Kombajn przeciążony! Zmniejsz prędkość."/>
         <text name="rhm_warn_overload_critical" text="KOMBAJN KRYTYCZNIE PRZECIĄŻONY! Poważne straty!"/>
-        <text name="rhm_configuration_title" text="RHM Elektronika"/>
+        <text name="rhm_configuration_title" text="Systemy Realistic Harvesting"/>
         <text name="rhm_package_standard" text="Standard"/>
         <text name="rhm_package_sensor" text="Zestaw Czujników"/>
         <text name="rhm_package_yield" text="Monitor Plonu i Strat"/>
@@ -169,7 +176,9 @@
         <text name="rhm_help_loss_1" text="Grain loss begins gently above 80% engine load. Losses remain negligible up to 90%, but climb noticeably past 100%. Running deep into the red zone (&gt;110%) risks clogging the threshing drum completely."/>
         <text name="rhm_help_loss_sub2" text="Live Grain Tank Deduction"/>
         <text name="rhm_help_loss_2" text="Harvest losses are fully physical: lost liters are subtracted directly from the combine hopper in real time. Misconfigured sieves or drums can waste up to 25% of your harvest, so watch the HUD and keep settings tuned."/>
-        <text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
+                <text name="rhm_help_loss_sub3" text="Zużycie mechaniczne i tępe noże"/>
+        <text name="rhm_help_loss_3" text="Zużycie sprzętu znacząco obniża jakość zbioru. Tępe bagnety i żyletki hedera otrząsają kłosy i strąki (do +3% strat i +15% oporu WOM). Zużyty bęben młócący i sita gubią niewymłócone ziarno (do +3% strat). Regularne naprawy w warsztacie eliminują te straty."/>
+<text name="rhm_help_difficulty_title" text="6. Speed Controller &amp; Headland Memory"/>
         <text name="rhm_help_difficulty_sub1" text="Smooth Cruise Control"/>
         <text name="rhm_help_difficulty_1" text="The hydrostatic transmission dynamically adapts speed to crop density. When entering a pass, the combine holds steady until the drum fills. It brakes gently in dense patches and smoothly speeds up in lighter stands."/>
         <text name="rhm_help_difficulty_sub2" text="Headland Turn Memory"/>
@@ -204,6 +213,7 @@
         <text name="rhm_ui_tier2_sensors" text="POZIOM 2 - CZUJNIKI"/>
         <text name="rhm_ui_tier3_monitor" text="POZIOM 3 - MONITOR"/>
         <text name="rhm_ui_tier4_opti" text="POZIOM 4 - AI OPTI"/>
+        <text name="rhm_ui_arcade_badge" text="ARCADE"/>
         <text name="rhm_ui_card_engine_load" text="OBCIĄŻENIE SILNIKA"/>
         <text name="rhm_ui_card_efficiency" text="WYDAJNOŚĆ"/>
         <text name="rhm_ui_card_predicted_loss" text="PRZEWIDYWANA STRATA"/>
@@ -241,7 +251,7 @@
         <text name="rhm_setting_enableTutorials" text="Podpowiedzi samouczka"/>
         <text name="rhm_setting_enableTutorials_long" text="Wyświetla interaktywne wskazówki i porady podczas zbioru."/>
         <text name="rhm_ui_btn_close_notification" text="OK (Enter / LPM)"/>
-        <text name="rhm_tut_welcome_title" text="Realistyczne Zbiory"/>
+        <text name="rhm_tut_welcome_title" text="Realistic Harvesting"/>
         <text name="rhm_tut_welcome_msg" text="Witaj w Realistic Harvesting! Prędkość kombajnu dostosowuje się dynamicznie do obciążenia silnika, gęstości łanu i hedera. Otwórz terminal kalibracji wciskając (Prawy Shift + K)."/>
         <text name="rhm_tut_overload_title" text="Przeciążenie Silnika"/>
         <text name="rhm_tut_overload_msg" text="Silnik pracuje na granicy możliwości! Napęd hydrostatyczny zwalnia kombajn, aby zapobiec zapchaniu bębna. Unieś heder lub zmniejsz szerokość roboczą."/>
@@ -253,5 +263,10 @@
         <text name="rhm_tut_headland_msg" text="Po uniesieniu hedera na nawrotach kombajn pamięta Twoją prędkość roboczą. Po opuszczeniu hedera płynnie powróci do optymalnego tempa."/>
         <text name="rhm_tut_upgrade_title" text="Ulepszenia Kombajnu"/>
         <text name="rhm_tut_upgrade_msg" text="Podstawowy kombajn wymaga ręcznej kalibracji. Zamontuj Pakiet Czujników (Tier 2), Monitor Plonu (Tier 3) lub Autopilot Opti-Harvest AI (Tier 4) w warsztacie."/>
+        <text name="rhm_setting_wear_loss_short" text="Straty ze zużycia sprzętu"/>
+        <text name="rhm_setting_wear_loss_long" text="Symuluje straty ziarna wynikające ze zużycia maszyn. Tępe noże hedera otrząsają kłosy (do +3% strat i +15% oporu). Zużyty bęben młócący i sita gubią ziarno (do +3% strat)."/>
+        <text name="rhm_ui_wear_loss" text="Strata ze zużycia"/>
+        <text name="rhm_ui_cutter_wear" text="Zużycie hedera"/>
+        <text name="rhm_ui_combine_wear" text="Zużycie młocarni"/>
     </texts>
 </l10n>
