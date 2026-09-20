@@ -496,7 +496,7 @@ function RHM_LoadCalculator:getAttachedHeaderInfo(vehicle)
 
             local minHpPerM = 7.5 -- Standard grain/draper cutter (7.5 HP/m - matches GIANTS neededMaxPtoPower)
             if isForageCutter then
-                minHpPerM = 50.0 -- High-speed rotary forage cutter (Kemper/XCollect)
+                minHpPerM = 20.0 -- High-speed rotary forage cutter (Kemper/XCollect: ~18-20 HP/m)
             elseif isPickup then
                 minHpPerM = 15.0 -- Windrow pickup reel
             elseif isTrailedHarvester then
@@ -627,7 +627,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
         if cropName:find("POPLAR") or cropName:find("WOOD") then
             baseESpec = 10.0 -- Poplar wood chipping: high-resistance wood cutting drum
         elseif cropName:find("MAIZE") or cropName:find("CORN") or cropName:find("SILAGE") or cropName:find("CHAFF") or cropName:find("GPS") then
-            baseESpec = 2.35 -- Whole corn silage: heavy biomass + corn cracker roller mills
+            baseESpec = 2.10 -- Whole corn silage: heavy biomass + corn cracker roller mills (ASABE EP496)
         elseif cropName:find("GRASS") or cropName:find("MEADOW") or cropName:find("ALFALFA") or cropName:find("LUCERNE") or cropName:find("CLOVER") then
             if isPickup then
                 baseESpec = 1.8 -- Swath pickup: pre-mowed windrow, low cutter resistance

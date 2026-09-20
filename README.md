@@ -1,6 +1,6 @@
 # Realistic Harvesting — Farming Simulator 25
 
-[![Version](https://img.shields.io/badge/version-1.5.4.1-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
+[![Version](https://img.shields.io/badge/version-1.5.3.0-green?style=for-the-badge&logo=github)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![FS25](https://img.shields.io/badge/FS25-Compatible-blue?style=for-the-badge&logo=farming-simulator)](https://www.farming-simulator.com/)
 [![Multiplayer](https://img.shields.io/badge/Multiplayer-Supported-brightgreen?style=for-the-badge&logo=users)](https://github.com/exekx/FS25_RealisticHarvesting)
 [![License](https://img.shields.io/badge/License-All_Rights_Reserved-red?style=for-the-badge&logo=copyright)](LICENSE)
@@ -95,7 +95,7 @@ The sleek horizontal HUD bar gives you instant, non-intrusive feedback:
 
 ### Step 3: Understanding Crop Loss & Audio Alarms
 
-Grain losses occur from three primary sources:
+Grain losses occur from two primary sources:
 
 1. **Overload Losses (Driving Too Fast / Excessive Mass Flow):**
    - **0% to 80% Load:** Safe operating zone — **0.0% crop loss**.
@@ -105,11 +105,7 @@ Grain losses occur from three primary sources:
 2. **Calibration Losses (Misaligned Machine Settings):**
    - **Rotor Speed / Concave Clearance:** Poor threshing either leaves grain in the ear or overworks the engine (`Efficiency -%`). Proper calibration yields up to a **+5.0% Speed Bonus**.
    - **Fan Speed & Sieves:** Excessive fan air blows clean grain out the rear; weak fan air clogs the cleaning shoe with chaff.
-3. **Mechanical Wear Losses (Equipment Damage & Dull Knives):**
-   - **Header Knife Wear:** Dull cutterbar knives fail to slice cleanly, shattering standing ears and pods (up to **+3.0% loss** and up to **+15% PTO drive resistance**).
-   - **Combine Thresher Wear:** Worn rasp bars and damaged sieves drop unseparated grain (up to **+3.0% loss**).
-   - Total wear loss is capped at **6.0%** to prevent over-punishment and can be toggled in `ESC → Game Settings`.
-4. **In-Cabin Overload Buzzer:**
+3. **In-Cabin Overload Buzzer:**
    - Sounds automatically inside the cockpit whenever **Engine Load ≥ 98%** or **Crop Loss > 4.0%**.
    - Balanced with automated exterior volume boost (+25%) when using 3rd person chase camera. Volume and toggle can be configured in `ESC → General Settings → Realistic Harvesting - Audio`.
 
@@ -327,9 +323,18 @@ Open `ESC → In-Game Help` to read the built-in 9-page handbook translated into
 
 **Created by:** exekx
 
-- **Official Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
-- **Community & Support:** [Discord Server](https://discord.gg/Dc2CvZJqU4)
-- **Bugs & Suggestions:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
+- 🌐 **Official Download:** [kingmod.net](https://www.kingmods.net/en/fs25/mods/73932/realistic-harvesting)
+- 💬 **Community & Support:** [Discord Server](https://discord.gg/Dc2CvZJqU4)
+- 🐛 **Bugs & Suggestions:** [GitHub Issues](https://github.com/exekx/FS25_RealisticHarvesting/issues)
+
+---
+
+### ☕ Support Ongoing Development
+If you enjoy the enhanced harvesting physics and want to support further development and new features:
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/exekx)
+
+---
 
 <div align="center">
 
