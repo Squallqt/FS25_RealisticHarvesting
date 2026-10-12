@@ -211,37 +211,16 @@ function RHMCombineCalibrationGUI:open(vehicle)
 
     local combineVehicle = vehicle
     if vehicle and not vehicle.spec_rhm_Combine then
-        local function findCombine(v, visited)
-            if not v or visited[v] then return nil end
-            visited[v] = true
-            if v.spec_rhm_Combine then return v end
-            if v.rootVehicle then
-                local r = findCombine(v.rootVehicle, visited)
-                if r then return r end
-            end
-            if v.attacherVehicle then
-                local r = findCombine(v.attacherVehicle, visited)
-                if r then return r end
-            end
-            if v.getAttachedImplements then
-                for _, impl in ipairs(v:getAttachedImplements() or {}) do
-                    if impl.object then
-                        local r = findCombine(impl.object, visited)
-                        if r then return r end
-                    end
-                end
-            end
-            return nil
-        end
-        local found = findCombine(vehicle.rootVehicle or vehicle, {})
-        if found then
+        local found = RHM_Api and RHM_Api.findCombine and RHM_Api.findCombine(vehicle)
+        if found and found.spec_rhm_Combine then
             combineVehicle = found
-            rhm_log(string.format("RHM [UI]: RHM: [GUI] NEXAT: found combine vehicle in hierarchy: %s", tostring(combineVehicle)))
+            rhm_log(string.format("RHM [UI]: RHM: [GUI] found combine vehicle in hierarchy: %s", tostring(combineVehicle)))
         else
             rhm_log("RHM [UI]: RHM: [GUI] No combine with spec_rhm_Combine found in vehicle hierarchy — GUI will not open")
             return
         end
     end
+
 
     self.isOpen = true
 
@@ -930,11 +909,15 @@ function RHMCombineCalibrationGUI:draw()
             renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, offLabel)
         else
             local settingsLoss = math.max(0, lossPenalty)
-            local wearLoss = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+            local wearLoss = 0
+            if spec.loadCalculator and self.activeVehicle then
+                wearLoss = spec.loadCalculator:calculateWearLoss(self.activeVehicle) or 0
+            end
             local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
             if not isWearEnabled or isArcadeLoss then
                 wearLoss = 0
             end
+
             local displayLoss = settingsLoss + wearLoss
             local lossColor = (displayLoss <= 0.05) and ui.colors.success or ((displayLoss <= 2.0) and ui.colors.warning or ui.colors.error)
             setTextColor(unpack(lossColor))

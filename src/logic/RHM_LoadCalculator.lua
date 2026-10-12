@@ -621,10 +621,7 @@ function RHM_LoadCalculator:getCropSpecificEnergy(fruitTypeIndex, fillTypeIndex,
     end
 
     -- Bulk density (kg/L)
-    local density = 0.75
-    if fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
-        density = fillTypeDesc.massPerLiter * 1000
-    end
+    local density = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(fillTypeDesc and fillTypeDesc.index or cropName)) or 0.75
 
     -- Does this crop generate straw/windrows in the thresher?
     local hasStraw = false
@@ -1686,12 +1683,18 @@ function RHM_LoadCalculator:calculateCropLoss()
         end
         rawLoss = rawLoss * entryGrace
         
-        self.cropLoss = math.min(rawLoss * lossMultiplier, 50) 
+        local overloadLoss = math.min(rawLoss * lossMultiplier, 50)
+        self.overloadLoss = overloadLoss
+        self.baseLoss = overloadLoss
+        self.cropLoss = overloadLoss
     else
+        self.overloadLoss = 0
+        self.baseLoss = 0
         self.cropLoss = 0
     end
-    return self.cropLoss
+    return self.baseLoss
 end
+
 
 ---EN: Calculates losses from inaccurate player threshing settings / UA: Розраховує втрати від неправильних налаштувань гравцем
 function RHM_LoadCalculator:updateSettingsImpact()
@@ -1894,6 +1897,7 @@ function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
     end
 
     self.baseLoss = baseLoss
+    self.overloadLoss = baseLoss
     self.settingsAddedLoss = settingsAddedLoss
     self.wearLoss = wearLoss
     self.slopeLoss = slopeLoss
@@ -1901,9 +1905,12 @@ function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
 
     local totalLoss = baseLoss + settingsAddedLoss + wearLoss + slopeLoss + moistureLoss
     totalLoss = math.min(totalLoss, 50)
+    self.totalLoss = totalLoss
+    self.totalCropLoss = totalLoss
     self.cropLoss = totalLoss
     return totalLoss
 end
+
 
 ---EN: Returns instantaneous breakdown of loss causes in percentage
 ---UA: Повертає моментальний розподіл причин втрат у відсотках

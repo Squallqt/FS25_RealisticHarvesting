@@ -150,6 +150,11 @@ function RHM_SettingsSyncEvent:run(connection)
             
             rhm_log(string.format("RHM [Network]: RHM: [Sync] Client received update - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, SlopeLoss: %s, WeedLoad: %s, IndLaunch: %s, Moisture: %s, AutoReset: %d",
                     self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableSlopeLoss), tostring(self.enableWeedLoad), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture), self.autoResetTripMode or 1))
+
+            if RHMSettingsUI and RHMSettingsUI.refreshUI then
+                RHMSettingsUI.refreshUI(settings)
+            end
         end
     end
 end
+

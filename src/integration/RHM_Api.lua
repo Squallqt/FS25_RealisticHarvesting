@@ -712,6 +712,15 @@ function RHM_Api.getTotalCropLoss(vehicle)
     return 0.0
 end
 
+---EN: Alias for getTotalCropLoss. Returns total crop loss percentage (0.0 to 50.0 %).
+---UA: Псевдонім для getTotalCropLoss. Повертає загальний відсоток втрат врожаю (0.0 .. 50.0 %).
+---@param vehicle table|nil
+---@return number cropLossPct
+function RHM_Api.getCropLoss(vehicle)
+    return RHM_Api.getTotalCropLoss(vehicle)
+end
+
+
 ---EN: Returns crop loss percentage caused purely by engine & thresher overload.
 ---UA: Повертає втрати від фізичного перевантаження молотарки (%).
 ---@param vehicle table|nil
@@ -719,10 +728,24 @@ end
 function RHM_Api.getOverloadLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.cropLoss or 0.0
+        local calc = combine.spec_rhm_Combine.loadCalculator
+        return calc.baseLoss or calc.overloadLoss or 0.0
     end
     return 0.0
 end
+
+---EN: Returns instantaneous moisture-induced crop loss percentage (%).
+---UA: Повертає моментальні втрати від надмірної вологості культури (%).
+---@param vehicle table|nil
+---@return number moistureLossPct
+function RHM_Api.getMoistureLoss(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        return combine.spec_rhm_Combine.loadCalculator.moistureLoss or 0.0
+    end
+    return 0.0
+end
+
 
 ---EN: Returns crop loss percentage caused by misaligned operator threshing settings.
 ---UA: Повертає втрати від неточних налаштувань обмолоту (%).
@@ -1431,6 +1454,59 @@ function RHM_Api.setHudLayout(layout)
         g_realisticHarvestManager.settings:setHudLayout(layout)
     end
 end
+
+-- ============================================================================
+-- 10. ACTIVE FARM & UTILITY HELPERS
+-- ============================================================================
+
+---EN: Resolves active player farm ID reliably across FS25 singleplayer and dedicated server.
+---UA: Надійно визначає ID активної ферми гравця в FS25 (синглплеєр та мультиплеєр).
+---@return number farmId
+function RHM_Api.getActiveFarmId()
+    local farmId = 1
+    if g_currentMission ~= nil then
+        if g_currentMission.player ~= nil and g_currentMission.player.getFarmId ~= nil then
+            local pFarm = g_currentMission.player:getFarmId()
+            if pFarm ~= nil and pFarm ~= 0 and (FarmManager == nil or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = pFarm
+            end
+        elseif g_currentMission.player ~= nil and g_currentMission.player.farmId ~= nil then
+            local pFarm = g_currentMission.player.farmId
+            if pFarm ~= nil and pFarm ~= 0 and (FarmManager == nil or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = pFarm
+            end
+        elseif g_currentMission.getFarmId ~= nil then
+            local mFarm = g_currentMission:getFarmId()
+            if mFarm ~= nil and mFarm ~= 0 and (FarmManager == nil or mFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = mFarm
+            end
+        end
+    end
+    return tonumber(farmId) or 1
+end
+
+---EN: Resolves crop density in kg per liter (kg/L) through RHM_UnitConverter.
+---UA: Визначає густину культури в кг на літр (кг/л) через RHM_UnitConverter.
+---@param cropNameOrFillType string|number
+---@return number densityKgPerL
+function RHM_Api.getCropDensityKgPerLiter(cropNameOrFillType)
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter then
+        return RHM_UnitConverter.getCropDensityKgPerLiter(cropNameOrFillType)
+    end
+    return 0.75
+end
+
+---EN: Resolves crop density in metric tons per liter (t/L) through RHM_UnitConverter.
+---UA: Визначає густину культури в метричних тоннах на літр (т/л) через RHM_UnitConverter.
+---@param cropNameOrFillType string|number
+---@return number densityTonsPerL
+function RHM_Api.getCropDensityTonsPerLiter(cropNameOrFillType)
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter then
+        return RHM_UnitConverter.getCropDensityTonsPerLiter(cropNameOrFillType)
+    end
+    return 0.00075
+end
+
 
 
 

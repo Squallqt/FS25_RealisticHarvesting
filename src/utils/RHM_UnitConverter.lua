@@ -99,6 +99,15 @@ function RHM_UnitConverter.getCropDensityTonsPerLiter(cropNameOrFillType)
     return 0.00075
 end
 
+---EN: Resolves crop density in kilograms per liter (kg/L) from g_fillTypeManager.
+---    Returns 0.75 kg/L as standard fallback if fillType or massPerLiter is unavailable.
+---UA: Визначає густину культури в кілограмах на літр (кг/л) через g_fillTypeManager.
+---    Повертає 0.75 кг/л як стандартне резервне значення, якщо fillType або massPerLiter недоступні.
+function RHM_UnitConverter.getCropDensityKgPerLiter(cropNameOrFillType)
+    return RHM_UnitConverter.getCropDensityTonsPerLiter(cropNameOrFillType) * 1000.0
+end
+
+
 -- EN: Returns the currently active unit system (1=Metric, 2=Imperial, 3=Bushels).
 --     Checks mod settings first, then falls back to base game settings.
 -- UA: Повертає поточно активну систему одиниць (1=Метрична, 2=Імперська, 3=Бушелі).

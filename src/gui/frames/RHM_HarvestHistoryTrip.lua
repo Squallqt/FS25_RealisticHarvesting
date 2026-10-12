@@ -48,17 +48,8 @@ function RHM_HarvestHistoryTrip:update(dt)
 end
 
 function RHM_HarvestHistoryTrip:getActiveTrip()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.getFarmId then
-            farmId = g_currentMission:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            farmId = g_currentMission.player.farmId
-        end
-    end
-    if farmId == nil or farmId == 0 or (FarmManager and farmId == FarmManager.SPECTATOR_FARM_ID) then
-        farmId = 1
-    end
+    local farmId = (RHM_Api and RHM_Api.getActiveFarmId and RHM_Api.getActiveFarmId()) or 1
+
 
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     local farm = tracker and tracker:getFarmData(farmId)
@@ -382,10 +373,7 @@ function RHM_HarvestHistoryTrip:updateData()
         self.lossBarFill:setSize(fillW, nil)
         self.lossBarFill:setImageColor(nil, lossBarCol[1], lossBarCol[2], lossBarCol[3], lossBarCol[4] or 1.0)
     end
-    if self.lossPercentText then
-        self.lossPercentText:setText(string.format("%.2f%%", lossPct))
-        RHM_UIColors.applyTextColor(self.lossPercentText, lossBarCol)
-    end
+
 
     local moneyVal = isCropLossEnabled and (trip.lossMoney or 0) or 0
     local moneyStr = "-$0"

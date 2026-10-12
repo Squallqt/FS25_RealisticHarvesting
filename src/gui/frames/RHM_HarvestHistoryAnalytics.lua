@@ -29,17 +29,8 @@ function RHM_HarvestHistoryAnalytics:onFrameClose()
 end
 
 function RHM_HarvestHistoryAnalytics:getActiveTrip()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.getFarmId then
-            farmId = g_currentMission:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            farmId = g_currentMission.player.farmId
-        end
-    end
-    if farmId == nil or farmId == 0 or (FarmManager and farmId == FarmManager.SPECTATOR_FARM_ID) then
-        farmId = 1
-    end
+    local farmId = (RHM_Api and RHM_Api.getActiveFarmId and RHM_Api.getActiveFarmId()) or 1
+
 
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     local farm = tracker and tracker:getFarmData(farmId)

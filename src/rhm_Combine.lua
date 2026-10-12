@@ -1447,8 +1447,8 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
             end
         end
         if not inField and g_farmlandManager and g_farmlandManager.getFarmlandAtWorldPosition then
-            local fmlOwner = g_farmlandManager:getFarmlandAtWorldPosition(px, pz)
-            if fmlOwner and fmlOwner ~= 0 then
+            local farmland = g_farmlandManager:getFarmlandAtWorldPosition(px, pz)
+            if farmland and farmland ~= 0 then
                 inField = true
             end
         end
@@ -1721,13 +1721,17 @@ function rhm_Combine:startThreshing(superFunc)
         local isTurning = type(self.rootVehicle.getAIFieldWorkerIsTurning) == "function" and self.rootVehicle:getAIFieldWorkerIsTurning()
         local allowLowering = not isAIActive or not isTurning
         
-        for _, cutter in pairs(spec_combine.attachedCutters) do
-            if allowLowering and cutter ~= self then
-                local jointDescIndex = self:getAttacherJointIndexFromObject(cutter)
-                self:setJointMoveDown(jointDescIndex, true, true)
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if type(cutter) == "table" then
+                if allowLowering and cutter ~= self then
+                    local jointDescIndex = self:getAttacherJointIndexFromObject(cutter)
+                    self:setJointMoveDown(jointDescIndex, true, true)
+                end
+                
+                if cutter.setIsTurnedOn then
+                    cutter:setIsTurnedOn(true, true)
+                end
             end
-            
-            cutter:setIsTurnedOn(true, true)
         end
     end
     
@@ -2014,19 +2018,71 @@ end
 --     Серверна сторона: визначає якщо молотарка або жатка вимкнена і скидає дані HUD відповідно.
 --     Передає зібрану масу та площу до RHM_LoadCalculator для фізичного розрахунку навантаження двигуна.
 function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
-    -- EN: Client-side: update safety warnings and audio feedback.
-    -- UA: Клієнтська сторона: оновлення попереджень безпеки та звуків.
+    local spec = self.spec_rhm_Combine
+    if not spec then return end
+
+
+    -- EN: Client-side: update safety warnings, audio feedback, and quick trip reset hold.
+    -- UA: Клієнтська сторона: оновлення попереджень безпеки, звуків та швидкого скидання одометра.
     if self.isClient then
         rhm_Combine.updateWarnings(self, dt)
         rhm_Combine.updateSounds(self, dt)
+
+        -- CLIENT: Quick Trip Reset Hold Handling (1.5 seconds)
+        if spec.isHoldingReset then
+            spec.resetHoldTimer = (spec.resetHoldTimer or 0) + dt
+            spec.resetHoldProgress = math.min(1.0, spec.resetHoldTimer / 1500)
+            if spec.resetHoldTimer >= 1500 then
+                spec.isHoldingReset = false
+                spec.resetHoldTimer = 0
+                spec.resetHoldProgress = 0
+
+                local farmId = self:getOwnerFarmId() or 1
+                local isMultiplayer = g_currentMission and g_currentMission.isMultiplayer
+                local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
+
+                local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or ""
+                if self.resetTrip then self:resetTrip() end
+                if spec.trip then
+                    spec.trip.harvestedAreaHa = 0
+                    spec.trip.harvestedLiters = 0
+                    spec.trip.harvestedMassKg = 0
+                    spec.trip.lostLiters = 0
+                    spec.trip.lossMoney = 0
+                    spec.trip.fuelUsedL = 0
+                    spec.trip.sessionDuration = 0
+                    spec.trip.avgSpeedSum = 0
+                    spec.trip.avgSpeedCount = 0
+                    spec.trip.avgLoadSum = 0
+                    spec.trip.avgLoadCount = 0
+                    spec.trip.efficiencyRank = RHM_HarvestTracker.RANK_A
+                    spec.trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+                    spec.trip.isActive = false
+                end
+                if isDedicatedClient and g_client and g_client:getServerConnection() then
+                    g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId, self, nil, machineKey))
+                else
+                    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+                    if tracker then tracker:resetTripForCombine(farmId, self, nil) end
+                end
+
+                if g_currentMission and g_currentMission.showBlinkingWarning then
+                    local msg = (g_i18n and g_i18n:hasText("rhm_trip_reset_done") and g_i18n:getText("rhm_trip_reset_done")) or "Harvest Trip Reset!"
+                    g_currentMission:showBlinkingWarning(msg, 2000)
+                end
+            end
+        elseif not spec.isHoldingReset then
+            spec.resetHoldTimer = 0
+            spec.resetHoldProgress = 0
+        end
     end
     
     if not self.isServer then
         return
     end
     
-    local spec = self.spec_rhm_Combine
     local spec_combine = self.spec_combine
+
     
     if not spec or not spec.loadCalculator then
         return
@@ -2256,19 +2312,10 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     end
     
     if liters > 0 then
-        if spec.lastFillType and g_fillTypeManager then
-            local fillType = g_fillTypeManager:getFillTypeByIndex(spec.lastFillType)
-            if fillType and fillType.massPerLiter then
-                -- EN: IMPORTANT: massPerLiter in FS25 is stored in TONS per liter, so multiply by 1000 to get kg.
-                -- UA: ВАЖЛИВО: massPerLiter в FS25 зберігається в ТОННАХ на літр, тому множимо на 1000 щоб отримати кг.
-                massKg = liters * fillType.massPerLiter * 1000
-            else
-                massKg = liters * 0.75 -- EN: Fallback density / UA: Запасна густота
-            end
-        else
-            massKg = liters * 0.75 -- EN: Fallback density / UA: Запасна густота
-        end
+        local densityKgPerL = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(spec.lastFillType)) or 0.75
+        massKg = liters * densityKgPerL
     end
+
     
     -- EN: Use lastRawArea (actual geometric area) for yield calculation.
     -- UA: Використовуємо lastRawArea (реальну геометричну площу) для розрахунку врожайності.
@@ -2451,13 +2498,18 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         local flushMassKg = spec._trackerMassBuffer
         local flushDt = spec._trackerDtBuffer or dt
 
+        local wearLossPct = (lossReasons and lossReasons.wearPct) or 0
+        local physicalLossPct = math.max(0, totalCropLossThisTick - wearLossPct)
+        local flushLostLiters = flushLiters * (physicalLossPct / 100.0)
+
         -- Clear buffers once transferred to tracker
         spec._trackerLitersBuffer = 0
         spec._trackerMassBuffer = 0
         spec._trackerAreaBuffer = 0
         spec._trackerDtBuffer = 0
 
-        tracker:onCombineHarvestTick(self, farmId, flushLiters, flushMassKg, areaHaThisTick, fieldId, totalCropLossThisTick, lossReasons, speedKmh, loadRatio, flushDt)
+        tracker:onCombineHarvestTick(self, farmId, flushLiters, flushMassKg, areaHaThisTick, fieldId, totalCropLossThisTick, lossReasons, speedKmh, loadRatio, flushDt, flushLostLiters)
+
     end
     -- ========================================================================
     
@@ -2712,55 +2764,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
         end
     end
-
-    -- CLIENT: Quick Trip Reset Hold Handling (1.5 seconds)
-    if self.isClient and spec.isHoldingReset then
-        spec.resetHoldTimer = (spec.resetHoldTimer or 0) + dt
-        spec.resetHoldProgress = math.min(1.0, spec.resetHoldTimer / 1500)
-        if spec.resetHoldTimer >= 1500 then
-            spec.isHoldingReset = false
-            spec.resetHoldTimer = 0
-            spec.resetHoldProgress = 0
-
-            local farmId = self:getOwnerFarmId() or 1
-            local isMultiplayer = g_currentMission and g_currentMission.isMultiplayer
-            local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
-
-            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or ""
-            if self.resetTrip then self:resetTrip() end
-            if spec.trip then
-                spec.trip.harvestedAreaHa = 0
-                spec.trip.harvestedLiters = 0
-                spec.trip.harvestedMassKg = 0
-                spec.trip.lostLiters = 0
-                spec.trip.lossMoney = 0
-                spec.trip.fuelUsedL = 0
-                spec.trip.sessionDuration = 0
-                spec.trip.avgSpeedSum = 0
-                spec.trip.avgSpeedCount = 0
-                spec.trip.avgLoadSum = 0
-                spec.trip.avgLoadCount = 0
-                spec.trip.efficiencyRank = RHM_HarvestTracker.RANK_A
-                spec.trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
-                spec.trip.isActive = false
-            end
-            if isDedicatedClient and g_client and g_client:getServerConnection() then
-                g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId, self, nil, machineKey))
-            else
-                local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
-                if tracker then tracker:resetTripForCombine(farmId, self, nil) end
-            end
-
-            if g_currentMission and g_currentMission.showBlinkingWarning then
-                local msg = (g_i18n and g_i18n:hasText("rhm_trip_reset_done") and g_i18n:getText("rhm_trip_reset_done")) or "Harvest Trip Reset!"
-                g_currentMission:showBlinkingWarning(msg, 2000)
-            end
-        end
-    elseif self.isClient and not spec.isHoldingReset then
-        spec.resetHoldTimer = 0
-        spec.resetHoldProgress = 0
-    end
 end
+
+
 
 -- EN: Called every frame when the player is in the combine.
 --     HUD is drawn centrally in RHM_RealisticHarvestManager:draw() via hierarchy scanning,

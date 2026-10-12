@@ -1312,7 +1312,7 @@ function RHM_HarvestTracker.getFuelFillUnitIndex(carrier)
 end
 
 ---Processes a single harvesting simulation tick on the server
-function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg, areaHa, fieldId, totalLossPct, lossReasons, speedKmh, loadRatio, dt)
+function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg, areaHa, fieldId, totalLossPct, lossReasons, speedKmh, loadRatio, dt, lostLitersParam)
     if not g_currentMission:getIsServer() then return end
     if liters <= 0 then return end
 
@@ -1572,7 +1572,7 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
     -- Calculate physical loss liters
     local wearLossPct = (lossReasons and lossReasons.wearPct) or 0
     local physicalLossPct = math.max(0, totalLossPct - wearLossPct)
-    local lostLiters = liters * (physicalLossPct / 100.0)
+    local lostLiters = lostLitersParam or (liters * (physicalLossPct / 100.0))
     if updateFarmTrip then
         trip.lostLiters = trip.lostLiters + lostLiters
     end
@@ -2604,7 +2604,7 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                         if curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fid)) then
                             totalHArea = curTrip.harvestedAreaHa or 0
                             totalHLiters = curTrip.harvestedLiters or 0
-                            totalHMass = (curTrip.harvestedMassKg or 0) * 0.001
+                            totalHMass = curTrip.harvestedMassKg or 0
                             totalLostL = curTrip.lostLiters or 0
                             totalMoney = curTrip.lossMoney or 0
                             totalDuration = curTrip.sessionDuration or 0
@@ -2683,7 +2683,7 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                 if curTrip and (curTrip.fieldId == fmlId or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fmlId)) then
                     totalHArea = curTrip.harvestedAreaHa or 0
                     totalHLiters = curTrip.harvestedLiters or 0
-                    totalHMass = (curTrip.harvestedMassKg or 0) * 0.001
+                    totalHMass = curTrip.harvestedMassKg or 0
                     totalLostL = curTrip.lostLiters or 0
                     totalMoney = curTrip.lossMoney or 0
                     totalDuration = curTrip.sessionDuration or 0

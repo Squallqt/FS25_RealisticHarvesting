@@ -140,21 +140,12 @@ function RHM_HarvestHistoryFields:onFrameClose()
 end
 
 function RHM_HarvestHistoryFields:getFarmId()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.getFarmId then
-            farmId = g_currentMission:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.getFarmId then
-            farmId = g_currentMission.player:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            farmId = g_currentMission.player.farmId
-        end
+    if RHM_Api and RHM_Api.getActiveFarmId then
+        return RHM_Api.getActiveFarmId()
     end
-    if farmId == nil or farmId == 0 or (FarmManager and farmId == FarmManager.SPECTATOR_FARM_ID) then
-        farmId = 1
-    end
-    return farmId
+    return 1
 end
+
 
 function RHM_HarvestHistoryFields:onClickPrevSeason()
     if not self.seasonYearList or #self.seasonYearList <= 1 then return end
@@ -1218,69 +1209,8 @@ function RHM_HarvestHistoryFields:updateSelectedCardData()
             self.fieldSummaryWorkDuration:setText(durStr)
         end
 
-        -- CARD 3: Losses & Economic Ledger
-        if self.fieldSummaryCard3Title then self.fieldSummaryCard3Title:setText(g_i18n:getText("rhm_card_field_losses") or "LOSSES & QUALITY") end
-        if self.fieldSummaryLabel3_1 then self.fieldSummaryLabel3_1:setText(g_i18n:getText("rhm_loss_volume") or "Loss Volume") end
-        if self.fieldSummaryTotalLost then
-            if isLossEnabled then
-                self.fieldSummaryTotalLost:setText(RHM_UnitConverter.formatMass(entry.overallLostTons or 0, sys))
-                if self.fieldSummaryTotalLost.setTextColor then
-                    local col = getLossColor(entry.overallLossPct or 0)
-                    self.fieldSummaryTotalLost:setTextColor(col[1], col[2], col[3], col[4])
-                end
-            else
-                self.fieldSummaryTotalLost:setText("--")
-                if self.fieldSummaryTotalLost.setTextColor then
-                    self.fieldSummaryTotalLost:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                end
-            end
-        end
-        if self.fieldSummaryLabel3_2 then self.fieldSummaryLabel3_2:setText(g_i18n:getText("rhm_loss_share") or "Loss Share") end
-        if self.fieldSummaryAvgLossPct then
-            if isLossEnabled then
-                self.fieldSummaryAvgLossPct:setText(string.format("%.2f%%", entry.overallLossPct or 0))
-                if self.fieldSummaryAvgLossPct.setTextColor then
-                    local col = getLossColor(entry.overallLossPct or 0)
-                    self.fieldSummaryAvgLossPct:setTextColor(col[1], col[2], col[3], col[4])
-                end
-            else
-                self.fieldSummaryAvgLossPct:setText("OFF")
-                if self.fieldSummaryAvgLossPct.setTextColor then
-                    self.fieldSummaryAvgLossPct:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                end
-            end
-        end
-        if self.fieldSummaryLabel3_3 then self.fieldSummaryLabel3_3:setText(safeL10n("rhm_net_margin", "Net Operating Margin")) end
-        if self.fieldSummaryTotalMoney then
-            self.fieldSummaryTotalMoney:setText(entry.money or "$0")
-            if self.fieldSummaryTotalMoney.setTextColor then
-                local col = getMoneyColor(entry.rawMoney)
-                self.fieldSummaryTotalMoney:setTextColor(col[1], col[2], col[3], col[4])
-            end
-        end
-        if self.fieldSummaryLabel3_4 then self.fieldSummaryLabel3_4:setText(g_i18n:getText("rhm_efficiency_index") or "Efficiency Class") end
-        if self.fieldSummaryEfficiencyRank then
-            local rk = isLossEnabled and (entry.overallRank or "A") or "A"
-            local cleanR = tostring(rk):gsub("%[", ""):gsub("%]", "")
-            self.fieldSummaryEfficiencyRank:setText(string.format("[%s]", cleanR))
-            if self.fieldSummaryEfficiencyRank.setTextColor then
-                local col = getRankColor(cleanR)
-                self.fieldSummaryEfficiencyRank:setTextColor(col[1], col[2], col[3], col[4])
-            end
-        end
-        if self.fieldSummaryLabel3_5 then self.fieldSummaryLabel3_5:setText(g_i18n:getText("rhm_causes_title") or "Crop Loss Cause") end
-        if self.fieldSummaryDominantCause then
-            local causeTxt = entry.dominantCauseText or "--"
-            self.fieldSummaryDominantCause:setText(causeTxt)
-            if self.fieldSummaryDominantCause.setTextColor then
-                if causeTxt == "--" or causeTxt == "None" or not isLossEnabled then
-                    self.fieldSummaryDominantCause:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                else
-                    self.fieldSummaryDominantCause:setTextColor(COLOR_WARN[1], COLOR_WARN[2], COLOR_WARN[3], 1.0)
-                end
-            end
-        end
     else
+
         -- --------------------------------------------------------------------
         -- FIELD-SPECIFIC CARDS (Selected field breakdown)
         -- --------------------------------------------------------------------
@@ -1377,70 +1307,76 @@ function RHM_HarvestHistoryFields:updateSelectedCardData()
             self.fieldSummaryWorkDuration:setText(durStr)
         end
 
-        -- CARD 3: Field Losses & Efficiency
-        if self.fieldSummaryCard3Title then self.fieldSummaryCard3Title:setText(g_i18n:getText("rhm_card_field_losses") or "LOSSES & QUALITY") end
-        if self.fieldSummaryLabel3_1 then self.fieldSummaryLabel3_1:setText(g_i18n:getText("rhm_loss_volume") or "Loss Volume") end
-        if self.fieldSummaryTotalLost then
-            if isLossEnabled then
-                self.fieldSummaryTotalLost:setText(RHM_UnitConverter.formatMass(entry.lostTons or 0, sys))
-                if self.fieldSummaryTotalLost.setTextColor then
-                    local col = getLossColor(entry.lossPct or 0)
-                    self.fieldSummaryTotalLost:setTextColor(col[1], col[2], col[3], col[4])
-                end
+    end
+
+    -- CARD 3: Losses & Economic Ledger (Unified for both overview and field-specific views)
+    local cardLostTons = entry.lostTons or entry.overallLostTons or 0
+    local cardLossPct = entry.lossPct or entry.overallLossPct or 0
+    local cardRank = entry.rank or entry.overallRank or "A"
+
+    if self.fieldSummaryCard3Title then self.fieldSummaryCard3Title:setText(g_i18n:getText("rhm_card_field_losses") or "LOSSES & QUALITY") end
+    if self.fieldSummaryLabel3_1 then self.fieldSummaryLabel3_1:setText(g_i18n:getText("rhm_loss_volume") or "Loss Volume") end
+    if self.fieldSummaryTotalLost then
+        if isLossEnabled then
+            self.fieldSummaryTotalLost:setText(RHM_UnitConverter.formatMass(cardLostTons, sys))
+            if self.fieldSummaryTotalLost.setTextColor then
+                local col = getLossColor(cardLossPct)
+                self.fieldSummaryTotalLost:setTextColor(col[1], col[2], col[3], col[4])
+            end
+        else
+            self.fieldSummaryTotalLost:setText("--")
+            if self.fieldSummaryTotalLost.setTextColor then
+                self.fieldSummaryTotalLost:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
+            end
+        end
+    end
+    if self.fieldSummaryLabel3_2 then self.fieldSummaryLabel3_2:setText(g_i18n:getText("rhm_loss_share") or "Loss Share") end
+    if self.fieldSummaryAvgLossPct then
+        if isLossEnabled then
+            self.fieldSummaryAvgLossPct:setText(string.format("%.2f%%", cardLossPct))
+            if self.fieldSummaryAvgLossPct.setTextColor then
+                local col = getLossColor(cardLossPct)
+                self.fieldSummaryAvgLossPct:setTextColor(col[1], col[2], col[3], col[4])
+            end
+        else
+            self.fieldSummaryAvgLossPct:setText("OFF")
+            if self.fieldSummaryAvgLossPct.setTextColor then
+                self.fieldSummaryAvgLossPct:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
+            end
+        end
+    end
+    if self.fieldSummaryLabel3_3 then self.fieldSummaryLabel3_3:setText(safeL10n("rhm_net_margin", "Net Operating Margin")) end
+    if self.fieldSummaryTotalMoney then
+        self.fieldSummaryTotalMoney:setText(entry.money or "$0")
+        if self.fieldSummaryTotalMoney.setTextColor then
+            local col = getMoneyColor(entry.rawMoney)
+            self.fieldSummaryTotalMoney:setTextColor(col[1], col[2], col[3], col[4])
+        end
+    end
+    if self.fieldSummaryLabel3_4 then self.fieldSummaryLabel3_4:setText(g_i18n:getText("rhm_efficiency_index") or "Efficiency Class") end
+    if self.fieldSummaryEfficiencyRank then
+        local rk = isLossEnabled and cardRank or "A"
+        local cleanR = tostring(rk):gsub("%[", ""):gsub("%]", "")
+        self.fieldSummaryEfficiencyRank:setText(string.format("[%s]", cleanR))
+        if self.fieldSummaryEfficiencyRank.setTextColor then
+            local col = getRankColor(cleanR)
+            self.fieldSummaryEfficiencyRank:setTextColor(col[1], col[2], col[3], col[4])
+        end
+    end
+    if self.fieldSummaryLabel3_5 then self.fieldSummaryLabel3_5:setText(g_i18n:getText("rhm_causes_title") or "Crop Loss Cause") end
+    if self.fieldSummaryDominantCause then
+        local causeTxt = entry.dominantCauseText or "--"
+        self.fieldSummaryDominantCause:setText(causeTxt)
+        if self.fieldSummaryDominantCause.setTextColor then
+            if causeTxt == "--" or causeTxt == "None" or not isLossEnabled then
+                self.fieldSummaryDominantCause:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
             else
-                self.fieldSummaryTotalLost:setText("--")
-                if self.fieldSummaryTotalLost.setTextColor then
-                    self.fieldSummaryTotalLost:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                end
-            end
-        end
-        if self.fieldSummaryLabel3_2 then self.fieldSummaryLabel3_2:setText(g_i18n:getText("rhm_loss_share") or "Loss Share") end
-        if self.fieldSummaryAvgLossPct then
-            if isLossEnabled then
-                self.fieldSummaryAvgLossPct:setText(string.format("%.2f%%", entry.lossPct or 0))
-                if self.fieldSummaryAvgLossPct.setTextColor then
-                    local col = getLossColor(entry.lossPct or 0)
-                    self.fieldSummaryAvgLossPct:setTextColor(col[1], col[2], col[3], col[4])
-                end
-            else
-                self.fieldSummaryAvgLossPct:setText("OFF")
-                if self.fieldSummaryAvgLossPct.setTextColor then
-                    self.fieldSummaryAvgLossPct:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                end
-            end
-        end
-        if self.fieldSummaryLabel3_3 then self.fieldSummaryLabel3_3:setText(safeL10n("rhm_net_margin", "Net Operating Margin")) end
-        if self.fieldSummaryTotalMoney then
-            self.fieldSummaryTotalMoney:setText(entry.money or "$0")
-            if self.fieldSummaryTotalMoney.setTextColor then
-                local col = getMoneyColor(entry.rawMoney)
-                self.fieldSummaryTotalMoney:setTextColor(col[1], col[2], col[3], col[4])
-            end
-        end
-        if self.fieldSummaryLabel3_4 then self.fieldSummaryLabel3_4:setText(g_i18n:getText("rhm_efficiency_index") or "Efficiency Class") end
-        if self.fieldSummaryEfficiencyRank then
-            local rk = isLossEnabled and (entry.rank or "A") or "A"
-            local cleanR = tostring(rk):gsub("%[", ""):gsub("%]", "")
-            self.fieldSummaryEfficiencyRank:setText(string.format("[%s]", cleanR))
-            if self.fieldSummaryEfficiencyRank.setTextColor then
-                local col = getRankColor(cleanR)
-                self.fieldSummaryEfficiencyRank:setTextColor(col[1], col[2], col[3], col[4])
-            end
-        end
-        if self.fieldSummaryLabel3_5 then self.fieldSummaryLabel3_5:setText(g_i18n:getText("rhm_causes_title") or "Crop Loss Cause") end
-        if self.fieldSummaryDominantCause then
-            local causeTxt = entry.dominantCauseText or "--"
-            self.fieldSummaryDominantCause:setText(causeTxt)
-            if self.fieldSummaryDominantCause.setTextColor then
-                if causeTxt == "--" or causeTxt == "None" or not isLossEnabled then
-                    self.fieldSummaryDominantCause:setTextColor(COLOR_DIM[1], COLOR_DIM[2], COLOR_DIM[3], 1.0)
-                else
-                    self.fieldSummaryDominantCause:setTextColor(COLOR_WARN[1], COLOR_WARN[2], COLOR_WARN[3], 1.0)
-                end
+                self.fieldSummaryDominantCause:setTextColor(COLOR_WARN[1], COLOR_WARN[2], COLOR_WARN[3], 1.0)
             end
         end
     end
 end
+
 
 -- ============================================================================
 -- SmoothList DataSource & Delegate Callbacks

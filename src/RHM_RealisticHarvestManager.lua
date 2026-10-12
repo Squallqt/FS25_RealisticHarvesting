@@ -261,52 +261,15 @@ function RHM_RealisticHarvestManager:onMissionLoaded()
     end
 end
 
-local SEARCH_CHECKED = {}
-
-local function findCombineInHierarchyInternal(vehicle)
-    if not vehicle or SEARCH_CHECKED[vehicle] then return nil end
-    SEARCH_CHECKED[vehicle] = true
-
-    if vehicle.spec_rhm_Combine then return vehicle end
-
-    -- EN: Search up through parent (rootVehicle, attacherVehicle) and down through children.
-    -- UA: Шукаємо вгору через батьків (rootVehicle, attacherVehicle) і вниз через дочірні.
-    if vehicle.rootVehicle and not SEARCH_CHECKED[vehicle.rootVehicle] then
-        local found = findCombineInHierarchyInternal(vehicle.rootVehicle)
-        if found then return found end
-    end
-
-    if vehicle.attacherVehicle and not SEARCH_CHECKED[vehicle.attacherVehicle] then
-        local found = findCombineInHierarchyInternal(vehicle.attacherVehicle)
-        if found then return found end
-    end
-
-    if vehicle.getAttachedImplements then
-        local implements = vehicle:getAttachedImplements()
-        if implements then
-            for _, implement in ipairs(implements) do
-                if implement.object and not SEARCH_CHECKED[implement.object] then
-                    local found = findCombineInHierarchyInternal(implement.object)
-                    if found then return found end
-                end
-            end
-        end
-    end
-
-    return nil
-end
-
--- EN: Recursively searches the vehicle hierarchy for the first vehicle with spec_rhm_Combine.
---     Reuses a module-level table to eliminate garbage collection overhead.
--- UA: Рекурсивно шукає в ієрархії транспорту перший транспортний засіб з spec_rhm_Combine.
---     Перевикористовує таблицю на рівні модуля для усунення навантаження на GC.
+-- EN: Resolves the active combine vehicle using canonical RHM_Api traversal.
+-- UA: Знаходить активний комбайн через канонічний обхід RHM_Api.
 local function findCombineInHierarchy(vehicle)
-    if not vehicle then return nil end
-    for k in pairs(SEARCH_CHECKED) do
-        SEARCH_CHECKED[k] = nil
+    if RHM_Api and RHM_Api.findCombine then
+        return RHM_Api.findCombine(vehicle)
     end
-    return findCombineInHierarchyInternal(vehicle)
+    return vehicle
 end
+
 
 -- EN: Returns the vehicle currently controlled by the local player.
 --     Falls back through multiple methods to handle various FS25 versions/states.

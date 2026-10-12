@@ -799,16 +799,8 @@ function RHM_CombineMemory:updateStatistics(harvestedLiters, cropLoss, cropName)
 
         -- EN: Get density from fill type manager, fallback to 0.75 kg/L if not available.
         -- UA: Отримуємо густину з менеджера типів врожаю, запасний варіант 0.75 кг/л.
-        local density = 0.75
-        if cropName and g_fillTypeManager and RHM_CombineSettingsDatabase then
-            local cropData = RHM_CombineSettingsDatabase:getCropData(cropName)
-            if cropData and cropData.fillType then
-                local fillTypeObj = g_fillTypeManager:getFillTypeByIndex(cropData.fillType)
-                if fillTypeObj and fillTypeObj.massPerLiter and fillTypeObj.massPerLiter > 0 then
-                    density = fillTypeObj.massPerLiter * 1000 -- EN: t/L → kg/L / UA: т/л → кг/л
-                end
-            end
-        end
+        local density = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(cropName)) or 0.75
+
 
         local tons = harvestedLiters * density / 1000
         profile.stats.totalHarvested = profile.stats.totalHarvested + tons

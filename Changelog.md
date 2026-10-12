@@ -1,6 +1,12 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.3.0:
+- FIXED: Live trip mass scale normalization in Field History cards ensuring harvested mass displays accurately in kilograms and tons.
+- FIXED: Resolved nil vehicle reference in Combine Calibration GUI (Shift+K) wear loss calculation.
+- FIXED: Header attachment loop iteration order in combine start threshing logic ensuring reliable implement engagement.
+- FIXED: Quick trip odometer reset on dedicated multiplayer servers when held by client players.
+- IMPROVED: Decoupled ground speed overload losses from total crop loss metrics for transparent in-cab telemetry.
+- OPTIMIZED: Centralized crop bulk density and active farm ID resolution across all UI frames and telemetry systems.
 - FIXED: Full support for cotton harvesters (John Deere CP690, CS770, Case IH Module Express 635) restored by disambiguating onboard baler/wrapper mechanisms from standalone balers.
 - ADDED: Real multiplayer player nickname resolution in Fleet overview OPERATOR card displaying active in-cab driver names.
 - ADDED: In-cab Yield Monitor HUD display mode (8 cells across 2 rows) featuring live mass flow rate (kg/s, lbs/s, bu/min), session average yield, field completion percentage, and clean mass odometer.

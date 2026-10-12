@@ -13,27 +13,12 @@ RHM_DiagnosticTool.timer = 0
 ---EN: Resolves active player farm ID reliably across FS25 singleplayer and dedicated server
 ---UA: Надійно визначає ID активної ферми гравця в FS25 (синглплеєр та мультиплеєр)
 function RHM_DiagnosticTool:getFarmId()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.player and g_currentMission.player.getFarmId then
-            local pFarm = g_currentMission.player:getFarmId()
-            if pFarm and pFarm ~= 0 and (not FarmManager or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
-                farmId = pFarm
-            end
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            local pFarm = g_currentMission.player.farmId
-            if pFarm and pFarm ~= 0 and (not FarmManager or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
-                farmId = pFarm
-            end
-        elseif g_currentMission.getFarmId then
-            local mFarm = g_currentMission:getFarmId()
-            if mFarm and mFarm ~= 0 and (not FarmManager or mFarm ~= FarmManager.SPECTATOR_FARM_ID) then
-                farmId = mFarm
-            end
-        end
+    if RHM_Api and RHM_Api.getActiveFarmId then
+        return RHM_Api.getActiveFarmId()
     end
-    return tonumber(farmId) or 1
+    return 1
 end
+
 
 function RHM_DiagnosticTool:log(msg)
     print(string.format("Info: RHM_Diag: %s", tostring(msg)))

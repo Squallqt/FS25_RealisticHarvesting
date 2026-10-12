@@ -297,9 +297,12 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
 
     -- 2. Bulk Density (kg/L)
     local densityKgPerL = 0.75
-    if fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter then
+        densityKgPerL = RHM_UnitConverter.getCropDensityKgPerLiter(fillTypeDesc and fillTypeDesc.index or cropName)
+    elseif fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
         densityKgPerL = fillTypeDesc.massPerLiter * 1000
     else
+
         local knownDensities = {
             WHEAT = 0.78, BARLEY = 0.62, OAT = 0.52, OATS = 0.52,
             CANOLA = 0.42, SUNFLOWER = 0.42, SAFFLOWER = 0.42,

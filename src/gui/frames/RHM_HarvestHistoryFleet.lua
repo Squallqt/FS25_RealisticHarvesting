@@ -151,21 +151,12 @@ end
 -- ============================================================================
 
 local function getActivePlayerFarmId()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.getFarmId then
-            farmId = g_currentMission:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.getFarmId then
-            farmId = g_currentMission.player:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            farmId = g_currentMission.player.farmId
-        end
+    if RHM_Api and RHM_Api.getActiveFarmId then
+        return RHM_Api.getActiveFarmId()
     end
-    if farmId == nil or farmId == 0 or (FarmManager and farmId == FarmManager.SPECTATOR_FARM_ID) then
-        farmId = 1
-    end
-    return farmId
+    return 1
 end
+
 
 local function getVehicleRentalState(vehicle)
     if not vehicle then return false, false end
@@ -631,15 +622,10 @@ function RHM_HarvestHistoryFleet:updateTables()
                     if not mTrip and farm and farm.combineTrips then
                         mTrip = farm.combineTrips[machineKey]
                     end
-                    if not mTrip and targetHarv.spec_rhm_Combine and targetHarv.spec_rhm_Combine.trip then
-                        mTrip = targetHarv.spec_rhm_Combine.trip
-                    end
-                    if not mTrip and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.trip then
-                        mTrip = vehicle.spec_rhm_Combine.trip
-                    end
                     if not mTrip and isControlled and farm and farm.currentTrip then
                         mTrip = farm.currentTrip
                     end
+
 
                     -- Field location & status
                     local fieldStr = safeL10n("rhm_field_yard", "Yard / Base")
@@ -974,10 +960,11 @@ function RHM_HarvestHistoryFleet:updateTables()
                         hours = opHours,
                         workSeconds = workSecs,
                         engineLoad = engineLoad,
-                        cropLoss = cropLoss,
+                        cropLoss = fleetLossPct,
                         rank = rank,
                         damage = damage
                     })
+
                 end
             end
         end
