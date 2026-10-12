@@ -39,11 +39,11 @@
                 <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_1" position="20px -44px" size="190px 13px" text="$l10n_rhm_fields_total_owned" />
                 <Text profile="rhmCardValue" id="fieldSummaryOwnedCount" position="20px -60px" size="190px 28px" text="0" />
 
-                <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_2" position="220px -44px" size="195px 13px" text="$l10n_rhm_hist_total_area" />
+                <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_2" position="220px -44px" size="195px 13px" text="$l10n_rhm_col_area" />
                 <Text profile="rhmCardValue" id="fieldSummaryTotalArea" position="220px -60px" size="195px 28px" text="0.00 ha" />
 
                 <!-- Row 2: Harvested Area & Contract Fields -->
-                <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_3" position="20px -98px" size="190px 13px" text="$l10n_rhm_col_area" />
+                <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_3" position="20px -98px" size="190px 13px" text="$l10n_rhm_hist_total_area" />
                 <Text profile="rhmCardValue" id="fieldSummaryHarvestedArea" position="20px -114px" size="190px 28px" text="0.00 ha" />
 
                 <Text profile="rhmCardSubValue" id="fieldSummaryLabel1_4" position="220px -98px" size="195px 13px" text="$l10n_rhm_contract_tag" />

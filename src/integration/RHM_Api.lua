@@ -218,8 +218,14 @@ end
 ---@return number|nil engineLoadPct or nil if unmanaged
 function RHM_Api.getEngineLoad(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
-    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator:getEngineLoad() or 0.0
+    if combine and combine.spec_rhm_Combine then
+        local spec = combine.spec_rhm_Combine
+        if spec.data and spec.data.load then
+            return spec.data.load
+        end
+        if spec.loadCalculator then
+            return spec.loadCalculator:getEngineLoad() or 0.0
+        end
     end
     return 0.0
 end
@@ -958,8 +964,9 @@ end
 function RHM_Api.getCombineTrip(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if not combine then return nil end
-    if combine.spec_rhm_Combine and combine.spec_rhm_Combine.trip then
-        return combine.spec_rhm_Combine.trip
+    local sTrip = combine.spec_rhm_Combine and combine.spec_rhm_Combine.trip
+    if sTrip and ((sTrip.harvestedLiters and sTrip.harvestedLiters > 0) or (sTrip.harvestedAreaHa and sTrip.harvestedAreaHa > 0.001) or (sTrip.sessionDuration and sTrip.sessionDuration > 0)) then
+        return sTrip
     end
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
@@ -972,10 +979,22 @@ function RHM_Api.getCombineTrip(vehicle)
                     combine.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
                 end
                 return farm.combineTrips[machineKey]
+            elseif combine.configFileName then
+                for k, v in pairs(farm.combineTrips) do
+                    if k:sub(1, #combine.configFileName) == combine.configFileName then
+                        if combine.spec_rhm_Combine then
+                            combine.spec_rhm_Combine.trip = v
+                        end
+                        return v
+                    end
+                end
             end
         end
+        if farm and farm.currentTrip and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.001)) then
+            return farm.currentTrip
+        end
     end
-    return nil
+    return sTrip
 end
 
 ---EN: Resolves the combine harvester currently occupied or driven by the local player.

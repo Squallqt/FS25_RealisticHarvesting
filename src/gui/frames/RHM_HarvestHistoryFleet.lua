@@ -833,7 +833,8 @@ function RHM_HarvestHistoryFleet:updateTables()
                     end
 
                     -- Telemetry metrics
-                    local engineLoad = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.engineLoad) or 0
+                    local engineLoad = (rhmSpec and rhmSpec.data and rhmSpec.data.load and (rhmSpec.data.load / 100.0))
+                                    or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.engineLoad) or 0
                     if engineLoad == 0 and vehicle.spec_motorized and vehicle.spec_motorized.motor then
                         if vehicle.spec_motorized.actualLoadPercentage then
                             engineLoad = vehicle.spec_motorized.actualLoadPercentage
@@ -841,9 +842,12 @@ function RHM_HarvestHistoryFleet:updateTables()
                             engineLoad = vehicle.spec_motorized.motor.lastMotorRpmPercentage
                         end
                     end
-                    local cropLoss = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.cropLoss) or 0
-                    local tonPerHour = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator:getTonPerHour()) or 0
-                    local currentYield = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentYield) or 0
+                    local cropLoss = (rhmSpec and rhmSpec.data and rhmSpec.data.cropLoss)
+                                  or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.cropLoss) or 0
+                    local tonPerHour = (rhmSpec and rhmSpec.data and rhmSpec.data.tonPerHour)
+                                    or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator:getTonPerHour()) or 0
+                    local currentYield = (rhmSpec and rhmSpec.data and rhmSpec.data.yield)
+                                      or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentYield) or 0
                     local lastYield = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.lastValidYield) or 0
                     local damage = (vehicle.getDamageAmount and vehicle:getDamageAmount()) or 0
 
@@ -880,7 +884,14 @@ function RHM_HarvestHistoryFleet:updateTables()
                     local totalBio = totalHarvestedL + totalLostL
                     local fleetLossPct = (totalBio > 0 and totalLostL > 0) and ((totalLostL / totalBio) * 100.0) or cropLoss
                     local rank = RHM_HarvestTracker.calculateEfficiencyRank(fleetLossPct)
-                    local opHours = ((vehicle.operatingTime or 0) / 3600000.0)
+                    local workSecs = (stat and stat.workSeconds) or 0
+                    if mTrip and (mTrip.sessionDuration or 0) > workSecs then
+                        workSecs = mTrip.sessionDuration
+                    end
+                    if rhmSpec and rhmSpec.trip and (rhmSpec.trip.workSeconds or 0) > workSecs then
+                        workSecs = rhmSpec.trip.workSeconds
+                    end
+                    local opHours = workSecs / 3600.0
 
                     table.insert(rawFleet, {
                         vehicle = vehicle,
@@ -906,6 +917,7 @@ function RHM_HarvestHistoryFleet:updateTables()
                         lastYield = lastYield,
                         avgYield = avgYield,
                         hours = opHours,
+                        workSeconds = workSecs,
                         engineLoad = engineLoad,
                         cropLoss = cropLoss,
                         rank = rank,
@@ -1162,7 +1174,14 @@ function RHM_HarvestHistoryFleet:updateSelectedCardData()
         end
     end
     if self.card2OperatingHours then
-        self.card2OperatingHours:setText(string.format("%.1f h", entry.hours or 0))
+        local wSec = entry.workSeconds or ((entry.hours or 0) * 3600.0)
+        if wSec < 3600 then
+            local mins = math.floor(wSec / 60.0)
+            local secs = math.floor(wSec % 60)
+            self.card2OperatingHours:setText(string.format("%d min %02d s", mins, secs))
+        else
+            self.card2OperatingHours:setText(string.format("%.1f h", wSec / 3600.0))
+        end
     end
 
     -- CARD 3: Load & Losses

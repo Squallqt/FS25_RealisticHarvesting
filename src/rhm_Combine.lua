@@ -16,6 +16,21 @@ rhm_Combine.debug = false
 -- UA: Перевіряє чи транспортний засіб має базову спеціалізацію Combine.
 --     Повертає true для всіх машин, включаючи модульні системи на кшталт NEXAT.
 function rhm_Combine.prerequisitesPresent(specializations)
+    if Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, specializations) then
+        return false
+    end
+    for _, specClass in ipairs(specializations or {}) do
+        local sName = (g_specializationManager and g_specializationManager.getSpecializationNameByObject and g_specializationManager:getSpecializationNameByObject(specClass))
+        if not sName and specClass and specClass.className then
+            sName = specClass.className
+        end
+        if sName then
+            local sLower = string.lower(sName)
+            if sLower:find("pelletizer") or sLower:find("baleshredder") then
+                return false
+            end
+        end
+    end
     return SpecializationUtil.hasSpecialization(Combine, specializations)
         or (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, specializations))
 end
@@ -74,6 +89,25 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.BOOL,   cur .. "#isCalibrated",    "Combine calibration status", true)
     schema:register(XMLValueType.STRING, cur .. "#calibratedCrops", "List of calibrated crops", "")
     schema:register(XMLValueType.STRING, cur .. "#machineId",       "Persistent machine identifier", "")
+
+    local tripKey = basePath .. ".trip"
+    schema:register(XMLValueType.INT,    tripKey .. "#fieldId",          "Active harvest field id", 0)
+    schema:register(XMLValueType.STRING, tripKey .. "#cropName",         "Active harvest crop name", "--")
+    schema:register(XMLValueType.INT,    tripKey .. "#fillTypeIndex",    "Active harvest fill type index", FillType.UNKNOWN)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedAreaHa",  "Active harvested area in hectares", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedLiters",  "Active harvested volume in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedMassKg",  "Active harvested mass in kg", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#lostLiters",       "Active grain loss volume in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#lossMoney",        "Active grain loss in money", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#fuelUsedL",        "Active fuel consumed in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#sessionDuration",  "Active harvesting duration in seconds", 0)
+    schema:register(XMLValueType.STRING, tripKey .. "#efficiencyRank",   "Active efficiency rank", "A")
+    schema:register(XMLValueType.BOOL,   tripKey .. "#isActive",         "Active harvesting status", false)
+    schema:register(XMLValueType.BOOL,   tripKey .. "#isContract",       "Contract field work flag", false)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#avgSpeedSum",      "Average speed accumulator", 0)
+    schema:register(XMLValueType.INT,    tripKey .. "#avgSpeedCount",    "Average speed samples count", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#avgLoadSum",       "Average load accumulator", 0)
+    schema:register(XMLValueType.INT,    tripKey .. "#avgLoadCount",     "Average load samples count", 0)
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -286,6 +320,13 @@ function rhm_Combine:onLoad(savegame)
     if not spec then
         Logging.error("RHM: Failed to initialize spec for combine: %s (specName: %s)", 
             tostring(self:getFullName()), tostring(specName))
+        return
+    end
+
+    -- EN: Guard against non-harvester processing units (balers, mobile pelletizers, bale shredders)
+    -- UA: Захист від не-збиральної переробної техніки (преси, мобільні пелетизатори, подрібнювачі тюків)
+    if self.spec_pelletizer ~= nil or self.spec_strawHarvestPelletizer ~= nil or self.spec_baler ~= nil
+        or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
         return
     end
 
@@ -600,8 +641,24 @@ function rhm_Combine:onPostLoad(savegame)
         local farmId = (self.getOwnerFarmId and self:getOwnerFarmId()) or 1
         local farm = tracker.farms and tracker.farms[farmId]
         local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or "Harvester"
-        if farm and farm.combineTrips and farm.combineTrips[machineKey] then
-            self.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
+        if farm and farm.combineTrips then
+            local mTrip = farm.combineTrips[machineKey]
+            if not mTrip and self.configFileName then
+                for k, v in pairs(farm.combineTrips) do
+                    if k:sub(1, #self.configFileName) == self.configFileName then
+                        mTrip = v
+                        break
+                    end
+                end
+            end
+            if mTrip then
+                self.spec_rhm_Combine.trip = mTrip
+            elseif self.spec_rhm_Combine.trip then
+                farm.combineTrips[machineKey] = self.spec_rhm_Combine.trip
+            end
+        elseif farm and self.spec_rhm_Combine.trip then
+            farm.combineTrips = farm.combineTrips or {}
+            farm.combineTrips[machineKey] = self.spec_rhm_Combine.trip
         end
     end
 end
@@ -1252,7 +1309,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     local spec_combine = vehicle.spec_combine
     if spec_combine and spec_combine.attachedCutters then
         for cutter, _ in pairs(spec_combine.attachedCutters) do
-            if cutter:getIsTurnedOn() then
+            if cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
                 activeCutter = cutter
                 break
             end
@@ -1262,7 +1319,35 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         end
     end
 
-    if not activeCutter or (activeCutter.getIsTurnedOn and not activeCutter:getIsTurnedOn()) then
+    if not activeCutter and vehicle.getAttachedImplements then
+        for _, impl in pairs(vehicle:getAttachedImplements()) do
+            local obj = impl.object
+            if obj and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter) then
+                if obj.getIsTurnedOn and obj:getIsTurnedOn() then
+                    activeCutter = obj
+                    break
+                end
+                if not activeCutter then
+                    activeCutter = obj
+                end
+            end
+        end
+    end
+
+    if not activeCutter and vehicle.spec_cutter then
+        activeCutter = vehicle
+    end
+
+    local isCutterOn = false
+    if activeCutter then
+        if activeCutter.getIsTurnedOn then
+            isCutterOn = activeCutter:getIsTurnedOn()
+        else
+            isCutterOn = true
+        end
+    end
+
+    if not activeCutter or not isCutterOn then
         return 0.0
     end
 
@@ -1356,27 +1441,22 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         local pz = sz + (wz - sz) * t + fz * lookAhead
         local py = (terrainRoot and getTerrainHeightAtWorldPos(terrainRoot, px, 0, pz)) or (sy + (wy - sy) * t)
 
-        -- 1. Ensure sample coordinate is within an authentic field
+        -- 1. Ensure sample coordinate is within an authentic field or farmland
         local inField = false
         if g_fieldManager and g_fieldManager.getFieldAtWorldPosition then
             local f = g_fieldManager:getFieldAtWorldPosition(px, pz)
             if f ~= nil then
                 inField = true
             end
-        else
-            inField = true
         end
-
-        -- 2. Validate that this point is actually within standing cultivated crop (not grass or unknown)
-        local isCropArea = false
-        if inField and FSDensityMapUtil and FSDensityMapUtil.getFieldFruitTypeAtWorldPos then
-            local ft = FSDensityMapUtil.getFieldFruitTypeAtWorldPos(px, pz)
-            if ft and ft ~= FruitType.UNKNOWN and ft ~= 0 and ft ~= FruitType.GRASS then
-                isCropArea = true
+        if not inField and g_farmlandManager and g_farmlandManager.getFarmlandAtWorldPosition then
+            local fmlOwner = g_farmlandManager:getFarmlandAtWorldPosition(px, pz)
+            if fmlOwner and fmlOwner ~= 0 then
+                inField = true
             end
         end
 
-        if isCropArea then
+        if inField then
             validSamples = validSamples + 1
             local d = getDensityAtWorldPos(mapId, px, py, pz)
             local s = bit32.band(bit32.rshift(d, firstChan), mask)
@@ -2003,13 +2083,34 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --     isTurnedOn І speed > 0.5 І опущена (або allowCuttingWhileRaised).
     --     Уникає прапорців напрямку, які можуть бути невизначеними під час руху по траєкторії.
     local cutterIsTurnedOn = false
-    for cutter, _ in pairs(spec_combine.attachedCutters) do
-        if cutter.spec_cutter then
-            local spec_cutter = cutter.spec_cutter
-            if cutter:getIsTurnedOn() 
-                and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
-                cutterIsTurnedOn = true
-                break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
+    if spec_combine and spec_combine.attachedCutters then
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if cutter.spec_cutter then
+                local spec_cutter = cutter.spec_cutter
+                if cutter:getIsTurnedOn() 
+                    and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
+                    cutterIsTurnedOn = true
+                    break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
+                end
+            end
+        end
+    end
+
+    -- EN: Check attached implements for forage harvesters, tool carriers, and system vehicles
+    -- UA: Перевірка прикріплених знарядь для силосних комбайнів, носіїв та системних тракторів
+    if not cutterIsTurnedOn and self.getAttachedImplements then
+        for _, impl in pairs(self:getAttachedImplements()) do
+            local cutter = impl.object
+            if cutter and cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
+                local spec_cutter = cutter.spec_cutter
+                local isCutterSpec = (spec_cutter ~= nil) or (cutter.spec_forageHarvesterCutter ~= nil) or (cutter.spec_forageCutter ~= nil)
+                if isCutterSpec then
+                    local allowRaised = (spec_cutter and spec_cutter.allowCuttingWhileRaised) or false
+                    if allowRaised or (cutter.getIsLowered and cutter:getIsLowered(true)) then
+                        cutterIsTurnedOn = true
+                        break
+                    end
+                end
             end
         end
     end
@@ -2216,11 +2317,15 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     end
     if not isCutterTurnedOn and self.getAttachedImplements then
         for _, impl in pairs(self:getAttachedImplements()) do
-            if impl.object and impl.object.getIsTurnedOn and impl.object:getIsTurnedOn() and impl.object.spec_cutter then
+            local obj = impl.object
+            if obj and obj.getIsTurnedOn and obj:getIsTurnedOn() and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter) then
                 isCutterTurnedOn = true
                 break
             end
         end
+    end
+    if not isCutterTurnedOn and self.spec_cutter and self.getIsTurnedOn and self:getIsTurnedOn() then
+        isCutterTurnedOn = true
     end
 
     if not isCutterTurnedOn or currentSpeed < 0.5 then
@@ -2624,12 +2729,29 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             local isMultiplayer = g_currentMission and g_currentMission.isMultiplayer
             local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
 
+            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or ""
+            if self.resetTrip then self:resetTrip() end
+            if spec.trip then
+                spec.trip.harvestedAreaHa = 0
+                spec.trip.harvestedLiters = 0
+                spec.trip.harvestedMassKg = 0
+                spec.trip.lostLiters = 0
+                spec.trip.lossMoney = 0
+                spec.trip.fuelUsedL = 0
+                spec.trip.sessionDuration = 0
+                spec.trip.avgSpeedSum = 0
+                spec.trip.avgSpeedCount = 0
+                spec.trip.avgLoadSum = 0
+                spec.trip.avgLoadCount = 0
+                spec.trip.efficiencyRank = RHM_HarvestTracker.RANK_A
+                spec.trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+                spec.trip.isActive = false
+            end
             if isDedicatedClient and g_client and g_client:getServerConnection() then
-                g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId))
+                g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId, self, nil, machineKey))
             else
                 local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
                 if tracker then tracker:resetTripForCombine(farmId, self, nil) end
-                if self.resetTrip then self:resetTrip() end
             end
 
             if g_currentMission and g_currentMission.showBlinkingWarning then
@@ -2666,7 +2788,7 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     
     local cur = key .. ".combineMemory.current"
     local mem = spec.combineMemory
-    local settings = mem.currentSettings
+    local settings = mem.currentSettings or {}
     
     xmlFile:setValue(cur .. "#mode",              mem.mode or "MANUAL")
     xmlFile:setValue(cur .. "#autoSwitch",         mem.autoSwitchEnabled ~= false)
@@ -2678,8 +2800,8 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     xmlFile:setValue(cur .. "#feeder",             settings.feeder or 50)
     xmlFile:setValue(cur .. "#targetEngineLoad",   settings.targetEngineLoad or 80)
     
-    local isCalib = mem.isCalibrated == true or mem.hasManualTuning == true or (mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true)
-    xmlFile:setValue(cur .. "#isCalibrated", isCalib)
+    local isCalib = (mem.isCalibrated == true) or (mem.hasManualTuning == true) or (mem.calibratedCrops ~= nil and mem.currentCrop ~= nil and mem.calibratedCrops[mem.currentCrop] == true)
+    xmlFile:setValue(cur .. "#isCalibrated",       isCalib == true)
 
     local calibList = {}
     if mem.calibratedCrops then
@@ -2696,8 +2818,31 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     if spec.machineId and spec.machineId ~= "" and not spec.machineId:find("#%d+$") then
         xmlFile:setValue(cur .. "#machineId", spec.machineId)
     end
+
+    -- Save active trip odometer directly in vehicles.xml
+    local trip = spec.trip
+    if trip then
+        local tKey = key .. ".trip"
+        xmlFile:setValue(tKey .. "#fieldId",          trip.fieldId or 0)
+        xmlFile:setValue(tKey .. "#cropName",         trip.cropName or "--")
+        xmlFile:setValue(tKey .. "#fillTypeIndex",    trip.fillTypeIndex or FillType.UNKNOWN)
+        xmlFile:setValue(tKey .. "#harvestedAreaHa",  trip.harvestedAreaHa or 0)
+        xmlFile:setValue(tKey .. "#harvestedLiters",  trip.harvestedLiters or 0)
+        xmlFile:setValue(tKey .. "#harvestedMassKg",  trip.harvestedMassKg or 0)
+        xmlFile:setValue(tKey .. "#lostLiters",       trip.lostLiters or 0)
+        xmlFile:setValue(tKey .. "#lossMoney",        trip.lossMoney or 0)
+        xmlFile:setValue(tKey .. "#fuelUsedL",        trip.fuelUsedL or 0)
+        xmlFile:setValue(tKey .. "#sessionDuration",  trip.sessionDuration or 0)
+        xmlFile:setValue(tKey .. "#efficiencyRank",   trip.efficiencyRank or "A")
+        xmlFile:setValue(tKey .. "#isActive",         trip.isActive == true)
+        xmlFile:setValue(tKey .. "#isContract",       trip.isContract == true)
+        xmlFile:setValue(tKey .. "#avgSpeedSum",      trip.avgSpeedSum or 0)
+        xmlFile:setValue(tKey .. "#avgSpeedCount",    trip.avgSpeedCount or 0)
+        xmlFile:setValue(tKey .. "#avgLoadSum",       trip.avgLoadSum or 0)
+        xmlFile:setValue(tKey .. "#avgLoadCount",     trip.avgLoadCount or 0)
+    end
     
-    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s, tripLiters=%.0f", 
         self:getName() or "?",
         tostring(mem.currentCrop),
         tostring(settings.fan),
@@ -2705,7 +2850,8 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
         tostring(settings.lowerSieve),
         tostring(settings.rotor),
         tostring(settings.feeder),
-        tostring(settings.targetEngineLoad)))
+        tostring(settings.targetEngineLoad),
+        trip and trip.harvestedLiters or 0))
 end
 
 ---Завантаження стану з savegame
@@ -2727,28 +2873,6 @@ function rhm_Combine:loadFromSavegame(savegame)
         or (g_realisticHarvestManager and g_realisticHarvestManager.modName)
         or "FS25_RealisticHarvesting"
 
-    local candidateKeys = {
-        savegame.key .. ".combineMemory.current",
-        string.format("%s.%s.rhm_Combine.combineMemory.current", savegame.key, modName),
-        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.combineMemory.current", savegame.key),
-        string.format("%s.rhm_Combine.combineMemory.current", savegame.key),
-        string.format("%s.combineMemory.current", savegame.key),
-    }
-
-    local cur = nil
-    for _, path in ipairs(candidateKeys) do
-        if xmlFile:hasProperty(path) then
-            cur = path
-            break
-        end
-    end
-
-    if not cur then
-        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] No saved combine settings found for %s in savegame (tested key: %s)",
-            self:getFullName() or "?", tostring(candidateKeys[2])))
-        return false
-    end
-
     local function readInt(path, def)
         if not xmlFile:hasProperty(path) then
             return def
@@ -2758,6 +2882,21 @@ function rhm_Combine:loadFromSavegame(savegame)
             val = xmlFile:getInt(path)
         elseif XMLValueType and XMLValueType.INT then
             val = xmlFile:getValue(path, XMLValueType.INT)
+        else
+            val = xmlFile:getValue(path)
+        end
+        return (val ~= nil and tonumber(val)) or def
+    end
+
+    local function readFloat(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
+        local val = nil
+        if xmlFile.getFloat then
+            val = xmlFile:getFloat(path)
+        elseif XMLValueType and XMLValueType.FLOAT then
+            val = xmlFile:getValue(path, XMLValueType.FLOAT)
         else
             val = xmlFile:getValue(path)
         end
@@ -2796,78 +2935,159 @@ function rhm_Combine:loadFromSavegame(savegame)
         return tostring(val):lower() == "true"
     end
 
-    local isTier4 = (spec.packageLevel or 1) >= 4
-    local loadedMode = readString(cur .. "#mode", "MANUAL")
-    local loadedAutoSwitch = readBool(cur .. "#autoSwitch", false)
-    if isTier4 then
-        spec.combineMemory.mode              = loadedMode
-        spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
-    else
-        spec.combineMemory.mode              = "MANUAL"
-        spec.combineMemory.autoSwitchEnabled = false
-    end
+    local candidateKeys = {
+        savegame.key .. ".combineMemory.current",
+        string.format("%s.%s.rhm_Combine.combineMemory.current", savegame.key, modName),
+        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.combineMemory.current", savegame.key),
+    }
 
-    local savedCrop = readString(cur .. "#currentCrop", "")
-    if savedCrop and savedCrop ~= "" then
-        spec.combineMemory.currentCrop = savedCrop
-        if spec.loadCalculator then
-            spec.loadCalculator.currentCrop = savedCrop
+    local cur = nil
+    for _, path in ipairs(candidateKeys) do
+        if xmlFile:hasProperty(path) then
+            cur = path
+            break
         end
     end
 
-    local curSettings = spec.combineMemory.currentSettings
-    if curSettings then
-        local loadedFan = readInt(cur .. "#fan", nil)
-        local loadedUpper = readInt(cur .. "#upperSieve", nil)
-        local loadedLower = readInt(cur .. "#lowerSieve", nil)
-        local loadedRotor = readInt(cur .. "#rotor", nil)
-        local loadedFeeder = readInt(cur .. "#feeder", nil)
-        local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
-        
-        if loadedFan ~= nil then curSettings.fan = loadedFan end
-        if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
-        if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
-        if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
-        if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
-        if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
-    end
+    local tripCandidateKeys = {
+        savegame.key .. ".trip",
+        string.format("%s.%s.rhm_Combine.trip", savegame.key, modName),
+        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.trip", savegame.key),
+        string.format("%s.rhm_Combine.trip", savegame.key),
+    }
 
-    local isCalibrated = readBool(cur .. "#isCalibrated", true)
-    spec.combineMemory.isCalibrated = isCalibrated
-    spec.combineMemory.hasManualTuning = isCalibrated
-    spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
-
-    if savedCrop and savedCrop ~= "" then
-        spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
-        spec._lastAiTunedCrop = savedCrop
-        spec._lastAiClientTunedCrop = savedCrop
-    end
-
-    local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
-    if savedCalibCropsStr and savedCalibCropsStr ~= "" then
-        for crop in string.gmatch(savedCalibCropsStr, "%S+") do
-            spec.combineMemory.calibratedCrops[crop] = true
+    local tripKey = nil
+    for _, path in ipairs(tripCandidateKeys) do
+        if xmlFile:hasProperty(path) then
+            tripKey = path
+            break
         end
     end
 
-    local savedMachineId = readString(cur .. "#machineId", nil)
-    if savedMachineId and savedMachineId ~= "" and not savedMachineId:find("#%d+$") then
-        spec.machineId = savedMachineId
+    if not cur and not tripKey then
+        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] No saved combine settings or trip found for %s in savegame (tested key: %s)",
+            self:getFullName() or "?", tostring(candidateKeys[2])))
+        return false
     end
 
-    self._rhmSettingsLoadedFromSavegame = true
+    if cur then
+        local isTier4 = (spec.packageLevel or 1) >= 4
+        local loadedMode = readString(cur .. "#mode", "MANUAL")
+        local loadedAutoSwitch = readBool(cur .. "#autoSwitch", false)
+        if isTier4 then
+            spec.combineMemory.mode              = loadedMode
+            spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
+        else
+            spec.combineMemory.mode              = "MANUAL"
+            spec.combineMemory.autoSwitchEnabled = false
+        end
 
-    Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
-        tostring(self:getFullName()),
-        tostring(spec.combineMemory.currentCrop),
-        tostring(spec.combineMemory.mode),
-        tostring(spec.combineMemory.autoSwitchEnabled),
-        tostring(curSettings and curSettings.fan),
-        tostring(curSettings and curSettings.upperSieve),
-        tostring(curSettings and curSettings.lowerSieve),
-        tostring(curSettings and curSettings.rotor),
-        tostring(curSettings and curSettings.feeder),
-        tostring(curSettings and curSettings.targetEngineLoad)))
+        local savedCrop = readString(cur .. "#currentCrop", "")
+        if savedCrop and savedCrop ~= "" then
+            spec.combineMemory.currentCrop = savedCrop
+            if spec.loadCalculator then
+                spec.loadCalculator.currentCrop = savedCrop
+            end
+        end
+
+        local curSettings = spec.combineMemory.currentSettings
+        if curSettings then
+            local loadedFan = readInt(cur .. "#fan", nil)
+            local loadedUpper = readInt(cur .. "#upperSieve", nil)
+            local loadedLower = readInt(cur .. "#lowerSieve", nil)
+            local loadedRotor = readInt(cur .. "#rotor", nil)
+            local loadedFeeder = readInt(cur .. "#feeder", nil)
+            local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
+            
+            if loadedFan ~= nil then curSettings.fan = loadedFan end
+            if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
+            if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
+            if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
+            if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
+            if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+        end
+
+        local isCalibrated = readBool(cur .. "#isCalibrated", true)
+        spec.combineMemory.isCalibrated = isCalibrated
+        spec.combineMemory.hasManualTuning = isCalibrated
+        spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+
+        if savedCrop and savedCrop ~= "" then
+            spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
+            spec._lastAiTunedCrop = savedCrop
+            spec._lastAiClientTunedCrop = savedCrop
+        end
+
+        local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
+        if savedCalibCropsStr and savedCalibCropsStr ~= "" then
+            for crop in string.gmatch(savedCalibCropsStr, "%S+") do
+                spec.combineMemory.calibratedCrops[crop] = true
+            end
+        end
+
+        local savedMachineId = readString(cur .. "#machineId", nil)
+        if savedMachineId and savedMachineId ~= "" and not savedMachineId:find("#%d+$") then
+            spec.machineId = savedMachineId
+        end
+
+        self._rhmSettingsLoadedFromSavegame = true
+
+        Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+            tostring(self:getFullName()),
+            tostring(spec.combineMemory.currentCrop),
+            tostring(spec.combineMemory.mode),
+            tostring(spec.combineMemory.autoSwitchEnabled),
+            tostring(curSettings and curSettings.fan),
+            tostring(curSettings and curSettings.upperSieve),
+            tostring(curSettings and curSettings.lowerSieve),
+            tostring(curSettings and curSettings.rotor),
+            tostring(curSettings and curSettings.feeder),
+            tostring(curSettings and curSettings.targetEngineLoad)))
+    end
+
+    if tripKey then
+        local savedTrip = {
+            fieldId          = readInt(tripKey .. "#fieldId", 0),
+            cropName         = readString(tripKey .. "#cropName", "--"),
+            fillTypeIndex    = readInt(tripKey .. "#fillTypeIndex", FillType.UNKNOWN),
+            harvestedAreaHa  = readFloat(tripKey .. "#harvestedAreaHa", 0),
+            harvestedLiters  = readFloat(tripKey .. "#harvestedLiters", 0),
+            harvestedMassKg  = readFloat(tripKey .. "#harvestedMassKg", 0),
+            lostLiters       = readFloat(tripKey .. "#lostLiters", 0),
+            lossMoney        = readFloat(tripKey .. "#lossMoney", 0),
+            fuelUsedL        = readFloat(tripKey .. "#fuelUsedL", 0),
+            sessionDuration  = readFloat(tripKey .. "#sessionDuration", 0),
+            efficiencyRank   = readString(tripKey .. "#efficiencyRank", "A"),
+            isActive         = readBool(tripKey .. "#isActive", false),
+            isContract       = readBool(tripKey .. "#isContract", false),
+            avgSpeedSum      = readFloat(tripKey .. "#avgSpeedSum", 0),
+            avgSpeedCount    = readInt(tripKey .. "#avgSpeedCount", 0),
+            avgLoadSum       = readFloat(tripKey .. "#avgLoadSum", 0),
+            avgLoadCount     = readInt(tripKey .. "#avgLoadCount", 0),
+        }
+        spec.trip = savedTrip
+
+        local farmId = self:getOwnerFarmId()
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        if tracker and farmId and farmId ~= 0 then
+            local farmData = tracker:getFarmData(farmId)
+            if farmData then
+                farmData.combineTrips = farmData.combineTrips or {}
+                local machineKey = tracker:getMachineKey(self)
+                if machineKey then
+                    farmData.combineTrips[machineKey] = savedTrip
+                end
+                if self.configFileName then
+                    farmData.combineTrips[self.configFileName] = savedTrip
+                end
+            end
+        end
+
+        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Restored vehicle trip odometer from savegame for %s: area=%.2f ha, liters=%.0f L, fuel=%.1f L",
+            self:getFullName() or "?", savedTrip.harvestedAreaHa or 0, savedTrip.harvestedLiters or 0, savedTrip.fuelUsedL or 0))
+    end
 
     return true
 end
@@ -2909,6 +3129,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 80)  -- targetEngineLoad
         streamWriteString(streamId, "AUTO")  -- mode
         streamWriteString(streamId, "")      -- currentCrop (empty = nil)
+        streamWriteBool(streamId, false)     -- hasTrip
         return
     end
     
@@ -2946,6 +3167,31 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteString(streamId, "MANUAL")
         streamWriteString(streamId, "")
     end
+
+    -- spec.trip (sync active vehicle trip odometer to connecting client)
+    local trip = spec.trip
+    if trip then
+        streamWriteBool(streamId, true)
+        streamWriteInt32(streamId, trip.fieldId or 0)
+        streamWriteString(streamId, trip.cropName or "")
+        streamWriteInt32(streamId, trip.fillTypeIndex or 0)
+        streamWriteFloat32(streamId, trip.harvestedAreaHa or 0)
+        streamWriteFloat32(streamId, trip.harvestedLiters or 0)
+        streamWriteFloat32(streamId, trip.harvestedMassKg or 0)
+        streamWriteFloat32(streamId, trip.lostLiters or 0)
+        streamWriteFloat32(streamId, trip.lossMoney or 0)
+        streamWriteFloat32(streamId, trip.fuelUsedL or 0)
+        streamWriteFloat32(streamId, trip.sessionDuration or 0)
+        streamWriteString(streamId, trip.efficiencyRank or "A")
+        streamWriteBool(streamId, trip.isActive == true)
+        streamWriteBool(streamId, trip.isContract == true)
+        streamWriteFloat32(streamId, trip.avgSpeedSum or 0)
+        streamWriteInt32(streamId, trip.avgSpeedCount or 0)
+        streamWriteFloat32(streamId, trip.avgLoadSum or 0)
+        streamWriteInt32(streamId, trip.avgLoadCount or 0)
+    else
+        streamWriteBool(streamId, false)
+    end
 end
 
 ---Початкова синхронізація: Клієнт читає дані при підключенні
@@ -2972,6 +3218,26 @@ function rhm_Combine:onReadStream(streamId, connection)
         streamReadUInt8(streamId)   -- targetEngineLoad
         streamReadString(streamId)
         streamReadString(streamId)
+        local hasTrip = streamReadBool(streamId)
+        if hasTrip then
+            streamReadInt32(streamId)
+            streamReadString(streamId)
+            streamReadInt32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadString(streamId)
+            streamReadBool(streamId)
+            streamReadBool(streamId)
+            streamReadFloat32(streamId)
+            streamReadInt32(streamId)
+            streamReadFloat32(streamId)
+            streamReadInt32(streamId)
+        end
         return
     end
     
@@ -3018,6 +3284,47 @@ function rhm_Combine:onReadStream(streamId, connection)
             spec.combineMemory.autoSwitchEnabled = false
         end
         spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
+    end
+
+    -- spec.trip initial connect sync
+    local hasTrip = streamReadBool(streamId)
+    if hasTrip then
+        local trip = {
+            fieldId          = streamReadInt32(streamId),
+            cropName         = streamReadString(streamId),
+            fillTypeIndex    = streamReadInt32(streamId),
+            harvestedAreaHa  = streamReadFloat32(streamId),
+            harvestedLiters  = streamReadFloat32(streamId),
+            harvestedMassKg  = streamReadFloat32(streamId),
+            lostLiters       = streamReadFloat32(streamId),
+            lossMoney        = streamReadFloat32(streamId),
+            fuelUsedL        = streamReadFloat32(streamId),
+            sessionDuration  = streamReadFloat32(streamId),
+            efficiencyRank   = streamReadString(streamId),
+            isActive         = streamReadBool(streamId),
+            isContract       = streamReadBool(streamId),
+            avgSpeedSum      = streamReadFloat32(streamId),
+            avgSpeedCount    = streamReadInt32(streamId),
+            avgLoadSum       = streamReadFloat32(streamId),
+            avgLoadCount     = streamReadInt32(streamId),
+        }
+        spec.trip = trip
+
+        local farmId = self:getOwnerFarmId()
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        if tracker and farmId and farmId ~= 0 then
+            local farmData = tracker:getFarmData(farmId)
+            if farmData then
+                farmData.combineTrips = farmData.combineTrips or {}
+                local machineKey = tracker:getMachineKey(self)
+                if machineKey then
+                    farmData.combineTrips[machineKey] = trip
+                end
+                if self.configFileName then
+                    farmData.combineTrips[self.configFileName] = trip
+                end
+            end
+        end
     end
 end
 
@@ -3089,12 +3396,20 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
         local spec = self.spec_rhm_Combine
         if not spec then
             streamWriteBool(streamId, false)
+            streamWriteBool(streamId, false)
             return
         end
         
-        -- Перевіряємо чи є зміни
-        local hasDataUpdate = bitAND(dirtyMask, spec.dataDirtyFlag) ~= 0
-        local hasSettingsUpdate = bitAND(dirtyMask, spec.settingsDirtyFlag) ~= 0
+        -- Перевіряємо чи є зміни (GIANTS Engine 10: bit32.band)
+        local hasDataUpdate = false
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" and bit32 and bit32.band then
+            hasDataUpdate = bit32.band(dirtyMask, spec.dataDirtyFlag) ~= 0
+        end
+
+        local hasSettingsUpdate = false
+        if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" and bit32 and bit32.band then
+            hasSettingsUpdate = bit32.band(dirtyMask, spec.settingsDirtyFlag) ~= 0
+        end
         
         streamWriteBool(streamId, hasDataUpdate)
         streamWriteBool(streamId, hasSettingsUpdate)

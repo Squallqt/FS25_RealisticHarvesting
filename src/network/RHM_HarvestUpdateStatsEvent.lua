@@ -53,6 +53,36 @@ function RHM_HarvestUpdateStatsEvent:writeStream(streamId, connection)
     streamWriteBool(streamId, trip.isActive == true)
     streamWriteBool(streamId, trip.isContract == true)
     streamWriteString(streamId, trip.lastMachineKey or "")
+
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+    local fStat = nil
+    if tracker and trip and trip.fieldId and trip.fieldId > 0 then
+        local farm = tracker:getFarmData(self.farmId)
+        if farm and farm.fieldStats then
+            fStat = farm.fieldStats[trip.fieldId]
+        end
+    end
+    local hasFStat = (fStat ~= nil)
+    streamWriteBool(streamId, hasFStat)
+    if hasFStat then
+        streamWriteInt32(streamId, fStat.fieldId or trip.fieldId)
+        streamWriteFloat32(streamId, fStat.harvestedLiters or 0)
+        streamWriteFloat32(streamId, fStat.harvestedMassKg or 0)
+        streamWriteFloat32(streamId, fStat.harvestedAreaHa or 0)
+        streamWriteFloat32(streamId, fStat.lostLiters or 0)
+        streamWriteFloat32(streamId, fStat.lossMoney or 0)
+        streamWriteFloat32(streamId, fStat.fuelUsedL or 0)
+        streamWriteFloat32(streamId, fStat.sessionDuration or 0)
+        streamWriteUInt16(streamId, fStat.operationsCount or 1)
+        streamWriteBool(streamId, fStat.isContract == true)
+        streamWriteString(streamId, fStat.lastCrop or fStat.lastCropName or trip.cropName or "--")
+        local fReasons = fStat.reasons or {}
+        streamWriteFloat32(streamId, fReasons.speed or 0)
+        streamWriteFloat32(streamId, fReasons.settings or 0)
+        streamWriteFloat32(streamId, fReasons.moisture or 0)
+        streamWriteFloat32(streamId, fReasons.wear or 0)
+        streamWriteFloat32(streamId, fReasons.slope or 0)
+    end
 end
 
 function RHM_HarvestUpdateStatsEvent:readStream(streamId, connection)
@@ -91,8 +121,86 @@ function RHM_HarvestUpdateStatsEvent:readStream(streamId, connection)
         local lmk = streamReadString(streamId)
         if lmk and lmk ~= "" then
             trip.lastMachineKey = lmk
-            if farm.combineTrips and farm.combineTrips[lmk] then
-                farm.combineTrips[lmk].isContract = trip.isContract
+            farm.combineTrips = farm.combineTrips or {}
+            if not farm.combineTrips[lmk] then
+                farm.combineTrips[lmk] = {}
+            end
+            local mTrip = farm.combineTrips[lmk]
+            mTrip.fieldId = trip.fieldId
+            mTrip.cropName = trip.cropName
+            mTrip.fillTypeIndex = trip.fillTypeIndex
+            mTrip.harvestedLiters = trip.harvestedLiters
+            mTrip.harvestedMassKg = trip.harvestedMassKg
+            mTrip.harvestedAreaHa = trip.harvestedAreaHa
+            mTrip.lostLiters = trip.lostLiters
+            mTrip.lossMoney = trip.lossMoney
+            mTrip.fuelUsedL = trip.fuelUsedL
+            mTrip.sessionDuration = trip.sessionDuration
+            mTrip.efficiencyRank = trip.efficiencyRank
+            mTrip.reasons = {
+                speed = trip.reasons and trip.reasons.speed or 0,
+                settings = trip.reasons and trip.reasons.settings or 0,
+                moisture = trip.reasons and trip.reasons.moisture or 0,
+                wear = trip.reasons and trip.reasons.wear or 0,
+                slope = trip.reasons and trip.reasons.slope or 0
+            }
+            mTrip.avgSpeedSum = trip.avgSpeedSum
+            mTrip.avgSpeedCount = trip.avgSpeedCount
+            mTrip.avgLoadSum = trip.avgLoadSum
+            mTrip.avgLoadCount = trip.avgLoadCount
+            mTrip.isActive = trip.isActive
+            mTrip.isContract = trip.isContract
+        end
+
+        local hasFStat = streamReadBool(streamId)
+        if hasFStat then
+            local fid = streamReadInt32(streamId)
+            farm.fieldStats = farm.fieldStats or {}
+            if not farm.fieldStats[fid] then
+                farm.fieldStats[fid] = { fieldId = fid }
+            end
+            local fs = farm.fieldStats[fid]
+            fs.fieldId = fid
+            fs.harvestedLiters = streamReadFloat32(streamId)
+            fs.harvestedMassKg = streamReadFloat32(streamId)
+            fs.harvestedAreaHa = streamReadFloat32(streamId)
+            fs.lostLiters = streamReadFloat32(streamId)
+            fs.lossMoney = streamReadFloat32(streamId)
+            fs.fuelUsedL = streamReadFloat32(streamId)
+            fs.sessionDuration = streamReadFloat32(streamId)
+            fs.operationsCount = streamReadUInt16(streamId)
+            fs.isContract = streamReadBool(streamId)
+            fs.lastCrop = streamReadString(streamId)
+            fs.lastCropName = fs.lastCrop
+            fs.reasons = fs.reasons or {}
+            fs.reasons.speed = streamReadFloat32(streamId)
+            fs.reasons.settings = streamReadFloat32(streamId)
+            fs.reasons.moisture = streamReadFloat32(streamId)
+            fs.reasons.wear = streamReadFloat32(streamId)
+            fs.reasons.slope = streamReadFloat32(streamId)
+        end
+
+        -- Mirror directly to active client combine vehicle instances
+        local vehicles = (g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles) or g_currentMission.vehicles
+        if vehicles then
+            for _, vehicle in pairs(vehicles) do
+                if vehicle and type(vehicle) == "table" and vehicle.spec_rhm_Combine then
+                    local vFarmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
+                    if vFarmId == self.farmId then
+                        local mKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName
+                        local isMatch = false
+                        if lmk and lmk ~= "" then
+                            if mKey == lmk then
+                                isMatch = true
+                            elseif vehicle.configFileName and lmk:sub(1, #vehicle.configFileName) == vehicle.configFileName then
+                                isMatch = true
+                            end
+                        end
+                        if isMatch or (vehicle.getIsEntered and vehicle:getIsEntered()) then
+                            vehicle.spec_rhm_Combine.trip = (farm.combineTrips and farm.combineTrips[mKey]) or farm.currentTrip
+                        end
+                    end
+                end
             end
         end
     end

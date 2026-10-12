@@ -186,6 +186,7 @@ function RHM_HarvestSyncInitialEvent:writeStream(streamId, connection)
         streamWriteFloat32(streamId, fStat.lostLiters or 0)
         streamWriteFloat32(streamId, fStat.lossMoney or 0)
         streamWriteFloat32(streamId, fStat.fuelUsedL or 0)
+        streamWriteFloat32(streamId, fStat.sessionDuration or 0)
         streamWriteUInt16(streamId, fStat.operationsCount or 0)
         streamWriteBool(streamId, fStat.isContract == true)
         streamWriteString(streamId, fStat.lastCropName or "--")
@@ -370,10 +371,10 @@ function RHM_HarvestSyncInitialEvent:readStream(streamId, connection)
             harvestedLiters = streamReadFloat32(streamId),
             harvestedMassKg = streamReadFloat32(streamId),
             harvestedAreaHa = streamReadFloat32(streamId),
-            sessionDuration = 0,
             lostLiters = streamReadFloat32(streamId),
             lossMoney = streamReadFloat32(streamId),
             fuelUsedL = streamReadFloat32(streamId),
+            sessionDuration = streamReadFloat32(streamId),
             operationsCount = streamReadUInt16(streamId),
             isContract = streamReadBool(streamId),
             lastCropName = streamReadString(streamId),
@@ -419,8 +420,20 @@ function RHM_HarvestSyncInitialEvent:readStream(streamId, connection)
                     local vFarmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
                     if vFarmId == self.farmId and farm.combineTrips then
                         local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
-                        if farm.combineTrips[machineKey] then
-                            vehicle.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
+                        local mTrip = farm.combineTrips[machineKey]
+                        if not mTrip and vehicle.configFileName then
+                            for k, v in pairs(farm.combineTrips) do
+                                if k:sub(1, #vehicle.configFileName) == vehicle.configFileName then
+                                    mTrip = v
+                                    break
+                                end
+                            end
+                        end
+                        if not mTrip and farm.currentTrip and farm.currentTrip.isActive then
+                            mTrip = farm.currentTrip
+                        end
+                        if mTrip then
+                            vehicle.spec_rhm_Combine.trip = mTrip
                         end
                     end
                 end

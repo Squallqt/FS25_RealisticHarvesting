@@ -122,13 +122,17 @@ local function loadedMission(mission, node)
     -- EN: Load persistent harvest trip and fleet statistics on the server
     -- UA: Завантажуємо збережені дані одометра та парку техніки на сервері
     if mission:getIsServer() and mission.missionInfo and mission.missionInfo.savegameDirectory then
-        local xmlPath = mission.missionInfo.savegameDirectory .. "/realisticHarvestingData.xml"
-        if fileExists(xmlPath) and rhm and rhm.harvestTracker then
+        local xmlPath = Utils.getFilename("realisticHarvestingData.xml", mission.missionInfo.savegameDirectory)
+        local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
+        if fileExists(xmlPath) and tracker then
             local xmlFile = loadXMLFile("RHM_Data", xmlPath)
             if xmlFile ~= 0 then
-                rhm.harvestTracker:loadFromXMLFile(xmlFile, "realisticHarvesting")
+                tracker:loadFromXMLFile(xmlFile, "realisticHarvesting")
                 delete(xmlFile)
+                rhm_log(string.format("RHM: [LOAD] Successfully restored harvest tracker data from %s", xmlPath))
             end
+        else
+            rhm_log(string.format("RHM: [LOAD] No existing realisticHarvestingData.xml found at %s (fresh start or first run)", xmlPath))
         end
     end
 
@@ -180,7 +184,27 @@ local function validateTypes(manager)
         for typeName, typeEntry in pairs(g_vehicleTypeManager:getTypes()) do
             local hasCombine = SpecializationUtil.hasSpecialization(Combine, typeEntry.specializations)
             local hasForage = (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, typeEntry.specializations))
-            if hasCombine or hasForage then
+            local isBaler = (Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, typeEntry.specializations))
+            local isPelletizer = false
+            if typeName and typeName:lower():find("pellet") then
+                isPelletizer = true
+            end
+            if not isPelletizer and typeEntry.specializations then
+                for _, specClass in ipairs(typeEntry.specializations) do
+                    local sName = (g_specializationManager and g_specializationManager.getSpecializationNameByObject and g_specializationManager:getSpecializationNameByObject(specClass))
+                    if not sName and specClass and specClass.className then
+                        sName = specClass.className
+                    end
+                    if sName then
+                        local sLower = string.lower(sName)
+                        if sLower:find("pelletizer") or sLower:find("baleshredder") then
+                            isPelletizer = true
+                            break
+                        end
+                    end
+                end
+            end
+            if (hasCombine or hasForage) and not isBaler and not isPelletizer then
                 g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
             end
         end
@@ -193,26 +217,62 @@ Mission00.load = Utils.prependedFunction(Mission00.load, load)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, loadedMission)
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
--- EN: Hook savegame saving to persist realisticHarvestingData.xml on server
--- UA: Підключаємось до збереження гри для запису realisticHarvestingData.xml на сервері
+-- EN: Helper to persist realisticHarvestingData.xml on server or career save
+-- UA: Допоміжна функція для запису realisticHarvestingData.xml на сервері чи збереженні кар'єри
+local function saveRealisticHarvestingData(savegameDirectory)
+    if not savegameDirectory or savegameDirectory == "" then return end
+    local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
+    if not tracker then return end
+    local xmlPath = Utils.getFilename("realisticHarvestingData.xml", savegameDirectory)
+    local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
+    if xmlFile ~= 0 then
+        tracker:saveToXMLFile(xmlFile, "realisticHarvesting")
+        saveXMLFile(xmlFile)
+        delete(xmlFile)
+        rhm_log(string.format("RHM: [SAVE] Successfully saved realisticHarvestingData.xml to %s", xmlPath))
+    end
+end
+
+-- EN: Hook interactive menu saving (Single Player / Client Host)
+-- UA: Підключаємось до збереження через меню (Одиночна гра / Клієнт-хост)
 local function onSaveSavegame(self)
-    if self:getIsServer() and self.missionInfo and self.missionInfo.savegameDirectory then
-        local xmlPath = self.missionInfo.savegameDirectory .. "/realisticHarvestingData.xml"
-        local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
-        if xmlFile ~= 0 and rhm and rhm.harvestTracker then
-            rhm.harvestTracker:saveToXMLFile(xmlFile, "realisticHarvesting")
-            saveXMLFile(xmlFile)
-            delete(xmlFile)
-        end
+    local saveDir = (self.missionInfo and self.missionInfo.savegameDirectory)
+        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+    if self:getIsServer() and saveDir then
+        saveRealisticHarvestingData(saveDir)
     end
 end
 FSBaseMission.saveSavegame = Utils.appendedFunction(FSBaseMission.saveSavegame, onSaveSavegame)
 
--- EN: Hook initial client state transmission in multiplayer to sync farm data to joining player
--- UA: Передаємо повний стан ферми гравцю, який приєднується до сесії мультиплеєра
-local function onSendInitialClientState(self, connection, user, farm)
-    if self.isMultiplayer and connection and not connection:getIsServer() and rhm and rhm.harvestTracker and farm then
-        connection:sendEvent(RHM_HarvestSyncInitialEvent.new(farm.farmId))
+-- EN: Hook dedicated server autosave & career XML serialization (Dedicated Server)
+-- UA: Підключаємось до збереження виділеного сервера (Dedicated Server)
+local function onCareerMissionInfoSaveToXMLFile(missionInfo)
+    local saveDir = (missionInfo and missionInfo.savegameDirectory)
+        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+    if saveDir then
+        saveRealisticHarvestingData(saveDir)
+    end
+end
+if FSCareerMissionInfo and FSCareerMissionInfo.saveToXMLFile then
+    FSCareerMissionInfo.saveToXMLFile = Utils.appendedFunction(FSCareerMissionInfo.saveToXMLFile, onCareerMissionInfoSaveToXMLFile)
+end
+
+-- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
+-- UA: Передаємо повний стан ферм та налаштування гравцю, який приєднується до сесії мультиплеєра
+local function onSendInitialClientState(mission, connection, isReconnect)
+    if mission and mission.isMultiplayer and connection and rhm and rhm.harvestTracker then
+        -- Sync active global physics & farm settings
+        if rhm.settings and RHM_SettingsSyncEvent then
+            connection:sendEvent(RHM_SettingsSyncEvent.new(rhm.settings))
+        end
+        -- Sync all farm statistics, combine trips, and season history
+        if rhm.harvestTracker.farms then
+            for farmId, farmData in pairs(rhm.harvestTracker.farms) do
+                if farmData and RHM_HarvestSyncInitialEvent then
+                    connection:sendEvent(RHM_HarvestSyncInitialEvent.new(farmId, farmData))
+                end
+            end
+        end
     end
 end
 FSBaseMission.sendInitialClientState = Utils.appendedFunction(FSBaseMission.sendInitialClientState, onSendInitialClientState)

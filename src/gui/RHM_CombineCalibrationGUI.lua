@@ -872,7 +872,9 @@ function RHMCombineCalibrationGUI:draw()
         local cardH = ui.statsHeight
         local startX = x + ui.margin
 
-        local load = (spec.loadCalculator and spec.loadCalculator.engineLoad or 0) * 100
+        local load = (spec.data and spec.data.load)
+            or (spec.loadCalculator and spec.loadCalculator.getEngineLoad and spec.loadCalculator:getEngineLoad())
+            or ((spec.loadCalculator and spec.loadCalculator.engineLoad or 0) * 100)
         local effPenalty = 0
         local lossPenalty = 0
         if memory.currentCrop then

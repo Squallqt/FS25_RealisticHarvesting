@@ -733,6 +733,68 @@ function RHM_HarvestHistoryFields:updateData()
             end
         end
 
+        -- 2b. Merge owned & active fields from getFarmFields for current season
+        if numYear == currentYear and tracker and tracker.getFarmFields then
+            local currentFarmFields = tracker:getFarmFields(farmId)
+            if currentFarmFields then
+                for _, f in ipairs(currentFarmFields) do
+                    local masterFid = (tracker and tracker.getMasterFieldId and tracker:getMasterFieldId(farmId, f.fieldId)) or f.fieldId
+                    local cName = f.lastCrop or "--"
+                    local isContract = (f.isContract == true)
+                    local groupKey = string.format("%d_%s_%s", masterFid, string.upper(tostring(cName)), isContract and "1" or "0")
+
+                    if not aggregatedMap[groupKey] then
+                        local anyGroupMatch = false
+                        for _, existing in pairs(aggregatedMap) do
+                            if existing.fieldId == masterFid then
+                                anyGroupMatch = true
+                                break
+                            end
+                        end
+                        if not anyGroupMatch and f.isOwned then
+                            local area = f.harvestedAreaHa or 0
+                            local harvL = f.harvestedLiters or 0
+                            local lostL = isLossEnabled and (f.lostLiters or 0) or 0
+                            local money = isLossEnabled and (f.lossMoney or 0) or 0
+                            local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(cName)) or 0.00075
+                            local harvT = (f.harvestedMassKg and f.harvestedMassKg > 0) and (f.harvestedMassKg * 0.001) or (harvL * cDensity)
+                            local fuelUsed = f.fuelUsedL or (area * 18.0)
+
+                            local pricePerLiter = 0.35
+                            if g_currentMission and g_currentMission.economyManager and cName ~= "--" and g_fillTypeManager then
+                                local ftIdx = g_fillTypeManager:getFillTypeIndexByName(cName)
+                                if ftIdx and ftIdx ~= FillType.UNKNOWN and g_currentMission.economyManager.getPricePerLiter then
+                                    pricePerLiter = g_currentMission.economyManager:getPricePerLiter(ftIdx) or pricePerLiter
+                                end
+                            end
+                            local fieldGross = harvL * pricePerLiter
+                            local fieldFuel = (fuelUsed > 0 and fuelUsed or (area * 18.0)) * 1.45
+
+                            aggregatedMap[groupKey] = {
+                                _fromFieldStats = true,
+                                fieldId = masterFid,
+                                cropName = cName,
+                                isContract = isContract,
+                                harvestedLiters = harvL,
+                                harvestedMassKg = (f.harvestedMassKg and f.harvestedMassKg > 0) and f.harvestedMassKg or (harvT * 1000.0),
+                                harvestedTons = harvT,
+                                harvestedAreaHa = area,
+                                nominalAreaHa = f.nominalAreaHa or 0,
+                                lostLiters = lostL,
+                                lossMoney = money,
+                                fuelUsedL = fuelUsed,
+                                grossRevenue = fieldGross,
+                                fuelExpense = fieldFuel,
+                                sessionDuration = f.sessionDuration or 0,
+                                operationsCount = (harvL > 0 or area > 0) and 1 or 0,
+                                reasons = f.reasons or { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+                            }
+                            table.insert(groupOrder, groupKey)
+                        end
+                    end
+                end
+            end
+        end
 
         -- 3. Construct formatted list items for each aggregated field & crop
         local seenUniqueFields = {}
@@ -1113,9 +1175,9 @@ function RHM_HarvestHistoryFields:updateSelectedCardData()
         if self.fieldSummaryCard1Title then self.fieldSummaryCard1Title:setText(safeL10n("rhm_card_field_land", "FARMLAND & PROGRESS")) end
         if self.fieldSummaryLabel1_1 then self.fieldSummaryLabel1_1:setText(safeL10n("rhm_fields_total_owned", "Owned Fields")) end
         if self.fieldSummaryOwnedCount then self.fieldSummaryOwnedCount:setText(tostring(entry.totalOwnedCount or 0)) end
-        if self.fieldSummaryLabel1_2 then self.fieldSummaryLabel1_2:setText(safeL10n("rhm_hist_total_area", "Total Area")) end
+        if self.fieldSummaryLabel1_2 then self.fieldSummaryLabel1_2:setText(safeL10n("rhm_col_area", "Total Area")) end
         if self.fieldSummaryTotalArea then self.fieldSummaryTotalArea:setText(RHM_UnitConverter.formatArea(entry.totalNominalArea or 0, sys)) end
-        if self.fieldSummaryLabel1_3 then self.fieldSummaryLabel1_3:setText(safeL10n("rhm_col_area", "Harvested Area")) end
+        if self.fieldSummaryLabel1_3 then self.fieldSummaryLabel1_3:setText(safeL10n("rhm_hist_total_area", "Harvested Area")) end
         if self.fieldSummaryHarvestedArea then self.fieldSummaryHarvestedArea:setText(RHM_UnitConverter.formatArea(entry.totalHarvestedArea or 0, sys)) end
         if self.fieldSummaryLabel1_4 then self.fieldSummaryLabel1_4:setText(safeL10n("rhm_contract_tag", "Contract")) end
         if self.fieldSummaryContractCount then self.fieldSummaryContractCount:setText(tostring(entry.totalContractCount or 0)) end
@@ -1242,9 +1304,6 @@ function RHM_HarvestHistoryFields:updateSelectedCardData()
                 fieldNumStr = string.format("%d (%s)", entry.fieldId, table.concat(entry.clusterMembers, ", "))
             end
             self.fieldSummaryOwnedCount:setText(fieldNumStr)
-            if self.fieldSummaryOwnedCount.setTextSize then
-                self.fieldSummaryOwnedCount:setTextSize((#fieldNumStr > 10) and 15 or 24)
-            end
         end
         if self.fieldSummaryLabel1_2 then self.fieldSummaryLabel1_2:setText(safeL10n("rhm_fields_nominal_area", "Nominal Area")) end
         if self.fieldSummaryTotalArea then self.fieldSummaryTotalArea:setText(RHM_UnitConverter.formatArea(entry.nominalAreaHa or 0, sys)) end
@@ -1425,9 +1484,6 @@ function RHM_HarvestHistoryFields:populateCellForItemInSection(list, section, in
     local fElem = cell:getDescendantByName("colField")
     if fElem and fElem.setText then
         fElem:setText(item.field or "--")
-        if fElem.setTextSize then
-            fElem:setTextSize((item.clusterMembers and #item.clusterMembers > 1) and 12 or 14)
-        end
     end
 
     local sElem = cell:getDescendantByName("colStatus")

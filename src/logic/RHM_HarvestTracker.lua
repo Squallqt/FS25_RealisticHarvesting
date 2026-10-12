@@ -35,7 +35,19 @@ local function hasFarmManagementRights(farmId, user)
         return true
     end
     if not user then return true end
+    -- If user belongs to this farm:
+    if user.farmId and user.farmId == farmId then
+        return true
+    end
+    -- Allow server master/admin user:
+    if (user.getIsMasterUser and user:getIsMasterUser()) or user.isMasterUser then
+        return true
+    end
     if g_farmManager then
+        local userFarm = (g_farmManager.getFarmForPlayer and g_farmManager:getFarmForPlayer(user.userId)) or (g_farmManager.getFarmByUserId and g_farmManager:getFarmByUserId(user.userId))
+        if userFarm and userFarm.farmId == farmId then
+            return true
+        end
         local realFarm = g_farmManager:getFarmById(farmId)
         if realFarm then
             if realFarm.ownerUserId and realFarm.ownerUserId == user.userId then
@@ -48,6 +60,9 @@ local function hasFarmManagementRights(farmId, user)
                 return true
             end
             if realFarm.isFarmManager and realFarm:isFarmManager(user.userId) then
+                return true
+            end
+            if realFarm.isUserPlayer and realFarm:isUserPlayer(user.userId) then
                 return true
             end
         end
@@ -514,8 +529,8 @@ function RHM_HarvestTracker:getFarmlandGraph()
                 graph.neighbors[fmlId] = graph.neighbors[fmlId] or {}
                 graph.borderPoints[fmlId] = graph.borderPoints[fmlId] or {}
 
-                -- Horizontal bridge across boundaries / roads (<= 70m)
-                if lastRowFmlId > 0 and lastRowFmlId ~= fmlId and (x - lastRowFmlX) <= 70 then
+                -- Horizontal contact across immediate adjacent grid cells
+                if lastRowFmlId > 0 and lastRowFmlId ~= fmlId and (x - lastRowFmlX) <= (step + 4) then
                     graph.neighbors[fmlId][lastRowFmlId] = true
                     graph.neighbors[lastRowFmlId] = graph.neighbors[lastRowFmlId] or {}
                     graph.neighbors[lastRowFmlId][fmlId] = true
@@ -523,21 +538,21 @@ function RHM_HarvestTracker:getFarmlandGraph()
                     local bx = (lastRowFmlX + x) * 0.5
                     local bz = z
                     graph.borderPoints[fmlId][lastRowFmlId] = graph.borderPoints[fmlId][lastRowFmlId] or {}
-                    if #graph.borderPoints[fmlId][lastRowFmlId] < 5 then
+                    if #graph.borderPoints[fmlId][lastRowFmlId] < 8 then
                         table.insert(graph.borderPoints[fmlId][lastRowFmlId], { x = bx, z = bz })
                     end
                     graph.borderPoints[lastRowFmlId] = graph.borderPoints[lastRowFmlId] or {}
                     graph.borderPoints[lastRowFmlId][fmlId] = graph.borderPoints[lastRowFmlId][fmlId] or {}
-                    if #graph.borderPoints[lastRowFmlId][fmlId] < 5 then
+                    if #graph.borderPoints[lastRowFmlId][fmlId] < 8 then
                         table.insert(graph.borderPoints[lastRowFmlId][fmlId], { x = bx, z = bz })
                     end
                 end
                 lastRowFmlId = fmlId
                 lastRowFmlX = x
 
-                -- Vertical bridge across boundaries / roads (<= 70m)
+                -- Vertical contact across immediate adjacent grid cells
                 local colData = lastColFml[x]
-                if colData and colData.id > 0 and colData.id ~= fmlId and (z - colData.z) <= 70 then
+                if colData and colData.id > 0 and colData.id ~= fmlId and (z - colData.z) <= (step + 4) then
                     local northFml = colData.id
                     graph.neighbors[fmlId][northFml] = true
                     graph.neighbors[northFml] = graph.neighbors[northFml] or {}
@@ -546,12 +561,12 @@ function RHM_HarvestTracker:getFarmlandGraph()
                     local bx = x
                     local bz = (colData.z + z) * 0.5
                     graph.borderPoints[fmlId][northFml] = graph.borderPoints[fmlId][northFml] or {}
-                    if #graph.borderPoints[fmlId][northFml] < 5 then
+                    if #graph.borderPoints[fmlId][northFml] < 8 then
                         table.insert(graph.borderPoints[fmlId][northFml], { x = bx, z = bz })
                     end
                     graph.borderPoints[northFml] = graph.borderPoints[northFml] or {}
                     graph.borderPoints[northFml][fmlId] = graph.borderPoints[northFml][fmlId] or {}
-                    if #graph.borderPoints[northFml][fmlId] < 5 then
+                    if #graph.borderPoints[northFml][fmlId] < 8 then
                         table.insert(graph.borderPoints[northFml][fmlId], { x = bx, z = bz })
                     end
                 end
@@ -719,121 +734,38 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
         end
     end
 
-    -- 3. Check Crop Consistency
-    -- Separate fields growing different crops can NEVER be merged into the same harvest cluster
-    if FSDensityMapUtil and FSDensityMapUtil.getFieldFruitTypeAtWorldPos then
-        local cAx, cAz = self:getFieldCenter(fieldIdA)
-        local cBx, cBz = self:getFieldCenter(fieldIdB)
-        local cropA = (cAx and cAz and FSDensityMapUtil.getFieldFruitTypeAtWorldPos(cAx, cAz)) or FruitType.UNKNOWN
-        local cropB = (cBx and cBz and FSDensityMapUtil.getFieldFruitTypeAtWorldPos(cBx, cBz)) or FruitType.UNKNOWN
-        if cropA ~= FruitType.UNKNOWN and cropB ~= FruitType.UNKNOWN and cropA ~= cropB then
-            return false
-        end
-    end
-
-    -- 4. Check physical field ground continuity across the boundary using native FSDensityMapUtil
+    -- 3. Check physical field ground continuity across the boundary
+    -- Two distinct fields can ONLY be merged if their farmland parcels are immediate physical neighbors
     local graph = self:getFarmlandGraph()
-    local isBordering = false
-    if graph and graph.neighbors and graph.neighbors[fmlA] and graph.neighbors[fmlA][fmlB] then
-        isBordering = true
+    if not graph or not graph.neighbors or not graph.neighbors[fmlA] or not graph.neighbors[fmlA][fmlB] then
+        return false
     end
 
-    if not isBordering and graph and graph.boxes and graph.boxes[fmlA] and graph.boxes[fmlB] then
-        local bA = graph.boxes[fmlA]
-        local bB = graph.boxes[fmlB]
-        local dx = math.max(0, math.max(bA.minX - bB.maxX, bB.minX - bA.maxX))
-        local dz = math.max(0, math.max(bA.minZ - bB.maxZ, bB.minZ - bA.maxZ))
-        local boxDist = math.sqrt(dx * dx + dz * dz)
-        if boxDist <= 65.0 then
-            isBordering = true
+    -- Verify that the player has physically merged them by plowing the boundary using FSDensityMapUtil
+    if not FSDensityMapUtil or not FSDensityMapUtil.getFieldDataAtWorldPosition then
+        return false
+    end
+
+    local pts = (graph.borderPoints and graph.borderPoints[fmlA] and graph.borderPoints[fmlA][fmlB])
+             or (graph.borderPoints and graph.borderPoints[fmlB] and graph.borderPoints[fmlB][fmlA])
+    if not pts or #pts == 0 then
+        return false
+    end
+
+    local terrainRoot = g_currentMission and g_currentMission.terrainRootNode
+    local plowedCount = 0
+    for _, pt in ipairs(pts) do
+        local py = 0
+        if terrainRoot and terrainRoot ~= 0 and getTerrainHeightAtWorldPos then
+            py = getTerrainHeightAtWorldPos(terrainRoot, pt.x, 0, pt.z) or 0
+        end
+        if FSDensityMapUtil.getFieldDataAtWorldPosition(pt.x, py, pt.z) == true then
+            plowedCount = plowedCount + 1
         end
     end
 
-    if isBordering then
-        -- Native GIANTS Engine density map verification:
-        -- Query the boundary points between the two field parcels with exact terrain elevation (Y).
-        -- Distinguishes genuine plowed ground from unplowed roadways or ditch grass.
-        if FSDensityMapUtil and FSDensityMapUtil.getFieldDataAtWorldPosition and graph then
-            local terrainRoot = g_currentMission and g_currentMission.terrainRootNode
-
-            local function checkPoint(px, pz)
-                local py = 0
-                if terrainRoot and terrainRoot ~= 0 and getTerrainHeightAtWorldPos then
-                    py = getTerrainHeightAtWorldPos(terrainRoot, px, 0, pz) or 0
-                end
-                local isOnField = FSDensityMapUtil.getFieldDataAtWorldPosition(px, py, pz)
-                if isOnField == true then
-                    return true
-                end
-                if FSDensityMapUtil.getFieldFruitTypeAtWorldPos then
-                    local fType = FSDensityMapUtil.getFieldFruitTypeAtWorldPos(px, pz)
-                    if fType and fType ~= FruitType.UNKNOWN then
-                        return true
-                    end
-                end
-                return false
-            end
-
-            -- 1. Check exact sampled border contact points between fmlA and fmlB if recorded
-            local pts = (graph.borderPoints and graph.borderPoints[fmlA] and graph.borderPoints[fmlA][fmlB])
-                     or (graph.borderPoints and graph.borderPoints[fmlB] and graph.borderPoints[fmlB][fmlA])
-            if pts and #pts > 0 then
-                for _, pt in ipairs(pts) do
-                    if checkPoint(pt.x, pt.z) then
-                        return true
-                    end
-                end
-            end
-
-            -- 2. Check geometry bounding box border points
-            if graph.boxes and graph.boxes[fmlA] and graph.boxes[fmlB] then
-                local bA = graph.boxes[fmlA]
-                local bB = graph.boxes[fmlB]
-                local isXSeparated = (bA.maxX < bB.minX) or (bB.maxX < bA.minX)
-                local isZSeparated = (bA.maxZ < bB.minZ) or (bB.maxZ < bA.minZ)
-
-                local samplePoints = {}
-                if isXSeparated and not isZSeparated then
-                    local mx = (bA.maxX < bB.minX) and ((bA.maxX + bB.minX) * 0.5) or ((bB.maxX + bA.minX) * 0.5)
-                    local minZ = math.max(bA.minZ, bB.minZ)
-                    local maxZ = math.min(bA.maxZ, bB.maxZ)
-                    table.insert(samplePoints, { x = mx, z = (minZ + maxZ) * 0.5 })
-                    table.insert(samplePoints, { x = mx, z = minZ * 0.75 + maxZ * 0.25 })
-                    table.insert(samplePoints, { x = mx, z = minZ * 0.25 + maxZ * 0.75 })
-                elseif isZSeparated and not isXSeparated then
-                    local mz = (bA.maxZ < bB.minZ) and ((bA.maxZ + bB.minZ) * 0.5) or ((bB.maxZ + bA.minZ) * 0.5)
-                    local minX = math.max(bA.minX, bB.minX)
-                    local maxX = math.min(bA.maxX, bB.maxX)
-                    table.insert(samplePoints, { x = (minX + maxX) * 0.5, z = mz })
-                    table.insert(samplePoints, { x = minX * 0.75 + maxX * 0.25, z = mz })
-                    table.insert(samplePoints, { x = minX * 0.25 + maxX * 0.75, z = mz })
-                else
-                    local mx = (math.max(bA.minX, bB.minX) + math.min(bA.maxX, bB.maxX)) * 0.5
-                    local mz = (math.max(bA.minZ, bB.minZ) + math.min(bA.maxZ, bB.maxZ)) * 0.5
-                    if bA.maxX < bB.minX then mx = (bA.maxX + bB.minX) * 0.5
-                    elseif bB.maxX < bA.minX then mx = (bB.maxX + bA.minX) * 0.5 end
-                    if bA.maxZ < bB.minZ then mz = (bA.maxZ + bB.minZ) * 0.5
-                    elseif bB.maxZ < bA.minZ then mz = (bB.maxZ + bA.minZ) * 0.5 end
-                    table.insert(samplePoints, { x = mx, z = mz })
-
-                    if graph.centers and graph.centers[fmlA] and graph.centers[fmlB] then
-                        local cA = graph.centers[fmlA]
-                        local cB = graph.centers[fmlB]
-                        table.insert(samplePoints, { x = (cA.x + cB.x) * 0.5, z = (cA.z + cB.z) * 0.5 })
-                    end
-                end
-
-                for _, pt in ipairs(samplePoints) do
-                    if checkPoint(pt.x, pt.z) then
-                        return true
-                    end
-                end
-            end
-
-            -- Boundary has no cultivated field ground or crop: separate unmerged fields!
-            return false
-        end
-
+    -- Require at least 80% of border contact points to be actively plowed field ground to confirm physical merge
+    if plowedCount > 0 and (plowedCount / #pts) >= 0.80 then
         return true
     end
 
@@ -1395,7 +1327,7 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
     end
     local mTrip = farm.combineTrips[machineKey]
 
-    -- Check if player is currently in this combine
+    -- Check if player is currently in this combine (supports local singleplayer & remote Dedicated Server clients)
     local isPlayerInThisCombine = false
     if combine.getIsEntered and combine:getIsEntered() then
         isPlayerInThisCombine = true
@@ -1403,10 +1335,23 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
         isPlayerInThisCombine = true
     elseif combine.spec_enterable and combine.spec_enterable.isEntered then
         isPlayerInThisCombine = true
+    elseif combine.getIsControlled and combine:getIsControlled() then
+        isPlayerInThisCombine = true
+    elseif combine.rootVehicle and combine.rootVehicle.getIsControlled and combine.rootVehicle:getIsControlled() then
+        isPlayerInThisCombine = true
+    elseif combine.getControllerName and combine:getControllerName() ~= "" then
+        isPlayerInThisCombine = true
+    elseif combine.spec_enterable and (combine.spec_enterable.playerStyle ~= nil or (combine.spec_enterable.controllerFarmId and combine.spec_enterable.controllerFarmId ~= 0)) then
+        isPlayerInThisCombine = true
     end
 
     -- If player is sitting in this combine, or no master machine set yet, or same machine, update farm.currentTrip
     local updateFarmTrip = isPlayerInThisCombine or (trip.lastMachineKey == nil) or (trip.lastMachineKey == machineKey)
+    if not updateFarmTrip and trip.lastMachineKey and combine.configFileName then
+        if trip.lastMachineKey:sub(1, #combine.configFileName) == combine.configFileName then
+            updateFarmTrip = true
+        end
+    end
 
     -- Auto-reset: Check for automatic field or crop transition for THIS specific combine
     local autoResetMode = 1
@@ -1491,7 +1436,10 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
         end
 
         if shouldReset then
-            self:archiveAndResetCombineTrip(farmId, machineKey, combine)
+            local record = self:archiveAndResetCombineTrip(farmId, machineKey, combine)
+            if g_currentMission:getIsServer() and g_server then
+                g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(farmId, combine, type(record) == "table" and record or nil, machineKey), nil, nil, nil)
+            end
             mTrip = farm.combineTrips[machineKey]
             trip = farm.currentTrip
         end
@@ -1904,6 +1852,7 @@ end
 function RHM_HarvestTracker:archiveTripToHistory(farmId)
     local farm = self:getFarmData(farmId)
     local trip = farm.currentTrip
+    local record = nil
 
     if trip.harvestedLiters > 10 then
         local currentYear = 1
@@ -1939,7 +1888,7 @@ function RHM_HarvestTracker:archiveTripToHistory(farmId)
         local fStat = trip.fieldId and trip.fieldId > 0 and farm.fieldStats and farm.fieldStats[trip.fieldId]
         local actualYear = (fStat and fStat.lastYear) or currentYear
 
-        local record = {
+        record = {
             year = actualYear,
             fieldId = trip.fieldId,
             cropName = trip.cropName,
@@ -1980,6 +1929,7 @@ function RHM_HarvestTracker:archiveTripToHistory(farmId)
         isActive = false
     }
     self.isDirty = true
+    return record or true
 end
 
 ---EN: Archives a specific combine's trip to season history and resets its odometer
@@ -2081,8 +2031,8 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
         combine.spec_rhm_Combine._rhmCutterWasDisengaged = false
     end
 
-    -- If farm.currentTrip belongs to this machine, also reset farm.currentTrip
-    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey) then
+    -- If farm.currentTrip belongs to this machine or this field operation, also reset farm.currentTrip
+    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (combine and combine.getIsEntered and combine:getIsEntered()) or (mTrip.fieldId and mTrip.fieldId > 0 and farm.currentTrip.fieldId == mTrip.fieldId)) then
         farm.currentTrip.harvestedLiters = 0
         farm.currentTrip.harvestedMassKg = 0
         farm.currentTrip.harvestedAreaHa = 0
@@ -2105,7 +2055,7 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
     end
 
     self.isDirty = true
-    return true
+    return record or true
 end
 
 
@@ -2593,9 +2543,22 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                     local totalMoney = (fStat and fStat.lossMoney) or 0
                     local totalDuration = (fStat and fStat.sessionDuration) or 0
 
+                    -- Merge live active trip if currently harvesting this field
+                    local curTrip = farm.currentTrip
+                    if not fStat or ((fStat.harvestedLiters or 0) <= 0 and (fStat.harvestedAreaHa or 0) <= 0) then
+                        if curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fid)) then
+                            totalHArea = curTrip.harvestedAreaHa or 0
+                            totalHLiters = curTrip.harvestedLiters or 0
+                            totalHMass = (curTrip.harvestedMassKg or 0) * 0.001
+                            totalLostL = curTrip.lostLiters or 0
+                            totalMoney = curTrip.lossMoney or 0
+                            totalDuration = curTrip.sessionDuration or 0
+                        end
+                    end
+
                     local cropName = (fStat and (fStat.lastCropName or fStat.lastCrop)) or "--"
-                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
-                        cropName = farm.currentTrip.cropName
+                    if (cropName == "--" or cropName == "UNKNOWN") and curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fid)) and curTrip.cropName and curTrip.cropName ~= "--" and curTrip.cropName ~= "UNKNOWN" then
+                        cropName = curTrip.cropName
                     end
                     if cropName == "--" then
                         local cx, cz = nil, nil
@@ -2659,6 +2622,18 @@ function RHM_HarvestTracker:getFarmFields(farmId)
             local totalLostL = (fStat and fStat.lostLiters) or 0
             local totalMoney = (fStat and fStat.lossMoney) or 0
             local totalDuration = (fStat and fStat.sessionDuration) or 0
+
+            local curTrip = farm.currentTrip
+            if not fStat or ((fStat.harvestedLiters or 0) <= 0 and (fStat.harvestedAreaHa or 0) <= 0) then
+                if curTrip and (curTrip.fieldId == fmlId or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fmlId)) then
+                    totalHArea = curTrip.harvestedAreaHa or 0
+                    totalHLiters = curTrip.harvestedLiters or 0
+                    totalHMass = (curTrip.harvestedMassKg or 0) * 0.001
+                    totalLostL = curTrip.lostLiters or 0
+                    totalMoney = curTrip.lossMoney or 0
+                    totalDuration = curTrip.sessionDuration or 0
+                end
+            end
 
             -- Include if parcel belongs to an active cluster, or player actively harvested a custom plot on this parcel!
             -- Unharvested non-field parcels (e.g. farm base yard 44, woods 63, empty meadows 39) are excluded.
@@ -2971,11 +2946,11 @@ function RHM_HarvestTracker:resetTrip(farmId, user)
         return false
     end
 
-    self:archiveTripToHistory(farmId)
+    local record = self:archiveTripToHistory(farmId)
 
     if g_currentMission:getIsServer() and g_server then
         -- Broadcast reset confirmation to clients
-        g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(farmId), nil, nil, nil)
+        g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(farmId, nil, type(record) == "table" and record or nil, farm.currentTrip and farm.currentTrip.lastMachineKey), nil, nil, nil)
     end
     return true
 end
@@ -2992,7 +2967,10 @@ function RHM_HarvestTracker:resetTripForCombine(farmId, combine, user)
             combine:resetTrip()
         end
         local machineKey = RHM_HarvestTracker.getMachineKey(combine)
-        self:archiveAndResetCombineTrip(farmId, machineKey, combine)
+        local record = self:archiveAndResetCombineTrip(farmId, machineKey, combine)
+        if g_currentMission:getIsServer() and g_server then
+            g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(farmId, combine, type(record) == "table" and record or nil, machineKey), nil, nil, nil)
+        end
         return true
     end
     return self:resetTrip(farmId, user)
@@ -3028,7 +3006,18 @@ end
 function RHM_HarvestTracker:broadcastUpdates()
     if not g_server then return end
     for farmId, farm in pairs(self.farms) do
-        if farm.currentTrip and farm.currentTrip.isActive then
+        local shouldBroadcast = false
+        if farm.currentTrip and (farm.currentTrip.isActive or (farm.currentTrip.harvestedLiters or 0) > 0 or (farm.currentTrip.sessionDuration or 0) > 0) then
+            shouldBroadcast = true
+        elseif farm.combineTrips then
+            for _, mTrip in pairs(farm.combineTrips) do
+                if mTrip.isActive or (mTrip.harvestedLiters or 0) > 0 or (mTrip.sessionDuration or 0) > 0 then
+                    shouldBroadcast = true
+                    break
+                end
+            end
+        end
+        if shouldBroadcast and farm.currentTrip then
             g_server:broadcastEvent(RHM_HarvestUpdateStatsEvent.new(farmId, farm.currentTrip), nil, nil, nil)
         end
     end

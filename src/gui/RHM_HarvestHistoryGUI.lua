@@ -53,18 +53,26 @@ end
 
 function RHM_HarvestHistoryGUI:setupMenuButtonInfo()
     local onButtonBackFunction = self.clickBackCallback
+    local onResetTripFunction = self:makeSelfCallback(self.onClickResetTrip)
 
     self.defaultMenuButtonInfo = {
         {
             inputAction = InputAction.MENU_BACK,
             text = g_i18n:getText("button_back"),
             callback = onButtonBackFunction
+        },
+        {
+            inputAction = InputAction.MENU_EXTRA_1,
+            text = (g_i18n and g_i18n:hasText("rhm_btn_reset_trip")) and g_i18n:getText("rhm_btn_reset_trip") or "Reset Trip",
+            callback = onResetTripFunction
         }
     }
 
     self.defaultMenuButtonInfoByActions[InputAction.MENU_BACK] = self.defaultMenuButtonInfo[1]
+    self.defaultMenuButtonInfoByActions[InputAction.MENU_EXTRA_1] = self.defaultMenuButtonInfo[2]
     self.defaultButtonActionCallbacks = {
         [InputAction.MENU_BACK] = onButtonBackFunction,
+        [InputAction.MENU_EXTRA_1] = onResetTripFunction,
     }
 end
 
@@ -89,6 +97,13 @@ end
 
 function RHM_HarvestHistoryGUI:exitMenu()
     g_gui:showGui("")
+end
+
+function RHM_HarvestHistoryGUI:onClickResetTrip()
+    local page = self:getCurrentPage()
+    if (page == self.pageTrip or not page or (self.pageTrip and self.pageTrip.getIsVisible and self.pageTrip:getIsVisible())) and self.pageTrip and self.pageTrip.onClickResetTrip then
+        self.pageTrip:onClickResetTrip()
+    end
 end
 
 function RHM_HarvestHistoryGUI:getCurrentPage()

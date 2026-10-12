@@ -204,20 +204,20 @@
         <textVerticalAlignment value="middle"/>
     </Profile>
 
-    <!-- Action Button (Base game clean dark button with neon highlight) -->
+    <!-- Action Button (Base game clean dark button with neon highlight on hover) -->
     <Profile name="rhmActionButton" extends="baseReference" with="anchorTopLeft">
         <imageSliceId value="gui.colorPreset" />
         <imageColor value="$preset_fs25_colorGreyDark_50" />
-        <imageFocusedColor value="$preset_fs25_colorMainHighlight" />
+        <imageFocusedColor value="$preset_fs25_colorGreyDark_50" />
         <imageHighlightedColor value="$preset_fs25_colorMainHighlight" />
-        <imageSelectedColor value="$preset_fs25_colorMainHighlight" />
+        <imageSelectedColor value="$preset_fs25_colorGreyDark_50" />
         <textSize value="14px" />
         <textBold value="true" />
         <textUpperCase value="true" />
         <textColor value="$preset_fs25_colorMainLight" />
-        <textFocusedColor value="$preset_fs25_colorMainDark" />
+        <textFocusedColor value="$preset_fs25_colorMainLight" />
         <textHighlightedColor value="$preset_fs25_colorMainDark" />
-        <textSelectedColor value="$preset_fs25_colorMainDark" />
+        <textSelectedColor value="$preset_fs25_colorMainLight" />
         <textDisabledColor value="$preset_colorDisabled" />
         <textAlignment value="center" />
     </Profile>
