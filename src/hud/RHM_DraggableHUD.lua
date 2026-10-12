@@ -1236,7 +1236,7 @@ function RHMDraggableHUD:buildActiveCells()
             trip = mTrip
         elseif self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.trip then
             trip = self.vehicle.spec_rhm_Combine.trip
-        elseif farm and farm.currentTrip and (farm.currentTrip.lastMachineKey == mKey) then
+        elseif farm and farm.currentTrip and (machineKey == nil or farm.currentTrip.lastMachineKey == machineKey) then
             trip = farm.currentTrip
         end
         if trip and self.vehicle and self.vehicle.spec_rhm_Combine then

@@ -16,9 +16,6 @@ rhm_Combine.debug = false
 -- UA: Перевіряє чи транспортний засіб має базову спеціалізацію Combine.
 --     Повертає true для всіх машин, включаючи модульні системи на кшталт NEXAT.
 function rhm_Combine.prerequisitesPresent(specializations)
-    if Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, specializations) then
-        return false
-    end
     for _, specClass in ipairs(specializations or {}) do
         local sName = (g_specializationManager and g_specializationManager.getSpecializationNameByObject and g_specializationManager:getSpecializationNameByObject(specClass))
         if not sName and specClass and specClass.className then
@@ -323,9 +320,9 @@ function rhm_Combine:onLoad(savegame)
         return
     end
 
-    -- EN: Guard against non-harvester processing units (balers, mobile pelletizers, bale shredders)
-    -- UA: Захист від не-збиральної переробної техніки (преси, мобільні пелетизатори, подрібнювачі тюків)
-    if self.spec_pelletizer ~= nil or self.spec_strawHarvestPelletizer ~= nil or self.spec_baler ~= nil
+    -- EN: Guard against non-harvester processing units (mobile pelletizers, bale shredders)
+    -- UA: Захист від не-збиральної переробної техніки (мобільні пелетизатори, подрібнювачі тюків)
+    if self.spec_pelletizer ~= nil or self.spec_strawHarvestPelletizer ~= nil
         or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
         return
     end
@@ -3356,6 +3353,18 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             spec.data.overloadLevel = streamReadUInt8(streamId)
             spec.data.moisture = streamReadFloat32(streamId)
             spec.data.weedRatio = streamReadUInt8(streamId) / 100.0
+
+            -- Active machine trip odometer
+            local hasTrip = streamReadBool(streamId)
+            if hasTrip then
+                spec.trip = spec.trip or {}
+                spec.trip.harvestedAreaHa = streamReadFloat32(streamId)
+                spec.trip.harvestedLiters = streamReadFloat32(streamId)
+                spec.trip.harvestedMassKg = streamReadFloat32(streamId)
+                spec.trip.sessionDuration = streamReadFloat32(streamId)
+                spec.trip.fieldId = streamReadInt32(streamId)
+                spec.trip.lostLiters = streamReadFloat32(streamId)
+            end
         end
 
         if hasSettingsUpdate then
@@ -3427,6 +3436,19 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
             streamWriteUInt8(streamId, data.overloadLevel or 0)
             streamWriteFloat32(streamId, data.moisture or 0)
             streamWriteUInt8(streamId, math.floor(math.min(100, math.max(0, (data.weedRatio or 0) * 100)) + 0.5))
+
+            -- Active machine trip odometer
+            local trip = spec.trip
+            local hasTrip = (trip ~= nil)
+            streamWriteBool(streamId, hasTrip)
+            if hasTrip then
+                streamWriteFloat32(streamId, trip.harvestedAreaHa or 0)
+                streamWriteFloat32(streamId, trip.harvestedLiters or 0)
+                streamWriteFloat32(streamId, trip.harvestedMassKg or 0)
+                streamWriteFloat32(streamId, trip.sessionDuration or 0)
+                streamWriteInt32(streamId, trip.fieldId or 0)
+                streamWriteFloat32(streamId, trip.lostLiters or 0)
+            end
         end
 
         if hasSettingsUpdate then

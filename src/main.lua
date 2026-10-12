@@ -184,9 +184,8 @@ local function validateTypes(manager)
         for typeName, typeEntry in pairs(g_vehicleTypeManager:getTypes()) do
             local hasCombine = SpecializationUtil.hasSpecialization(Combine, typeEntry.specializations)
             local hasForage = (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, typeEntry.specializations))
-            local isBaler = (Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, typeEntry.specializations))
             local isPelletizer = false
-            if typeName and typeName:lower():find("pellet") then
+            if typeName and (typeName:lower():find("pellet") or typeName:lower():find("baleshredder")) then
                 isPelletizer = true
             end
             if not isPelletizer and typeEntry.specializations then
@@ -204,7 +203,7 @@ local function validateTypes(manager)
                     end
                 end
             end
-            if (hasCombine or hasForage) and not isBaler and not isPelletizer then
+            if (hasCombine or hasForage) and not isPelletizer then
                 g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
             end
         end

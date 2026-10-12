@@ -1,6 +1,8 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.3.0:
+- FIXED: Full support for cotton harvesters (John Deere CP690, CS770, Case IH Module Express 635) restored by disambiguating onboard baler/wrapper mechanisms from standalone balers.
+- ADDED: Real multiplayer player nickname resolution in Fleet overview OPERATOR card displaying active in-cab driver names.
 - ADDED: In-cab Yield Monitor HUD display mode (8 cells across 2 rows) featuring live mass flow rate (kg/s, lbs/s, bu/min), session average yield, field completion percentage, and clean mass odometer.
 - ADDED: Customizable HUD Display Mode setting in pause menu (Compact 4-cell vs. Yield Monitor 8-cell) with seamless live layout resizing, dynamic F1 menu docking, and magnetic snap rescaling.
 - IMPROVED: Interactive click-to-cycle metrics across all HUD cells with two-row cursor routing and graceful muted indicators when specific telemetry sensors are turned off.

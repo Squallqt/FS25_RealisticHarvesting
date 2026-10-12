@@ -266,11 +266,16 @@ end
 local function isHarvesterVehicle(vehicle)
     if not vehicle then return false end
 
-    -- Strictly exclude forage wagons, loader wagons, balers, bale loaders, and windrowers
+    local isCottonHarvester = (vehicle.spec_cottonHarvester ~= nil)
+        or (vehicle.xmlFile and vehicle.xmlFile:hasProperty("vehicle.cottonHarvester"))
+        or (vehicle.typeName and vehicle.typeName:lower():find("cotton") ~= nil)
+        or (vehicle.configFileName and vehicle.configFileName:lower():find("cotton") ~= nil)
+
+    -- Strictly exclude forage wagons, loader wagons, standalone balers, bale loaders, and windrowers
     if vehicle.spec_forageWagon ~= nil 
        or vehicle.spec_loaderWagon ~= nil 
-       or vehicle.spec_baler ~= nil 
-       or vehicle.spec_baleWrapper ~= nil 
+       or (vehicle.spec_baler ~= nil and not isCottonHarvester and not vehicle.spec_combine)
+       or (vehicle.spec_baleWrapper ~= nil and not isCottonHarvester and not vehicle.spec_combine)
        or vehicle.spec_baleLoader ~= nil
        or vehicle.spec_tedder ~= nil
        or vehicle.spec_windrower ~= nil then
@@ -565,7 +570,57 @@ function RHM_HarvestHistoryFleet:updateTables()
                             driverStr = (g_i18n and g_i18n:hasText("rhm_driver_hired_ai") and g_i18n:getText("rhm_driver_hired_ai")) or "AI Worker"
                         end
                     elseif isControlled then
-                        driverStr = (g_i18n and g_i18n:hasText("rhm_driver_player") and g_i18n:getText("rhm_driver_player")) or "Player"
+                        local playerName = nil
+                        local candVehicles = { vehicle, targetHarv, (vehicle and vehicle.rootVehicle), (targetHarv and targetHarv.rootVehicle) }
+                        for _, v in ipairs(candVehicles) do
+                            if v and type(v) == "table" and ((v.getIsControlled and v:getIsControlled()) or (v.getIsEntered and v:getIsEntered()) or (v.spec_enterable and (v.spec_enterable.isControlled or v.spec_enterable.isEntered))) then
+                                -- 1. GIANTS native Enterable:getControllerName() (works on host, dedicated server, and multiplayer clients)
+                                if v.getControllerName then
+                                    local cName = v:getControllerName()
+                                    if cName and type(cName) == "string" and cName ~= "" then
+                                        playerName = cName
+                                        break
+                                    end
+                                end
+                                -- 2. v.spec_enterable.player object
+                                if v.spec_enterable and v.spec_enterable.player then
+                                    local p = v.spec_enterable.player
+                                    if p.getNickname then
+                                        local pName = p:getNickname()
+                                        if pName and pName ~= "" then
+                                            playerName = pName
+                                            break
+                                        end
+                                    elseif p.nickname and p.nickname ~= "" then
+                                        playerName = p.nickname
+                                        break
+                                    end
+                                end
+                                -- 3. Local player currently entered in this vehicle
+                                if v.getIsEntered and v:getIsEntered() then
+                                    if g_currentMission and g_currentMission.player and g_currentMission.player.getNickname then
+                                        local localName = g_currentMission.player:getNickname()
+                                        if localName and localName ~= "" then
+                                            playerName = localName
+                                            break
+                                        end
+                                    end
+                                    if g_gameSettings and g_gameSettings.getValue then
+                                        local settName = g_gameSettings:getValue("nickname")
+                                        if settName and settName ~= "" then
+                                            playerName = settName
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+                        if playerName and playerName ~= "" then
+                            driverStr = playerName
+                        else
+                            driverStr = (g_i18n and g_i18n:hasText("rhm_driver_player") and g_i18n:getText("rhm_driver_player")) or "Player"
+                        end
                     elseif isTurnedOn then
                         driverStr = (g_i18n and g_i18n:hasText("rhm_driver_idle_on") and g_i18n:getText("rhm_driver_idle_on")) or "Running (Idle)"
                     end

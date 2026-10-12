@@ -181,7 +181,17 @@ function RHM_HarvestUpdateStatsEvent:readStream(streamId, connection)
         end
 
         -- Mirror directly to active client combine vehicle instances
-        local vehicles = (g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles) or g_currentMission.vehicles
+        local vehicles = nil
+        if g_currentMission.vehicleSystem then
+            if g_currentMission.vehicleSystem.getVehicles then
+                vehicles = g_currentMission.vehicleSystem:getVehicles()
+            elseif g_currentMission.vehicleSystem.vehicles then
+                vehicles = g_currentMission.vehicleSystem.vehicles
+            end
+        elseif g_currentMission.vehicles then
+            vehicles = g_currentMission.vehicles
+        end
+
         if vehicles then
             for _, vehicle in pairs(vehicles) do
                 if vehicle and type(vehicle) == "table" and vehicle.spec_rhm_Combine then
@@ -196,11 +206,21 @@ function RHM_HarvestUpdateStatsEvent:readStream(streamId, connection)
                                 isMatch = true
                             end
                         end
-                        if isMatch or (vehicle.getIsEntered and vehicle:getIsEntered()) then
+                        if isMatch or (vehicle.getIsEntered and vehicle:getIsEntered()) or (vehicle.getIsControlled and vehicle:getIsControlled()) then
                             vehicle.spec_rhm_Combine.trip = (farm.combineTrips and farm.combineTrips[mKey]) or farm.currentTrip
                         end
                     end
                 end
+            end
+        end
+
+        -- Direct safeguard for the player's actively controlled vehicle
+        if g_currentMission and g_currentMission.controlledVehicle and g_currentMission.controlledVehicle.spec_rhm_Combine then
+            local cv = g_currentMission.controlledVehicle
+            local cvFarmId = (cv.getOwnerFarmId and cv:getOwnerFarmId()) or 1
+            if cvFarmId == self.farmId then
+                local mKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(cv)) or cv.configFileName
+                cv.spec_rhm_Combine.trip = (farm.combineTrips and farm.combineTrips[mKey]) or farm.currentTrip
             end
         end
     end

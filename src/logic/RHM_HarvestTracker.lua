@@ -322,9 +322,16 @@ function RHM_HarvestTracker.getMachineKey(combine)
         if license ~= "" then
             machineKey = string.format("%s_%s", baseKey, license)
         else
-            -- Ephemeral fallback only if vehicle is not yet registered in savegame
-            local idPart = tostring(combine.rootNode or combine.id or "0")
-            machineKey = string.format("%s#%s", baseKey, idPart)
+            -- Synchronized network object ID if vehicle is not yet registered in savegame
+            local netId = (NetworkUtil and NetworkUtil.getObjectId and NetworkUtil.getObjectId(combine))
+                       or (combine.rootVehicle and NetworkUtil and NetworkUtil.getObjectId and NetworkUtil.getObjectId(combine.rootVehicle))
+                       or combine.id
+            if netId and type(netId) == "number" and netId > 0 then
+                machineKey = string.format("%s_net%d", baseKey, netId)
+            else
+                local idPart = tostring(combine.rootNode or "0")
+                machineKey = string.format("%s#%s", baseKey, idPart)
+            end
         end
     end
 
@@ -535,8 +542,20 @@ function RHM_HarvestTracker:getFarmlandGraph()
                     graph.neighbors[lastRowFmlId] = graph.neighbors[lastRowFmlId] or {}
                     graph.neighbors[lastRowFmlId][fmlId] = true
 
-                    local bx = (lastRowFmlX + x) * 0.5
+                    -- Binary bisection to find the authentic boundary coordinate (within 0.5m)
+                    local xA, xB = lastRowFmlX, x
+                    for _ = 1, 6 do
+                        local mid = (xA + xB) * 0.5
+                        local fMid = g_farmlandManager:getFarmlandIdAtWorldPosition(mid, z) or 0
+                        if fMid == lastRowFmlId then
+                            xA = mid
+                        else
+                            xB = mid
+                        end
+                    end
+                    local bx = (xA + xB) * 0.5
                     local bz = z
+
                     graph.borderPoints[fmlId][lastRowFmlId] = graph.borderPoints[fmlId][lastRowFmlId] or {}
                     if #graph.borderPoints[fmlId][lastRowFmlId] < 8 then
                         table.insert(graph.borderPoints[fmlId][lastRowFmlId], { x = bx, z = bz })
@@ -558,8 +577,20 @@ function RHM_HarvestTracker:getFarmlandGraph()
                     graph.neighbors[northFml] = graph.neighbors[northFml] or {}
                     graph.neighbors[northFml][fmlId] = true
 
+                    -- Binary bisection to find the authentic boundary coordinate (within 0.5m)
+                    local zA, zB = colData.z, z
+                    for _ = 1, 6 do
+                        local mid = (zA + zB) * 0.5
+                        local fMid = g_farmlandManager:getFarmlandIdAtWorldPosition(x, mid) or 0
+                        if fMid == northFml then
+                            zA = mid
+                        else
+                            zB = mid
+                        end
+                    end
                     local bx = x
-                    local bz = (colData.z + z) * 0.5
+                    local bz = (zA + zB) * 0.5
+
                     graph.borderPoints[fmlId][northFml] = graph.borderPoints[fmlId][northFml] or {}
                     if #graph.borderPoints[fmlId][northFml] < 8 then
                         table.insert(graph.borderPoints[fmlId][northFml], { x = bx, z = bz })
@@ -714,12 +745,7 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
     local farm = self:getFarmData(farmId or 1)
     if not farm then return false end
 
-    -- 1. Already members of the same cluster
-    if self:getMasterFieldId(farmId, fieldIdA) == self:getMasterFieldId(farmId, fieldIdB) then
-        return true
-    end
-
-    -- 2. Verify farmland ownership for both fields
+    -- 1. Verify farmland ownership for both fields
     local fA = g_fieldManager and g_fieldManager.getFieldById and g_fieldManager:getFieldById(fieldIdA)
     local fB = g_fieldManager and g_fieldManager.getFieldById and g_fieldManager:getFieldById(fieldIdB)
 
@@ -734,15 +760,36 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
         end
     end
 
-    -- 3. Check physical field ground continuity across the boundary
-    -- Two distinct fields can ONLY be merged if their farmland parcels are immediate physical neighbors
-    local graph = self:getFarmlandGraph()
-    if not graph or not graph.neighbors or not graph.neighbors[fmlA] or not graph.neighbors[fmlA][fmlB] then
+    -- 2. Verify that FSDensityMapUtil is available
+    if not FSDensityMapUtil or not FSDensityMapUtil.getFieldDataAtWorldPosition then
         return false
     end
 
-    -- Verify that the player has physically merged them by plowing the boundary using FSDensityMapUtil
-    if not FSDensityMapUtil or not FSDensityMapUtil.getFieldDataAtWorldPosition then
+    -- 3. Case A: Both fields reside on the exact SAME farmland parcel
+    if fmlA == fmlB then
+        local ax, az = self:getFieldCenter(fieldIdA)
+        local bx, bz = self:getFieldCenter(fieldIdB)
+        if not ax or not bx then return false end
+
+        local terrainRoot = g_currentMission and g_currentMission.terrainRootNode
+        for i = 1, 8 do
+            local t = i / 9.0
+            local sx = ax + (bx - ax) * t
+            local sz = az + (bz - az) * t
+            local sy = 0
+            if terrainRoot and terrainRoot ~= 0 and getTerrainHeightAtWorldPos then
+                sy = getTerrainHeightAtWorldPos(terrainRoot, sx, 0, sz) or 0
+            end
+            if FSDensityMapUtil.getFieldDataAtWorldPosition(sx, sy, sz) ~= true then
+                return false -- Separated by grass, road, ditch, or obstacle
+            end
+        end
+        return true -- Entire span between both fields is continuous plowed field ground
+    end
+
+    -- 4. Case B: Distinct farmland parcels. They must be immediate physical neighbors
+    local graph = self:getFarmlandGraph()
+    if not graph or not graph.neighbors or not graph.neighbors[fmlA] or not graph.neighbors[fmlA][fmlB] then
         return false
     end
 
@@ -764,8 +811,9 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
         end
     end
 
-    -- Require at least 80% of border contact points to be actively plowed field ground to confirm physical merge
-    if plowedCount > 0 and (plowedCount / #pts) >= 0.80 then
+    -- Must have authentic plowed field ground bridging the boundary
+    local minRequired = (#pts >= 3) and 2 or 1
+    if plowedCount >= minRequired then
         return true
     end
 
@@ -1513,6 +1561,13 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
     mTrip.fuelUsedL = (mTrip.fuelUsedL or 0) + fuelThisTick
     mTrip.sessionDuration = mTrip.sessionDuration + (dt * 0.001)
     mTrip.isActive = true
+
+    if combine and combine.spec_rhm_Combine then
+        combine.spec_rhm_Combine.trip = mTrip
+        if combine.spec_rhm_Combine.dataDirtyFlag and type(combine.spec_rhm_Combine.dataDirtyFlag) == "number" then
+            combine:raiseDirtyFlags(combine.spec_rhm_Combine.dataDirtyFlag)
+        end
+    end
 
     -- Calculate physical loss liters
     local wearLossPct = (lossReasons and lossReasons.wearPct) or 0
