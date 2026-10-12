@@ -179,32 +179,59 @@ end
 --     які вже мають базову спеціалізацію Combine.
 local function validateTypes(manager)
     if manager.typeName == "vehicle" then
-        -- EN: Add the specialization to every vehicle type that has a Combine spec.
-        -- UA: Додаємо спеціалізацію до кожного типу транспорту, який має спеціалізацію Combine.
+        -- EN: Add the specialization to genuine harvesters (grain, forage, root, specialty)
+        --     while strictly excluding non-combines (balers, cutting balers, mobile pelletizers, bale shredders).
+        -- UA: Додаємо спеціалізацію лише до справжніх комбайнів (зернових, силосних, коренеплодів, спецтехніки),
+        --     суворо виключаючи не-комбайни (тюкопреси, гранулятори, подрібнювачі тюків).
         for typeName, typeEntry in pairs(g_vehicleTypeManager:getTypes()) do
             local hasCombine = SpecializationUtil.hasSpecialization(Combine, typeEntry.specializations)
             local hasForage = (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, typeEntry.specializations))
-            local isPelletizer = false
-            if typeName and (typeName:lower():find("pellet") or typeName:lower():find("baleshredder")) then
-                isPelletizer = true
-            end
-            if not isPelletizer and typeEntry.specializations then
-                for _, specClass in ipairs(typeEntry.specializations) do
-                    local sName = (g_specializationManager and g_specializationManager.getSpecializationNameByObject and g_specializationManager:getSpecializationNameByObject(specClass))
-                    if not sName and specClass and specClass.className then
-                        sName = specClass.className
+            local hasCotton = (CottonHarvester ~= nil and SpecializationUtil.hasSpecialization(CottonHarvester, typeEntry.specializations))
+                or (typeName and typeName:lower():find("cotton") ~= nil)
+                or (typeEntry.specializationsByName and (typeEntry.specializationsByName["cottonharvester"] ~= nil or typeEntry.specializationsByName["cottonHarvester"] ~= nil))
+
+            if hasCombine or hasForage or hasCotton then
+                local isExcludedNonCombine = false
+
+                if not hasCotton then
+                    -- 1. Check if vehicle has Baler specialization (e.g. cutting balers like BioBaler WB-55, round/square balers)
+                    if Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, typeEntry.specializations) then
+                        isExcludedNonCombine = true
                     end
-                    if sName then
-                        local sLower = string.lower(sName)
-                        if sLower:find("pelletizer") or sLower:find("baleshredder") then
-                            isPelletizer = true
-                            break
+
+                    -- 2. Check typeName string for known non-combine processing equipment
+                    if not isExcludedNonCombine and typeName then
+                        local tLower = typeName:lower()
+                        if tLower:find("baler") or tLower:find("pellet") or tLower:find("premos") or tLower:find("baleshredder") or tLower:find("biobaler") then
+                            isExcludedNonCombine = true
+                        end
+                    end
+
+                    -- 3. Check specializationsByName / specializationNames
+                    if not isExcludedNonCombine and typeEntry.specializationsByName then
+                        for sName, _ in pairs(typeEntry.specializationsByName) do
+                            local sLower = tostring(sName):lower()
+                            if sLower:find("baler") or sLower:find("pelletizer") or sLower:find("baleshredder") then
+                                isExcludedNonCombine = true
+                                break
+                            end
+                        end
+                    end
+
+                    if not isExcludedNonCombine and typeEntry.specializationNames then
+                        for _, sName in ipairs(typeEntry.specializationNames) do
+                            local sLower = tostring(sName):lower()
+                            if sLower:find("baler") or sLower:find("pelletizer") or sLower:find("baleshredder") then
+                                isExcludedNonCombine = true
+                                break
+                            end
                         end
                     end
                 end
-            end
-            if (hasCombine or hasForage) and not isPelletizer then
-                g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
+
+                if not isExcludedNonCombine then
+                    g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
+                end
             end
         end
     end

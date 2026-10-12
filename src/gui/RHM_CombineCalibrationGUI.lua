@@ -210,9 +210,9 @@ function RHMCombineCalibrationGUI:open(vehicle)
     if self.isOpen then return end
 
     local combineVehicle = vehicle
-    if vehicle and not vehicle.spec_rhm_Combine then
+    if vehicle and not (vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.isRhmCombine == true) then
         local found = RHM_Api and RHM_Api.findCombine and RHM_Api.findCombine(vehicle)
-        if found and found.spec_rhm_Combine then
+        if found and found.spec_rhm_Combine and found.spec_rhm_Combine.isRhmCombine == true then
             combineVehicle = found
             rhm_log(string.format("RHM [UI]: RHM: [GUI] found combine vehicle in hierarchy: %s", tostring(combineVehicle)))
         else

@@ -896,8 +896,8 @@ function RHM_LoadCalculator:update(vehicle, dt, mass)
         self.idleHarvestTime = 0
     else
         self.idleHarvestTime = (self.idleHarvestTime or 0) + dt
-        if self.idleHarvestTime > 1500 then
-            -- Reset entry grace period after 1.5s of no crop intake (e.g. at field turns/headlands)
+        if self.idleHarvestTime > 3500 then
+            -- Reset entry grace period after 3.5s of no crop intake (e.g. at field turns/headlands)
             self.harvestActiveTime = 0
             self.underloadTimer = 0
         end
@@ -1344,6 +1344,17 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
         local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
         local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
+
+        -- EN: If the machine was actively harvesting in this pass (< 3.5s idle), hold working speed steady across gaps!
+        --     Never accelerate into a tramline, sprayer track, or unseeded patch.
+        -- UA: Якщо комбайн щойно косив у цьому проході (< 3.5с простою), стабільно утримуємо робочу швидкість через прогалини!
+        --     Ніколи не прискорюємося на коліях, слідах обприскувача чи незасіяних ділянках.
+        local isMidPassGap = (self.idleHarvestTime or 0) < 3500 and (self.harvestActiveTime or 0) >= 1500
+        if isMidPassGap then
+            self.underloadTimer = 0
+            return
+        end
+
         if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
             remembered = self.speedLimit
         end
@@ -1354,9 +1365,13 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         local target = remembered or defaultEntry
         target = math.max(minSpeed, math.min(maxAllowedSpeed, target))
 
-        -- Smooth hydrostatic easing towards target entry speed (tau = 0.8s)
-        local blend = 1.0 - math.exp(-dtSec / 0.8)
-        self.speedLimit = self.speedLimit + (target - self.speedLimit) * blend
+        -- Smooth hydrostatic easing towards target entry speed (tau = 1.6s)
+        local blend = 1.0 - math.exp(-dtSec / 1.6)
+        local delta = (target - self.speedLimit) * blend
+        local maxStep = 0.60 * dtSec
+        if delta > maxStep then delta = maxStep end
+        if delta < -maxStep then delta = -maxStep end
+        self.speedLimit = self.speedLimit + delta
         self.underloadTimer = 0
         return
     end
@@ -1421,50 +1436,63 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         -- NEVER accelerate above the approach speed during entry!
         -- ONLY allow smooth braking if the crop is unexpectedly dense/heavy and starts overloading.
         self.underloadTimer = 0
-        if vEquilibrium < (currentLimit - 0.15) then
-            local blend = 1.0 - math.exp(-dtSec / 0.6)
-            self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
+        if vEquilibrium < (currentLimit - 0.20) then
+            local blend = 1.0 - math.exp(-dtSec / 1.4)
+            local delta = (vEquilibrium - currentLimit) * blend
+            local maxStep = -0.75 * dtSec
+            if delta < maxStep then delta = maxStep end
+            self.speedLimit = currentLimit + delta
         else
             -- Hold the remembered approach/average speed steady — no surging into crop!
         end
-    elseif isSurge or vEquilibrium < (currentLimit - 0.1) then
+    elseif isSurge or vEquilibrium < (currentLimit - 0.15) then
         -- BRAKING / OVERLOAD / SURGE:
         -- Reset underload confirmation timer immediately
         self.underloadTimer = 0
 
-        -- Fast, decisive, smooth transition to target equilibrium (tau = 0.45s)
-        -- Decisively prevents engine choking without harsh jarring steps
-        local blend = 1.0 - math.exp(-dtSec / 0.45)
-        self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
-    elseif vEquilibrium > (currentLimit + 0.15) then
+        -- Differentiated hydrostatic braking:
+        -- Normal crop variation adapts gently (tau = 1.5s, max -0.75 km/h/s).
+        -- Acute surge or severe overload (>115% load) decelerates decisively (tau = 0.8s, max -1.6 km/h/s)
+        -- to protect the cylinder without jarring camera lurches.
+        local isSevereOverload = isSurge or ((self.engineLoad or 0) > 1.15)
+        local tauBrake = isSevereOverload and 0.8 or 1.5
+        local maxBrakeRate = isSevereOverload and 1.6 or 0.75
+        local blend = 1.0 - math.exp(-dtSec / tauBrake)
+        local delta = (vEquilibrium - currentLimit) * blend
+        local maxStep = -maxBrakeRate * dtSec
+        if delta < maxStep then
+            delta = maxStep
+        end
+        self.speedLimit = currentLimit + delta
+    elseif vEquilibrium > (currentLimit + 0.20) then
         -- ACCELERATION / UNDERLOAD:
         -- Accumulate confirmed underload time
         local dtMs = self.lastUpdateInterval or 300
         self.underloadTimer = (self.underloadTimer or 0) + dtMs
 
-        -- Confirmation window: only accelerate if light crop has been sustained for >= 3.2 seconds.
-        -- Transient tramlines (технічні колії), sprayer tracks, and micro-thin patches (2-3m) are completely ignored.
-        if self.underloadTimer >= 3200 then
+        -- Confirmation window: only accelerate if light crop has been sustained for >= 4.5 seconds.
+        -- Transient tramlines (технічні колії), sprayer tracks, and micro-thin patches (2-5m) are completely ignored.
+        if self.underloadTimer >= 4500 then
             -- Bound target acceleration: never surge straight to header max from steady harvesting
             local targetSpeed = vEquilibrium
             local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
             local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
             local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
             if remembered and remembered > minSpeed then
-                targetSpeed = math.min(targetSpeed, remembered + 0.6)
+                targetSpeed = math.min(targetSpeed, remembered + 0.5)
             end
 
-            -- Smooth hydrostatic acceleration (tau = 2.4s) with slew-rate cap (+0.35 km/h per sec)
-            local blend = 1.0 - math.exp(-dtSec / 2.4)
+            -- Smooth hydrostatic acceleration (tau = 2.8s) with slew-rate cap (+0.30 km/h per sec)
+            local blend = 1.0 - math.exp(-dtSec / 2.8)
             local speedDelta = (targetSpeed - currentLimit) * blend
-            local maxStep = 0.35 * dtSec
+            local maxStep = 0.30 * dtSec
             if speedDelta > maxStep then
                 speedDelta = maxStep
             end
             self.speedLimit = currentLimit + speedDelta
         end
     else
-        -- Stable deadzone within +/- 0.15 km/h: hold steady!
+        -- Stable deadzone within -0.15 .. +0.20 km/h: hold steady!
         self.underloadTimer = 0
     end
 
@@ -1503,6 +1531,7 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
 
     -- AI SPEED LIMITER: Automatically slow down hired AI workers when speed-controllable loss exceeds farm limit.
     -- Uncontrollable losses (environmental moisture/dew and mechanical blade wear) cannot be reduced by driving slower.
+    -- Features hysteresis: preserves brake damping across tramlines and gaps for 4.0s after loss drops to 0.
     if vehicle and rhm_Combine and rhm_Combine.isAiWorkerActive and rhm_Combine.isAiWorkerActive(vehicle) then
         local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
         if tracker then
@@ -1514,11 +1543,29 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
                 local controllableLoss = math.max(0, (self.cropLoss or 0) - uncontrollableLoss)
                 if controllableLoss > maxAllowedLoss then
                     local excess = controllableLoss - maxAllowedLoss
-                    local brakeFactor = math.max(0.55, 1.0 - (excess * 0.12))
-                    self.speedLimit = math.max(minSpeed, self.speedLimit * brakeFactor)
+                    local targetBrake = math.max(0.55, 1.0 - (excess * 0.12))
+                    self.aiBrakeFactor = math.min(self.aiBrakeFactor or 1.0, targetBrake)
+                    self.aiLossClearTimer = 0
+                else
+                    -- Hold the brake factor across tramlines / gaps for at least 4.0 seconds after loss clears
+                    self.aiLossClearTimer = (self.aiLossClearTimer or 0) + (self.lastUpdateInterval or 300)
+                    if self.aiLossClearTimer > 4000 and self.aiBrakeFactor and self.aiBrakeFactor < 1.0 then
+                        local dtSecRecovery = math.min(1.0, (self.lastUpdateInterval or 300) / 1000.0)
+                        self.aiBrakeFactor = math.min(1.0, self.aiBrakeFactor + (0.15 * dtSecRecovery))
+                    end
                 end
+
+                if self.aiBrakeFactor and self.aiBrakeFactor < 0.99 then
+                    self.speedLimit = math.max(minSpeed, self.speedLimit * self.aiBrakeFactor)
+                end
+            else
+                self.aiBrakeFactor = 1.0
+                self.aiLossClearTimer = 0
             end
         end
+    else
+        self.aiBrakeFactor = 1.0
+        self.aiLossClearTimer = 0
     end
 end
 
@@ -1589,6 +1636,8 @@ function RHM_LoadCalculator:reset()
     self.cutterWearLoss = 0
     self.combineWearLoss = 0
     self.totalWearLoss = 0
+    self.aiBrakeFactor = 1.0
+    self.aiLossClearTimer = 0
     local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
     local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
     local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed

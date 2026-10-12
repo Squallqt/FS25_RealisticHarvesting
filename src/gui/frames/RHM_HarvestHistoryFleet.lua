@@ -263,14 +263,25 @@ local function isHarvesterVehicle(vehicle)
         or (vehicle.configFileName and vehicle.configFileName:lower():find("cotton") ~= nil)
 
     -- Strictly exclude forage wagons, loader wagons, standalone balers, bale loaders, and windrowers
-    if vehicle.spec_forageWagon ~= nil 
-       or vehicle.spec_loaderWagon ~= nil 
-       or (vehicle.spec_baler ~= nil and not isCottonHarvester and not vehicle.spec_combine)
-       or (vehicle.spec_baleWrapper ~= nil and not isCottonHarvester and not vehicle.spec_combine)
-       or vehicle.spec_baleLoader ~= nil
-       or vehicle.spec_tedder ~= nil
-       or vehicle.spec_windrower ~= nil then
-        return false
+    if not isCottonHarvester then
+        if vehicle.spec_forageWagon ~= nil 
+           or vehicle.spec_loaderWagon ~= nil 
+           or vehicle.spec_baler ~= nil
+           or vehicle.spec_pelletizer ~= nil
+           or vehicle.spec_strawHarvestPelletizer ~= nil
+           or vehicle.spec_baleShredder ~= nil
+           or vehicle.spec_baleWrapper ~= nil
+           or vehicle.spec_baleLoader ~= nil
+           or vehicle.spec_tedder ~= nil
+           or vehicle.spec_windrower ~= nil then
+            return false
+        end
+        if vehicle.typeName then
+            local tLower = vehicle.typeName:lower()
+            if tLower:find("baler") or tLower:find("pellet") or tLower:find("premos") or tLower:find("baleshredder") or tLower:find("biobaler") then
+                return false
+            end
+        end
     end
 
     -- Avoid pure standalone cutterbars / headers

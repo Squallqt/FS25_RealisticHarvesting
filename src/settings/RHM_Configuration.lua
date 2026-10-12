@@ -7,15 +7,48 @@ local modDirectory = g_currentModDirectory
 local function addNewStoreConfig(manager, superFunc, xmlFile, key, baseDir, customEnvironment, isMod, storeItem)
     local configurations, defaultConfigurationIds = superFunc(manager, xmlFile, key, baseDir, customEnvironment, isMod, storeItem)
     
-    -- 1. Check if the vehicle is a combine by inspecting its XML root nodes
+    -- 1. Check if the vehicle is a genuine combine by inspecting its XML root nodes
     local isCombine = false
     if xmlFile ~= nil then
-        if xmlFile:hasProperty("vehicle.combine") or
-           xmlFile:hasProperty("vehicle.forageHarvester") or
-           xmlFile:hasProperty("vehicle.cottonHarvester") or
-           xmlFile:hasProperty("vehicle.rootCropHarvester") or
-           xmlFile:hasProperty("vehicle.rootCropHaarvester") then
-            isCombine = true
+        local vType = xmlFile:getString("vehicle#type") or ""
+        local vTypeLower = vType:lower()
+        local storeCat = (storeItem ~= nil and storeItem.categoryName ~= nil) and tostring(storeItem.categoryName):lower() or ""
+
+        local isCotton = (vTypeLower:find("cotton") ~= nil)
+            or xmlFile:hasProperty("vehicle.cottonHarvester")
+            or (storeCat:find("cotton") ~= nil)
+
+        local isNonCombine = false
+
+        if not isCotton then
+            if xmlFile:hasProperty("vehicle.baler") or
+               xmlFile:hasProperty("vehicle.pelletizer") or
+               xmlFile:hasProperty("vehicle.baleShredder") or
+               xmlFile:hasProperty("vehicle.baleWrapper") or
+               xmlFile:hasProperty("vehicle.baleLoader") or
+               xmlFile:hasProperty("vehicle.forageWagon") or
+               xmlFile:hasProperty("vehicle.loaderWagon") then
+                isNonCombine = true
+            end
+
+            if vTypeLower:find("baler") or vTypeLower:find("pellet") or vTypeLower:find("premos") or vTypeLower:find("baleshredder") or vTypeLower:find("biobaler") then
+                isNonCombine = true
+            end
+
+            if storeCat == "balers" or storeCat == "round_balers" or storeCat == "square_balers" or storeCat == "bale_wrappers" or storeCat == "bale_loaders" or storeCat == "forage_wagons" or storeCat == "forage_wagon_vehicles" then
+                isNonCombine = true
+            end
+        end
+
+        if not isNonCombine then
+            if isCotton or
+               xmlFile:hasProperty("vehicle.combine") or
+               xmlFile:hasProperty("vehicle.forageHarvester") or
+               xmlFile:hasProperty("vehicle.rootCropHarvester") or
+               xmlFile:hasProperty("vehicle.rootCropHaarvester") or
+               xmlFile:hasProperty("vehicle.sugarCaneHarvester") then
+                isCombine = true
+            end
         end
     end
 

@@ -27,6 +27,43 @@ RHM_Api.listeners = {}
 ---    трактора (з причіпним комбайном) або жатки. Якщо nil — бере керовану техніку.
 ---@param vehicle table|nil
 ---@return table|nil combineVehicle
+---EN: Checks if a vehicle node is a genuine harvester, strictly excluding balers, cutting balers, mobile pelletizers, and bale shredders.
+---UA: Перевіряє чи є транспортний засіб справжнім комбайном, суворо виключаючи преси, гранулятори та подрібнювачі тюків.
+local function isGenuineCombine(node)
+    if node == nil then return false end
+
+    local storeItem = node.configFileName and g_storeManager and g_storeManager:getItemByXMLFilename(node.configFileName)
+    local storeCat = (storeItem and storeItem.categoryName) and storeItem.categoryName:lower() or ""
+    local isCotton = (node.spec_cottonHarvester ~= nil)
+        or (node.typeName and node.typeName:lower():find("cotton") ~= nil)
+        or (node.configFileName and node.configFileName:lower():find("cotton") ~= nil)
+        or (node.xmlFile and node.xmlFile:hasProperty("vehicle.cottonHarvester"))
+        or storeCat:find("cotton") ~= nil
+
+    if not isCotton then
+        -- Filter out balers, cutting balers (BioBaler WB-55), mobile pelletizers, and bale shredders
+        if node.spec_baler ~= nil or node.spec_pelletizer ~= nil or node.spec_strawHarvestPelletizer ~= nil or node.spec_baleShredder ~= nil then
+            return false
+        end
+        if node.typeName then
+            local tLower = node.typeName:lower()
+            if tLower:find("baler") or tLower:find("pellet") or tLower:find("premos") or tLower:find("baleshredder") or tLower:find("biobaler") then
+                return false
+            end
+        end
+        if node.xmlFile and (node.xmlFile:hasProperty("vehicle.baler") or node.xmlFile:hasProperty("vehicle.pelletizer") or node.xmlFile:hasProperty("vehicle.baleShredder")) then
+            return false
+        end
+    end
+
+    -- Must have active RHM combine or authentic base harvester specialization
+    return (node.spec_rhm_Combine ~= nil and node.spec_rhm_Combine.isRhmCombine == true)
+        or node.spec_combine ~= nil
+        or node.spec_forageHarvester ~= nil
+        or node.spec_cottonHarvester ~= nil
+        or node.spec_sugarCaneHarvester ~= nil
+end
+
 function RHM_Api.findCombine(vehicle)
     local target = vehicle
     if target == nil and g_currentMission ~= nil then
@@ -45,12 +82,12 @@ function RHM_Api.findCombine(vehicle)
     end
 
     -- Fast-path: target itself is an RHM combine or harvester
-    if target.spec_rhm_Combine ~= nil or target.spec_combine ~= nil or target.spec_forageHarvester ~= nil or target.spec_cottonHarvester ~= nil or target.spec_sugarCaneHarvester ~= nil then
+    if isGenuineCombine(target) then
         return target
     end
 
     -- Check root vehicle
-    if target.rootVehicle ~= nil and target.rootVehicle ~= target and (target.rootVehicle.spec_rhm_Combine ~= nil or target.rootVehicle.spec_combine ~= nil or target.rootVehicle.spec_forageHarvester ~= nil or target.rootVehicle.spec_cottonHarvester ~= nil or target.rootVehicle.spec_sugarCaneHarvester ~= nil) then
+    if target.rootVehicle ~= nil and target.rootVehicle ~= target and isGenuineCombine(target.rootVehicle) then
         return target.rootVehicle
     end
 
@@ -62,7 +99,7 @@ function RHM_Api.findCombine(vehicle)
         end
         visited[node] = true
 
-        if node.spec_rhm_Combine ~= nil or node.spec_combine ~= nil or node.spec_forageHarvester ~= nil or node.spec_cottonHarvester ~= nil or node.spec_sugarCaneHarvester ~= nil then
+        if isGenuineCombine(node) then
             return node
         end
 

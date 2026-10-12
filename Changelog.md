@@ -1,6 +1,10 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.3.0:
+- FIXED: Cotton harvester vehicle type preservation in GIANTS Engine 10, ensuring machines (John Deere CP690, Case IH Module Express 635) load seamlessly on maps and in the store without prerequisite validation deletion.
+- FIXED: Strict non-combine equipment filtering excluding cutting balers, mobile pelletizers, and standalone balers from store packages, PTO power drag, motor throttling, and HUD displays.
+- ADDED: Global Shift+J Harvest Menu availability across all vehicles and on-foot player contexts with dynamic combine trip tab filtering.
+- IMPROVED: Working cruise speed stabilization across tramlines, sprayer tracks, and unseeded gaps, paired with continuous frame-level hydrostatic motor speed ramping.
 - FIXED: Live trip mass scale normalization in Field History cards ensuring harvested mass displays accurately in kilograms and tons.
 - FIXED: Resolved nil vehicle reference in Combine Calibration GUI (Shift+K) wear loss calculation.
 - FIXED: Header attachment loop iteration order in combine start threshing logic ensuring reliable implement engagement.

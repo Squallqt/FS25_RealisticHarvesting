@@ -16,20 +16,7 @@ rhm_Combine.debug = false
 -- UA: Перевіряє чи транспортний засіб має базову спеціалізацію Combine.
 --     Повертає true для всіх машин, включаючи модульні системи на кшталт NEXAT.
 function rhm_Combine.prerequisitesPresent(specializations)
-    for _, specClass in ipairs(specializations or {}) do
-        local sName = (g_specializationManager and g_specializationManager.getSpecializationNameByObject and g_specializationManager:getSpecializationNameByObject(specClass))
-        if not sName and specClass and specClass.className then
-            sName = specClass.className
-        end
-        if sName then
-            local sLower = string.lower(sName)
-            if sLower:find("pelletizer") or sLower:find("baleshredder") then
-                return false
-            end
-        end
-    end
-    return SpecializationUtil.hasSpecialization(Combine, specializations)
-        or (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, specializations))
+    return true
 end
 
 -- EN: Natively called by the engine during specialization registration.
@@ -61,13 +48,19 @@ end
 --     Ці функції перехоплюють основні поведінки комбайна для вбудованої логіки навантаження і швидкості.
 function rhm_Combine.registerOverwrittenFunctions(vehicleType)
     rhm_log("RHM [Combine]: RHM: Registering overwritten functions for rhm_Combine")
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "addCutterArea", rhm_Combine.addCutterArea)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "addFillUnitFillLevel", rhm_Combine.addFillUnitFillLevel)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "getSpeedLimit", rhm_Combine.getSpeedLimit)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "startThreshing", rhm_Combine.startThreshing)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "stopThreshing", rhm_Combine.stopThreshing)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "verifyCombine", rhm_Combine.verifyCombine)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "getCanBeTurnedOn", rhm_Combine.getCanBeTurnedOn)
+    local function safeRegisterOverwrittenFunction(funcName, targetFunc)
+        if vehicleType and vehicleType.functions and vehicleType.functions[funcName] ~= nil then
+            SpecializationUtil.registerOverwrittenFunction(vehicleType, funcName, targetFunc)
+        end
+    end
+
+    safeRegisterOverwrittenFunction("addCutterArea", rhm_Combine.addCutterArea)
+    safeRegisterOverwrittenFunction("addFillUnitFillLevel", rhm_Combine.addFillUnitFillLevel)
+    safeRegisterOverwrittenFunction("getSpeedLimit", rhm_Combine.getSpeedLimit)
+    safeRegisterOverwrittenFunction("startThreshing", rhm_Combine.startThreshing)
+    safeRegisterOverwrittenFunction("stopThreshing", rhm_Combine.stopThreshing)
+    safeRegisterOverwrittenFunction("verifyCombine", rhm_Combine.verifyCombine)
+    safeRegisterOverwrittenFunction("getCanBeTurnedOn", rhm_Combine.getCanBeTurnedOn)
 end
 
 -- EN: Registers XML paths for vehicle config (shop/modDesc XML). Persists combine settings per-vehicle.
@@ -163,7 +156,7 @@ end
 
 local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isActiveForInputIgnoreSelection)
     -- Skip if this is already a combine with our spec (handled by rhm_Combine:onRegisterActionEvents)
-    if vehicle.spec_rhm_Combine then
+    if not vehicle or vehicle.spec_rhm_Combine then
         return
     end
     
@@ -171,6 +164,7 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     local canRegister = isActiveForInputIgnoreSelection
         or vehicle.isActiveForInputIgnoreSelectionIgnoreAI
         or (vehicle.getIsEntered and vehicle:getIsEntered())
+        or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
 
     if not canRegister then
         return
@@ -180,12 +174,18 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     if not vehicle.isClient then
         return
     end
+
+    local currentFrame = (g_currentMission and g_currentMission.frameIndex) or (g_currentMission and g_currentMission.time) or g_time or 1
+    if vehicle._rhmActionEventsFrame == currentFrame then
+        return
+    end
+    vehicle._rhmActionEventsFrame = currentFrame
     
     -- Check if there's a combine with our spec in the hierarchy
     local function hasCombineInHierarchy(v, visited)
         if not v or visited[v] then return false end
         visited[v] = true
-        if v.spec_rhm_Combine then return true end
+        if v.spec_rhm_Combine and v.spec_rhm_Combine.isRhmCombine == true then return true end
         if v.rootVehicle and hasCombineInHierarchy(v.rootVehicle, visited) then return true end
         if v.attacherVehicle and hasCombineInHierarchy(v.attacherVehicle, visited) then return true end
         if v.getAttachedImplements then
@@ -197,52 +197,53 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     end
     
     local searchRoot = vehicle.rootVehicle or vehicle
-    if not hasCombineInHierarchy(searchRoot, {}) then
-        return
-    end
+    local hasCombine = hasCombineInHierarchy(searchRoot, {})
     
-    -- Register RHM_OPEN_MENU for this NEXAT-style vehicle
+    -- Register action events for this non-combine vehicle
     if not vehicle._rhmActionEvents then
         vehicle._rhmActionEvents = {}
     end
     vehicle:clearActionEventsTable(vehicle._rhmActionEvents)
     
-    if InputAction.RHM_OPEN_MENU then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_MENU, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleMenu(self)
+    if hasCombine then
+        if InputAction.RHM_OPEN_MENU then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_MENU, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleMenu(self)
+                    end
+                end, false, true, false, true, nil)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
+                if g_i18n:hasText("input_RHM_OPEN_MENU") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_MENU"))
                 end
-            end, false, true, false, true, nil)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
-            if g_i18n:hasText("input_RHM_OPEN_MENU") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_MENU"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
+            -- RHM_Debug.log("Combine", "RHM: [NEXAT] Registered RHM_OPEN_MENU for non-combine vehicle: " .. tostring(vehicle:getFullName()))
         end
-        -- RHM_Debug.log("Combine", "RHM: [NEXAT] Registered RHM_OPEN_MENU for non-combine vehicle: " .. tostring(vehicle:getFullName()))
-    end
-    if InputAction.RHM_TOGGLE_HUD then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_HUD, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleHUD()
+        if InputAction.RHM_TOGGLE_HUD then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_HUD, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleHUD()
+                    end
+                end, false, true, false, true, nil)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
+                if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_HUD"))
                 end
-            end, false, true, false, true, nil)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
-            if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_HUD"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
     end
+    -- Harvest History & Fleet Telemetry Menu is globally accessible in ANY entered vehicle (tractor, car, truck, etc.)
     if InputAction.RHM_OPEN_HARVEST_MENU then
         local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_HARVEST_MENU, vehicle,
             function(self, ...)
                 if g_realisticHarvestManager then
-                    g_realisticHarvestManager:showHarvestHistoryGUI()
+                    g_realisticHarvestManager:showHarvestHistoryGUI(self)
                 end
             end, false, true, false, true, nil)
         if eventId then
@@ -253,32 +254,93 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
             g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
     end
-    if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleMouseCursor(self)
+    if hasCombine then
+        if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleMouseCursor(self)
+                    end
+                end, false, true, false, true, nil, nil, true, true)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
+                if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_MOUSE_CURSOR"))
                 end
-            end, false, true, false, true, nil, nil, true, true)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
-            if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_MOUSE_CURSOR"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
+    end
+
+end
+
+---EN: Applies global action event hooks to non-combine vehicles across Enterable, Drivable, and Vehicle classes.
+---UA: Застосовує глобальні хуки реєстрації подій для транспорту без спеціалізації комбайна (Enterable, Drivable, Vehicle).
+function rhm_Combine.applyGlobalVehicleHooks()
+    if rhm_Combine._globalVehicleHooksApplied then
+        return
+    end
+
+    local hookedAny = false
+
+    -- 1. Hook Enterable specialization object from g_specializationManager (native to all enterable machinery in FS25)
+    local enterableSpec = (g_specializationManager and g_specializationManager:getSpecializationObjectByName("enterable"))
+        or _G.Enterable
+    if enterableSpec and enterableSpec.onRegisterActionEvents then
+        enterableSpec.onRegisterActionEvents = Utils.appendedFunction(
+            enterableSpec.onRegisterActionEvents,
+            RHM_globalOnRegisterActionEvents
+        )
+        rhm_log("RHM [Combine]: Global Enterable.onRegisterActionEvents hook applied.")
+        hookedAny = true
+    end
+
+    -- 2. Hook Drivable specialization object from g_specializationManager as reinforcement
+    local drivableSpec = (g_specializationManager and g_specializationManager:getSpecializationObjectByName("drivable"))
+        or _G.Drivable
+    if drivableSpec and drivableSpec.onRegisterActionEvents then
+        drivableSpec.onRegisterActionEvents = Utils.appendedFunction(
+            drivableSpec.onRegisterActionEvents,
+            RHM_globalOnRegisterActionEvents
+        )
+        rhm_log("RHM [Combine]: Global Drivable.onRegisterActionEvents hook applied.")
+        hookedAny = true
+    end
+
+    -- 3. Hook Vehicle.registerActionEvents as context-wrapped fallback
+    if Vehicle and Vehicle.registerActionEvents then
+        Vehicle.registerActionEvents = Utils.appendedFunction(
+            Vehicle.registerActionEvents,
+            function(vehicle, ...)
+                if not vehicle or vehicle.spec_rhm_Combine or not vehicle.isClient then
+                    return
+                end
+                local currentFrame = (g_currentMission and g_currentMission.frameIndex) or (g_currentMission and g_currentMission.time) or g_time or 1
+                if vehicle._rhmActionEventsFrame == currentFrame then
+                    return
+                end
+                local canRegister = (vehicle.getIsActiveForInput and vehicle:getIsActiveForInput(true))
+                    or (vehicle.getIsEntered and vehicle:getIsEntered())
+                    or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
+                if canRegister and g_inputBinding and InputAction and InputAction.RHM_OPEN_HARVEST_MENU then
+                    local contextName = Vehicle.INPUT_CONTEXT_NAME or "VEHICLE"
+                    g_inputBinding:beginActionEventsModification(contextName)
+                    RHM_globalOnRegisterActionEvents(vehicle, true, true)
+                    g_inputBinding:endActionEventsModification()
+                end
+            end
+        )
+        rhm_log("RHM [Combine]: Global Vehicle.registerActionEvents context-wrapped fallback hook applied.")
+        hookedAny = true
+    end
+
+    if hookedAny then
+        rhm_Combine._globalVehicleHooksApplied = true
     end
 end
 
--- Apply global hook ONCE (guard against double-loading)
-if not rhm_Combine._nexatHookApplied then
-    rhm_Combine._nexatHookApplied = true
-    Vehicle.onRegisterActionEvents = Utils.appendedFunction(
-        Vehicle.onRegisterActionEvents,
-        RHM_globalOnRegisterActionEvents
-    )
-    rhm_log("RHM [Combine]: RHM: [NEXAT] Global Vehicle.onRegisterActionEvents hook applied.")
-end
+-- Try applying global hooks immediately at script load time
+rhm_Combine.applyGlobalVehicleHooks()
 
 ---EN: Safely gets or lazy-initializes RHM_CombineMemory to guarantee it is never nil.
 ---UA: Безпечно повертає або ліниво ініціалізує RHM_CombineMemory для гарантії захисту від nil.
@@ -320,11 +382,25 @@ function rhm_Combine:onLoad(savegame)
         return
     end
 
-    -- EN: Guard against non-harvester processing units (mobile pelletizers, bale shredders)
-    -- UA: Захист від не-збиральної переробної техніки (мобільні пелетизатори, подрібнювачі тюків)
-    if self.spec_pelletizer ~= nil or self.spec_strawHarvestPelletizer ~= nil
-        or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
-        return
+    local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
+    local storeCat = (storeItem and storeItem.categoryName) and storeItem.categoryName:lower() or ""
+    local isCottonHarvester = (self.spec_cottonHarvester ~= nil)
+        or (CottonHarvester ~= nil and SpecializationUtil.hasSpecialization(CottonHarvester, self.specializations))
+        or (self.typeName and self.typeName:lower():find("cotton") ~= nil)
+        or (self.configFileName and self.configFileName:lower():find("cotton") ~= nil)
+        or (self.xmlFile and self.xmlFile:hasProperty("vehicle.cottonHarvester"))
+        or storeCat:find("cotton") ~= nil
+
+    if not isCottonHarvester then
+        if self.spec_baler ~= nil
+            or self.spec_pelletizer ~= nil
+            or self.spec_strawHarvestPelletizer ~= nil
+            or self.spec_baleShredder ~= nil
+            or (self.typeName and (self.typeName:lower():find("baler") or self.typeName:lower():find("pellet") or self.typeName:lower():find("premos") or self.typeName:lower():find("baleshredder") or self.typeName:lower():find("biobaler")))
+            or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.baler") or self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
+            spec.isRhmCombine = false
+            return
+        end
     end
 
     spec.isRhmCombine = true
@@ -410,7 +486,7 @@ function rhm_Combine:onLoad(savegame)
         machineType = "grain"
     elseif category == "forageHarvesters" or category == "forageHarvesterVehicles" or category == "forageHarvesting" or catLower:find("forage") ~= nil or typeName:find("forage") ~= nil then
         machineType = "forage"
-    elseif category == "cottonVehicles" or category == "cottonHarvesting" then
+    elseif category == "cottonVehicles" or category == "cottonHarvesting" or catLower:find("cotton") ~= nil or typeName:find("cotton") ~= nil or self.spec_cottonHarvester ~= nil then
         machineType = "cotton"
     elseif category == "beetVehicles" or category == "beetHarvesting" 
        or category == "potatoVehicles" or category == "potatoHarvesting"
@@ -1475,9 +1551,9 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- UA: Викликаємо оригінал щоб отримати базовий ліміт швидкості гри і прапорець перевірки.
     local limit, doCheckSpeedLimit = superFunc(self, onlyIfWorking)
     
-    -- EN: If spec not initialized (vehicle loading), return original limit unchanged.
-    -- UA: Якщо spec не ініціалізований (завантаження транспорту), повертаємо оригінальний ліміт без змін.
-    if not spec or not spec.loadCalculator then
+    -- EN: If spec not initialized or not genuine RHM combine, return original limit unchanged.
+    -- UA: Якщо spec не ініціалізований або не є справжнім комбайном RHM, повертаємо оригінальний ліміт без змін.
+    if not spec or not spec.loadCalculator or spec.isRhmCombine ~= true then
         return limit, doCheckSpeedLimit
     end
     
@@ -1603,8 +1679,9 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     end
     
     -- === SERVER: Continue with normal RHM_LoadCalculator logic ===
-    -- Отримуємо обмеження з RHM_LoadCalculator
-    local calculatedLimit = spec.loadCalculator:getSpeedLimit()
+    -- EN: Prefer smoothed hydrostatic limit so AI helpers and cruise control never experience discontinuous steps
+    -- UA: Надаємо перевагу згладженому гідростатичному ліміту щоб помічники і круїз-контроль не отримували ривків
+    local calculatedLimit = spec._rhmSmoothedMotorLimit or spec.loadCalculator:getSpeedLimit()
     local engineLoad = spec.loadCalculator:getEngineLoad()
     
     -- Діагностика: логуємо розрахунки (рідше)
@@ -2009,7 +2086,7 @@ end
 --     Передає зібрану масу та площу до RHM_LoadCalculator для фізичного розрахунку навантаження двигуна.
 function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
     local spec = self.spec_rhm_Combine
-    if not spec then return end
+    if not spec or spec.isRhmCombine ~= true then return end
 
 
     -- EN: Client-side: update safety warnings, audio feedback, and quick trip reset hold.
@@ -2096,6 +2173,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
+        spec._rhmSmoothedMotorLimit = nil
         spec.loadCalculator:reset()
         spec.currentWeedRatio = 0
         if spec.data then
@@ -2250,6 +2328,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
+        spec._rhmSmoothedMotorLimit = nil
         spec.loadCalculator:reset() 
         spec.currentWeedRatio = 0
         if spec.data then
@@ -2537,7 +2616,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.recommendedSpeed = 0
             spec.data.targetSpeed = 0
         else
-            spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
+            spec.data.recommendedSpeed = spec._rhmSmoothedMotorLimit or spec.loadCalculator:getSpeedLimit()
             spec.data.targetSpeed = spec.data.recommendedSpeed
         end
         -- NEW: Yield Monitor Data
@@ -2675,6 +2754,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                         motor:setSpeedLimit(math.huge)
                         spec._rhmLastMotorSpeedLimit = nil
                     end
+                    spec._rhmSmoothedMotorLimit = nil
                 else
                     local ceiling = spec.loadCalculator.genuineSpeedLimit
                     if ceiling and ceiling > 0 then
@@ -2682,12 +2762,30 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                     end
 
                     if currentLimit and currentLimit > 0 and currentLimit ~= math.huge then
-                        -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
-                        -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
+                        -- EN: Continuous frame-level hydrostatic ramping prevents chunky 400ms speed staircase steps
+                        -- UA: Безперервне пофреймове згладжування гідростатики запобігає драбинчастим ривкам кожні 400мс
+                        local smoothed = spec._rhmSmoothedMotorLimit
+                        if smoothed == nil then
+                            smoothed = currentLimit
+                        else
+                            local dtSec = math.min(0.1, dt * 0.001)
+                            if currentLimit < smoothed then
+                                local isHighLoad = (spec.data and spec.data.load and spec.data.load > 115)
+                                local maxDecelRate = isHighLoad and 1.6 or 0.75
+                                local maxStep = maxDecelRate * dtSec
+                                smoothed = math.max(currentLimit, smoothed - maxStep)
+                            elseif currentLimit > smoothed then
+                                local maxAccelRate = 0.40
+                                local maxStep = maxAccelRate * dtSec
+                                smoothed = math.min(currentLimit, smoothed + maxStep)
+                            end
+                        end
+                        spec._rhmSmoothedMotorLimit = smoothed
+
                         local prev = spec._rhmLastMotorSpeedLimit
-                        if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
-                            spec._rhmLastMotorSpeedLimit = currentLimit
-                            motor:setSpeedLimit(currentLimit)
+                        if prev == nil or math.abs(prev - smoothed) >= 0.03 then
+                            spec._rhmLastMotorSpeedLimit = smoothed
+                            motor:setSpeedLimit(smoothed)
                         end
                     end
                 end
@@ -3482,6 +3580,9 @@ end
 function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIgnoreSelection)
     if self.isClient then
         local spec = self.spec_rhm_Combine
+        if not spec or spec.isRhmCombine ~= true then
+            return
+        end
         self:clearActionEventsTable(spec.actionEvents)
         
         -- EN: Allow registration when player is inside the combine, even while an automated worker is operating it.
@@ -3558,7 +3659,7 @@ end
 
 function rhm_Combine:actionOpenHarvestMenu(actionName, inputValue, callbackState, isAnalog)
     if g_realisticHarvestManager then
-        g_realisticHarvestManager:showHarvestHistoryGUI()
+        g_realisticHarvestManager:showHarvestHistoryGUI(self)
     end
 end
 

@@ -55,7 +55,7 @@ function RHM_HarvestHistoryTrip:getActiveTrip()
     local farm = tracker and tracker:getFarmData(farmId)
 
     -- 1. If player is currently driving or sitting in a combine, track THIS specific combine!
-    local activeCombine = RHM_HarvestTracker and RHM_HarvestTracker.findPlayerEnteredCombine and RHM_HarvestTracker.findPlayerEnteredCombine()
+    local activeCombine = self.targetCombine or (RHM_HarvestTracker and RHM_HarvestTracker.findPlayerEnteredCombine and RHM_HarvestTracker.findPlayerEnteredCombine())
     if activeCombine then
         if activeCombine.getOwnerFarmId then
             local cFarmId = activeCombine:getOwnerFarmId()

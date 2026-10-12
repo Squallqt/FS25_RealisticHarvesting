@@ -70,6 +70,7 @@ function RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
     -- UA: Створюємо візуальний GUI калібрування (тільки клієнт, для ручного регулювання).
     if mission:getIsClient() then
         self.calibrationGUI = RHMCombineCalibrationGUI.new(modDirectory)
+        self:registerGlobalActionEvents()
     end
 
     return self
@@ -124,13 +125,141 @@ end
 
 -- EN: Shows the fullscreen Harvest History and Trip Telemetry GUI.
 -- UA: Відкриває повноекранне меню історії збору врожаю та одометра поля.
-function RHM_RealisticHarvestManager:showHarvestHistoryGUI()
+function RHM_RealisticHarvestManager:showHarvestHistoryGUI(targetVehicle)
+    if not self.harvestHistoryGUI then
+        self:loadHarvestHistoryGUI()
+    end
+    if self.harvestHistoryGUI then
+        self.harvestHistoryGUI.callerVehicle = targetVehicle
+    end
     if g_gui then
         if g_gui.currentGui == nil then
             g_gui:showGui("RHM_HarvestHistoryGUI")
         elseif g_gui.currentGuiName == "RHM_HarvestHistoryGUI" then
             g_gui:showGui("")
         end
+    end
+end
+
+---EN: Registers global action events for the on-foot player context and general mission lifecycle.
+---UA: Реєструє глобальні події дій для контексту пішого гравця та життєвого циклу місії.
+function RHM_RealisticHarvestManager:registerGlobalActionEvents()
+    if not (self.mission and self.mission:getIsClient()) then
+        return
+    end
+
+    if not self._globalActionEventsHooked then
+        self._globalActionEventsHooked = true
+
+        -- Hook PlayerInputComponent for on-foot player context (FS25/FS22)
+        if PlayerInputComponent and PlayerInputComponent.registerActionEvents then
+            PlayerInputComponent.registerActionEvents = Utils.appendedFunction(
+                PlayerInputComponent.registerActionEvents,
+                function(inputComponent, ...)
+                    if not (inputComponent and inputComponent.player and inputComponent.player.isOwner) then
+                        return
+                    end
+                    if not (g_inputBinding and InputAction and InputAction.RHM_OPEN_HARVEST_MENU) then
+                        return
+                    end
+
+                    local contextName = PlayerInputComponent.INPUT_CONTEXT_NAME or "PLAYER"
+                    g_inputBinding:beginActionEventsModification(contextName)
+                    local _, eventId = g_inputBinding:registerActionEvent(
+                        InputAction.RHM_OPEN_HARVEST_MENU,
+                        self,
+                        self.onGlobalActionOpenHarvestMenu,
+                        false, -- triggerUp
+                        true,  -- triggerDown
+                        false, -- triggerAlways
+                        true,  -- startActive
+                        nil,
+                        true
+                    )
+                    if eventId then
+                        g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
+                        if g_i18n and g_i18n:hasText("input_RHM_OPEN_HARVEST_MENU") then
+                            g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_HARVEST_MENU"))
+                        end
+                        g_inputBinding:setActionEventTextVisibility(eventId, true)
+                    end
+                    g_inputBinding:endActionEventsModification()
+                end
+            )
+        end
+
+        -- Hook FSBaseMission.registerActionEvents as an additional mission-level registration fallback
+        if FSBaseMission and FSBaseMission.registerActionEvents then
+            FSBaseMission.registerActionEvents = Utils.appendedFunction(
+                FSBaseMission.registerActionEvents,
+                function(mission, ...)
+                    if not (mission and mission:getIsClient()) then return end
+                    if not (g_inputBinding and InputAction and InputAction.RHM_OPEN_HARVEST_MENU) then
+                        return
+                    end
+                    local _, eventId = g_inputBinding:registerActionEvent(
+                        InputAction.RHM_OPEN_HARVEST_MENU,
+                        self,
+                        self.onGlobalActionOpenHarvestMenu,
+                        false,
+                        true,
+                        false,
+                        true,
+                        nil,
+                        true
+                    )
+                    if eventId then
+                        g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
+                        if g_i18n and g_i18n:hasText("input_RHM_OPEN_HARVEST_MENU") then
+                            g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_HARVEST_MENU"))
+                        end
+                        g_inputBinding:setActionEventTextVisibility(eventId, true)
+                    end
+                end
+            )
+        end
+
+        -- Ensure non-combine vehicle hooks (Enterable, Drivable, Vehicle) are applied
+        if rhm_Combine and rhm_Combine.applyGlobalVehicleHooks then
+            rhm_Combine.applyGlobalVehicleHooks()
+        end
+    end
+
+    -- If player is already active on foot during post-load, ensure immediate binding
+    if g_currentMission and g_currentMission.player and g_currentMission.player.isOwner and g_inputBinding and InputAction and InputAction.RHM_OPEN_HARVEST_MENU then
+        local contextName = (PlayerInputComponent and PlayerInputComponent.INPUT_CONTEXT_NAME) or "PLAYER"
+        g_inputBinding:beginActionEventsModification(contextName)
+        local _, eventId = g_inputBinding:registerActionEvent(
+            InputAction.RHM_OPEN_HARVEST_MENU,
+            self,
+            self.onGlobalActionOpenHarvestMenu,
+            false,
+            true,
+            false,
+            true,
+            nil,
+            true
+        )
+        if eventId then
+            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
+            if g_i18n and g_i18n:hasText("input_RHM_OPEN_HARVEST_MENU") then
+                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_HARVEST_MENU"))
+            end
+            g_inputBinding:setActionEventTextVisibility(eventId, true)
+        end
+        g_inputBinding:endActionEventsModification()
+    end
+end
+
+---EN: Action event callback triggered when pressing Shift+J outside of a combine vehicle.
+---UA: Зворотний виклик події дії при натисканні Shift+J поза комбайном.
+function RHM_RealisticHarvestManager:onGlobalActionOpenHarvestMenu(actionName, inputValue, callbackState, isAnalog)
+    local mgr = self
+    if not (mgr and mgr.showHarvestHistoryGUI) then
+        mgr = g_realisticHarvestManager
+    end
+    if mgr and mgr.showHarvestHistoryGUI then
+        mgr:showHarvestHistoryGUI(nil)
     end
 end
 
@@ -258,6 +387,7 @@ function RHM_RealisticHarvestManager:onMissionLoaded()
 
     if self.mission and self.mission:getIsClient() then
         self:loadHarvestHistoryGUI()
+        self:registerGlobalActionEvents()
     end
 end
 
