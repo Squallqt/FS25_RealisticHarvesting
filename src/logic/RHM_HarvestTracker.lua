@@ -629,10 +629,6 @@ end
 ---UA: Визначає 2D координати центру будь-якого поля чи земельної ділянки
 function RHM_HarvestTracker:getFieldCenter(fieldId)
     if not fieldId or fieldId <= 0 then return nil, nil end
-    local graph = self:getFarmlandGraph()
-    if graph and graph.centers and graph.centers[fieldId] then
-        return graph.centers[fieldId].x, graph.centers[fieldId].z
-    end
     if g_fieldManager and g_fieldManager.getFieldById then
         local f = g_fieldManager:getFieldById(fieldId)
         if f then
@@ -647,6 +643,10 @@ function RHM_HarvestTracker:getFieldCenter(fieldId)
                 return f.posX, f.posZ
             end
         end
+    end
+    local graph = self:getFarmlandGraph()
+    if graph and graph.centers and graph.centers[fieldId] then
+        return graph.centers[fieldId].x, graph.centers[fieldId].z
     end
     return nil, nil
 end
@@ -735,6 +735,50 @@ function RHM_HarvestTracker:getOwnedFieldIds(farmId)
     return ownedIds
 end
 
+---EN: Resolves authentic cadastral farmland parcel ID for any Field object using coordinates and engine fallbacks.
+---UA: Визначає автентичний кадастровий номер ділянки (farmland ID) для об'єкта поля через координати.
+---@param field table|nil Field object from g_fieldManager
+---@return number farmlandId
+function RHM_HarvestTracker.resolveFarmlandId(field)
+    if not field then return 0 end
+    if field.farmlandId and type(field.farmlandId) == "number" and field.farmlandId > 0 then
+        return field.farmlandId
+    end
+    local fl = (field.getFarmland and field:getFarmland()) or field.farmland
+    if fl then
+        local flid = (fl.getId and fl:getId()) or fl.id or fl.farmlandId
+        if flid and type(flid) == "number" and flid > 0 then
+            return flid
+        end
+    end
+    if g_farmlandManager and g_farmlandManager.getFarmlandIdAtWorldPosition then
+        if field.rootNode and field.rootNode ~= 0 and entityExists(field.rootNode) then
+            local wx, _, wz = getWorldTranslation(field.rootNode)
+            local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
+            if fid and fid > 0 then return fid end
+        end
+        if field.fieldPositionX and field.fieldPositionZ then
+            local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(field.fieldPositionX, field.fieldPositionZ)
+            if fid and fid > 0 then return fid end
+        end
+        if field.posX and field.posZ then
+            local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(field.posX, field.posZ)
+            if fid and fid > 0 then return fid end
+        end
+        if field.node and field.node ~= 0 and entityExists(field.node) then
+            local wx, _, wz = getWorldTranslation(field.node)
+            local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
+            if fid and fid > 0 then return fid end
+        end
+        if field.mapMarker and field.mapMarker ~= 0 and entityExists(field.mapMarker) then
+            local wx, _, wz = getWorldTranslation(field.mapMarker)
+            local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
+            if fid and fid > 0 then return fid end
+        end
+    end
+    return 0
+end
+
 ---EN: Evaluates whether two fields are physically connected / plowed together on the terrain.
 ---UA: Перевіряє, чи два поля фізично з'єднані (розорані разом) на карті.
 function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, fieldIdB, combine)
@@ -745,16 +789,31 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
     local farm = self:getFarmData(farmId or 1)
     if not farm then return false end
 
+    -- Fast-path: Check if already clustered under the same master field
+    if farm.fieldClusterMembers and farm.fieldClusterMembers[fieldIdA] and farm.fieldClusterMembers[fieldIdB] then
+        if farm.fieldClusterMembers[fieldIdA] == farm.fieldClusterMembers[fieldIdB] then
+            return true
+        end
+    end
+
+    -- Empirical transit: If combine is actively harvesting and crossing between these fields on field ground
+    if combine and combine.rootNode then
+        local cx, cy, cz = getWorldTranslation(combine.rootNode)
+        if FSDensityMapUtil and FSDensityMapUtil.getFieldDataAtWorldPosition and FSDensityMapUtil.getFieldDataAtWorldPosition(cx, cy, cz) == true then
+            return true
+        end
+    end
+
     -- 1. Verify farmland ownership for both fields
     local fA = g_fieldManager and g_fieldManager.getFieldById and g_fieldManager:getFieldById(fieldIdA)
     local fB = g_fieldManager and g_fieldManager.getFieldById and g_fieldManager:getFieldById(fieldIdB)
 
-    local fmlA = (fA and (fA.farmlandId or (fA.farmland and (fA.farmland.id or fA.farmland.farmlandId)))) or fieldIdA
-    local fmlB = (fB and (fB.farmlandId or (fB.farmland and (fB.farmland.id or fB.farmland.farmlandId)))) or fieldIdB
+    local fmlA = RHM_HarvestTracker.resolveFarmlandId(fA)
+    local fmlB = RHM_HarvestTracker.resolveFarmlandId(fB)
 
     if g_farmlandManager and g_farmlandManager.getFarmlandOwner then
-        local ownerA = g_farmlandManager:getFarmlandOwner(fmlA)
-        local ownerB = g_farmlandManager:getFarmlandOwner(fmlB)
+        local ownerA = (fmlA > 0) and g_farmlandManager:getFarmlandOwner(fmlA) or farmId
+        local ownerB = (fmlB > 0) and g_farmlandManager:getFarmlandOwner(fmlB) or farmId
         if (ownerA ~= nil and ownerA > 0 and ownerA ~= farmId) or (ownerB ~= nil and ownerB > 0 and ownerB ~= farmId) then
             return false
         end
@@ -766,7 +825,7 @@ function RHM_HarvestTracker:areFieldsPhysicallyConnected(farmId, fieldIdA, field
     end
 
     -- 3. Case A: Both fields reside on the exact SAME farmland parcel
-    if fmlA == fmlB then
+    if fmlA > 0 and fmlA == fmlB then
         local ax, az = self:getFieldCenter(fieldIdA)
         local bx, bz = self:getFieldCenter(fieldIdB)
         if not ax or not bx then return false end
@@ -840,12 +899,19 @@ function RHM_HarvestTracker:discoverAndClusterMergedFields(farmId, startFieldId,
         local currentField = table.remove(queue, 1)
         for candId, _ in pairs(ownedIds) do
             if not visited[candId] then
-                if self:areFieldsPhysicallyConnected(farmId, currentField, candId) then
+                if self:areFieldsPhysicallyConnected(farmId, currentField, candId, combine) then
                     visited[candId] = true
                     clusterGroup[candId] = true
                     table.insert(queue, candId)
                 end
             end
+        end
+    end
+
+    -- Preserve existing cluster members: BFS expands/unifies clusters, never destroys them during live harvesting
+    if existingMaster and farm.fieldClusters and farm.fieldClusters[existingMaster] then
+        for oldMId, _ in pairs(farm.fieldClusters[existingMaster].members or {}) do
+            clusterGroup[oldMId] = true
         end
     end
 
@@ -859,19 +925,6 @@ function RHM_HarvestTracker:discoverAndClusterMergedFields(farmId, startFieldId,
 
     local masterId = existingMaster or startFieldId or sortedMembers[1]
 
-    -- Purge any orphaned members previously associated with existingMaster that are NOT physically connected
-    if existingMaster and farm.fieldClusters and farm.fieldClusters[existingMaster] then
-        local orphaned = {}
-        for oldMId, _ in pairs(farm.fieldClusters[existingMaster].members or {}) do
-            if not clusterGroup[oldMId] then
-                table.insert(orphaned, oldMId)
-            end
-        end
-        for _, oldMId in ipairs(orphaned) do
-            self:unclusterField(farmId, oldMId)
-        end
-    end
-
     if count > 1 then
         for _, mId in ipairs(sortedMembers) do
             if mId ~= masterId then
@@ -881,18 +934,6 @@ function RHM_HarvestTracker:discoverAndClusterMergedFields(farmId, startFieldId,
 
         local memberStr = table.concat(sortedMembers, ", ")
         print(string.format("Info: RHM_Diag: Transitive Field Cluster active: Master Field %d (Members: [%s])", masterId, memberStr))
-    else
-        -- Clean up single-member cluster if all other members were unclustered
-        if existingMaster and farm.fieldClusters and farm.fieldClusters[existingMaster] then
-            local remaining = 0
-            for _ in pairs(farm.fieldClusters[existingMaster].members or {}) do
-                remaining = remaining + 1
-            end
-            if remaining <= 1 then
-                farm.fieldClusters[existingMaster] = nil
-                farm.fieldClusterMembers[existingMaster] = nil
-            end
-        end
     end
 end
 
@@ -1412,9 +1453,22 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
     end
 
     if mTrip then
-        if fieldId > 0 and mTrip._rhmLastProactiveCheckField ~= fieldId then
+        local currentMaster = self:getMasterFieldId(farmId, mTrip.fieldId)
+        local newMaster = (fieldId > 0) and self:getMasterFieldId(farmId, fieldId) or 0
+
+        -- If candidate fieldId already belongs to the same cluster master as the active trip,
+        -- harmonize fieldId immediately and do NOT trigger a proactive BFS rescan or false field change!
+        if currentMaster > 0 and newMaster > 0 and currentMaster == newMaster then
+            fieldId = currentMaster
+            mTrip.fieldId = currentMaster
+            if updateFarmTrip then
+                trip.fieldId = currentMaster
+            end
+        elseif fieldId > 0 and mTrip._rhmLastProactiveCheckField ~= fieldId then
             mTrip._rhmLastProactiveCheckField = fieldId
             self:discoverAndClusterMergedFields(farmId, fieldId, combine)
+            -- Re-evaluate master after potential discovery
+            newMaster = self:getMasterFieldId(farmId, fieldId)
         end
 
         local currentFillType = (combine.spec_rhm_Combine and combine.spec_rhm_Combine.lastFillType) or FillType.UNKNOWN
@@ -1422,8 +1476,8 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
                             and mTrip.fillTypeIndex ~= FillType.UNKNOWN 
                             and mTrip.fillTypeIndex ~= currentFillType 
                             and (mTrip.harvestedLiters or 0) > 50)
-        local currentMaster = self:getMasterFieldId(farmId, mTrip.fieldId)
-        local newMaster = (fieldId > 0) and self:getMasterFieldId(farmId, fieldId) or 0
+        currentMaster = self:getMasterFieldId(farmId, mTrip.fieldId)
+        newMaster = (fieldId > 0) and self:getMasterFieldId(farmId, fieldId) or 0
         local fieldChanged = (newMaster > 0 and currentMaster > 0 and currentMaster ~= newMaster and ((mTrip.harvestedLiters or 0) > 50 or (mTrip.harvestedAreaHa or 0) > 0.01))
 
         local shouldReset = false
@@ -1434,13 +1488,13 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
                 rhm_log(string.format("[RHM_HarvestTracker] Crop changed during operation -> archiving session for Field %d", currentMaster))
             elseif fieldChanged then
                 -- Check if newMaster is physically connected / adjacent to currentMaster
-                local isConnected = self:areFieldsPhysicallyConnected(farmId, currentMaster, newMaster)
+                local isConnected = self:areFieldsPhysicallyConnected(farmId, currentMaster, newMaster, combine)
 
                 if isConnected then
                     -- Merged fields: Continuous harvesting across boundaries
                     -- Automatically cluster these fields and run transitive BFS expansion
                     self:clusterFields(farmId, currentMaster, newMaster)
-                    self:discoverAndClusterMergedFields(farmId, currentMaster)
+                    self:discoverAndClusterMergedFields(farmId, currentMaster, combine)
                     local unifiedMaster = self:getMasterFieldId(farmId, currentMaster)
                     fieldId = unifiedMaster
                     mTrip.fieldId = unifiedMaster
@@ -2511,45 +2565,7 @@ function RHM_HarvestTracker:getFarmFields(farmId)
     end
 
     -- Helper to resolve farmland ID for any field object
-    local function resolveFarmlandId(field)
-        if not field then return 0 end
-        if field.farmlandId and type(field.farmlandId) == "number" and field.farmlandId > 0 then
-            return field.farmlandId
-        end
-        local fl = (field.getFarmland and field:getFarmland()) or field.farmland
-        if fl then
-            local flid = (fl.getId and fl:getId()) or fl.id or fl.farmlandId
-            if flid and type(flid) == "number" and flid > 0 then
-                return flid
-            end
-        end
-        if g_farmlandManager and g_farmlandManager.getFarmlandIdAtWorldPosition then
-            if field.rootNode and field.rootNode ~= 0 and entityExists(field.rootNode) then
-                local wx, _, wz = getWorldTranslation(field.rootNode)
-                local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
-                if fid and fid > 0 then return fid end
-            end
-            if field.fieldPositionX and field.fieldPositionZ then
-                local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(field.fieldPositionX, field.fieldPositionZ)
-                if fid and fid > 0 then return fid end
-            end
-            if field.posX and field.posZ then
-                local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(field.posX, field.posZ)
-                if fid and fid > 0 then return fid end
-            end
-            if field.node and field.node ~= 0 and entityExists(field.node) then
-                local wx, _, wz = getWorldTranslation(field.node)
-                local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
-                if fid and fid > 0 then return fid end
-            end
-            if field.mapMarker and field.mapMarker ~= 0 and entityExists(field.mapMarker) then
-                local wx, _, wz = getWorldTranslation(field.mapMarker)
-                local fid = g_farmlandManager:getFarmlandIdAtWorldPosition(wx, wz)
-                if fid and fid > 0 then return fid end
-            end
-        end
-        return 0
-    end
+    local resolveFarmlandId = RHM_HarvestTracker.resolveFarmlandId
 
     -- Helper to calculate nominal area in hectares
     local function resolveFieldAreaHa(field, fmlId)

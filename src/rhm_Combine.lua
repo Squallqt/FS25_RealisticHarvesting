@@ -1236,7 +1236,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     end
 
     if rhm_Combine.weedLiveStates == nil then
-        local liveStates = {}
+        local liveStates = { [1] = true, [2] = true, [3] = true }
         local deadStates = {}
         local rep = weedSystem.getHerbicideReplacements and weedSystem:getHerbicideReplacements()
         local repTable = nil
@@ -1253,9 +1253,10 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         if repTable then
             for sourceState, targetState in pairs(repTable) do
                 if type(sourceState) == "number" and type(targetState) == "number" then
-                    -- sourceState represents active growing weed stages.
-                    -- targetState represents withered/dead weed stages produced by herbicide application.
-                    liveStates[sourceState] = true
+                    -- sourceState represents active growing weed stages. Must never be state 0 (clean soil).
+                    if sourceState ~= 0 then
+                        liveStates[sourceState] = true
+                    end
                     if targetState ~= 0 then
                         deadStates[targetState] = true
                     end
@@ -1263,30 +1264,13 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
             end
         end
 
-        -- Fallback: if replacements table is empty, query weedSystem factors
-        if not next(liveStates) and type(weedSystem.getFactors) == "function" then
-            local factors = weedSystem:getFactors()
-            if factors then
-                for st, f in pairs(factors) do
-                    if f and f > 0 then
-                        liveStates[st] = true
-                    end
-                end
-            end
-        end
-
-        -- Fallback default for FS25 standard weed density map:
-        -- In FS25: states 1..3 are live growing weeds; states >= 4 are withered or dead.
-        if not next(liveStates) then
-            for st = 1, 3 do
-                liveStates[st] = true
-            end
-        end
-
         -- Strictly remove any withered/dead/sprayed states from liveStates
         for deadState, _ in pairs(deadStates) do
             liveStates[deadState] = nil
         end
+
+        -- Strictly enforce state 0 (clean soil, zero weeds) is NEVER treated as live weeds
+        liveStates[0] = nil
 
         local mapId, firstChannel, numChannels = weedSystem:getDensityMapData()
         rhm_Combine.weedMapId = mapId
@@ -1336,15 +1320,24 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     end
 
     local isCutterOn = false
+    local isCutterLowered = false
     if activeCutter then
         if activeCutter.getIsTurnedOn then
             isCutterOn = activeCutter:getIsTurnedOn()
         else
             isCutterOn = true
         end
+
+        if activeCutter.getIsLowered then
+            isCutterLowered = activeCutter:getIsLowered(true)
+        elseif activeCutter.spec_cutter and activeCutter.spec_cutter.allowCuttingWhileRaised then
+            isCutterLowered = true
+        else
+            isCutterLowered = true
+        end
     end
 
-    if not activeCutter or not isCutterOn then
+    if not activeCutter or not isCutterOn or not isCutterLowered then
         return 0.0
     end
 
@@ -1438,7 +1431,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         local pz = sz + (wz - sz) * t + fz * lookAhead
         local py = (terrainRoot and getTerrainHeightAtWorldPos(terrainRoot, px, 0, pz)) or (sy + (wy - sy) * t)
 
-        -- 1. Ensure sample coordinate is within an authentic field or farmland
+        -- 1. Ensure sample coordinate is within an authentic cultivated field
         local inField = false
         if g_fieldManager and g_fieldManager.getFieldAtWorldPosition then
             local f = g_fieldManager:getFieldAtWorldPosition(px, pz)
@@ -1446,11 +1439,8 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
                 inField = true
             end
         end
-        if not inField and g_farmlandManager and g_farmlandManager.getFarmlandAtWorldPosition then
-            local farmland = g_farmlandManager:getFarmlandAtWorldPosition(px, pz)
-            if farmland and farmland ~= 0 then
-                inField = true
-            end
+        if not inField and FSDensityMapUtil and FSDensityMapUtil.getFieldDataAtWorldPosition then
+            inField = FSDensityMapUtil.getFieldDataAtWorldPosition(px, py, pz) ~= nil
         end
 
         if inField then

@@ -1442,11 +1442,26 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         local dtMs = self.lastUpdateInterval or 300
         self.underloadTimer = (self.underloadTimer or 0) + dtMs
 
-        -- Confirmation window: only accelerate if light crop has been sustained for >= 1.5 seconds
-        if self.underloadTimer >= 1500 then
-            -- Smooth, dignified acceleration (tau = 1.8s)
-            local blend = 1.0 - math.exp(-dtSec / 1.8)
-            self.speedLimit = currentLimit + (vEquilibrium - currentLimit) * blend
+        -- Confirmation window: only accelerate if light crop has been sustained for >= 3.2 seconds.
+        -- Transient tramlines (технічні колії), sprayer tracks, and micro-thin patches (2-3m) are completely ignored.
+        if self.underloadTimer >= 3200 then
+            -- Bound target acceleration: never surge straight to header max from steady harvesting
+            local targetSpeed = vEquilibrium
+            local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
+            if remembered and remembered > minSpeed then
+                targetSpeed = math.min(targetSpeed, remembered + 0.6)
+            end
+
+            -- Smooth hydrostatic acceleration (tau = 2.4s) with slew-rate cap (+0.35 km/h per sec)
+            local blend = 1.0 - math.exp(-dtSec / 2.4)
+            local speedDelta = (targetSpeed - currentLimit) * blend
+            local maxStep = 0.35 * dtSec
+            if speedDelta > maxStep then
+                speedDelta = maxStep
+            end
+            self.speedLimit = currentLimit + speedDelta
         end
     else
         -- Stable deadzone within +/- 0.15 km/h: hold steady!
