@@ -419,7 +419,8 @@ function RHM_HarvestSyncInitialEvent:readStream(streamId, connection)
                 if vehicle and type(vehicle) == "table" and vehicle.spec_rhm_Combine then
                     local vFarmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
                     if vFarmId == self.farmId and farm.combineTrips then
-                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
+                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or
+                            (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
                         local mTrip = farm.combineTrips[machineKey]
                         if not mTrip and vehicle.configFileName then
                             for k, v in pairs(farm.combineTrips) do

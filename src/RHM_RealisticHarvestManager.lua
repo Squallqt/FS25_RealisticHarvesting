@@ -328,13 +328,8 @@ function RHM_RealisticHarvestManager:setupSettingsHooks()
 
     local function ensureAdditionalGameSettings()
         if g_additionalSettingsManager and g_additionalSettingsManager.settingsPage then
-            local ok, err = pcall(function()
-                if g_additionalSettingsManager.settingsPage.updateAlternating then
-                    g_additionalSettingsManager.settingsPage:updateAlternating()
-                end
-            end)
-            if not ok then
-                rhm_log("RHM [Settings]: Auxiliary settings page update failed: " .. tostring(err))
+            if g_additionalSettingsManager.settingsPage.updateAlternating then
+                g_additionalSettingsManager.settingsPage:updateAlternating()
             end
         end
     end

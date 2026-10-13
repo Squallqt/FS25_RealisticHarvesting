@@ -485,7 +485,8 @@ function RHM_HarvestHistoryFields:updateData()
             overviewStatus = string.format("%d %s", #filteredItems, safeL10n("rhm_fields_contract", "Contract"))
             headerCountStr = string.format("%d %s  |  %s", #filteredItems, safeL10n("rhm_filter_contracts", "Contracts"), RHM_UnitConverter.formatArea(effectiveArea, sys))
         else
-            headerCountStr = string.format("%d %s (%d %s | %d %s)  |  %s", #filteredItems, safeL10n("rhm_col_field", "Fields"), totalOwnedCount, safeL10n("rhm_fields_owned", "Owned"), totalContractCount, safeL10n("rhm_fields_contract", "Contract"), RHM_UnitConverter.formatArea(effectiveArea, sys))
+            headerCountStr = string.format("%d %s (%d %s | %d %s)  |  %s", #filteredItems, safeL10n("rhm_col_field", "Fields"), totalOwnedCount, safeL10n("rhm_fields_owned",
+                "Owned"), totalContractCount, safeL10n("rhm_fields_contract", "Contract"), RHM_UnitConverter.formatArea(effectiveArea, sys))
         end
 
         local overviewItem = {
@@ -913,7 +914,8 @@ function RHM_HarvestHistoryFields:updateData()
                     yieldTha = yieldTha,
                     yield = (yieldTha > 0) and RHM_UnitConverter.formatYield(yieldTha, sys) or "--",
                     lostLiters = isLossEnabled and lostL or 0,
-                    lostTons = (isLossEnabled and lostL > 0) and (lostL * (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(cName) or 0.00075)) or 0,
+                    lostTons = (isLossEnabled and lostL > 0) and (lostL * (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and
+                        RHM_UnitConverter.getCropDensityTonsPerLiter(cName) or 0.00075)) or 0,
                     lossPct = isLossEnabled and lossPct or 0,
                     loss = isLossEnabled and ((bioVol > 0) and string.format("%.2f%%", lossPct) or "--") or "OFF",
                     money = moneyStr,
@@ -1058,7 +1060,8 @@ function RHM_HarvestHistoryFields:updateData()
             overviewStatus = string.format("%d %s", #filteredItems, safeL10n("rhm_fields_contract", "Contract"))
             headerCountStr = string.format("%d %s  |  %s", #filteredItems, safeL10n("rhm_filter_contracts", "Contracts"), RHM_UnitConverter.formatArea(effectiveArea, sys))
         else
-            headerCountStr = string.format("%d %s (%d %s | %d %s)  |  %s", #filteredItems, safeL10n("rhm_col_field", "Fields"), totalFarmOwnedCount, safeL10n("rhm_fields_owned", "Owned"), sContractCount, safeL10n("rhm_fields_contract", "Contract"), RHM_UnitConverter.formatArea(effectiveArea, sys))
+            headerCountStr = string.format("%d %s (%d %s | %d %s)  |  %s", #filteredItems, safeL10n("rhm_col_field", "Fields"), totalFarmOwnedCount, safeL10n("rhm_fields_owned",
+                "Owned"), sContractCount, safeL10n("rhm_fields_contract", "Contract"), RHM_UnitConverter.formatArea(effectiveArea, sys))
         end
 
         local covPct = (totalFarmNominalArea > 0.001) and ((fHarvestedArea / totalFarmNominalArea) * 100.0) or 0
@@ -1158,7 +1161,8 @@ function RHM_HarvestHistoryFields:updateSelectedCardData()
             self.fieldsSummaryTitle:setText(self.currentTitleStr or g_i18n:getText("rhm_tab_fields") or "FARM FIELDS OVERVIEW")
         end
         if self.fieldsSummaryCountText then
-            local countStr = entry.customHeaderCount or string.format("%d %s  |  %s", entry.totalFieldsCount or 0, g_i18n:getText("rhm_col_field") or "Fields", RHM_UnitConverter.formatArea(entry.totalNominalArea or entry.totalHarvestedArea or 0, sys))
+            local countStr = entry.customHeaderCount or string.format("%d %s  |  %s", entry.totalFieldsCount or 0, g_i18n:getText("rhm_col_field") or "Fields",
+                RHM_UnitConverter.formatArea(entry.totalNominalArea or entry.totalHarvestedArea or 0, sys))
             self.fieldsSummaryCountText:setText(countStr)
         end
 

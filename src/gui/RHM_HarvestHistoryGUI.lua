@@ -103,7 +103,8 @@ function RHM_HarvestHistoryGUI:getPlayerEnteredCombine()
                     or (veh.xmlFile and veh.xmlFile:hasProperty("vehicle.cottonHarvester"))
                 if not isCotton then
                     local isNonCombine = (veh.spec_baler ~= nil or veh.spec_pelletizer ~= nil or veh.spec_strawHarvestPelletizer ~= nil)
-                        or (veh.typeName and (veh.typeName:lower():find("baler") or veh.typeName:lower():find("pellet") or veh.typeName:lower():find("premos") or veh.typeName:lower():find("biobaler")))
+                        or (veh.typeName and (veh.typeName:lower():find("baler") or veh.typeName:lower():find("pellet") or veh.typeName:lower():find("premos") or
+                            veh.typeName:lower():find("biobaler")))
                     if isNonCombine then
                         return nil
                     end

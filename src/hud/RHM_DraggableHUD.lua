@@ -1221,7 +1221,8 @@ function RHMDraggableHUD:buildActiveCells()
         local farm = tracker:getFarmData(farmId)
         local mTrip = nil
         if farm and farm.combineTrips then
-            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self.vehicle)) or self.vehicle.configFileName or (self.vehicle.getFullName and self.vehicle:getFullName()) or "Harvester"
+            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self.vehicle)) or self.vehicle.configFileName or
+                (self.vehicle.getFullName and self.vehicle:getFullName()) or "Harvester"
             mTrip = farm.combineTrips[machineKey]
             if (not mTrip or (mTrip.harvestedLiters or 0) <= 0) and self.vehicle.configFileName then
                 for k, v in pairs(farm.combineTrips) do

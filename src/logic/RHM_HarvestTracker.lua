@@ -2141,7 +2141,8 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
     end
 
     -- If farm.currentTrip belongs to this machine or this field operation, also reset farm.currentTrip
-    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (combine and combine.getIsEntered and combine:getIsEntered()) or (mTrip.fieldId and mTrip.fieldId > 0 and farm.currentTrip.fieldId == mTrip.fieldId)) then
+    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (combine and combine.getIsEntered and
+        combine:getIsEntered()) or (mTrip.fieldId and mTrip.fieldId > 0 and farm.currentTrip.fieldId == mTrip.fieldId)) then
         farm.currentTrip.harvestedLiters = 0
         farm.currentTrip.harvestedMassKg = 0
         farm.currentTrip.harvestedAreaHa = 0
@@ -2628,7 +2629,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                     end
 
                     local cropName = (fStat and (fStat.lastCropName or fStat.lastCrop)) or "--"
-                    if (cropName == "--" or cropName == "UNKNOWN") and curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fid)) and curTrip.cropName and curTrip.cropName ~= "--" and curTrip.cropName ~= "UNKNOWN" then
+                    if (cropName == "--" or cropName == "UNKNOWN") and curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId,
+                        curTrip.fieldId) == fid)) and curTrip.cropName and curTrip.cropName ~= "--" and curTrip.cropName ~= "UNKNOWN" then
                         cropName = curTrip.cropName
                     end
                     if cropName == "--" then
@@ -2714,7 +2716,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                 local areaHa = resolveFieldAreaHa(nil, fmlId)
 
                 local cropName = (fStat and (fStat.lastCropName or fStat.lastCrop)) or "--"
-                if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fmlId and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fmlId and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                    farm.currentTrip.cropName ~= "UNKNOWN" then
                     cropName = farm.currentTrip.cropName
                 end
                 if cropName == "--" then
@@ -2792,7 +2795,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                     seen[fid] = true
 
                     local cropName = (fStat.lastCropName or fStat.lastCrop) or "--"
-                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                        farm.currentTrip.cropName ~= "UNKNOWN" then
                         cropName = farm.currentTrip.cropName
                     end
 
@@ -2870,7 +2874,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                         local ft = g_fillTypeManager:getFillTypeByIndex(mission.fillType)
                         if ft and ft.name then cropName = ft.name end
                     end
-                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                        farm.currentTrip.cropName ~= "UNKNOWN" then
                         cropName = farm.currentTrip.cropName
                     end
 
@@ -3577,7 +3582,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                     end
                     local entryDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(entry.cropName)) or 0.00075
                     fStat.harvestedLiters = fStat.harvestedLiters + (entry.harvested or 0)
-                    fStat.harvestedMassKg = fStat.harvestedMassKg + ((entry.harvestedMassKg and entry.harvestedMassKg > 0) and entry.harvestedMassKg or ((entry.harvested or 0) * entryDensity * 1000.0))
+                    fStat.harvestedMassKg = fStat.harvestedMassKg + ((entry.harvestedMassKg and entry.harvestedMassKg > 0) and entry.harvestedMassKg or ((entry.harvested or 0) *
+                        entryDensity * 1000.0))
                     fStat.harvestedAreaHa = fStat.harvestedAreaHa + (entry.areaHa or 0)
                     fStat.lostLiters = fStat.lostLiters + (entry.lost or 0)
                     fStat.lossMoney = fStat.lossMoney + (entry.lossMoney or 0)
@@ -3648,7 +3654,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                     local farmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
                     local farm = self.farms[farmId]
                     if farm and farm.combineTrips then
-                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
+                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or
+                            (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
                         if farm.combineTrips[machineKey] then
                             vehicle.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
                         else
@@ -3681,7 +3688,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                                 end
 
                                 vehicle.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
-                            elseif farm.currentTrip and (farm.currentTrip.harvestedLiters or 0) > 0 and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (farm.currentTrip.lastMachineKey and farm.currentTrip.lastMachineKey:find("#%d+$"))) then
+                            elseif farm.currentTrip and (farm.currentTrip.harvestedLiters or 0) > 0 and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey
+                                == machineKey or (farm.currentTrip.lastMachineKey and farm.currentTrip.lastMachineKey:find("#%d+$"))) then
                                 farm.combineTrips[machineKey] = {
                                     fieldId = farm.currentTrip.fieldId or 0,
                                     cropName = farm.currentTrip.cropName or "--",

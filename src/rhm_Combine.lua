@@ -396,7 +396,8 @@ function rhm_Combine:onLoad(savegame)
             or self.spec_pelletizer ~= nil
             or self.spec_strawHarvestPelletizer ~= nil
             or self.spec_baleShredder ~= nil
-            or (self.typeName and (self.typeName:lower():find("baler") or self.typeName:lower():find("pellet") or self.typeName:lower():find("premos") or self.typeName:lower():find("baleshredder") or self.typeName:lower():find("biobaler")))
+            or (self.typeName and (self.typeName:lower():find("baler") or self.typeName:lower():find("pellet") or self.typeName:lower():find("premos") or
+                self.typeName:lower():find("baleshredder") or self.typeName:lower():find("biobaler")))
             or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.baler") or self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
             spec.isRhmCombine = false
             return
@@ -1189,7 +1190,8 @@ function rhm_Combine:onCropTypeChanged(newCropName)
 
     if spec.loadCalculator then
         spec.loadCalculator.currentCrop = newCropName
-        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
+        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+            RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
         local remembered = spec.loadCalculator.cropHarvestingSpeeds and (spec.loadCalculator.cropHarvestingSpeeds[canonical] or spec.loadCalculator.cropHarvestingSpeeds[newCropName])
         remembered = remembered or spec.loadCalculator.lastHarvestingSpeed or (spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 and spec.loadCalculator.speedLimit)
         if remembered and remembered > 0 then
@@ -2312,7 +2314,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- UA: Зберігаємо робочу швидкість перед скиданням щоб розвороти на краю поля не стирали пам'ять
         if spec.loadCalculator and spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 then
             local activeCrop = spec.loadCalculator.currentCrop or (spec.combineMemory and spec.combineMemory.currentCrop)
-            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+                RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
             spec.loadCalculator.lastHarvestingSpeed = spec.loadCalculator.speedLimit
             if activeCrop then
                 spec.loadCalculator.cropHarvestingSpeeds = spec.loadCalculator.cropHarvestingSpeeds or {}
@@ -2665,7 +2668,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                         tankCrop = "MAIZE_FORAGE"
                     end
                     if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
-                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
+                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel),
+                            tostring(spec.combineMemory.currentCrop)))
                         rhm_Combine.onCropTypeChanged(self, tankCrop)
                     end
                 end
@@ -3642,7 +3646,8 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
             end
             -- Реєструємо дію Перемикання Курсора Миші (MMB / Middle Mouse Click)
             if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
-                local _, cursorEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, self, rhm_Combine.actionToggleMouseCursor, false, true, false, true, nil, nil, true, true)
+                local _, cursorEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, self, rhm_Combine.actionToggleMouseCursor, false, true, false,
+                    true, nil, nil, true, true)
                 if cursorEventId then
                     g_inputBinding:setActionEventTextPriority(cursorEventId, GS_PRIO_NORMAL)
                     if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then

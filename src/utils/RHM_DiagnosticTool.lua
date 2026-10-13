@@ -407,7 +407,8 @@ function RHM_DiagnosticTool:update(dt)
                     end
                 end
                 print(string.format("Info: RHM_Diag:    Machine Trip: Field=%d%s | Harv=%.0f L (%.2f t) | Area=%.2f ha | Yield=%.1f t/ha | Fuel=%.1f L | Dur=%.0f s | Rank=%s | Active=%s",
-                    tonumber(masterId) or 0, clusterInfo, tonumber(t.harvestedLiters) or 0, tonumber(tMass) or 0, tonumber(t.harvestedAreaHa) or 0, tonumber(yieldTha) or 0, tonumber(t.fuelUsedL) or 0, tonumber(t.sessionDuration) or 0, tostring(rank), tostring(t.isActive)))
+                    tonumber(masterId) or 0, clusterInfo, tonumber(t.harvestedLiters) or 0, tonumber(tMass) or 0, tonumber(t.harvestedAreaHa) or 0, tonumber(yieldTha) or 0,
+                        tonumber(t.fuelUsedL) or 0, tonumber(t.sessionDuration) or 0, tostring(rank), tostring(t.isActive)))
             end
         end
     end
@@ -449,7 +450,8 @@ function RHM_DiagnosticTool:update(dt)
                 local ops = fStat.operationsCount or 1
 
                 print(string.format("Info: RHM_Diag:    Field %d Cumulative: Season %d | Crop=%s | Harv=%.0f L (%.2f t) | Area=%.2f ha | Yield=%.1f t/ha | Fuel=%.1f L | Ops=%d | NetMargin=+EUR %.0f",
-                    tonumber(fId) or 0, tonumber(fStat.lastYear or currentYear) or 1, tostring(cName or "--"), tonumber(fStat.harvestedLiters) or 0, tonumber(fMass) or 0, tonumber(fStat.harvestedAreaHa) or 0, tonumber(fYield) or 0, tonumber(fStat.fuelUsedL) or 0, tonumber(ops) or 1, tonumber(netMargin) or 0))
+                    tonumber(fId) or 0, tonumber(fStat.lastYear or currentYear) or 1, tostring(cName or "--"), tonumber(fStat.harvestedLiters) or 0, tonumber(fMass) or 0,
+                        tonumber(fStat.harvestedAreaHa) or 0, tonumber(fYield) or 0, tonumber(fStat.fuelUsedL) or 0, tonumber(ops) or 1, tonumber(netMargin) or 0))
             end
         end
         if fCount == 0 then

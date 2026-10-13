@@ -35,7 +35,8 @@ local function addNewStoreConfig(manager, superFunc, xmlFile, key, baseDir, cust
                 isNonCombine = true
             end
 
-            if storeCat == "balers" or storeCat == "round_balers" or storeCat == "square_balers" or storeCat == "bale_wrappers" or storeCat == "bale_loaders" or storeCat == "forage_wagons" or storeCat == "forage_wagon_vehicles" then
+            if storeCat == "balers" or storeCat == "round_balers" or storeCat == "square_balers" or storeCat == "bale_wrappers" or storeCat == "bale_loaders" or storeCat ==
+                "forage_wagons" or storeCat == "forage_wagon_vehicles" then
                 isNonCombine = true
             end
         end

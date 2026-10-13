@@ -981,7 +981,7 @@ function RHM_Api.unregisterEventListener(eventName, callback)
     end
 end
 
----EN: Dispatches an internal event to registered listeners safely (pcall).
+---EN: Dispatches an internal event to registered listeners; errors remain visible in the game log.
 ---UA: Безпечно розсилає подію зареєстрованим слухачам.
 ---@param eventName string
 ---@param ... any
@@ -989,10 +989,7 @@ function RHM_Api.dispatch(eventName, ...)
     local list = RHM_Api.listeners[eventName]
     if list == nil then return end
     for _, callback in ipairs(list) do
-        local ok, err = pcall(callback, ...)
-        if not ok then
-            rhm_log(string.format("RHM [API Event Error] %s: %s", eventName, tostring(err)))
-        end
+        callback(...)
     end
 end
 
@@ -1033,7 +1030,8 @@ function RHM_Api.getCombineTrip(vehicle)
         local farmId = (combine.getOwnerFarmId and combine:getOwnerFarmId()) or RHM_Api.getActiveFarmId()
         local farm = tracker:getFarmData(farmId)
         if farm and farm.combineTrips then
-            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(combine)) or combine.configFileName or (combine.getFullName and combine:getFullName()) or "Harvester"
+            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(combine)) or combine.configFileName or
+                (combine.getFullName and combine:getFullName()) or "Harvester"
             if farm.combineTrips[machineKey] then
                 if combine.spec_rhm_Combine then
                     combine.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
@@ -1050,7 +1048,8 @@ function RHM_Api.getCombineTrip(vehicle)
                 end
             end
         end
-        if farm and farm.currentTrip and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.001)) then
+        if farm and farm.currentTrip and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and
+            farm.currentTrip.harvestedAreaHa > 0.001)) then
             return farm.currentTrip
         end
     end

@@ -132,72 +132,95 @@ function RHM_NotificationManager:consoleCommandShowHint(name)
     name = tostring(name or "welcome"):upper():gsub("%s+", "")
     if name == "" or name == "WELCOME" or name == "1" then
         local title = "REALISTIC HARVESTING"
-        local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
+        local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or
+            "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open " .. "the combine calibration terminal."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: WELCOME"
     elseif name == "OVERLOAD" or name == "2" then
         local title = g_i18n:hasText("rhm_tut_overload_title") and g_i18n:getText("rhm_tut_overload_title") or "ENGINE OVERLOAD"
-        local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. Raise the cutter or reduce width to relieve pressure."
+        local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or
+            "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. " ..
+            "Raise the cutter or reduce width to relieve pressure."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: OVERLOAD"
     elseif name == "LOSS" or name == "3" then
         local title = g_i18n:hasText("rhm_tut_loss_title") and g_i18n:getText("rhm_tut_loss_title") or "CROP LOSS"
-        local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press Shift+K to load an optimal factory preset."
+        local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or
+            "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press " .. "Shift+K to load an optimal factory preset."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: LOSS"
     elseif name == "MOISTURE" or name == "4" then
         local title = g_i18n:hasText("rhm_tut_moisture_title") and g_i18n:getText("rhm_tut_moisture_title") or "HIGH MOISTURE"
-        local msg = g_i18n:hasText("rhm_tut_moisture_msg") and g_i18n:getText("rhm_tut_moisture_msg") or "Damp straw and grain require significantly more horsepower to thresh, reducing your harvesting speed and increasing loss risk. Harvest during dry conditions for optimal efficiency."
+        local msg = g_i18n:hasText("rhm_tut_moisture_msg") and g_i18n:getText("rhm_tut_moisture_msg") or
+            "Damp straw and grain require significantly more horsepower to thresh, reducing your harvesting speed and increasing " ..
+            "loss risk. Harvest during dry conditions for optimal efficiency."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: MOISTURE"
     elseif name == "HEADLAND" or name == "5" then
         local title = g_i18n:hasText("rhm_tut_headland_title") and g_i18n:getText("rhm_tut_headland_title") or "WORKING SPEED MEMORY"
-        local msg = g_i18n:hasText("rhm_tut_headland_msg") and g_i18n:getText("rhm_tut_headland_msg") or "The combine automatically remembers your cruising harvest speed across field turns. When lowering the header for the next row, it will smoothly accelerate back to this speed."
+        local msg = g_i18n:hasText("rhm_tut_headland_msg") and g_i18n:getText("rhm_tut_headland_msg") or
+            "The combine automatically remembers your cruising harvest speed across field turns. When lowering the header for " ..
+            "the next row, it will smoothly accelerate back to this speed."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: HEADLAND"
     elseif name == "UPGRADE" or name == "UPGRADE_TIERS" or name == "6" then
         local title = g_i18n:hasText("rhm_tut_upgrade_title") and g_i18n:getText("rhm_tut_upgrade_title") or "UPGRADE PACKAGES"
-        local msg = g_i18n:hasText("rhm_tut_upgrade_msg") and g_i18n:getText("rhm_tut_upgrade_msg") or "Harvester upgrade packages are available at the vehicle shop: Tier 2 (Sensors & Profiles), Tier 3 (Telemetry & Loss Monitor), and Tier 4 (Opti-Harvest AI autopilot)."
+        local msg = g_i18n:hasText("rhm_tut_upgrade_msg") and g_i18n:getText("rhm_tut_upgrade_msg") or
+            "Harvester upgrade packages are available at the vehicle shop: Tier 2 (Sensors & Profiles), Tier 3 (Telemetry & Loss " ..
+            "Monitor), and Tier 4 (Opti-Harvest AI autopilot)."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: UPGRADE"
     elseif name == "HUD" or name == "HUD_DRAG" or name == "7" then
         local title = g_i18n:hasText("rhm_tut_hud_drag_title") and g_i18n:getText("rhm_tut_hud_drag_title") or "INTERACTIVE HUD"
-        local msg = g_i18n:hasText("rhm_tut_hud_drag_msg") and g_i18n:getText("rhm_tut_hud_drag_msg") or "You can reposition the HUD anywhere by holding the Left Mouse Button (LMB) on the panel, or snap it cleanly beneath the F1 menu and screen edges."
+        local msg = g_i18n:hasText("rhm_tut_hud_drag_msg") and g_i18n:getText("rhm_tut_hud_drag_msg") or
+            "You can reposition the HUD anywhere by holding the Left Mouse Button (LMB) on the panel, or snap it cleanly beneath " .. "the F1 menu and screen edges."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: HUD_DRAG"
     elseif name == "TRIP" or name == "TRIP_COUNTER" or name == "8" then
         local title = g_i18n:hasText("rhm_tut_trip_title") and g_i18n:getText("rhm_tut_trip_title") or "FIELD JOB COUNTER"
-        local msg = g_i18n:hasText("rhm_tut_trip_msg") and g_i18n:getText("rhm_tut_trip_msg") or "Press Shift+J to view your field yield summary, financial loss analysis, and fleet status. To quickly reset the counter for a new field, hold Shift+R for 1 second in the cab!"
+        local msg = g_i18n:hasText("rhm_tut_trip_msg") and g_i18n:getText("rhm_tut_trip_msg") or
+            "Press Shift+J to view your field yield summary, financial loss analysis, and fleet status. To quickly reset the " ..
+            "counter for a new field, hold Shift+R for 1 second in the cab!"
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: TRIP_COUNTER"
     elseif name == "CHOPPER" or name == "STRAW_CHOPPER" or name == "9" then
         local title = g_i18n:hasText("rhm_tut_chopper_title") and g_i18n:getText("rhm_tut_chopper_title") or "STRAW CHOPPER POWER"
-        local msg = g_i18n:hasText("rhm_tut_chopper_msg") and g_i18n:getText("rhm_tut_chopper_msg") or "Chopping straw consumes an extra 15-20% of engine power compared to swathing. If you need more harvesting speed on dense crops, switch to laying a swath."
+        local msg = g_i18n:hasText("rhm_tut_chopper_msg") and g_i18n:getText("rhm_tut_chopper_msg") or
+            "Chopping straw consumes an extra 15-20% of engine power compared to swathing. If you need more harvesting speed on " .. "dense crops, switch to laying a swath."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: STRAW_CHOPPER"
     elseif name == "CALIB_WARN" or name == "CALIBRATION_WARN" or name == "10" then
         local title = g_i18n:hasText("rhm_tut_calib_warn_title") and g_i18n:getText("rhm_tut_calib_warn_title") or "COMBINE CALIBRATION"
-        local msg = string.format(g_i18n:hasText("rhm_tut_calib_warn_msg") and g_i18n:getText("rhm_tut_calib_warn_msg") or "The combine is not yet calibrated for %s! Operating with unadjusted clearance, rotor speed, or sieves causes extra engine load and severe grain losses. Press Shift+K to load an optimal factory preset.", "WHEAT")
+        local msg = string.format(g_i18n:hasText("rhm_tut_calib_warn_msg") and g_i18n:getText("rhm_tut_calib_warn_msg") or
+            "The combine is not yet calibrated for %s! Operating with unadjusted clearance, rotor speed, or sieves causes extra " ..
+            "engine load and severe grain losses. Press Shift+K to load an optimal factory preset.", "WHEAT")
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: CALIBRATION_WARN"
     elseif name == "CALIB_OK" or name == "CALIBRATION_OK" or name == "11" then
         local title = g_i18n:hasText("rhm_tut_calib_ok_title") and g_i18n:getText("rhm_tut_calib_ok_title") or "OPTIMAL CALIBRATION VERIFIED"
-        local msg = string.format(g_i18n:hasText("rhm_tut_calib_ok_msg") and g_i18n:getText("rhm_tut_calib_ok_msg") or "All combine threshing and cleaning mechanisms are calibrated within optimal tolerance for %s. Operating at maximum efficiency!", "WHEAT")
+        local msg = string.format(g_i18n:hasText("rhm_tut_calib_ok_msg") and g_i18n:getText("rhm_tut_calib_ok_msg") or
+            "All combine threshing and cleaning mechanisms are calibrated within optimal tolerance for %s. Operating at maximum " .. "efficiency!", "WHEAT")
         self:showNotification(title, msg, 6000, false)
         return "Displayed hint: CALIBRATION_OK"
     elseif name == "WEED" or name == "WEED_LOAD" or name == "12" then
         local title = g_i18n:hasText("rhm_tut_weed_title") and g_i18n:getText("rhm_tut_weed_title") or "WEED RESISTANCE"
-        local msg = g_i18n:hasText("rhm_tut_weed_msg") and g_i18n:getText("rhm_tut_weed_msg") or "Dense green weed patches under the cutterbar significantly increase cutting resistance and drum drag (+15-25% load). The speed controller slows down automatically to prevent intake clogging."
+        local msg = g_i18n:hasText("rhm_tut_weed_msg") and g_i18n:getText("rhm_tut_weed_msg") or
+            "Dense green weed patches under the cutterbar significantly increase cutting resistance and drum drag (+15-25% " ..
+            "load). The speed controller slows down automatically to prevent intake clogging."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: WEED_RESISTANCE"
     elseif name == "SLOPE" or name == "SLOPE_LOSS" or name == "13" then
         local title = g_i18n:hasText("rhm_tut_slope_title") and g_i18n:getText("rhm_tut_slope_title") or "SLOPE CROP LOSS"
-        local msg = g_i18n:hasText("rhm_tut_slope_msg") and g_i18n:getText("rhm_tut_slope_msg") or "Operating on hillside slopes tilts the cleaning shoe, causing grain to pool on one side of the chaffer and cascade out with the chaff. Reduce ground speed on cross-slopes to minimize losses."
+        local msg = g_i18n:hasText("rhm_tut_slope_msg") and g_i18n:getText("rhm_tut_slope_msg") or
+            "Operating on hillside slopes tilts the cleaning shoe, causing grain to pool on one side of the chaffer and cascade " ..
+            "out with the chaff. Reduce ground speed on cross-slopes to minimize losses."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: SLOPE_LOSS"
     elseif name == "WEAR" or name == "WEAR_LOSS" or name == "14" then
         local title = g_i18n:hasText("rhm_tut_wear_title") and g_i18n:getText("rhm_tut_wear_title") or "CUTTER & KNIFE WEAR"
-        local msg = g_i18n:hasText("rhm_tut_wear_msg") and g_i18n:getText("rhm_tut_wear_msg") or "Worn cutterbar knife sections and dull threshing elements increase intake drag and cause grain shattering losses at the header. Service your machinery at the workshop to restore peak performance."
+        local msg = g_i18n:hasText("rhm_tut_wear_msg") and g_i18n:getText("rhm_tut_wear_msg") or
+            "Worn cutterbar knife sections and dull threshing elements increase intake drag and cause grain shattering losses at " ..
+            "the header. Service your machinery at the workshop to restore peak performance."
         self:showNotification(title, msg, 0, false)
         return "Displayed hint: WEAR_LOSS"
     else
@@ -316,7 +339,8 @@ function RHM_NotificationManager:showNotification(title, text, durationMs, isTut
 
     local dynamicHeight = 0
     if hasTitle then
-        dynamicHeight = padTop + (#titleLines * titleLineHeight) + gapAfterTitle + titleDividerHeight + gapAfterTopDivider + (#lines * lineHeight) + gapBeforeBottomDivider + titleDividerHeight + gapBeforeFooter + closeGlyphHeight + padBottom
+        dynamicHeight = padTop + (#titleLines * titleLineHeight) + gapAfterTitle + titleDividerHeight + gapAfterTopDivider + (#lines * lineHeight) + gapBeforeBottomDivider +
+            titleDividerHeight + gapBeforeFooter + closeGlyphHeight + padBottom
     else
         dynamicHeight = padTop + (#lines * lineHeight) + gapBeforeFooter + closeGlyphHeight + padBottom
     end
@@ -596,7 +620,8 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 1: First Harvest / Welcome (triggers upon boarding combine)
     if not self.seenTutorials["WELCOME"] then
         local title = "REALISTIC HARVESTING"
-        local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open the combine calibration terminal."
+        local msg = g_i18n:hasText("rhm_tut_welcome_msg") and g_i18n:getText("rhm_tut_welcome_msg") or
+            "Harvesting speed is now dynamically controlled by crop density, engine power, and moisture. Press Shift+K to open " .. "the combine calibration terminal."
         self:showNotification(title, msg, 0, true, "WELCOME")
         return
     end
@@ -632,17 +657,22 @@ function RHM_NotificationManager:update(dt, combineVehicle)
                         if #badParams >= 2 then break end
                     end
                     local paramStr = table.concat(badParams, ", ")
-                    local template = g_i18n:hasText("rhm_tut_calib_warn_params_msg") and g_i18n:getText("rhm_tut_calib_warn_params_msg") or "Suboptimal settings detected for %s (%s out of tolerance)! Operating with misaligned components causes high power drag and crop losses. Press Shift+K to calibrate."
+                    local template = g_i18n:hasText("rhm_tut_calib_warn_params_msg") and g_i18n:getText("rhm_tut_calib_warn_params_msg") or
+                        "Suboptimal settings detected for %s (%s out of tolerance)! Operating with misaligned components causes high power " ..
+                        "drag and crop losses. Press Shift+K to calibrate."
                     msg = string.format(template, cropTitle, paramStr)
                 else
-                    local template = g_i18n:hasText("rhm_tut_calib_warn_msg") and g_i18n:getText("rhm_tut_calib_warn_msg") or "The combine is not yet calibrated for %s! Operating with unadjusted clearance, rotor speed, or sieves causes extra engine load and severe grain losses. Press Shift+K to load an optimal factory preset."
+                    local template = g_i18n:hasText("rhm_tut_calib_warn_msg") and g_i18n:getText("rhm_tut_calib_warn_msg") or
+                        "The combine is not yet calibrated for %s! Operating with unadjusted clearance, rotor speed, or sieves causes extra " ..
+                        "engine load and severe grain losses. Press Shift+K to load an optimal factory preset."
                     msg = string.format(template, cropTitle)
                 end
                 self:showNotification(title, msg, 0, true, calTutKey)
                 return
             else
                 local title = g_i18n:hasText("rhm_tut_calib_ok_title") and g_i18n:getText("rhm_tut_calib_ok_title") or "OPTIMAL CALIBRATION VERIFIED"
-                local template = g_i18n:hasText("rhm_tut_calib_ok_msg") and g_i18n:getText("rhm_tut_calib_ok_msg") or "All combine threshing and cleaning mechanisms are calibrated within optimal tolerance for %s. Operating at maximum efficiency!"
+                local template = g_i18n:hasText("rhm_tut_calib_ok_msg") and g_i18n:getText("rhm_tut_calib_ok_msg") or
+                    "All combine threshing and cleaning mechanisms are calibrated within optimal tolerance for %s. Operating at maximum " .. "efficiency!"
                 local msg = string.format(template, cropTitle)
                 self:showNotification(title, msg, 6000, true, calTutKey)
                 return
@@ -653,7 +683,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 3: Engine Overload (> 98%)
     if not isArcadeMotor and not self.seenTutorials["OVERLOAD"] and isHarvesting and load >= 98 then
         local title = g_i18n:hasText("rhm_tut_overload_title") and g_i18n:getText("rhm_tut_overload_title") or "ENGINE OVERLOAD"
-        local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. In extreme overloads, the threshing unit may clog."
+        local msg = g_i18n:hasText("rhm_tut_overload_msg") and g_i18n:getText("rhm_tut_overload_msg") or
+            "The combine is operating at peak capacity! The hydrostatic drive automatically slows down to protect the drum. In " ..
+            "extreme overloads, the threshing unit may clog."
         self:showNotification(title, msg, 0, true, "OVERLOAD")
         return
     end
@@ -661,7 +693,8 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 4: Excessive Crop Loss (> 1.5%)
     if not isArcadeLoss and not self.seenTutorials["LOSS"] and isHarvesting and cropLoss > 1.5 then
         local title = g_i18n:hasText("rhm_tut_loss_title") and g_i18n:getText("rhm_tut_loss_title") or "CROP LOSS"
-        local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press Shift+K to load an optimal factory preset."
+        local msg = g_i18n:hasText("rhm_tut_loss_msg") and g_i18n:getText("rhm_tut_loss_msg") or
+            "Excessive crop loss detected! Rotor speed, fan airflow, or sieve openings are misaligned for this crop. Press " .. "Shift+K to load an optimal factory preset."
         self:showNotification(title, msg, 0, true, "LOSS")
         return
     end
@@ -670,7 +703,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     local isRaining = g_currentMission and g_currentMission.environment and g_currentMission.environment.weather and g_currentMission.environment.weather:getIsRaining()
     if not self.seenTutorials["MOISTURE"] and isHarvesting and (moisture > 15.0 or isRaining) then
         local title = g_i18n:hasText("rhm_tut_moisture_title") and g_i18n:getText("rhm_tut_moisture_title") or "HIGH MOISTURE"
-        local msg = g_i18n:hasText("rhm_tut_moisture_msg") and g_i18n:getText("rhm_tut_moisture_msg") or "Damp straw and grain require significantly more horsepower to thresh, reducing your harvesting speed and increasing loss risk. Harvest during dry conditions for optimal efficiency."
+        local msg = g_i18n:hasText("rhm_tut_moisture_msg") and g_i18n:getText("rhm_tut_moisture_msg") or
+            "Damp straw and grain require significantly more horsepower to thresh, reducing your harvesting speed and increasing " ..
+            "loss risk. Harvest during dry conditions for optimal efficiency."
         self:showNotification(title, msg, 0, true, "MOISTURE")
         return
     end
@@ -680,7 +715,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     local weedRatio = (spec.data and spec.data.weedRatio) or (spec.loadCalculator and spec.loadCalculator.currentWeedRatio) or 0
     if not isArcadeMotor and not self.seenTutorials["WEED_LOAD"] and isHarvesting and isWeedEnabled and weedRatio >= 0.20 then
         local title = g_i18n:hasText("rhm_tut_weed_title") and g_i18n:getText("rhm_tut_weed_title") or "WEED RESISTANCE"
-        local msg = g_i18n:hasText("rhm_tut_weed_msg") and g_i18n:getText("rhm_tut_weed_msg") or "Dense green weed patches under the cutterbar significantly increase cutting resistance and drum drag (+15-25% load). The speed controller slows down automatically to prevent intake clogging."
+        local msg = g_i18n:hasText("rhm_tut_weed_msg") and g_i18n:getText("rhm_tut_weed_msg") or
+            "Dense green weed patches under the cutterbar significantly increase cutting resistance and drum drag (+15-25% " ..
+            "load). The speed controller slows down automatically to prevent intake clogging."
         self:showNotification(title, msg, 0, true, "WEED_LOAD")
         return
     end
@@ -690,7 +727,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     local slopeAngle = (spec.loadCalculator and spec.loadCalculator.smoothedSlopeAngle) or 0
     if not isArcadeLoss and not self.seenTutorials["SLOPE_LOSS"] and isHarvesting and isSlopeEnabled and slopeAngle >= 7.0 then
         local title = g_i18n:hasText("rhm_tut_slope_title") and g_i18n:getText("rhm_tut_slope_title") or "SLOPE CROP LOSS"
-        local msg = g_i18n:hasText("rhm_tut_slope_msg") and g_i18n:getText("rhm_tut_slope_msg") or "Operating on hillside slopes tilts the cleaning shoe, causing grain to pool on one side of the chaffer and cascade out with the chaff. Reduce ground speed on cross-slopes to minimize losses."
+        local msg = g_i18n:hasText("rhm_tut_slope_msg") and g_i18n:getText("rhm_tut_slope_msg") or
+            "Operating on hillside slopes tilts the cleaning shoe, causing grain to pool on one side of the chaffer and cascade " ..
+            "out with the chaff. Reduce ground speed on cross-slopes to minimize losses."
         self:showNotification(title, msg, 0, true, "SLOPE_LOSS")
         return
     end
@@ -708,7 +747,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     end
     if not isArcadeLoss and not self.seenTutorials["WEAR_LOSS"] and isHarvesting and isWearEnabled and (wearLoss >= 0.6 or cutterDamage >= 0.40) then
         local title = g_i18n:hasText("rhm_tut_wear_title") and g_i18n:getText("rhm_tut_wear_title") or "CUTTER & KNIFE WEAR"
-        local msg = g_i18n:hasText("rhm_tut_wear_msg") and g_i18n:getText("rhm_tut_wear_msg") or "Worn cutterbar knife sections and dull threshing elements increase intake drag and cause grain shattering losses at the header. Service your machinery at the workshop to restore peak performance."
+        local msg = g_i18n:hasText("rhm_tut_wear_msg") and g_i18n:getText("rhm_tut_wear_msg") or
+            "Worn cutterbar knife sections and dull threshing elements increase intake drag and cause grain shattering losses at " ..
+            "the header. Service your machinery at the workshop to restore peak performance."
         self:showNotification(title, msg, 0, true, "WEAR_LOSS")
         return
     end
@@ -716,7 +757,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 9: Headland Turn Speed Memory (cutter raised after >= 8s harvest)
     if not self.seenTutorials["HEADLAND"] and not isCutterActive and self.harvestActiveRunTime >= 8000 then
         local title = g_i18n:hasText("rhm_tut_headland_title") and g_i18n:getText("rhm_tut_headland_title") or "WORKING SPEED MEMORY"
-        local msg = g_i18n:hasText("rhm_tut_headland_msg") and g_i18n:getText("rhm_tut_headland_msg") or "The combine automatically remembers your cruising harvest speed across field turns. When lowering the header for the next row, it will smoothly accelerate back to this speed."
+        local msg = g_i18n:hasText("rhm_tut_headland_msg") and g_i18n:getText("rhm_tut_headland_msg") or
+            "The combine automatically remembers your cruising harvest speed across field turns. When lowering the header for " ..
+            "the next row, it will smoothly accelerate back to this speed."
         self:showNotification(title, msg, 0, true, "HEADLAND")
         return
     end
@@ -724,7 +767,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 10: Upgrade Tiers (2 cumulative minutes on Tier 1 combine)
     if not self.seenTutorials["UPGRADE_TIERS"] and spec.packageLevel == 1 and self.cumulativeTier1HarvestTime >= 120000 then
         local title = g_i18n:hasText("rhm_tut_upgrade_title") and g_i18n:getText("rhm_tut_upgrade_title") or "UPGRADE PACKAGES"
-        local msg = g_i18n:hasText("rhm_tut_upgrade_msg") and g_i18n:getText("rhm_tut_upgrade_msg") or "Harvester upgrade packages are available at the vehicle shop: Tier 2 (Sensors & Profiles), Tier 3 (Telemetry & Loss Monitor), and Tier 4 (Opti-Harvest AI autopilot)."
+        local msg = g_i18n:hasText("rhm_tut_upgrade_msg") and g_i18n:getText("rhm_tut_upgrade_msg") or
+            "Harvester upgrade packages are available at the vehicle shop: Tier 2 (Sensors & Profiles), Tier 3 (Telemetry & Loss " ..
+            "Monitor), and Tier 4 (Opti-Harvest AI autopilot)."
         self:showNotification(title, msg, 0, true, "UPGRADE_TIERS")
         return
     end
@@ -732,7 +777,8 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     -- TRIGGER 11: Interactive HUD Drag & Docking (after active harvesting run time >= 25s)
     if not self.seenTutorials["HUD_DRAG"] and self.harvestActiveRunTime >= 25000 then
         local title = g_i18n:hasText("rhm_tut_hud_drag_title") and g_i18n:getText("rhm_tut_hud_drag_title") or "INTERACTIVE HUD"
-        local msg = g_i18n:hasText("rhm_tut_hud_drag_msg") and g_i18n:getText("rhm_tut_hud_drag_msg") or "You can reposition the HUD anywhere by holding the Left Mouse Button (LMB) on the panel, or snap it cleanly beneath the F1 menu and screen edges."
+        local msg = g_i18n:hasText("rhm_tut_hud_drag_msg") and g_i18n:getText("rhm_tut_hud_drag_msg") or
+            "You can reposition the HUD anywhere by holding the Left Mouse Button (LMB) on the panel, or snap it cleanly beneath " .. "the F1 menu and screen edges."
         self:showNotification(title, msg, 0, true, "HUD_DRAG")
         return
     end
@@ -741,7 +787,9 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     local tripArea = (spec.trip and spec.trip.harvestedAreaHa) or 0
     if not self.seenTutorials["TRIP_COUNTER"] and tripArea >= 0.15 then
         local title = g_i18n:hasText("rhm_tut_trip_title") and g_i18n:getText("rhm_tut_trip_title") or "FIELD JOB COUNTER"
-        local msg = g_i18n:hasText("rhm_tut_trip_msg") and g_i18n:getText("rhm_tut_trip_msg") or "Press Shift+J to view your field yield summary, financial loss analysis, and fleet status. To quickly reset the counter for a new field, hold Shift+R for 1 second in the cab!"
+        local msg = g_i18n:hasText("rhm_tut_trip_msg") and g_i18n:getText("rhm_tut_trip_msg") or
+            "Press Shift+J to view your field yield summary, financial loss analysis, and fleet status. To quickly reset the " ..
+            "counter for a new field, hold Shift+R for 1 second in the cab!"
         self:showNotification(title, msg, 0, true, "TRIP_COUNTER")
         return
     end
@@ -750,7 +798,8 @@ function RHM_NotificationManager:update(dt, combineVehicle)
     local isChopperActive = (spec.data and spec.data.isStrawChopperActive) or (spec.loadCalculator and spec.loadCalculator.isStrawChopperActive) or false
     if not self.seenTutorials["STRAW_CHOPPER"] and isHarvesting and isChopperActive and load >= 85 then
         local title = g_i18n:hasText("rhm_tut_chopper_title") and g_i18n:getText("rhm_tut_chopper_title") or "STRAW CHOPPER POWER"
-        local msg = g_i18n:hasText("rhm_tut_chopper_msg") and g_i18n:getText("rhm_tut_chopper_msg") or "Chopping straw consumes an extra 15-20% of engine power compared to swathing. If you need more harvesting speed on dense crops, switch to laying a swath."
+        local msg = g_i18n:hasText("rhm_tut_chopper_msg") and g_i18n:getText("rhm_tut_chopper_msg") or
+            "Chopping straw consumes an extra 15-20% of engine power compared to swathing. If you need more harvesting speed on " .. "dense crops, switch to laying a swath."
         self:showNotification(title, msg, 0, true, "STRAW_CHOPPER")
         return
     end
@@ -866,8 +915,10 @@ function RHM_NotificationManager:draw()
             local mX = centerX - totalFooterW * 0.5
             local mY = footerY
 
-            self:drawBorderedRect(mX, mY, mWidth, mHeight, COLOR_BUTTON_BG[1], COLOR_BUTTON_BG[2], COLOR_BUTTON_BG[3], COLOR_BUTTON_BG[4], COLOR_BUTTON_BORDER[1], COLOR_BUTTON_BORDER[2], COLOR_BUTTON_BORDER[3], COLOR_BUTTON_BORDER[4])
-            self:drawRect(mX + self:scalePixelToScreenWidth(2), mY + mHeight * 0.5, (mWidth - self:scalePixelToScreenWidth(4)) * 0.5, (mHeight * 0.5) - self:scalePixelToScreenHeight(2), COLOR_ACCENT[1], COLOR_ACCENT[2], COLOR_ACCENT[3], 0.90)
+            self:drawBorderedRect(mX, mY, mWidth, mHeight, COLOR_BUTTON_BG[1], COLOR_BUTTON_BG[2], COLOR_BUTTON_BG[3], COLOR_BUTTON_BG[4], COLOR_BUTTON_BORDER[1],
+                COLOR_BUTTON_BORDER[2], COLOR_BUTTON_BORDER[3], COLOR_BUTTON_BORDER[4])
+            self:drawRect(mX + self:scalePixelToScreenWidth(2), mY + mHeight * 0.5, (mWidth - self:scalePixelToScreenWidth(4)) * 0.5, (mHeight * 0.5) -
+                self:scalePixelToScreenHeight(2), COLOR_ACCENT[1], COLOR_ACCENT[2], COLOR_ACCENT[3], 0.90)
 
             setTextAlignment(RenderText.ALIGN_LEFT)
             setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_MIDDLE)

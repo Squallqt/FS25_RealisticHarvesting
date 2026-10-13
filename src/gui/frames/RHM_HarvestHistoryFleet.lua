@@ -575,7 +575,8 @@ function RHM_HarvestHistoryFleet:updateTables()
                         local playerName = nil
                         local candVehicles = { vehicle, targetHarv, (vehicle and vehicle.rootVehicle), (targetHarv and targetHarv.rootVehicle) }
                         for _, v in ipairs(candVehicles) do
-                            if v and type(v) == "table" and ((v.getIsControlled and v:getIsControlled()) or (v.getIsEntered and v:getIsEntered()) or (v.spec_enterable and (v.spec_enterable.isControlled or v.spec_enterable.isEntered))) then
+                            if v and type(v) == "table" and ((v.getIsControlled and v:getIsControlled()) or (v.getIsEntered and v:getIsEntered()) or (v.spec_enterable and
+                                (v.spec_enterable.isControlled or v.spec_enterable.isEntered))) then
                                 -- 1. GIANTS native Enterable:getControllerName() (works on host, dedicated server, and multiplayer clients)
                                 if v.getControllerName then
                                     local cName = v:getControllerName()
@@ -925,11 +926,14 @@ function RHM_HarvestHistoryFleet:updateTables()
 
                     local avgYield = 0
                     if mTrip and mTrip.harvestedAreaHa and mTrip.harvestedAreaHa > 0.01 and totalHarvestedL > 0 then
-                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(mTrip.fillTypeIndex or mTrip.cropName)) or 0.00075
+                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(mTrip.fillTypeIndex or
+                            mTrip.cropName)) or 0.00075
                         local massKg = mTrip.harvestedMassKg or (totalHarvestedL * cDensity * 1000.0)
                         avgYield = (massKg * 0.001) / mTrip.harvestedAreaHa
-                    elseif farm and farm.currentTrip and farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.01 and (farm.currentTrip.lastMachineKey == machineKey or isControlled) then
-                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(farm.currentTrip.fillTypeIndex or farm.currentTrip.cropName)) or 0.00075
+                    elseif farm and farm.currentTrip and farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.01 and (farm.currentTrip.lastMachineKey ==
+                        machineKey or isControlled) then
+                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and
+                            RHM_UnitConverter.getCropDensityTonsPerLiter(farm.currentTrip.fillTypeIndex or farm.currentTrip.cropName)) or 0.00075
                         avgYield = ((farm.currentTrip.harvestedMassKg or (farm.currentTrip.harvestedLiters * cDensity * 1000.0)) * 0.001) / farm.currentTrip.harvestedAreaHa
                     end
 

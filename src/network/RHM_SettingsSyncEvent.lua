@@ -87,7 +87,8 @@ function RHM_SettingsSyncEvent:run(connection)
         local settings = g_realisticHarvestManager.settings
         if settings then
             rhm_log(string.format("RHM [Network]: RHM: [Sync] Server APPLYING settings - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, IndLaunch: %s, Moisture: %s, AutoReset: %d",
-                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture), self.autoResetTripMode or 1))
+                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableIndependentLaunch),
+                        tostring(self.enableMoisture), self.autoResetTripMode or 1))
 
             -- EN: Apply the received split difficulty fields and feature flags.
             -- UA: Застосовуємо отримані розділені поля складності та прапорці функцій.
@@ -148,8 +149,10 @@ function RHM_SettingsSyncEvent:run(connection)
             settings.enableIndependentLaunch = self.enableIndependentLaunch
             settings.enableMoisture = self.enableMoisture
             
-            rhm_log(string.format("RHM [Network]: RHM: [Sync] Client received update - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, SlopeLoss: %s, WeedLoad: %s, IndLaunch: %s, Moisture: %s, AutoReset: %d",
-                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableSlopeLoss), tostring(self.enableWeedLoad), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture), self.autoResetTripMode or 1))
+            rhm_log(string.format("RHM [Network]: RHM: [Sync] Client received update - Motor: %d, Loss: %d, Speed: %s, CropLoss: %s, SlopeLoss: %s, " ..
+                "WeedLoad: %s, IndLaunch: %s, Moisture: %s, AutoReset: %d",
+                    self.difficultyMotor, self.difficultyLoss, tostring(self.enableSpeedLimit), tostring(self.enableCropLoss), tostring(self.enableSlopeLoss),
+                        tostring(self.enableWeedLoad), tostring(self.enableIndependentLaunch), tostring(self.enableMoisture), self.autoResetTripMode or 1))
 
             if RHMSettingsUI and RHMSettingsUI.refreshUI then
                 RHMSettingsUI.refreshUI(settings)
