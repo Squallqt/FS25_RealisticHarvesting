@@ -2775,8 +2775,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                     end
 
                     if currentLimit and currentLimit > 0 and currentLimit ~= math.huge then
-                        -- EN: Continuous frame-level hydrostatic ramping prevents chunky 400ms speed staircase steps
-                        -- UA: Безперервне пофреймове згладжування гідростатики запобігає драбинчастим ривкам кожні 400мс
+                        -- EN: Continuous frame-level hydrostatic ramping prevents chunky speed staircase steps
+                        -- UA: Безперервне пофреймове згладжування гідростатики запобігає драбинчастим ривкам
                         local smoothed = spec._rhmSmoothedMotorLimit
                         if smoothed == nil then
                             smoothed = currentLimit
@@ -2784,11 +2784,11 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                             local dtSec = math.min(0.1, dt * 0.001)
                             if currentLimit < smoothed then
                                 local isHighLoad = (spec.data and spec.data.load and spec.data.load > 115)
-                                local maxDecelRate = isHighLoad and 1.6 or 0.75
+                                local maxDecelRate = isHighLoad and 1.4 or 0.65
                                 local maxStep = maxDecelRate * dtSec
                                 smoothed = math.max(currentLimit, smoothed - maxStep)
                             elseif currentLimit > smoothed then
-                                local maxAccelRate = 0.40
+                                local maxAccelRate = 0.35
                                 local maxStep = maxAccelRate * dtSec
                                 smoothed = math.min(currentLimit, smoothed + maxStep)
                             end
@@ -2796,7 +2796,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                         spec._rhmSmoothedMotorLimit = smoothed
 
                         local prev = spec._rhmLastMotorSpeedLimit
-                        if prev == nil or math.abs(prev - smoothed) >= 0.03 then
+                        if prev == nil or math.abs(prev - smoothed) >= 0.05 then
                             spec._rhmLastMotorSpeedLimit = smoothed
                             motor:setSpeedLimit(smoothed)
                         end
