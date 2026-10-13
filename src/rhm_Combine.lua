@@ -1318,7 +1318,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     end
 
     if rhm_Combine.weedLiveStates == nil then
-        local liveStates = { [1] = true, [2] = true, [3] = true }
+        local liveStates = { [3] = true, [4] = true, [5] = true, [6] = true }
         local deadStates = {}
         local rep = weedSystem.getHerbicideReplacements and weedSystem:getHerbicideReplacements()
         local repTable = nil
@@ -1333,10 +1333,12 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         end
 
         if repTable then
+            liveStates = {}
             for sourceState, targetState in pairs(repTable) do
                 if type(sourceState) == "number" and type(targetState) == "number" then
-                    -- sourceState represents active growing weed stages. Must never be state 0 (clean soil).
-                    if sourceState ~= 0 then
+                    -- GIANTS Engine 10: targetState == 0 represents preventative spraying on invisible seedbed states (1 & 2).
+                    -- Only targetState ~= 0 represents actual visible growing weeds (states 3, 4, 5, 6).
+                    if targetState ~= 0 and sourceState ~= 0 then
                         liveStates[sourceState] = true
                     end
                     if targetState ~= 0 then
@@ -1346,13 +1348,20 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
             end
         end
 
+        -- Fallback if repTable was empty or unconfigured
+        if not next(liveStates) then
+            liveStates = { [3] = true, [4] = true, [5] = true, [6] = true }
+        end
+
         -- Strictly remove any withered/dead/sprayed states from liveStates
         for deadState, _ in pairs(deadStates) do
             liveStates[deadState] = nil
         end
 
-        -- Strictly enforce state 0 (clean soil, zero weeds) is NEVER treated as live weeds
+        -- Strictly enforce state 0 (clean soil), state 1, and state 2 (invisible seedbed) are NEVER treated as live weeds
         liveStates[0] = nil
+        liveStates[1] = nil
+        liveStates[2] = nil
 
         local mapId, firstChannel, numChannels = weedSystem:getDensityMapData()
         rhm_Combine.weedMapId = mapId
@@ -1500,7 +1509,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     local numSamples = math.max(3, math.min(9, math.ceil(cutterWidth / 1.8)))
     local firstChan = rhm_Combine.weedFirstChannel or 0
     local mask = rhm_Combine.weedChannelMask or 15
-    local liveStates = rhm_Combine.weedLiveStates or { [1] = true, [2] = true, [3] = true }
+    local liveStates = rhm_Combine.weedLiveStates or { [3] = true, [4] = true, [5] = true, [6] = true }
 
     local liveCount = 0
     local validSamples = 0
