@@ -166,10 +166,8 @@ function RHMSettingsUI.inject(settings)
         diffOptions, settings.difficultyMotor,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.difficultyMotor = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.difficultyMotor = val
+            settings:saveAndSync("difficultyMotor")
         end)
     if motorOpt and motorOpt.setDisabled then motorOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.difficultyMotorOption = motorOpt
@@ -178,10 +176,8 @@ function RHMSettingsUI.inject(settings)
         diffOptions, settings.difficultyLoss,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.difficultyLoss = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.difficultyLoss = val
+            settings:saveAndSync("difficultyLoss")
         end)
     if lossOpt and lossOpt.setDisabled then lossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.difficultyLossOption = lossOpt
@@ -190,10 +186,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableSpeedLimit,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableSpeedLimit = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableSpeedLimit = val
+            settings:saveAndSync("enableSpeedLimit")
         end)
     if speedOpt and speedOpt.setDisabled then speedOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.speedLimitOption = speedOpt
@@ -202,10 +196,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableCropLoss,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableCropLoss = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableCropLoss = val
+            settings:saveAndSync("enableCropLoss")
         end)
     if cropLossOpt and cropLossOpt.setDisabled then cropLossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.cropLossOption = cropLossOpt
@@ -220,10 +212,8 @@ function RHMSettingsUI.inject(settings)
         aiTuningOptions, settings.aiHelperTuning or 1,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.aiHelperTuning = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.aiHelperTuning = val
+            settings:saveAndSync("aiHelperTuning")
         end)
     if aiTuningOpt and aiTuningOpt.setDisabled then aiTuningOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.aiTuningOption = aiTuningOpt
@@ -232,10 +222,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableWearLoss ~= false,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableWearLoss = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableWearLoss = val
+            settings:saveAndSync("enableWearLoss")
         end)
     if wearLossOpt and wearLossOpt.setDisabled then wearLossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.wearLossOption = wearLossOpt
@@ -244,10 +232,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableSlopeLoss ~= false,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableSlopeLoss = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableSlopeLoss = val
+            settings:saveAndSync("enableSlopeLoss")
         end)
     if slopeLossOpt and slopeLossOpt.setDisabled then slopeLossOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.slopeLossOption = slopeLossOpt
@@ -256,10 +242,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableWeedLoad ~= false,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableWeedLoad = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableWeedLoad = val
+            settings:saveAndSync("enableWeedLoad")
         end)
     if weedLoadOpt and weedLoadOpt.setDisabled then weedLoadOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.weedLoadOption = weedLoadOpt
@@ -268,10 +252,8 @@ function RHMSettingsUI.inject(settings)
         settings.enableMoisture,
         function(val)
             if not settings:canChangeServerSettings() then return end
-            settings.enableMoisture = val; settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
+            settings.enableMoisture = val
+            settings:saveAndSync("enableMoisture")
         end)
     if moistureEnableOpt and moistureEnableOpt.setDisabled then moistureEnableOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.moistureEnableOption = moistureEnableOpt
@@ -286,18 +268,7 @@ function RHMSettingsUI.inject(settings)
         function(val)
             if not settings:canChangeServerSettings() then return end
             settings.autoResetTripMode = val
-            settings:save()
-            if g_currentMission.missionDynamicInfo.isMultiplayer and RHM_SettingsSync then
-                RHM_SettingsSync:sendToClients(settings)
-            end
-            if g_currentMission:getIsServer() and g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker and g_realisticHarvestManager.harvestTracker.farms then
-                for _, farm in pairs(g_realisticHarvestManager.harvestTracker.farms) do
-                    if farm.farmSettings then
-                        farm.farmSettings.autoResetMode = val
-                        farm.farmSettings.autoResetOnFieldChange = (val ~= 3)
-                    end
-                end
-            end
+            settings:saveAndSync("autoResetTripMode")
         end)
     if autoResetOpt and autoResetOpt.setDisabled then autoResetOpt:setDisabled(not isAdmin) end
     RHMSettingsUI.autoResetOption = autoResetOpt

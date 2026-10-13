@@ -8,7 +8,7 @@ RHM_SettingsSync = {}
 
 -- EN: Broadcasts server settings to all clients. If called from a client admin, sends to server first.
 -- UA: Транслює серверні налаштування всім клієнтам. Якщо викликано від клієнта-адміна, спочатку надсилає на сервер.
-function RHM_SettingsSync:sendToClients(settings)
+function RHM_SettingsSync:sendToClients(settings, settingName)
     -- EN: Safety check for mission
     -- UA: Перевірка безпеки для місії
     if not g_currentMission then
@@ -19,7 +19,7 @@ function RHM_SettingsSync:sendToClients(settings)
     if not g_currentMission:getIsServer() then
         -- EN: We are a client (admin) — send the update to the server first.
         -- UA: Ми клієнт (адміністратор) — спочатку надсилаємо оновлення на сервер.
-        self:sendToServer(settings)
+        self:sendToServer(settings, settingName)
         return
     end
 
@@ -30,7 +30,7 @@ function RHM_SettingsSync:sendToClients(settings)
         return
     end
     
-    local event = RHM_SettingsSyncEvent.new(settings)
+    local event = RHM_SettingsSyncEvent.new(settings, settingName)
     g_server:broadcastEvent(event)
 end
 
@@ -38,7 +38,7 @@ end
 --     Only works if the caller is a client (not the server itself).
 -- UA: Надсилає оновлення налаштувань від клієнта-адміністратора на сервер.
 --     Працює тільки якщо викликано на клієнті (не на самому сервері).
-function RHM_SettingsSync:sendToServer(settings)
+function RHM_SettingsSync:sendToServer(settings, settingName)
     if g_currentMission:getIsServer() then
         return
     end
@@ -56,7 +56,7 @@ function RHM_SettingsSync:sendToServer(settings)
 
     rhm_log(string.format("RHM [Network]: RHM: [Sync] Sending event to server via connection %s", tostring(connection)))
     
-    local event = RHM_SettingsSyncEvent.new(settings)
+    local event = RHM_SettingsSyncEvent.new(settings, settingName)
     connection:sendEvent(event)
 
     rhm_log(string.format("RHM [Network]: RHM: [Sync] Event sent (Motor: %d, Loss: %d)", tostring(settings.difficultyMotor or 2), tostring(settings.difficultyLoss or 2)))

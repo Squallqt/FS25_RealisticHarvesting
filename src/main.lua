@@ -286,7 +286,7 @@ end
 -- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
 -- UA: Передаємо повний стан ферм та налаштування гравцю, який приєднується до сесії мультиплеєра
 local function onSendInitialClientState(mission, connection, isReconnect)
-    if mission and mission.isMultiplayer and connection and rhm and rhm.harvestTracker then
+    if mission and mission.missionDynamicInfo.isMultiplayer and connection and rhm and rhm.harvestTracker then
         -- Sync active global physics & farm settings
         if rhm.settings and RHM_SettingsSyncEvent then
             connection:sendEvent(RHM_SettingsSyncEvent.new(rhm.settings))

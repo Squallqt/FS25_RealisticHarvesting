@@ -86,150 +86,82 @@ function RHM_HarvestResetTripEvent:readStream(streamId, connection)
     self:run(connection)
 end
 
+local function clearTrip(trip, keepField)
+    if not trip then return end
+    for _, field in ipairs({ "harvestedLiters", "harvestedMassKg", "harvestedAreaHa", "lostLiters", "lossMoney", "fuelUsedL",
+        "sessionDuration", "avgSpeedSum", "avgSpeedCount", "avgLoadSum", "avgLoadCount" }) do
+        trip[field] = 0
+    end
+    trip.efficiencyRank = RHM_HarvestTracker.RANK_A
+    trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+    trip.isActive = false
+    if not keepField then
+        trip.fieldId = 0
+        trip.isContract = false
+        trip.cropName = "--"
+        trip.fillTypeIndex = FillType.UNKNOWN
+    end
+end
+
 function RHM_HarvestResetTripEvent:run(connection)
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     if not tracker then return end
+    local key = self.machineKey or ""
+    local vehicles = (g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles) or g_currentMission.vehicles
 
     if connection and not connection:getIsServer() then
-        -- Server validates permissions and executes reset (received from remote client)
         local user = g_currentMission.userManager and g_currentMission.userManager:getUserByConnection(connection)
-        
-        local combineObj = self.vehicle
-        local vehicles = (g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles) or g_currentMission.vehicles
-        if not combineObj and vehicles and self.machineKey and self.machineKey ~= "" then
-            for _, v in pairs(vehicles) do
-                if v and v.spec_rhm_Combine then
-                    local mk = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(v)) or v.configFileName
-                    if mk == self.machineKey or (v.configFileName and self.machineKey:sub(1, #v.configFileName) == v.configFileName) then
-                        combineObj = v
-                        break
-                    end
+        if not user then return end
+        local combine = self.vehicle
+        if not combine and key ~= "" then
+            for _, vehicle in pairs(vehicles or {}) do
+                if vehicle.spec_rhm_Combine and RHM_HarvestTracker.getMachineKey(vehicle) == key then
+                    combine = vehicle
+                    break
                 end
             end
         end
-
-        if combineObj then
-            tracker:resetTripForCombine(self.farmId, combineObj, user)
-        elseif self.machineKey and self.machineKey ~= "" then
-            local record = tracker:archiveAndResetCombineTrip(self.farmId, self.machineKey, nil)
-            if g_server then
-                g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(self.farmId, nil, type(record) == "table" and record or nil, self.machineKey), nil, nil, nil)
-            end
+        if combine then
+            if combine:getOwnerFarmId() ~= self.farmId then return end
+            tracker:resetTripForCombine(self.farmId, combine, user)
+        elseif key ~= "" then
+            tracker:resetTripForMachineKey(self.farmId, key, user)
         else
             tracker:resetTrip(self.farmId, user)
         end
-    else
-        -- Client received broadcast confirmation from server: clear local display & add archived record
-        local farm = tracker:getFarmData(self.farmId)
-        if farm then
-            if farm.currentTrip then
-                farm.currentTrip.harvestedLiters = 0
-                farm.currentTrip.harvestedMassKg = 0
-                farm.currentTrip.harvestedAreaHa = 0
-                farm.currentTrip.lostLiters = 0
-                farm.currentTrip.lossMoney = 0
-                farm.currentTrip.fuelUsedL = 0
-                farm.currentTrip.sessionDuration = 0
-                farm.currentTrip.avgSpeedSum = 0
-                farm.currentTrip.avgSpeedCount = 0
-                farm.currentTrip.avgLoadSum = 0
-                farm.currentTrip.avgLoadCount = 0
-                farm.currentTrip.efficiencyRank = RHM_HarvestTracker.RANK_A
-                farm.currentTrip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
-                farm.currentTrip.isActive = false
-                farm.currentTrip.fieldId = 0
-                farm.currentTrip.isContract = false
-                farm.currentTrip.cropName = "--"
-                farm.currentTrip.fillTypeIndex = FillType.UNKNOWN
-            end
-            if self.vehicle and self.vehicle.spec_rhm_Combine then
-                if self.vehicle.resetTrip then self.vehicle:resetTrip() end
-                local mKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self.vehicle)) or self.vehicle.configFileName
-                if farm.combineTrips and farm.combineTrips[mKey] then
-                    local mTrip = farm.combineTrips[mKey]
-                    mTrip.harvestedLiters = 0
-                    mTrip.harvestedMassKg = 0
-                    mTrip.harvestedAreaHa = 0
-                    mTrip.lostLiters = 0
-                    mTrip.lossMoney = 0
-                    mTrip.fuelUsedL = 0
-                    mTrip.sessionDuration = 0
-                    mTrip.avgSpeedSum = 0
-                    mTrip.avgSpeedCount = 0
-                    mTrip.avgLoadSum = 0
-                    mTrip.avgLoadCount = 0
-                    mTrip.efficiencyRank = RHM_HarvestTracker.RANK_A
-                    mTrip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
-                    mTrip.isActive = false
-                    mTrip.fieldId = 0
-                    mTrip.isContract = false
-                    mTrip.cropName = "--"
-                    mTrip.fillTypeIndex = FillType.UNKNOWN
-                end
-            end
-            if farm.combineTrips then
-                local cfg = (self.vehicle and self.vehicle.configFileName)
-                for k, mTrip in pairs(farm.combineTrips) do
-                    local match = (self.machineKey and self.machineKey ~= "" and (k == self.machineKey or k:find(self.machineKey, 1, true) ~= nil))
-                        or (cfg and (k == cfg or k:sub(1, #cfg) == cfg))
-                    if match and mTrip then
-                        mTrip.harvestedLiters = 0
-                        mTrip.harvestedMassKg = 0
-                        mTrip.harvestedAreaHa = 0
-                        mTrip.lostLiters = 0
-                        mTrip.lossMoney = 0
-                        mTrip.fuelUsedL = 0
-                        mTrip.sessionDuration = 0
-                        mTrip.avgSpeedSum = 0
-                        mTrip.avgSpeedCount = 0
-                        mTrip.avgLoadSum = 0
-                        mTrip.avgLoadCount = 0
-                        mTrip.efficiencyRank = RHM_HarvestTracker.RANK_A
-                        mTrip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
-                        mTrip.isActive = false
-                        mTrip.fieldId = 0
-                        mTrip.isContract = false
-                        mTrip.cropName = "--"
-                        mTrip.fillTypeIndex = FillType.UNKNOWN
-                    end
-                end
-            end
-            if self.record and type(self.record) == "table" and (self.record.fieldId or 0) > 0 then
-                farm.seasonHistory = farm.seasonHistory or {}
-                table.insert(farm.seasonHistory, 1, self.record)
-                if #farm.seasonHistory > 50 then
-                    table.remove(farm.seasonHistory)
-                end
-            end
-        end
+        return
+    end
 
-        -- Mirror directly to active client combine vehicle instances
-        local vehicles = (g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles) or g_currentMission.vehicles
-        if vehicles then
-            for _, vehicle in pairs(vehicles) do
-                if vehicle and type(vehicle) == "table" and vehicle.spec_rhm_Combine then
-                    local vFarmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
-                    if vFarmId == self.farmId then
-                        local mKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName
-                        local isTarget = not self.machineKey or self.machineKey == ""
-                            or mKey == self.machineKey
-                            or vehicle == self.vehicle
-                            or (vehicle.configFileName and self.machineKey and self.machineKey:find(vehicle.configFileName, 1, true) ~= nil)
-                        if isTarget then
-                            if vehicle.resetTrip then vehicle:resetTrip() end
-                            if farm and farm.combineTrips and farm.combineTrips[mKey] then
-                                vehicle.spec_rhm_Combine.trip = farm.combineTrips[mKey]
-                            elseif farm then
-                                vehicle.spec_rhm_Combine.trip = farm.currentTrip
-                            end
-                        end
-                    end
+    local farm = tracker:getFarmData(self.farmId)
+    if key == "" and self.vehicle then key = RHM_HarvestTracker.getMachineKey(self.vehicle) end
+    if key == "" or farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == key then
+        clearTrip(farm.currentTrip, key == "")
+        farm.currentTrip.lastMachineKey = nil
+    end
+    local notify = false
+    if key ~= "" then
+        clearTrip(farm.combineTrips and farm.combineTrips[key])
+        for _, vehicle in pairs(vehicles or {}) do
+            if vehicle.spec_rhm_Combine and vehicle:getOwnerFarmId() == self.farmId
+                and (vehicle == self.vehicle or RHM_HarvestTracker.getMachineKey(vehicle) == key) then
+                notify = notify or vehicle.spec_rhm_Combine.pendingQuickTripReset == true
+                vehicle.spec_rhm_Combine.pendingQuickTripReset = false
+                clearTrip(vehicle.spec_rhm_Combine.trip)
+                if farm.combineTrips and farm.combineTrips[key] then
+                    vehicle.spec_rhm_Combine.trip = farm.combineTrips[key]
                 end
             end
         end
-
-        if g_realisticHarvestManager and g_realisticHarvestManager.harvestHistoryGUI and g_realisticHarvestManager.harvestHistoryGUI.isOpen then
-            g_realisticHarvestManager.harvestHistoryGUI:refreshCurrentPage()
-        end
+    end
+    if notify and g_currentMission.showBlinkingWarning then
+        local msg = (g_i18n and g_i18n:hasText("rhm_trip_reset_done") and g_i18n:getText("rhm_trip_reset_done")) or "Harvest Trip Reset!"
+        g_currentMission:showBlinkingWarning(msg, 2000)
+    end
+    if self.record and (self.record.fieldId or 0) > 0 then
+        table.insert(farm.seasonHistory, 1, self.record)
+        if #farm.seasonHistory > 50 then table.remove(farm.seasonHistory) end
+    end
+    if g_realisticHarvestManager.harvestHistoryGUI and g_realisticHarvestManager.harvestHistoryGUI.isOpen then
+        g_realisticHarvestManager.harvestHistoryGUI:refreshCurrentPage()
     end
 end

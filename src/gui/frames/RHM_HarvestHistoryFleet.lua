@@ -217,7 +217,7 @@ local function isFarmVehicle(vehicle, farmId)
         if vehicle.getIsControlled and vehicle:getIsControlled() then
             return true, true, false
         end
-        local isMultiplayer = (g_currentMission and g_currentMission.isMultiplayer) or false
+        local isMultiplayer = (g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer) or false
         if not isMultiplayer and farmId == 1 then
             return true, true, false
         end
@@ -232,7 +232,7 @@ local function isFarmVehicle(vehicle, farmId)
         return true, false, isLeased
     end
 
-    local isMultiplayer = (g_currentMission and g_currentMission.isMultiplayer) or false
+    local isMultiplayer = (g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer) or false
     if not isMultiplayer then
         -- In singleplayer, only vehicles owned by the active farm or currently operated by player belong to fleet
         if vehicle.getIsControlled and vehicle:getIsControlled() then
@@ -689,7 +689,7 @@ function RHM_HarvestHistoryFleet:updateTables()
                     end
 
                     local rhmSpec = targetHarv.spec_rhm_Combine or vehicle.spec_rhm_Combine
-                    local liveTph = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.tonPerHour) or 0
+                    local liveTph = (rhmSpec and rhmSpec.data and rhmSpec.data.tonPerHour) or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.tonPerHour) or 0
                     local liveAvgTph = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.avgTonPerHour) or 0
 
                     -- Real-time Activity Status
@@ -901,7 +901,8 @@ function RHM_HarvestHistoryFleet:updateTables()
                                     or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator:getTonPerHour()) or 0
                     local currentYield = (rhmSpec and rhmSpec.data and rhmSpec.data.yield)
                                       or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentYield) or 0
-                    local lastYield = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.lastValidYield) or 0
+                    local lastYield = (rhmSpec and rhmSpec.data and rhmSpec.data.lastValidYield)
+                                    or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.lastValidYield) or 0
                     local damage = (vehicle.getDamageAmount and vehicle:getDamageAmount()) or 0
 
                     -- Tracker cumulative records for this specific machine instance

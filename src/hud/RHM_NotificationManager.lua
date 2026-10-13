@@ -724,7 +724,7 @@ function RHM_NotificationManager:update(dt, combineVehicle)
 
     -- TRIGGER 7: Slope Losses (> 7 deg lateral tilt)
     local isSlopeEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableSlopeLoss ~= false)
-    local slopeAngle = (spec.loadCalculator and spec.loadCalculator.smoothedSlopeAngle) or 0
+    local slopeAngle = spec.data.slopeAngle or (spec.loadCalculator and spec.loadCalculator.smoothedSlopeAngle) or 0
     if not isArcadeLoss and not self.seenTutorials["SLOPE_LOSS"] and isHarvesting and isSlopeEnabled and slopeAngle >= 7.0 then
         local title = g_i18n:hasText("rhm_tut_slope_title") and g_i18n:getText("rhm_tut_slope_title") or "SLOPE CROP LOSS"
         local msg = g_i18n:hasText("rhm_tut_slope_msg") and g_i18n:getText("rhm_tut_slope_msg") or
@@ -736,7 +736,7 @@ function RHM_NotificationManager:update(dt, combineVehicle)
 
     -- TRIGGER 8: Cutter & Knife Wear (wear loss >= 0.6% or cutter damage >= 40%)
     local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
-    local wearLoss = (spec.loadCalculator and spec.loadCalculator.wearLoss) or 0
+    local wearLoss = spec.data.wearLoss or (spec.loadCalculator and spec.loadCalculator.wearLoss) or 0
     local cutterDamage = 0
     if combineVehicle.getAttachedImplements then
         for _, impl in pairs(combineVehicle:getAttachedImplements()) do

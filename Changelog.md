@@ -1,6 +1,18 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.3.0:
+- FIXED: Multiplayer calibration now confirms the applied settings and active crop status to the requesting player; host AUTO changes also reach other players.
+- FIXED: AUTO calibration announces success only after the server applies it, and does not calibrate another crop if the crop changes during the request.
+- FIXED: Multiplayer hillside, wear and straw chopper hints now use the current machine conditions.
+- FIXED: Multiplayer fleet records now show the current harvesting activity and retain the last measured yield when harvesting stops.
+- FIXED: Multiplayer pickup calibration now uses the harvested crop and pickup context received from the server.
+- FIXED: Multiplayer harvesting speed limits now respect a lower limit imposed by the game or other equipment.
+- FIXED: Server simulation settings can only be changed by a multiplayer administrator; other players can reset their own preferences without altering the shared simulation options.
+- FIXED: Joining or rejoining a multiplayer server now restores its saved simulation options instead of displaying local defaults.
+- FIXED: Changing a multiplayer simulation option no longer restores other options to older values.
+- FIXED: Saving a calibration preset in multiplayer no longer reapplies older machine settings.
+- FIXED: Hired workers can now use saved crop presets from players in their farm on multiplayer servers, while preserving player-calibrated settings and respecting disabled helper tuning.
+- FIXED: Returned and removed temporary machines are cleared from multiplayer fleet records without requiring the host to open the Fleet menu.
 - ADDED: Multi-tier crop filtering in Combine Calibration tablet (Shift+K) intersecting active cargo bunker fill types and attached cutter fruit types (e.g. corn headers display only maize and sunflower, grain headers display only cereals/oilseeds, and single-crop root harvesters display only their allowed crop).
 - IMPROVED: Authentic pod vegetable harvester classification (Oxbo EPD540E, BP2140E) featuring dedicated 3-slider vegetable calibration (cleaner fan, cleaning beaters, intake feeder) with pea and bean presets.
 - FIXED: Separated grape and olive calibration profiles, ensuring grape harvesters display strictly grape and olive harvesters display strictly olive.
@@ -11,7 +23,7 @@ Changelog 1.6.3.0:
 - FIXED: Live trip mass scale normalization in Field History cards ensuring harvested mass displays accurately in kilograms and tons.
 - FIXED: Resolved nil vehicle reference in Combine Calibration GUI (Shift+K) wear loss calculation.
 - FIXED: Header attachment loop iteration order in combine start threshing logic ensuring reliable implement engagement.
-- FIXED: Quick trip odometer reset on dedicated multiplayer servers when held by client players.
+- FIXED: Quick trip reset on multiplayer clients now waits for server confirmation before clearing the counter and showing success.
 - IMPROVED: Decoupled ground speed overload losses from total crop loss metrics for transparent in-cab telemetry.
 - OPTIMIZED: Centralized crop bulk density and active farm ID resolution across all UI frames and telemetry systems.
 - FIXED: Full support for cotton harvesters (John Deere CP690, CS770, Case IH Module Express 635) restored by disambiguating onboard baler/wrapper mechanisms from standalone balers.
@@ -43,21 +55,21 @@ Changelog 1.6.3.0:
 - FIXED: Forage harvester header engagement and telemetry calculation by traversing attached implements and guarding against missing combine specifications.
 - FIXED: Savegame XML boolean serialization in combine save routine preventing nil argument crashes during vehicle configuration reloads.
 - FIXED: Non-harvester processing units and balers incorrectly receiving combine harvester specialization and in-cab HUD displays.
-- FIXED: Calibration menu and fleet telematics live engine load readout on multiplayer clients by reading synchronized network telemetry data.
+- FIXED: Multiplayer engine load, horsepower, throughput and yield readouts now use the values received from the server.
 - FIXED: Dedicated server persistence by hooking FSCareerMissionInfo save routine ensuring realisticHarvestingData.xml is written on server autosaves and shutdown.
-- FIXED: Multiplayer initial client state synchronization in sendInitialClientState delivering full farm statistics and settings to joining players.
+- FIXED: Joining multiplayer players now receive all retained harvest records, machine counters and seasonal crop and loss totals.
 - FIXED: Dedicated server remote player detection in trip tracker ensuring master field odometers and live telemetry stream continuously.
 - FIXED: Multiplayer client mini-HUD trip indicators (average yield, area, mass, time) and Shift+J Job Counter telemetry replication.
 - FIXED: Text scaling in field statistics and trip counter menus preventing field numbers from becoming invisible.
 - FIXED: Live weed sensor detection across all crops, corn headers, and forage harvesters by sampling authentic terrain density map layers and removing non-existent API calls.
 - FIXED: Over-aggressive field clustering across roads and distant parcels by enforcing strict adjacent boundary contact and physical plowing verification.
 - FIXED: Fields menu overview area card labels and restored active season field visibility for newly purchased and in-progress fields.
-- FIXED: Vehicle data bleed when switching combines by enforcing strict machine key isolation in multiplayer network replication.
+- FIXED: Harvest counters and resets remain specific to each machine when several harvesters share the same model in multiplayer, including counters read by other mods.
 - FIXED: Fleet menu operating hours metric accurately reflecting cumulative harvester field work time instead of base game engine run hours.
 - FIXED: Dedicated server field trip reset allowing players to reset active odometers via GUI button and in-cab keybind with synchronized machine clearing.
-- FIXED: Single-click instant field odometer reset eliminating double-click requirement, ghost data revival, and input focus loss across mouse and keyboard bindings.
+- FIXED: Resetting a harvest counter now archives its session before clearing it, including resets from the harvest menu while on foot.
 - FIXED: Native vehicle savegame XML odometer persistence and connecting client stream synchronization ensuring active harvester trip telemetry survives server rejoins.
-- FIXED: Field statistics synchronization and session archiving upon field or crop transitions ensuring completed fields appear in seasonal records across all multiplayer clients.
+- FIXED: Multiplayer field, fleet and seasonal statistics now update during harvesting; completed sessions and merged fields stay consistent across clients.
 - FIXED: Property name parity in trip telemetry merging eliminating zeroed field progress, false 100% loss rates, and double-counted harvest volumes.
 
 Changelog 1.6.2.0:
