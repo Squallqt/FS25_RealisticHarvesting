@@ -3164,6 +3164,13 @@ function rhm_Combine:loadFromSavegame(savegame)
             avgSpeedCount    = readInt(tripKey .. "#avgSpeedCount", 0),
             avgLoadSum       = readFloat(tripKey .. "#avgLoadSum", 0),
             avgLoadCount     = readInt(tripKey .. "#avgLoadCount", 0),
+            reasons          = {
+                speed    = readFloat(tripKey .. ".reasons#speed", 0),
+                settings = readFloat(tripKey .. ".reasons#settings", 0),
+                moisture = readFloat(tripKey .. ".reasons#moisture", 0),
+                wear     = readFloat(tripKey .. ".reasons#wear", 0),
+                slope    = readFloat(tripKey .. ".reasons#slope", 0)
+            }
         }
         spec.trip = savedTrip
 
@@ -3853,7 +3860,7 @@ function rhm_Combine:resetTrip()
         avgLoadSum = 0,
         avgLoadCount = 0,
         efficiencyRank = "A",
-        reasons = { speed = 0, moisture = 0, wear = 0, slope = 0 },
+        reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 },
         isActive = false
     }
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
