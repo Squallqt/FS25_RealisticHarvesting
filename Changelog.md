@@ -1,6 +1,9 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.3.0:
+- ADDED: Multi-tier crop filtering in Combine Calibration tablet (Shift+K) intersecting active cargo bunker fill types and attached cutter fruit types (e.g. corn headers display only maize and sunflower, grain headers display only cereals/oilseeds, and single-crop root harvesters display only their allowed crop).
+- IMPROVED: Authentic pod vegetable harvester classification (Oxbo EPD540E, BP2140E) featuring dedicated 3-slider vegetable calibration (cleaner fan, cleaning beaters, intake feeder) with pea and bean presets.
+- FIXED: Separated grape and olive calibration profiles, ensuring grape harvesters display strictly grape and olive harvesters display strictly olive.
 - FIXED: Cotton harvester vehicle type preservation in GIANTS Engine 10, ensuring machines (John Deere CP690, Case IH Module Express 635) load seamlessly on maps and in the store without prerequisite validation deletion.
 - FIXED: Strict non-combine equipment filtering excluding cutting balers, mobile pelletizers, and standalone balers from store packages, PTO power drag, motor throttling, and HUD displays.
 - ADDED: Global Shift+J Harvest Menu availability across all vehicles and on-foot player contexts with dynamic combine trip tab filtering.

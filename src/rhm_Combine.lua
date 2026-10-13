@@ -491,6 +491,9 @@ function rhm_Combine:onLoad(savegame)
     elseif category == "beetVehicles" or category == "beetHarvesting" 
        or category == "potatoVehicles" or category == "potatoHarvesting"
        or category == "vegetableVehicles" or category == "vegetableHarvesting"
+       or category == "peaHarvesters" or catLower:find("pea") ~= nil
+       or category == "greenBeanHarvesters" or catLower:find("greenbean") ~= nil
+       or catLower:find("spinach") ~= nil
        or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
         machineType = "root"
     elseif category == "grapeVehicles" or category == "grapeHarvesting" then
@@ -539,7 +542,8 @@ function rhm_Combine:onLoad(savegame)
                                     elseif name:find("POTATO") or name:find("BEET") or name:find("CARROT")
                                        or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
                                        or name:find("SPINACH") or name:find("GREENBEAN") or name:find("GREEN_BEAN")
-                                       or name:find("SUGARCANE") or name:find("CABBAGE") then
+                                       or name:find("SUGARCANE") or name:find("CABBAGE")
+                                       or name == "PEA" or name == "PEAS" then
                                         hasRootFill = true
                                     elseif name == "COTTON" then
                                         hasCottonFill = true
