@@ -1449,6 +1449,12 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
         end
     end
     local mTrip = farm.combineTrips[machineKey]
+    if mTrip and not mTrip.reasons then
+        mTrip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+    end
+    if trip and not trip.reasons then
+        trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+    end
 
     -- Check if player is currently in this combine (supports local singleplayer & remote Dedicated Server clients)
     local isPlayerInThisCombine = false
@@ -1684,6 +1690,12 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
 
     -- Partition loss reasons proportionally (including calibration/settings)
     if lossReasons and lostLiters > 0 then
+        if mTrip and not mTrip.reasons then
+            mTrip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+        end
+        if updateFarmTrip and trip and not trip.reasons then
+            trip.reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
+        end
         local sumPcts = (lossReasons.speedPct or 0) + (lossReasons.settingsPct or 0) + (lossReasons.moisturePct or 0) + (lossReasons.wearPct or 0) + (lossReasons.slopePct or 0)
         if sumPcts > 0.001 then
             local spdAdd = lostLiters * ((lossReasons.speedPct or 0) / sumPcts)
