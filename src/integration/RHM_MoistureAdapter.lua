@@ -36,10 +36,7 @@ function RHM_MoistureAdapter.getObjectMoisture(vehicle, fillType)
     
     if uniqueId and ms.objectInfo then
         if ms.ensureObjectMoistureLoaded and type(vehicle) == "table" then
-            local ok, err = pcall(function() ms:ensureObjectMoistureLoaded(vehicle) end)
-            if not ok then
-                rhm_log(string.format("RHM [Moisture Adapter Error] ensureObjectMoistureLoaded: %s", tostring(err)))
-            end
+            ms:ensureObjectMoistureLoaded(vehicle)
         end
         
         local objectData = ms.objectInfo[uniqueId]
@@ -76,13 +73,9 @@ function RHM_MoistureAdapter.getObjectMoisture(vehicle, fillType)
     
     -- Generic external interface probe fallback
     if ms.getObjectMoisture then
-        local success, result = pcall(function()
-            return ms:getObjectMoisture(uniqueId, fillType)
-        end)
-        if success and result and type(result) == "number" then
+        local result = ms:getObjectMoisture(uniqueId, fillType)
+        if result and type(result) == "number" then
             return (result <= 1.0) and (result * 100.0) or result
-        elseif not success then
-            rhm_log(string.format("RHM [Moisture Adapter Error] getObjectMoisture: %s", tostring(result)))
         end
     end
     
@@ -96,14 +89,13 @@ end
 function RHM_MoistureAdapter.getMoistureAtPosition(x, z)
     if not RHM_MoistureAdapter.isActive or not x or not z then return nil end
     
-    local success, result = pcall(function()
-        return g_currentMission.MoistureSystem:getMoistureAtPosition(x, z)
-    end)
+    local ms = g_currentMission and g_currentMission.MoistureSystem
+    if not ms or not ms.getMoistureAtPosition then return nil end
+
+    local result = ms:getMoistureAtPosition(x, z)
     
-    if success and result and type(result) == "number" then
+    if result and type(result) == "number" then
         return result * 100 -- Convert 0-1 scale to percentage
-    elseif not success then
-        rhm_log(string.format("RHM [Moisture Adapter Error] getMoistureAtPosition: %s", tostring(result)))
     end
     
     return nil

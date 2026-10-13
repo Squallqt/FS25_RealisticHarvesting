@@ -331,7 +331,9 @@ end
 function RHM_Api.isStrawChopperActive(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isStrawChopperActive == true
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.isStrawChopperActive == true end
+        return spec.loadCalculator.isStrawChopperActive == true
     end
     return false
 end
@@ -368,8 +370,8 @@ end
 ---@return boolean
 function RHM_Api.isPickupActive(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
-    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isPickup == true
+    if combine and combine.spec_rhm_Combine then
+        return combine.spec_rhm_Combine.data and combine.spec_rhm_Combine.data.isPickup == true or false
     end
     return false
 end
@@ -406,6 +408,8 @@ end
 function RHM_Api.getFreshMatterThroughput(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.tonPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getTonPerHour() or 0.0
     end
     return 0.0
@@ -557,6 +561,8 @@ function RHM_Api.getTonPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.tonPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getTonPerHour() or 0.0
     end
     return 0.0
@@ -590,6 +596,8 @@ function RHM_Api.getLitersPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.litersPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getLitersPerHour() or 0.0
     end
     return 0.0
@@ -606,6 +614,8 @@ function RHM_Api.getHectaresPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.hectaresPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getHectaresPerHour() or 0.0
     end
     return 0.0
@@ -618,6 +628,8 @@ end
 function RHM_Api.getYield(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.yield or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator.currentYield or 0.0
     end
     return 0.0
@@ -630,7 +642,9 @@ end
 function RHM_Api.getLastValidYield(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.lastValidYield or 0.0
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.lastValidYield or 0.0 end
+        return spec.loadCalculator.lastValidYield or 0.0
     end
     return 0.0
 end
@@ -885,15 +899,16 @@ function RHM_Api.getOptimalSettings(vehicle)
             end
             local m = (rhmSpec.data and rhmSpec.data.moisture) or 0
             if m <= 0 and RHM_MoistureAdapter and RHM_MoistureAdapter.getStandingCropMoisture then
-                local fillType = rhmSpec.lastFillType or (rhmSpec.combineMemory and rhmSpec.combineMemory.currentCrop)
+                local fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex) or (rhmSpec.combineMemory and rhmSpec.combineMemory.currentCrop)
                 m = RHM_MoistureAdapter.getStandingCropMoisture(combine, fillType) or 0
             end
             context = {
                 machineType = rhmSpec.machineType or "grain",
                 moisture = m,
                 yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
-                isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-                fillType = rhmSpec.lastFillType,
+                weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or 0,
+                isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+                fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
                 fruitType = rhmSpec.lastFruitType,
                 dayTime = dayTimeHours,
                 isRaining = isRaining,
@@ -981,7 +996,7 @@ function RHM_Api.unregisterEventListener(eventName, callback)
     end
 end
 
----EN: Dispatches an internal event to registered listeners safely (pcall).
+---EN: Dispatches an internal event to registered listeners; errors remain visible in the game log.
 ---UA: Безпечно розсилає подію зареєстрованим слухачам.
 ---@param eventName string
 ---@param ... any
@@ -989,10 +1004,7 @@ function RHM_Api.dispatch(eventName, ...)
     local list = RHM_Api.listeners[eventName]
     if list == nil then return end
     for _, callback in ipairs(list) do
-        local ok, err = pcall(callback, ...)
-        if not ok then
-            rhm_log(string.format("RHM [API Event Error] %s: %s", eventName, tostring(err)))
-        end
+        callback(...)
     end
 end
 
@@ -1032,25 +1044,19 @@ function RHM_Api.getCombineTrip(vehicle)
     if tracker then
         local farmId = (combine.getOwnerFarmId and combine:getOwnerFarmId()) or RHM_Api.getActiveFarmId()
         local farm = tracker:getFarmData(farmId)
+        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(combine)) or combine.configFileName or
+            (combine.getFullName and combine:getFullName()) or "Harvester"
         if farm and farm.combineTrips then
-            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(combine)) or combine.configFileName or (combine.getFullName and combine:getFullName()) or "Harvester"
             if farm.combineTrips[machineKey] then
                 if combine.spec_rhm_Combine then
                     combine.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
                 end
                 return farm.combineTrips[machineKey]
-            elseif combine.configFileName then
-                for k, v in pairs(farm.combineTrips) do
-                    if k:sub(1, #combine.configFileName) == combine.configFileName then
-                        if combine.spec_rhm_Combine then
-                            combine.spec_rhm_Combine.trip = v
-                        end
-                        return v
-                    end
-                end
             end
         end
-        if farm and farm.currentTrip and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.001)) then
+        if farm and farm.currentTrip and farm.currentTrip.lastMachineKey == machineKey
+            and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and
+            farm.currentTrip.harvestedAreaHa > 0.001)) then
             return farm.currentTrip
         end
     end
@@ -1118,7 +1124,14 @@ end
 function RHM_Api.resetFarmTrip(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        return tracker:resetTrip(farmId or RHM_Api.getActiveFarmId(), nil)
+        local resolvedFarmId = farmId or RHM_Api.getActiveFarmId()
+        if g_currentMission and not g_currentMission:getIsServer() then
+            local connection = g_client and g_client:getServerConnection()
+            if not connection then return false end
+            connection:sendEvent(RHM_HarvestResetTripEvent.new(resolvedFarmId, nil))
+            return true
+        end
+        return tracker:resetTrip(resolvedFarmId, nil)
     end
     return false
 end

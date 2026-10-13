@@ -30,11 +30,24 @@ function RHM_HarvestTracker.new()
     return self
 end
 
+-- Only changed menu records enter the periodic network payload.
+function RHM_HarvestTracker:getPendingFarmSync(farmId)
+    self.pendingFarmSync = self.pendingFarmSync or {}
+    local pending = self.pendingFarmSync[farmId]
+    if not pending then
+        pending = { combineTrips = {}, fieldStats = {}, fleetStats = {}, yearlyStats = {} }
+        self.pendingFarmSync[farmId] = pending
+    end
+    self.isDirty = true
+    return pending
+end
+
 local function hasFarmManagementRights(farmId, user)
-    if not (g_currentMission and g_currentMission.isMultiplayer) then
+    if not (g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer) then
         return true
     end
     if not user then return true end
+    local userId = (user.getId and user:getId()) or user.userId
     -- If user belongs to this farm:
     if user.farmId and user.farmId == farmId then
         return true
@@ -44,25 +57,25 @@ local function hasFarmManagementRights(farmId, user)
         return true
     end
     if g_farmManager then
-        local userFarm = (g_farmManager.getFarmForPlayer and g_farmManager:getFarmForPlayer(user.userId)) or (g_farmManager.getFarmByUserId and g_farmManager:getFarmByUserId(user.userId))
+        local userFarm = (g_farmManager.getFarmForPlayer and g_farmManager:getFarmForPlayer(userId)) or (g_farmManager.getFarmByUserId and g_farmManager:getFarmByUserId(userId))
         if userFarm and userFarm.farmId == farmId then
             return true
         end
         local realFarm = g_farmManager:getFarmById(farmId)
         if realFarm then
-            if realFarm.ownerUserId and realFarm.ownerUserId == user.userId then
+            if realFarm.ownerUserId and realFarm.ownerUserId == userId then
                 return true
             end
-            if realFarm.isUserFarmManager and realFarm:isUserFarmManager(user.userId) then
+            if realFarm.isUserFarmManager and realFarm:isUserFarmManager(userId) then
                 return true
             end
-            if realFarm.getIsUserFarmManager and realFarm:getIsUserFarmManager(user.userId) then
+            if realFarm.getIsUserFarmManager and realFarm:getIsUserFarmManager(userId) then
                 return true
             end
-            if realFarm.isFarmManager and realFarm:isFarmManager(user.userId) then
+            if realFarm.isFarmManager and realFarm:isFarmManager(userId) then
                 return true
             end
-            if realFarm.isUserPlayer and realFarm:isUserPlayer(user.userId) then
+            if realFarm.isUserPlayer and realFarm:isUserPlayer(userId) then
                 return true
             end
         end
@@ -232,6 +245,7 @@ end
 ---EN: Prunes any orphaned contract/mission combines from farm fleet stats.
 ---UA: Очищає тимчасову контрактну/місійну техніку зі статистики парку ферми.
 function RHM_HarvestTracker:pruneMissionFleetStats(farmId)
+    if not g_currentMission:getIsServer() then return end
     local farm = self:getFarmData(farmId or 1)
     if farm and farm.fleetStats then
         local liveVehicles = (g_currentMission and g_currentMission.vehicleSystem and g_currentMission.vehicleSystem.vehicles)
@@ -241,6 +255,7 @@ function RHM_HarvestTracker:pruneMissionFleetStats(farmId)
         local liveKeys = {}
         for _, veh in pairs(liveVehicles) do
             if type(veh) == "table" then
+                liveKeys[RHM_HarvestTracker.getMachineKey(veh)] = true
                 local k = veh.configFileName
                 if k then liveKeys[k] = true end
                 if veh.getFullName and veh:getFullName() then liveKeys[veh:getFullName()] = true end
@@ -251,13 +266,17 @@ function RHM_HarvestTracker:pruneMissionFleetStats(farmId)
         for key, v in pairs(farm.fleetStats) do
             local isRentedOrMission = v.isMission or v.isLeased or v.isRental or RHM_HarvestTracker.isMissionCombine(nil, v.name, key)
             if isRentedOrMission then
-                local isLive = liveKeys[key] or (v.name and liveKeys[v.name])
+                local isLive = liveKeys[key]
                 if not isLive or RHM_HarvestTracker.isMissionCombine(nil, v.name, key) then
                     farm.fleetStats[key] = nil
                     if farm.combineTrips then
                         farm.combineTrips[key] = nil
                     end
-                    self.isDirty = true
+                    local pending = self:getPendingFarmSync(farmId or 1)
+                    pending.fleetStats = farm.fleetStats
+                    pending.combineTrips = farm.combineTrips
+                    pending.replaceFleetStats = true
+                    pending.replaceCombineTrips = true
                 end
             end
         end
@@ -268,7 +287,11 @@ function RHM_HarvestTracker:pruneMissionFleetStats(farmId)
                 local baseKey = string.match(mKey, "^([^#]+)") or mKey
                 if not liveKeys[mKey] and not liveKeys[baseKey] then
                     farm.combineTrips[mKey] = nil
-                    self.isDirty = true
+                    local pending = self:getPendingFarmSync(farmId or 1)
+                    pending.fleetStats = farm.fleetStats
+                    pending.combineTrips = farm.combineTrips
+                    pending.replaceFleetStats = true
+                    pending.replaceCombineTrips = true
                 end
             end
         end
@@ -293,7 +316,9 @@ function RHM_HarvestTracker:pruneMissionFleetStats(farmId)
                     target.totalLost = math.max(target.totalLost or 0, v.totalLost or 0)
                 end
                 farm.fleetStats[key] = nil
-                self.isDirty = true
+                local pending = self:getPendingFarmSync(farmId or 1)
+                pending.fleetStats = farm.fleetStats
+                pending.replaceFleetStats = true
             end
         end
     end
@@ -882,6 +907,7 @@ end
 ---EN: Discovers all connected/merged fields via transitive Breadth-First Search (BFS) graph traversal.
 ---UA: Проактивно виявляє всі зв'язані/об'єднані поля за допомогою транзитивного хвильового пошуку (BFS).
 function RHM_HarvestTracker:discoverAndClusterMergedFields(farmId, startFieldId, combine)
+    if not g_currentMission:getIsServer() then return end
     if not startFieldId or startFieldId <= 0 then return end
     local farm = self:getFarmData(farmId or 1)
     if not farm then return end
@@ -940,6 +966,7 @@ end
 ---EN: Clusters a member field under a master field, merging existing stats and clusters
 ---UA: Об'єднує підпорядковане поле з майстер-полем у єдиний кластер
 function RHM_HarvestTracker:clusterFields(farmId, masterId, memberId)
+    if not g_currentMission:getIsServer() then return end
     if not masterId or not memberId or masterId <= 0 or memberId <= 0 or masterId == memberId then return end
     local farm = self:getFarmData(farmId or 1)
     farm.fieldClusters = farm.fieldClusters or {}
@@ -994,12 +1021,16 @@ function RHM_HarvestTracker:clusterFields(farmId, masterId, memberId)
         farm.fieldStats[memberId] = nil
     end
 
-    self.isDirty = true
+    local pending = self:getPendingFarmSync(farmId or 1)
+    pending.fieldClusters = farm.fieldClusters
+    pending.fieldStats = farm.fieldStats or {}
+    pending.replaceFieldStats = true
 end
 
 ---EN: Removes a member field from its cluster
 ---UA: Вилучає поле з кластера
 function RHM_HarvestTracker:unclusterField(farmId, memberId)
+    if not g_currentMission:getIsServer() then return end
     if not memberId or memberId <= 0 then return end
     local farm = self:getFarmData(farmId or 1)
     if not farm or not farm.fieldClusterMembers then return end
@@ -1015,7 +1046,10 @@ function RHM_HarvestTracker:unclusterField(farmId, memberId)
         end
     end
     farm.fieldClusterMembers[memberId] = nil
-    self.isDirty = true
+    local pending = self:getPendingFarmSync(farmId or 1)
+    pending.fieldClusters = farm.fieldClusters
+    pending.fieldStats = farm.fieldStats or {}
+    pending.replaceFieldStats = true
 end
 
 ---EN: Returns sorted list of all member fields in a cluster
@@ -1436,11 +1470,6 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
 
     -- If player is sitting in this combine, or no master machine set yet, or same machine, update farm.currentTrip
     local updateFarmTrip = isPlayerInThisCombine or (trip.lastMachineKey == nil) or (trip.lastMachineKey == machineKey)
-    if not updateFarmTrip and trip.lastMachineKey and combine.configFileName then
-        if trip.lastMachineKey:sub(1, #combine.configFileName) == combine.configFileName then
-            updateFarmTrip = true
-        end
-    end
 
     -- Auto-reset: Check for automatic field or crop transition for THIS specific combine
     local autoResetMode = 1
@@ -1855,6 +1884,7 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
                     }
                     farm.seasonHistory = farm.seasonHistory or {}
                     table.insert(farm.seasonHistory, 1, archiveRecord)
+                    self:getPendingFarmSync(farmId).seasonHistory = farm.seasonHistory
                     if #farm.seasonHistory > 50 then
                         table.remove(farm.seasonHistory)
                     end
@@ -1940,13 +1970,27 @@ function RHM_HarvestTracker:onCombineHarvestTick(combine, farmId, liters, massKg
         end
     end
 
-    self.isDirty = true
+    local pending = self:getPendingFarmSync(farmId)
+    pending.combineTrips[machineKey] = mTrip
+    pending.fleetStats[machineKey] = fleetEntry
+    pending.yearlyStats[currentYear] = yStat
+    if fieldId > 0 then pending.fieldStats[fieldId] = farm.fieldStats[fieldId] end
+    if updateFarmTrip then pending.currentTrip = trip end
+end
+
+-- Fleet cleanup must also run on dedicated servers, which have no Fleet menu.
+function RHM_HarvestTracker:onVehiclesChanged()
+    self.needsFleetPrune = true
 end
 
 ---Periodic update on server to broadcast stats
 function RHM_HarvestTracker:update(dt)
     if not g_currentMission:getIsServer() then return end
 
+    if self.needsFleetPrune then
+        self.needsFleetPrune = false
+        for farmId in pairs(self.farms) do self:pruneMissionFleetStats(farmId) end
+    end
     self.timeSinceLastSync = self.timeSinceLastSync + dt
     if self.timeSinceLastSync >= self.syncInterval then
         if self.isDirty then
@@ -2037,7 +2081,16 @@ function RHM_HarvestTracker:archiveTripToHistory(farmId)
         efficiencyRank = RHM_HarvestTracker.RANK_A,
         isActive = false
     }
-    self.isDirty = true
+    local pending = self:getPendingFarmSync(farmId)
+    pending.currentTrip = farm.currentTrip
+    pending.seasonHistory = farm.seasonHistory
+    if record then
+        local year = (g_currentMission.environment and g_currentMission.environment.currentYear) or 1
+        pending.yearlyStats[year] = farm.yearlyStats[year]
+        if farm.fieldStats and farm.fieldStats[record.fieldId] then
+            pending.fieldStats[record.fieldId] = farm.fieldStats[record.fieldId]
+        end
+    end
     return record or true
 end
 
@@ -2047,6 +2100,7 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
     if not farmId or not machineKey then return false end
     local farm = self:getFarmData(farmId)
     local mTrip = farm.combineTrips and farm.combineTrips[machineKey]
+    local record
     if not mTrip then return false end
 
     -- Archive only if there is meaningful harvest data (> 50 L or > 0.01 ha)
@@ -2083,7 +2137,7 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
         local fStat = mTrip.fieldId and mTrip.fieldId > 0 and farm.fieldStats and farm.fieldStats[mTrip.fieldId]
         local actualYear = (fStat and fStat.lastYear) or mTrip.lastYear or currentYear
 
-        local record = {
+        record = {
             year = actualYear,
             fieldId = mTrip.fieldId or 0,
             isContract = (mTrip.isContract == true),
@@ -2141,7 +2195,7 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
     end
 
     -- If farm.currentTrip belongs to this machine or this field operation, also reset farm.currentTrip
-    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (combine and combine.getIsEntered and combine:getIsEntered()) or (mTrip.fieldId and mTrip.fieldId > 0 and farm.currentTrip.fieldId == mTrip.fieldId)) then
+    if farm.currentTrip and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey) then
         farm.currentTrip.harvestedLiters = 0
         farm.currentTrip.harvestedMassKg = 0
         farm.currentTrip.harvestedAreaHa = 0
@@ -2163,7 +2217,17 @@ function RHM_HarvestTracker:archiveAndResetCombineTrip(farmId, machineKey, combi
         farm.currentTrip.lastMachineKey = nil
     end
 
-    self.isDirty = true
+    local pending = self:getPendingFarmSync(farmId)
+    pending.currentTrip = farm.currentTrip
+    pending.seasonHistory = farm.seasonHistory
+    if record then
+        local year = (g_currentMission.environment and g_currentMission.environment.currentYear) or 1
+        pending.yearlyStats[year] = farm.yearlyStats[year]
+        if farm.fieldStats and farm.fieldStats[record.fieldId] then
+            pending.fieldStats[record.fieldId] = farm.fieldStats[record.fieldId]
+        end
+    end
+    pending.combineTrips[machineKey] = mTrip
     return record or true
 end
 
@@ -2628,7 +2692,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                     end
 
                     local cropName = (fStat and (fStat.lastCropName or fStat.lastCrop)) or "--"
-                    if (cropName == "--" or cropName == "UNKNOWN") and curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId, curTrip.fieldId) == fid)) and curTrip.cropName and curTrip.cropName ~= "--" and curTrip.cropName ~= "UNKNOWN" then
+                    if (cropName == "--" or cropName == "UNKNOWN") and curTrip and (curTrip.fieldId == fid or (self.getMasterFieldId and self:getMasterFieldId(farmId,
+                        curTrip.fieldId) == fid)) and curTrip.cropName and curTrip.cropName ~= "--" and curTrip.cropName ~= "UNKNOWN" then
                         cropName = curTrip.cropName
                     end
                     if cropName == "--" then
@@ -2714,7 +2779,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                 local areaHa = resolveFieldAreaHa(nil, fmlId)
 
                 local cropName = (fStat and (fStat.lastCropName or fStat.lastCrop)) or "--"
-                if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fmlId and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fmlId and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                    farm.currentTrip.cropName ~= "UNKNOWN" then
                     cropName = farm.currentTrip.cropName
                 end
                 if cropName == "--" then
@@ -2792,7 +2858,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                     seen[fid] = true
 
                     local cropName = (fStat.lastCropName or fStat.lastCrop) or "--"
-                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                        farm.currentTrip.cropName ~= "UNKNOWN" then
                         cropName = farm.currentTrip.cropName
                     end
 
@@ -2870,7 +2937,8 @@ function RHM_HarvestTracker:getFarmFields(farmId)
                         local ft = g_fillTypeManager:getFillTypeByIndex(mission.fillType)
                         if ft and ft.name then cropName = ft.name end
                     end
-                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and farm.currentTrip.cropName ~= "UNKNOWN" then
+                    if cropName == "--" and farm.currentTrip and farm.currentTrip.fieldId == fid and farm.currentTrip.cropName and farm.currentTrip.cropName ~= "--" and
+                        farm.currentTrip.cropName ~= "UNKNOWN" then
                         cropName = farm.currentTrip.cropName
                     end
 
@@ -3028,15 +3096,22 @@ end
 
 ---EN: Resets trip odometer for a specific combine or entire farm
 ---UA: Скидає одометр сесії для конкретного комбайна або всієї ферми
+function RHM_HarvestTracker:resetTripForMachineKey(farmId, machineKey, user)
+    if user and not hasFarmManagementRights(farmId, user) then return false end
+    local record = self:archiveAndResetCombineTrip(farmId, machineKey, nil)
+    if record == false then return false end
+    if g_server then
+        g_server:broadcastEvent(RHM_HarvestResetTripEvent.new(farmId, machineKey, type(record) == "table" and record or nil), nil, nil, nil)
+    end
+    return true
+end
+
 function RHM_HarvestTracker:resetTripForCombine(farmId, combine, user)
     if farmId == nil then return false end
     if user and not hasFarmManagementRights(farmId, user) then
         return false
     end
     if combine then
-        if combine.resetTrip then
-            combine:resetTrip()
-        end
         local machineKey = RHM_HarvestTracker.getMachineKey(combine)
         local record = self:archiveAndResetCombineTrip(farmId, machineKey, combine)
         if g_currentMission:getIsServer() and g_server then
@@ -3076,22 +3151,10 @@ end
 ---Broadcasts updated trip stats to all connected clients
 function RHM_HarvestTracker:broadcastUpdates()
     if not g_server then return end
-    for farmId, farm in pairs(self.farms) do
-        local shouldBroadcast = false
-        if farm.currentTrip and (farm.currentTrip.isActive or (farm.currentTrip.harvestedLiters or 0) > 0 or (farm.currentTrip.sessionDuration or 0) > 0) then
-            shouldBroadcast = true
-        elseif farm.combineTrips then
-            for _, mTrip in pairs(farm.combineTrips) do
-                if mTrip.isActive or (mTrip.harvestedLiters or 0) > 0 or (mTrip.sessionDuration or 0) > 0 then
-                    shouldBroadcast = true
-                    break
-                end
-            end
-        end
-        if shouldBroadcast and farm.currentTrip then
-            g_server:broadcastEvent(RHM_HarvestUpdateStatsEvent.new(farmId, farm.currentTrip), nil, nil, nil)
-        end
+    for farmId, pending in pairs(self.pendingFarmSync or {}) do
+        g_server:broadcastEvent(RHM_HarvestUpdateStatsEvent.new(farmId, pending), nil, nil, nil)
     end
+    self.pendingFarmSync = {}
 end
 
 -- ============================================================================
@@ -3577,7 +3640,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                     end
                     local entryDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(entry.cropName)) or 0.00075
                     fStat.harvestedLiters = fStat.harvestedLiters + (entry.harvested or 0)
-                    fStat.harvestedMassKg = fStat.harvestedMassKg + ((entry.harvestedMassKg and entry.harvestedMassKg > 0) and entry.harvestedMassKg or ((entry.harvested or 0) * entryDensity * 1000.0))
+                    fStat.harvestedMassKg = fStat.harvestedMassKg + ((entry.harvestedMassKg and entry.harvestedMassKg > 0) and entry.harvestedMassKg or ((entry.harvested or 0) *
+                        entryDensity * 1000.0))
                     fStat.harvestedAreaHa = fStat.harvestedAreaHa + (entry.areaHa or 0)
                     fStat.lostLiters = fStat.lostLiters + (entry.lost or 0)
                     fStat.lossMoney = fStat.lossMoney + (entry.lossMoney or 0)
@@ -3648,7 +3712,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                     local farmId = (vehicle.getOwnerFarmId and vehicle:getOwnerFarmId()) or 1
                     local farm = self.farms[farmId]
                     if farm and farm.combineTrips then
-                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
+                        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(vehicle)) or vehicle.configFileName or
+                            (vehicle.getFullName and vehicle:getFullName()) or "Harvester"
                         if farm.combineTrips[machineKey] then
                             vehicle.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
                         else
@@ -3681,7 +3746,8 @@ function RHM_HarvestTracker:loadFromXMLFile(xmlFile, rootKey)
                                 end
 
                                 vehicle.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
-                            elseif farm.currentTrip and (farm.currentTrip.harvestedLiters or 0) > 0 and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey == machineKey or (farm.currentTrip.lastMachineKey and farm.currentTrip.lastMachineKey:find("#%d+$"))) then
+                            elseif farm.currentTrip and (farm.currentTrip.harvestedLiters or 0) > 0 and (farm.currentTrip.lastMachineKey == nil or farm.currentTrip.lastMachineKey
+                                == machineKey or (farm.currentTrip.lastMachineKey and farm.currentTrip.lastMachineKey:find("#%d+$"))) then
                                 farm.combineTrips[machineKey] = {
                                     fieldId = farm.currentTrip.fieldId or 0,
                                     cropName = farm.currentTrip.cropName or "--",

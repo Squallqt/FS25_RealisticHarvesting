@@ -41,7 +41,7 @@ function RHM_DiagnosticTool:consoleDumpState()
     end
     print(string.format("Info: RHM_Diag: Current Environment Year: %d", currentYear))
 
-    local tracker = g_realisticHarvestTracker or (RHM_RealisticHarvestManager and RHM_RealisticHarvestManager.harvestTracker)
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     if not tracker then
         print("Warning: RHM_Diag: HarvestTracker singleton not found!")
         return
@@ -206,7 +206,7 @@ function RHM_DiagnosticTool:update(dt)
     end
 
     local farmId = self:getFarmId()
-    local tracker = g_realisticHarvestTracker or (RHM_RealisticHarvestManager and RHM_RealisticHarvestManager.harvestTracker)
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     local currentYear = (g_currentMission.environment and g_currentMission.environment.currentYear) or 1
 
     -- Discover combines on map
@@ -266,7 +266,7 @@ function RHM_DiagnosticTool:update(dt)
                 currentCrop = (spec.loadCalculator and spec.loadCalculator.currentCrop) or (spec.combineMemory and spec.combineMemory.currentCrop) or "--",
                 fieldId = (spec.trip and spec.trip.fieldId) or spec._lastDetectedFieldId or 0,
                 speedKmh = veh:getLastSpeed() or 0,
-                engineLoad = (veh.getMotorLoadPercentage and veh:getMotorLoadPercentage() * 100) or ((spec.lastEngineLoad or 0) * 100),
+                engineLoad = (spec.data and spec.data.load) or (veh.getMotorLoadPercentage and veh:getMotorLoadPercentage() * 100) or 0,
                 trip = spec.trip
             })
         end
@@ -299,7 +299,7 @@ function RHM_DiagnosticTool:update(dt)
         local v = c.vehicle
         local spec = c.spec
         local calc = spec.loadCalculator
-        local tph = (calc and calc:getTonPerHour()) or 0.0
+        local tph = (spec.data and spec.data.tonPerHour) or (calc and calc:getTonPerHour()) or 0.0
         local moisture = (spec.data and spec.data.moisture) or (calc and calc.currentMoisture) or 0
         local totalLossPct = (spec.data and spec.data.cropLoss) or 0
         local lossBioL = (spec.trip and spec.trip.lostLiters) or 0
@@ -329,8 +329,8 @@ function RHM_DiagnosticTool:update(dt)
             if carrier and carrier.spec_motorized then
                 fuelUsageLh = carrier.spec_motorized.lastFuelUsage or 0
             end
-            local effHp = (calc and calc.lastEffectiveHp) or (calc and calc:getEnginePowerHp(v)) or 0
-            local speedLimit = (calc and calc.speedLimit) or 0
+            local effHp = (spec.data and spec.data.effectiveHp) or (calc and calc.lastEffectiveHp) or (calc and calc:getEnginePowerHp(v)) or 0
+            local speedLimit = (spec.data and spec.data.recommendedSpeed) or (calc and calc.speedLimit) or 0
             local pTotal = (calc and calc.lastPowerTotal) or 0
             local pBase = (calc and calc.lastPowerBase) or 0
             local pHeader = (calc and calc.lastPowerHeader) or 0
@@ -338,10 +338,17 @@ function RHM_DiagnosticTool:update(dt)
             local pChopper = (calc and calc.lastPowerChopper) or 0
             local pSoil = (calc and calc.lastPowerSoil) or 0
 
-            print(string.format("Info: RHM_Diag:    Engine & Speed: Speed=%.1f km/h (Limit: %.1f km/h) | Load=%.0f%% | FuelRate=%.1f L/h | EffectivePower=%.0f HP",
-                tonumber(c.speedKmh) or 0, tonumber(speedLimit) or 0, tonumber(c.engineLoad) or 0, tonumber(fuelUsageLh) or 0, tonumber(effHp) or 0))
-            print(string.format("Info: RHM_Diag:    Power Balance: Total=%.1f HP [Base: %.1f HP | Header: %.1f HP | Thresh: %.1f HP | Chopper: %.1f HP | Soil: %.1f HP]",
-                tonumber(pTotal) or 0, tonumber(pBase) or 0, tonumber(pHeader) or 0, tonumber(pProcess) or 0, tonumber(pChopper) or 0, tonumber(pSoil) or 0))
+            if v.isServer then
+                print(string.format("Info: RHM_Diag:    Engine & Speed: Speed=%.1f km/h (Limit: %.1f km/h) | Load=%.0f%% | FuelRate=%.1f L/h | EffectivePower=%.0f HP",
+                    tonumber(c.speedKmh) or 0, tonumber(speedLimit) or 0, tonumber(c.engineLoad) or 0, tonumber(fuelUsageLh) or 0, tonumber(effHp) or 0))
+                print(string.format("Info: RHM_Diag:    Power Balance: Total=%.1f HP [Base: %.1f HP | Header: %.1f HP | Thresh: %.1f HP | Chopper: %.1f HP | Soil: %.1f HP]",
+                    tonumber(pTotal) or 0, tonumber(pBase) or 0, tonumber(pHeader) or 0, tonumber(pProcess) or 0, tonumber(pChopper) or 0, tonumber(pSoil) or 0))
+
+            else
+                print(string.format("Info: RHM_Diag:    Server telemetry: Speed=%.1f km/h (Limit: %.1f km/h) | Load=%.0f%% | EffectivePower=%.0f HP",
+                    tonumber(c.speedKmh) or 0, tonumber(speedLimit) or 0, tonumber(c.engineLoad) or 0, tonumber(effHp) or 0))
+                print("Info: RHM_Diag:    Detailed power balance, slope, wear and instantaneous loss breakdown are available in the server log.")
+            end
 
             -- 3. Header & Field Geometry
             local cutWidth = tonumber(c.cutterWidth) or 0
@@ -360,8 +367,14 @@ function RHM_DiagnosticTool:update(dt)
             local cutterDmg = ((calc and calc.lastCutterDamage) or 0) * 100
             local combineDmg = ((calc and calc.lastCombineDamage) or 0) * 100
             local weedNote = (weedPct <= 0.01) and " (Clean Field)" or ""
-            print(string.format("Info: RHM_Diag:    Conditions: Moisture=%.1f%% | Weeds=%.1f%%%s | Slope=%.1f deg | KnifeWear=%.0f%% | CombineWear=%.0f%%",
-                tonumber(moisture) or 0, tonumber(weedPct) or 0, weedNote, tonumber(slopeAngle) or 0, tonumber(cutterDmg) or 0, tonumber(combineDmg) or 0))
+            if v.isServer then
+                print(string.format("Info: RHM_Diag:    Conditions: Moisture=%.1f%% | Weeds=%.1f%%%s | Slope=%.1f deg | KnifeWear=%.0f%% | CombineWear=%.0f%%",
+                    tonumber(moisture) or 0, tonumber(weedPct) or 0, weedNote, tonumber(slopeAngle) or 0, tonumber(cutterDmg) or 0, tonumber(combineDmg) or 0))
+
+            else
+                print(string.format("Info: RHM_Diag:    Conditions: Moisture=%.1f%% | Weeds=%.1f%%%s",
+                    tonumber(moisture) or 0, tonumber(weedPct) or 0, weedNote))
+            end
 
             -- 5. Mechanical Tuning Settings (Shift+K)
             local set = spec.combineMemory and spec.combineMemory.currentSettings
@@ -375,22 +388,25 @@ function RHM_DiagnosticTool:update(dt)
             print(string.format("Info: RHM_Diag:    Tuning (Shift+K): Drum=%d%% | Concave=%d%% | Fan=%d%% | TopSieve=%d%% | BtmSieve=%d%% | Straw=%s",
                 tonumber(drumRpm) or 0, tonumber(concave) or 0, tonumber(fanRpm) or 0, tonumber(upSieve) or 0, tonumber(lowSieve) or 0, strawMode))
 
-            -- 6. Loss Breakdown
-            local lossBreakdown = calc and calc:getLossBreakdown()
-            local spdLoss = lossBreakdown and lossBreakdown.speedPct or 0
-            local setLoss = lossBreakdown and lossBreakdown.settingsPct or 0
-            local mstLoss = lossBreakdown and lossBreakdown.moisturePct or 0
-            local wearLoss = lossBreakdown and lossBreakdown.wearPct or 0
-            local slpLoss = lossBreakdown and lossBreakdown.slopePct or 0
-            local spdNote = (spdLoss == 0 and (tonumber(c.engineLoad) or 0) <= 80) and " (Load <=80%)" or ""
-            local slpNote = (slpLoss == 0 and (tonumber(slopeAngle) or 0) <= 4.0) and " (Slope <=4°)" or ""
-            print(string.format("Info: RHM_Diag:    Loss Breakdown: Total=%.2f%% (%.1f L) | [Speed: %.2f%%%s | Settings: %.2f%% | Moisture: %.2f%% | Wear: %.2f%% | Slope: %.2f%%%s]",
-                tonumber(totalLossPct) or 0, tonumber(lossBioL) or 0,
-                tonumber(spdLoss) or 0, spdNote,
-                tonumber(setLoss) or 0,
-                tonumber(mstLoss) or 0,
-                tonumber(wearLoss) or 0,
-                tonumber(slpLoss) or 0, slpNote))
+            if v.isServer then
+                -- 6. Loss Breakdown
+                local lossBreakdown = calc and calc:getLossBreakdown()
+                local spdLoss = lossBreakdown and lossBreakdown.speedPct or 0
+                local setLoss = lossBreakdown and lossBreakdown.settingsPct or 0
+                local mstLoss = lossBreakdown and lossBreakdown.moisturePct or 0
+                local wearLoss = lossBreakdown and lossBreakdown.wearPct or 0
+                local slpLoss = lossBreakdown and lossBreakdown.slopePct or 0
+                local spdNote = (spdLoss == 0 and (tonumber(c.engineLoad) or 0) <= 80) and " (Load <=80%)" or ""
+                local slpNote = (slpLoss == 0 and (tonumber(slopeAngle) or 0) <= 4.0) and " (Slope <=4°)" or ""
+                print(string.format("Info: RHM_Diag:    Loss Breakdown: Total=%.2f%% (%.1f L) | [Speed: %.2f%%%s | Settings: %.2f%% | Moisture: %.2f%% | Wear: %.2f%% | Slope: %.2f%%%s]",
+                    tonumber(totalLossPct) or 0, tonumber(lossBioL) or 0,
+                    tonumber(spdLoss) or 0, spdNote,
+                    tonumber(setLoss) or 0,
+                    tonumber(mstLoss) or 0,
+                    tonumber(wearLoss) or 0,
+                    tonumber(slpLoss) or 0, slpNote))
+
+            end
 
             -- 7. Machine Trip Odometer
             if c.trip then
@@ -407,7 +423,8 @@ function RHM_DiagnosticTool:update(dt)
                     end
                 end
                 print(string.format("Info: RHM_Diag:    Machine Trip: Field=%d%s | Harv=%.0f L (%.2f t) | Area=%.2f ha | Yield=%.1f t/ha | Fuel=%.1f L | Dur=%.0f s | Rank=%s | Active=%s",
-                    tonumber(masterId) or 0, clusterInfo, tonumber(t.harvestedLiters) or 0, tonumber(tMass) or 0, tonumber(t.harvestedAreaHa) or 0, tonumber(yieldTha) or 0, tonumber(t.fuelUsedL) or 0, tonumber(t.sessionDuration) or 0, tostring(rank), tostring(t.isActive)))
+                    tonumber(masterId) or 0, clusterInfo, tonumber(t.harvestedLiters) or 0, tonumber(tMass) or 0, tonumber(t.harvestedAreaHa) or 0, tonumber(yieldTha) or 0,
+                        tonumber(t.fuelUsedL) or 0, tonumber(t.sessionDuration) or 0, tostring(rank), tostring(t.isActive)))
             end
         end
     end
@@ -449,7 +466,8 @@ function RHM_DiagnosticTool:update(dt)
                 local ops = fStat.operationsCount or 1
 
                 print(string.format("Info: RHM_Diag:    Field %d Cumulative: Season %d | Crop=%s | Harv=%.0f L (%.2f t) | Area=%.2f ha | Yield=%.1f t/ha | Fuel=%.1f L | Ops=%d | NetMargin=+EUR %.0f",
-                    tonumber(fId) or 0, tonumber(fStat.lastYear or currentYear) or 1, tostring(cName or "--"), tonumber(fStat.harvestedLiters) or 0, tonumber(fMass) or 0, tonumber(fStat.harvestedAreaHa) or 0, tonumber(fYield) or 0, tonumber(fStat.fuelUsedL) or 0, tonumber(ops) or 1, tonumber(netMargin) or 0))
+                    tonumber(fId) or 0, tonumber(fStat.lastYear or currentYear) or 1, tostring(cName or "--"), tonumber(fStat.harvestedLiters) or 0, tonumber(fMass) or 0,
+                        tonumber(fStat.harvestedAreaHa) or 0, tonumber(fYield) or 0, tonumber(fStat.fuelUsedL) or 0, tonumber(ops) or 1, tonumber(netMargin) or 0))
             end
         end
         if fCount == 0 then

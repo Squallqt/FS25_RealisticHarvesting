@@ -52,6 +52,7 @@ function RHM_HarvestFarmSettingsEvent:run(connection)
 
     if g_currentMission:getIsServer() then
         local user = connection and g_currentMission.userManager:getUserByConnection(connection)
+        if connection and not connection:getIsServer() and not user then return end
         tracker:updateFarmSettings(self.farmId, self.settings, user)
     else
         local farm = tracker:getFarmData(self.farmId)

@@ -230,35 +230,46 @@ function RHMSettings:save()
     self.manager:saveSettings(self)
 end
 
-function RHMSettings:saveAndSync()
+function RHMSettings:saveAndSync(settingName)
+    if self:isAdmin() and (settingName == nil or settingName == "autoResetTripMode") then
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        for _, farm in pairs(tracker and tracker.farms or {}) do
+            if farm.farmSettings then
+                farm.farmSettings.autoResetMode = self.autoResetTripMode
+                farm.farmSettings.autoResetOnFieldChange = self.autoResetTripMode ~= 3
+            end
+        end
+    end
     self:save()
     if g_currentMission.missionDynamicInfo.isMultiplayer and
        self:isAdmin() and
        RHM_SettingsSync then
-        RHM_SettingsSync:sendToClients(self)
+        RHM_SettingsSync:sendToClients(self, settingName)
     end
 end
 
 -- EN: Resets all settings to their factory default values and saves immediately.
 -- UA: Скидає всі налаштування до заводських значень за замовчуванням і негайно зберігає.
 function RHMSettings:resetToDefaults()
-    self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
-    self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
-    self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
-    self.autoResetTripMode = RHMSettings.AUTO_RESET_SMART
-    self.enableSpeedLimit = true
-    self.enableCropLoss = true
-    self.enableWearLoss = true
-    self.enableSlopeLoss = true
-    self.enableWeedLoad = true
-    self.enableMoisture = true
+    if self:canChangeServerSettings() then
+        self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
+        self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
+        self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
+        self.autoResetTripMode = RHMSettings.AUTO_RESET_SMART
+        self.enableSpeedLimit = true
+        self.enableCropLoss = true
+        self.enableWearLoss = true
+        self.enableSlopeLoss = true
+        self.enableWeedLoad = true
+        self.enableMoisture = true
+        self.enableIndependentLaunch = true
+    end
     self.showHUD = true
     self.showLoad = true
     self.showProductivity = true
     self.showCropLoss = true
     self.showSpeed = true
     self.showMoisture = true
-    self.enableIndependentLaunch = true
     self.enableTutorials = true
     self.alarmMode = RHMSettings.ALARM_MODE_SMART
     self.enableAlarmSound = true
@@ -281,10 +292,9 @@ end
 ---EN: Sets whether wear-based crop loss is enabled
 ---UA: Встановлює чи увімкнено втрати від зносу техніки
 function RHMSettings:setEnableWearLoss(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableWearLoss = enabled
-    if self.save then
-        self:save()
-    end
+    self:saveAndSync("enableWearLoss")
 end
 
 ---EN: Gets whether tutorial hints are enabled
@@ -311,10 +321,9 @@ end
 ---EN: Sets whether slope loss simulation is enabled
 ---UA: Встановлює чи увімкнено втрати від нахилу рельєфу
 function RHMSettings:setEnableSlopeLoss(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableSlopeLoss = enabled
-    if self.save then
-        self:save()
-    end
+    self:saveAndSync("enableSlopeLoss")
 end
 
 ---EN: Gets whether weed resistance on engine load is enabled
@@ -326,10 +335,9 @@ end
 ---EN: Sets whether weed resistance on engine load is enabled
 ---UA: Встановлює чи увімкнено опір та навантаження від бур'янів
 function RHMSettings:setEnableWeedLoad(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableWeedLoad = enabled
-    if self.save then
-        self:save()
-    end
+    self:saveAndSync("enableWeedLoad")
 end
 
 ---EN: Gets HUD layout style (1=Compact, 2=Yield Monitor)

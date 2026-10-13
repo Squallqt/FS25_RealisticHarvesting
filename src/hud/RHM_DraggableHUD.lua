@@ -1217,26 +1217,18 @@ function RHMDraggableHUD:buildActiveCells()
     local trip = (self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.trip)
     local hasTripData = trip and ((trip.harvestedLiters or 0) > 0 or (trip.harvestedAreaHa or 0) > 0.001 or (trip.sessionDuration or 0) > 0)
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+    local machineKey = self.vehicle and RHM_HarvestTracker.getMachineKey(self.vehicle)
     if (not hasTripData) and tracker and self.vehicle then
         local farm = tracker:getFarmData(farmId)
         local mTrip = nil
         if farm and farm.combineTrips then
-            local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self.vehicle)) or self.vehicle.configFileName or (self.vehicle.getFullName and self.vehicle:getFullName()) or "Harvester"
             mTrip = farm.combineTrips[machineKey]
-            if (not mTrip or (mTrip.harvestedLiters or 0) <= 0) and self.vehicle.configFileName then
-                for k, v in pairs(farm.combineTrips) do
-                    if k:sub(1, #self.vehicle.configFileName) == self.vehicle.configFileName then
-                        mTrip = v
-                        break
-                    end
-                end
-            end
         end
         if mTrip then
             trip = mTrip
         elseif self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.trip then
             trip = self.vehicle.spec_rhm_Combine.trip
-        elseif farm and farm.currentTrip and (machineKey == nil or farm.currentTrip.lastMachineKey == machineKey) then
+        elseif farm and farm.currentTrip and (machineKey ~= nil and farm.currentTrip.lastMachineKey == machineKey) then
             trip = farm.currentTrip
         end
         if trip and self.vehicle and self.vehicle.spec_rhm_Combine then
@@ -1366,7 +1358,8 @@ function RHMDraggableHUD:buildActiveCells()
         local mode1 = self.displayModes.cell1 or "load"
         if mode1 == "loadHp" then
             local calc = self.vehicle and self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.loadCalculator
-            local effHp = (calc and calc.lastEffectiveHp) or (calc and calc:getEnginePowerHp(self.vehicle)) or 0
+            local effHp = (d.effectiveHp and d.effectiveHp > 0 and d.effectiveHp) or (calc and calc.lastEffectiveHp)
+                or (calc and calc:getEnginePowerHp(self.vehicle)) or 0
             local locHp = rhm_getLocalizedUnit("HP")
             if effHp > 10 then
                 local curHp = (loadVal / 100.0) * effHp

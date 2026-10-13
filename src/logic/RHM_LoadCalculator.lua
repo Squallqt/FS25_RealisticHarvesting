@@ -151,15 +151,15 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         if storeItem then
             local configs = motorObj.configurations or {}
             -- Try with returnValues = true (returns raw minPower, maxPower in HP)
-            local okVal, p1, p2 = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, true)
-            if okVal and p2 and tonumber(p2) and tonumber(p2) > 0 then
+            local p1, p2 = Motorized.getSpecValuePower(storeItem, motorObj, configs, nil, true)
+            if p2 and tonumber(p2) and tonumber(p2) > 0 then
                 resolvedHp = tonumber(p2)
-            elseif okVal and p1 and tonumber(p1) and tonumber(p1) > 0 then
+            elseif p1 and tonumber(p1) and tonumber(p1) > 0 then
                 resolvedHp = tonumber(p1)
             else
                 -- Try with returnValues = false (returns formatted string, e.g. "809 kW / 1100 hp" or "1100 hp")
-                local okStr, pStr = pcall(Motorized.getSpecValuePower, storeItem, motorObj, configs, nil, false)
-                if okStr and type(pStr) == "string" then
+                local pStr = Motorized.getSpecValuePower(storeItem, motorObj, configs, nil, false)
+                if type(pStr) == "string" then
                     local hpVal = pStr:match("(%d+[%d%,%.]*)%s*[Hh][Pp]") 
                                or pStr:match("(%d+[%d%,%.]*)%s*[Cc][Hh]")
                                or pStr:match("(%d+[%d%,%.]*)%s*л%.%s*с")
@@ -172,9 +172,6 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                             resolvedHp = tonumber(kwVal:gsub(",", ".")) * 1.35962
                         end
                     end
-                end
-                if not okVal and not okStr then
-                    rhm_log(string.format("RHM: Failed to inspect shop power specifications for %s: %s", tostring(motorObj:getName() or motorObj.configFileName), tostring(p1 or pStr)))
                 end
             end
         end
@@ -1198,7 +1195,8 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
             -- In heavy swaths, pickup auger & feed rolls have an intake capacity limit.
             -- When fresh mass exceeds nominal feed capacity, intake resistance rises sharply.
             if isPickup then
-                local isDryWindrow = (self.currentCrop and (string.find(string.upper(self.currentCrop), "HAY") or string.find(string.upper(self.currentCrop), "STRAW") or string.find(string.upper(self.currentCrop), "DRYGRASS")))
+                local isDryWindrow = (self.currentCrop and (string.find(string.upper(self.currentCrop), "HAY") or string.find(string.upper(self.currentCrop), "STRAW") or
+                    string.find(string.upper(self.currentCrop), "DRYGRASS")))
                 local pickupIntakeLimitTph = isDryWindrow and math.max(160.0, (effectiveEngineHp * 0.24) + 40.0) or math.max(280.0, (effectiveEngineHp * 0.40) + 60.0)
                 if avgTph > pickupIntakeLimitTph then
                     local surgeRatio = (avgTph - pickupIntakeLimitTph) / pickupIntakeLimitTph
@@ -1356,7 +1354,8 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
     -- This prevents the combine from charging into the standing crop at high speed and choking the cylinder!
     if (self.currentAvgMass or 0) <= 0.01 and (self.tonPerHour or 0) <= 0.05 then
         local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
-        local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+        local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+            RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
         local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
 
         -- EN: If the machine was actively harvesting in this pass (< 3.5s idle), hold working speed steady across gaps!
@@ -1533,7 +1532,8 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
             -- Bound target acceleration: never surge straight to header max from steady harvesting
             local targetSpeed = vEquilibrium
             local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
-            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+                RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
             local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
             if remembered and remembered > minSpeed then
                 targetSpeed = math.min(targetSpeed, remembered + 0.8)

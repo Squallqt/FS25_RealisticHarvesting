@@ -217,7 +217,7 @@ local function isFarmVehicle(vehicle, farmId)
         if vehicle.getIsControlled and vehicle:getIsControlled() then
             return true, true, false
         end
-        local isMultiplayer = (g_currentMission and g_currentMission.isMultiplayer) or false
+        local isMultiplayer = (g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer) or false
         if not isMultiplayer and farmId == 1 then
             return true, true, false
         end
@@ -232,7 +232,7 @@ local function isFarmVehicle(vehicle, farmId)
         return true, false, isLeased
     end
 
-    local isMultiplayer = (g_currentMission and g_currentMission.isMultiplayer) or false
+    local isMultiplayer = (g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer) or false
     if not isMultiplayer then
         -- In singleplayer, only vehicles owned by the active farm or currently operated by player belong to fleet
         if vehicle.getIsControlled and vehicle:getIsControlled() then
@@ -575,7 +575,8 @@ function RHM_HarvestHistoryFleet:updateTables()
                         local playerName = nil
                         local candVehicles = { vehicle, targetHarv, (vehicle and vehicle.rootVehicle), (targetHarv and targetHarv.rootVehicle) }
                         for _, v in ipairs(candVehicles) do
-                            if v and type(v) == "table" and ((v.getIsControlled and v:getIsControlled()) or (v.getIsEntered and v:getIsEntered()) or (v.spec_enterable and (v.spec_enterable.isControlled or v.spec_enterable.isEntered))) then
+                            if v and type(v) == "table" and ((v.getIsControlled and v:getIsControlled()) or (v.getIsEntered and v:getIsEntered()) or (v.spec_enterable and
+                                (v.spec_enterable.isControlled or v.spec_enterable.isEntered))) then
                                 -- 1. GIANTS native Enterable:getControllerName() (works on host, dedicated server, and multiplayer clients)
                                 if v.getControllerName then
                                     local cName = v:getControllerName()
@@ -688,7 +689,7 @@ function RHM_HarvestHistoryFleet:updateTables()
                     end
 
                     local rhmSpec = targetHarv.spec_rhm_Combine or vehicle.spec_rhm_Combine
-                    local liveTph = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.tonPerHour) or 0
+                    local liveTph = (rhmSpec and rhmSpec.data and rhmSpec.data.tonPerHour) or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.tonPerHour) or 0
                     local liveAvgTph = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.avgTonPerHour) or 0
 
                     -- Real-time Activity Status
@@ -900,7 +901,8 @@ function RHM_HarvestHistoryFleet:updateTables()
                                     or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator:getTonPerHour()) or 0
                     local currentYield = (rhmSpec and rhmSpec.data and rhmSpec.data.yield)
                                       or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentYield) or 0
-                    local lastYield = (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.lastValidYield) or 0
+                    local lastYield = (rhmSpec and rhmSpec.data and rhmSpec.data.lastValidYield)
+                                    or (rhmSpec and rhmSpec.loadCalculator and rhmSpec.loadCalculator.lastValidYield) or 0
                     local damage = (vehicle.getDamageAmount and vehicle:getDamageAmount()) or 0
 
                     -- Tracker cumulative records for this specific machine instance
@@ -925,11 +927,14 @@ function RHM_HarvestHistoryFleet:updateTables()
 
                     local avgYield = 0
                     if mTrip and mTrip.harvestedAreaHa and mTrip.harvestedAreaHa > 0.01 and totalHarvestedL > 0 then
-                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(mTrip.fillTypeIndex or mTrip.cropName)) or 0.00075
+                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(mTrip.fillTypeIndex or
+                            mTrip.cropName)) or 0.00075
                         local massKg = mTrip.harvestedMassKg or (totalHarvestedL * cDensity * 1000.0)
                         avgYield = (massKg * 0.001) / mTrip.harvestedAreaHa
-                    elseif farm and farm.currentTrip and farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.01 and (farm.currentTrip.lastMachineKey == machineKey or isControlled) then
-                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(farm.currentTrip.fillTypeIndex or farm.currentTrip.cropName)) or 0.00075
+                    elseif farm and farm.currentTrip and farm.currentTrip.harvestedAreaHa and farm.currentTrip.harvestedAreaHa > 0.01 and (farm.currentTrip.lastMachineKey ==
+                        machineKey or isControlled) then
+                        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and
+                            RHM_UnitConverter.getCropDensityTonsPerLiter(farm.currentTrip.fillTypeIndex or farm.currentTrip.cropName)) or 0.00075
                         avgYield = ((farm.currentTrip.harvestedMassKg or (farm.currentTrip.harvestedLiters * cDensity * 1000.0)) * 0.001) / farm.currentTrip.harvestedAreaHa
                     end
 

@@ -328,13 +328,8 @@ function RHM_RealisticHarvestManager:setupSettingsHooks()
 
     local function ensureAdditionalGameSettings()
         if g_additionalSettingsManager and g_additionalSettingsManager.settingsPage then
-            local ok, err = pcall(function()
-                if g_additionalSettingsManager.settingsPage.updateAlternating then
-                    g_additionalSettingsManager.settingsPage:updateAlternating()
-                end
-            end)
-            if not ok then
-                rhm_log("RHM [Settings]: Auxiliary settings page update failed: " .. tostring(err))
+            if g_additionalSettingsManager.settingsPage.updateAlternating then
+                g_additionalSettingsManager.settingsPage:updateAlternating()
             end
         end
     end
@@ -372,6 +367,10 @@ end
 -- UA: Викликається після завершення завантаження місії. Ініціалізує ресурси HUD (текстури, позиції).
 function RHM_RealisticHarvestManager:onMissionLoaded()
     self:setupSettingsHooks()
+    if self.mission:getIsServer() and self.harvestTracker then
+        self.harvestTracker:onVehiclesChanged()
+        g_messageCenter:subscribe(MessageType.VEHICLE_REMOVED, self.harvestTracker.onVehiclesChanged, self.harvestTracker)
+    end
 
     if self.mission and self.mission:getIsClient() then
         RHMSettingsUI.inject(self.settings)
@@ -563,6 +562,7 @@ end
 -- EN: Cleans up all HUD and GUI resources on mission end.
 -- UA: Очищає всі ресурси HUD і GUI при завершенні місії.
 function RHM_RealisticHarvestManager:delete()
+    if self.harvestTracker then g_messageCenter:unsubscribeAll(self.harvestTracker) end
     if self.notificationManager then
         self.notificationManager:delete()
         self.notificationManager = nil

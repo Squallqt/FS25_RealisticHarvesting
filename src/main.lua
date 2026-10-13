@@ -145,7 +145,7 @@ end
 --     Creates the main manager instance and initializes the RHM_ProfileManager.
 -- UA: Викликається при початку завантаження місії.
 --     Створює головний екземпляр менеджера та ініціалізує RHM_ProfileManager.
-local function load(mission)
+local function loadMission(mission)
     if rhm == nil then
         rhm = RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
         -- EN: Expose manager globally so other scripts can access it via g_realisticHarvestManager.
@@ -239,7 +239,7 @@ end
 
 -- EN: Hook into the mission lifecycle using FS25's Utils.appendedFunction/prependedFunction pattern.
 -- UA: Підключаємось до життєвого циклу місії через Utils.appendedFunction/prependedFunction від FS25.
-Mission00.load = Utils.prependedFunction(Mission00.load, load)
+Mission00.load = Utils.prependedFunction(Mission00.load, loadMission)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, loadedMission)
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
@@ -286,7 +286,7 @@ end
 -- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
 -- UA: Передаємо повний стан ферм та налаштування гравцю, який приєднується до сесії мультиплеєра
 local function onSendInitialClientState(mission, connection, isReconnect)
-    if mission and mission.isMultiplayer and connection and rhm and rhm.harvestTracker then
+    if mission and mission.missionDynamicInfo.isMultiplayer and connection and rhm and rhm.harvestTracker then
         -- Sync active global physics & farm settings
         if rhm.settings and RHM_SettingsSyncEvent then
             connection:sendEvent(RHM_SettingsSyncEvent.new(rhm.settings))
