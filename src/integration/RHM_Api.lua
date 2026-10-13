@@ -13,7 +13,7 @@
 -- ============================================================================
 
 RHM_Api = {}
-RHM_Api.VERSION = "1.6.2.0"
+RHM_Api.VERSION = "1.6.3.0"
 RHM_Api.listeners = {}
 
 -- ============================================================================
@@ -27,22 +27,67 @@ RHM_Api.listeners = {}
 ---    трактора (з причіпним комбайном) або жатки. Якщо nil — бере керовану техніку.
 ---@param vehicle table|nil
 ---@return table|nil combineVehicle
+---EN: Checks if a vehicle node is a genuine harvester, strictly excluding balers, cutting balers, mobile pelletizers, and bale shredders.
+---UA: Перевіряє чи є транспортний засіб справжнім комбайном, суворо виключаючи преси, гранулятори та подрібнювачі тюків.
+local function isGenuineCombine(node)
+    if node == nil then return false end
+
+    local storeItem = node.configFileName and g_storeManager and g_storeManager:getItemByXMLFilename(node.configFileName)
+    local storeCat = (storeItem and storeItem.categoryName) and storeItem.categoryName:lower() or ""
+    local isCotton = (node.spec_cottonHarvester ~= nil)
+        or (node.typeName and node.typeName:lower():find("cotton") ~= nil)
+        or (node.configFileName and node.configFileName:lower():find("cotton") ~= nil)
+        or (node.xmlFile and node.xmlFile:hasProperty("vehicle.cottonHarvester"))
+        or storeCat:find("cotton") ~= nil
+
+    if not isCotton then
+        -- Filter out balers, cutting balers (BioBaler WB-55), mobile pelletizers, and bale shredders
+        if node.spec_baler ~= nil or node.spec_pelletizer ~= nil or node.spec_strawHarvestPelletizer ~= nil or node.spec_baleShredder ~= nil then
+            return false
+        end
+        if node.typeName then
+            local tLower = node.typeName:lower()
+            if tLower:find("baler") or tLower:find("pellet") or tLower:find("premos") or tLower:find("baleshredder") or tLower:find("biobaler") then
+                return false
+            end
+        end
+        if node.xmlFile and (node.xmlFile:hasProperty("vehicle.baler") or node.xmlFile:hasProperty("vehicle.pelletizer") or node.xmlFile:hasProperty("vehicle.baleShredder")) then
+            return false
+        end
+    end
+
+    -- Must have active RHM combine or authentic base harvester specialization
+    return (node.spec_rhm_Combine ~= nil and node.spec_rhm_Combine.isRhmCombine == true)
+        or node.spec_combine ~= nil
+        or node.spec_forageHarvester ~= nil
+        or node.spec_cottonHarvester ~= nil
+        or node.spec_sugarCaneHarvester ~= nil
+end
+
 function RHM_Api.findCombine(vehicle)
     local target = vehicle
     if target == nil and g_currentMission ~= nil then
         target = g_currentMission.controlledVehicle
+    end
+    -- Fallback 1: check if local player is sitting in an active combine
+    if target == nil and RHM_Api.findPlayerEnteredCombine then
+        target = RHM_Api.findPlayerEnteredCombine()
+    end
+    -- Fallback 2: check if any combine is active on player's farm
+    if target == nil and RHM_Api.findActiveCombine then
+        target = RHM_Api.findActiveCombine()
     end
     if target == nil then
         return nil
     end
 
     -- Fast-path: target itself is an RHM combine or harvester
-    if target.spec_rhm_Combine ~= nil or target.spec_combine ~= nil or target.spec_forageHarvester ~= nil or target.spec_cottonHarvester ~= nil or target.spec_sugarCaneHarvester ~= nil then
+    if isGenuineCombine(target) then
         return target
     end
 
     -- Check root vehicle
-    if target.rootVehicle ~= nil and target.rootVehicle ~= target and (target.rootVehicle.spec_rhm_Combine ~= nil or target.rootVehicle.spec_combine ~= nil or target.rootVehicle.spec_forageHarvester ~= nil or target.rootVehicle.spec_cottonHarvester ~= nil or target.rootVehicle.spec_sugarCaneHarvester ~= nil) then
+    if target.rootVehicle ~= nil and target.rootVehicle ~= target and isGenuineCombine(target.rootVehicle) then
         return target.rootVehicle
     end
 
@@ -54,7 +99,7 @@ function RHM_Api.findCombine(vehicle)
         end
         visited[node] = true
 
-        if node.spec_rhm_Combine ~= nil or node.spec_combine ~= nil or node.spec_forageHarvester ~= nil or node.spec_cottonHarvester ~= nil or node.spec_sugarCaneHarvester ~= nil then
+        if isGenuineCombine(node) then
             return node
         end
 
@@ -83,6 +128,58 @@ function RHM_Api.findCombine(vehicle)
     end
 
     return searchNode(target)
+end
+
+---EN: Resolves the active player farm ID reliably across FS25 singleplayer, multiplayer, and dedicated server.
+---UA: Надійно визначає ID активної ферми поточного гравця в FS25.
+---@return number farmId
+function RHM_Api.getActiveFarmId()
+    if g_currentMission then
+        if g_currentMission.player and g_currentMission.player.getFarmId then
+            local pFarm = g_currentMission.player:getFarmId()
+            if pFarm and pFarm ~= 0 and (not FarmManager or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                return tonumber(pFarm) or 1
+            end
+        elseif g_currentMission.player and g_currentMission.player.farmId then
+            local pFarm = g_currentMission.player.farmId
+            if pFarm and pFarm ~= 0 and (not FarmManager or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                return tonumber(pFarm) or 1
+            end
+        elseif g_currentMission.getFarmId then
+            local mFarm = g_currentMission:getFarmId()
+            if mFarm and mFarm ~= 0 and (not FarmManager or mFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                return tonumber(mFarm) or 1
+            end
+        end
+    end
+    return 1
+end
+
+---EN: Finds any actively operating combine harvester belonging to the farm.
+---UA: Знаходить будь-який активний комбайн заданої ферми.
+---@param farmId number|nil
+---@return table|nil combine
+function RHM_Api.findActiveCombine(farmId)
+    local targetFarmId = farmId or RHM_Api.getActiveFarmId()
+    if g_currentMission and g_currentMission.vehicleSystem then
+        local vehicles = (g_currentMission.vehicleSystem.getVehicles and g_currentMission.vehicleSystem:getVehicles())
+            or g_currentMission.vehicleSystem.vehicles
+            or g_currentMission.vehicles
+            or {}
+        for _, veh in pairs(vehicles) do
+            if type(veh) == "table" and veh.spec_rhm_Combine and (veh.getOwnerFarmId and veh:getOwnerFarmId() == targetFarmId) then
+                if veh.spec_rhm_Combine.isActivelyHarvesting or (veh.getIsMotorStarted and veh:getIsMotorStarted()) then
+                    return veh
+                end
+            end
+        end
+        for _, veh in pairs(vehicles) do
+            if type(veh) == "table" and veh.spec_rhm_Combine and (veh.getOwnerFarmId and veh:getOwnerFarmId() == targetFarmId) then
+                return veh
+            end
+        end
+    end
+    return nil
 end
 
 -- ============================================================================
@@ -114,40 +211,36 @@ function RHM_Api.getMachineType(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.combineMemory then
         return combine.spec_rhm_Combine.combineMemory.machineType or "grain"
     end
-    return nil
+    return "unknown"
 end
 
 ---EN: Returns true if target combine is a specialized grape harvester.
 ---UA: Повертає true, якщо комбайн є виноградозбиральним.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isGrapeHarvester(vehicle)
-    local mType = RHM_Api.getMachineType(vehicle)
-    if mType == nil then return nil end
-    return mType == "grape"
+    return RHM_Api.getMachineType(vehicle) == "grape"
 end
 
 ---EN: Returns true if target combine is a specialized olive harvester.
 ---UA: Повертає true, якщо комбайн є оливкозбиральним.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isOliveHarvester(vehicle)
-    local mType = RHM_Api.getMachineType(vehicle)
-    if mType == nil then return nil end
-    return mType == "olive"
+    return RHM_Api.getMachineType(vehicle) == "olive"
 end
 
 ---EN: Returns the installed electronic package level (1..4):
 ---    1: Mechanical, 2: Sensors, 3: Opti-Clean, 4: Opti-Harvest AI.
 ---UA: Повертає встановлений пакет електроніки (1..4).
 ---@param vehicle table|nil
----@return integer|nil packageLevel (1..4) or nil if unmanaged
+---@return integer packageLevel (1..4)
 function RHM_Api.getPackageLevel(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine then
         return combine.spec_rhm_Combine.packageLevel or 1
     end
-    return nil
+    return 1
 end
 
 -- ============================================================================
@@ -162,29 +255,33 @@ end
 ---@return number|nil engineLoadPct or nil if unmanaged
 function RHM_Api.getEngineLoad(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
-    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator:getEngineLoad() or 0.0
+    if combine and combine.spec_rhm_Combine then
+        local spec = combine.spec_rhm_Combine
+        if spec.data and spec.data.load then
+            return spec.data.load
+        end
+        if spec.loadCalculator then
+            return spec.loadCalculator:getEngineLoad() or 0.0
+        end
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns normalized engine load factor strictly clamped between 0.0 and 1.0.
 ---    Essential for external damage, telemetry, and wear monitoring systems
 ---    that expect standard GIANTS 0.0..1.0 load domain.
----    Returns nil if the vehicle is not managed by RHM.
 ---UA: Повертає нормалізоване навантаження суворо від 0.0 до 1.0 (0% .. 100%).
 ---@param vehicle table|nil
----@return number|nil normalizedLoad (0.0 .. 1.0) or nil if unmanaged
+---@return number normalizedLoad (0.0 .. 1.0)
 function RHM_Api.getNormalizedEngineLoad(vehicle)
-    local raw = RHM_Api.getEngineLoad(vehicle)
-    if raw == nil then return nil end
+    local raw = RHM_Api.getEngineLoad(vehicle) or 0.0
     return math.max(0.0, math.min(1.0, raw / 100.0))
 end
 
 ---EN: Returns user-configured target engine load percentage (e.g., 80%).
 ---UA: Повертає задане цільове навантаження у відсотках.
 ---@param vehicle table|nil
----@return number|nil targetLoadPct or nil if unmanaged
+---@return number targetLoadPct
 function RHM_Api.getTargetEngineLoad(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.combineMemory then
@@ -193,7 +290,7 @@ function RHM_Api.getTargetEngineLoad(vehicle)
             return mem.currentSettings.targetEngineLoad
         end
     end
-    return nil
+    return 85.0
 end
 
 ---EN: Returns physical power distribution table in Horsepower (HP):
@@ -201,7 +298,7 @@ end
 ---UA: Повертає розкладку потужностей у кінських силах (к.с.):
 ---    { pTotal, effectiveHp, pBase, pHeader, pProcess, pChopper, pSoil }.
 ---@param vehicle table|nil
----@return table|nil
+---@return table
 function RHM_Api.getPowerBreakdown(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -216,37 +313,47 @@ function RHM_Api.getPowerBreakdown(vehicle)
             pSoil       = calc.lastPowerSoil or 0.0
         }
     end
-    return nil
+    return {
+        pTotal      = 0.0,
+        effectiveHp = 0.0,
+        pBase       = 0.0,
+        pHeader     = 0.0,
+        pProcess    = 0.0,
+        pChopper    = 0.0,
+        pSoil       = 0.0
+    }
 end
 
 ---EN: Returns true if straw chopper is actively engaging and shredding crop residue.
 ---UA: Повертає true, якщо подрібнювач соломи активно подрібнює та розкидає солому.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isStrawChopperActive(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isStrawChopperActive or false
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.isStrawChopperActive == true end
+        return spec.loadCalculator.isStrawChopperActive == true
     end
-    return nil
+    return false
 end
 
 ---EN: Returns instantaneous straw chopper power consumption in horsepower (HP).
 ---UA: Повертає поточну потужність подрібнювача соломи в кінських силах (к.с.).
 ---@param vehicle table|nil
----@return number|nil chopperHp or nil if unmanaged
+---@return number chopperHp
 function RHM_Api.getChopperPowerHp(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator.lastPowerChopper or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns true if the vehicle is a self-propelled or trailed forage harvester (silage chopper).
 ---UA: Повертає true, якщо транспортний засіб є кормозбиральним комбайном (силосорізкою).
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isForageHarvester(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine then
@@ -254,19 +361,19 @@ function RHM_Api.isForageHarvester(vehicle)
         local mType = (spec.combineMemory and spec.combineMemory.machineType) or spec.machineType or ""
         return mType == "forage"
     end
-    return nil
+    return false
 end
 
 ---EN: Returns true if the attached harvesting tool is a grass/swath pickup header.
 ---UA: Повертає true, якщо підключене робоче знаряддя є підбирачем валків з землі.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isPickupActive(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
-    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isPickup or false
+    if combine and combine.spec_rhm_Combine then
+        return combine.spec_rhm_Combine.data and combine.spec_rhm_Combine.data.isPickup == true or false
     end
-    return nil
+    return false
 end
 
 ---EN: Returns internal power distribution table for forage harvester stages in Horsepower (HP):
@@ -274,7 +381,7 @@ end
 ---UA: Повертає розкладку потужностей механічних вузлів кормозбирального комбайна (к.с.):
 ---    { feedPower, drumPower, blowerPower, totalProcessPower }.
 ---@param vehicle table|nil
----@return table|nil
+---@return table
 function RHM_Api.getForagePowerBreakdown(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -286,31 +393,38 @@ function RHM_Api.getForagePowerBreakdown(vehicle)
             totalProcessPower = calc.lastPowerProcess or 0.0
         }
     end
-    return nil
+    return {
+        feedPower         = 0.0,
+        drumPower         = 0.0,
+        blowerPower       = 0.0,
+        totalProcessPower = 0.0
+    }
 end
 
 ---EN: Returns instantaneous harvested fresh matter throughput in metric tonnes per hour (t/h).
 ---UA: Повертає поточну продуктивність збирання свіжої маси в тоннах за годину (т/год).
 ---@param vehicle table|nil
----@return number|nil freshMatterTph or nil if unmanaged
+---@return number freshMatterTph
 function RHM_Api.getFreshMatterThroughput(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.tonPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getTonPerHour() or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns rated engine horsepower (HP) of the combine or motorized carrier (e.g. NEXAT).
 ---UA: Повертає номінальну потужність двигуна (к.с.) комбайна або тягача (наприклад, NEXAT).
 ---@param vehicle table|nil
----@return number|nil engineHp or nil if unmanaged
+---@return number engineHp
 function RHM_Api.getEnginePowerHp(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator:getEnginePowerHp(combine) or 0.0
     end
-    return nil
+    return 0.0
 end
 
 -- ============================================================================
@@ -320,64 +434,116 @@ end
 ---EN: Returns true if there is an active flow of crop biomass entering the thresher.
 ---UA: Повертає true, якщо через молотарку зараз іде активний потік культури.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isActivelyHarvesting(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isActivelyHarvesting or false
+        return combine.spec_rhm_Combine.loadCalculator.isActivelyHarvesting == true
     end
-    return nil
+    return false
 end
 
 ---EN: Returns true if attached header/cutter is turned on and lowered in working position.
 ---UA: Повертає true, якщо жатка увімкнена та опущена в робоче положення.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isCutterActive(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.isCutterActive or false
+        return combine.spec_rhm_Combine.loadCalculator.isCutterActive == true
     end
-    return nil
+    return false
 end
 
 ---EN: Returns dynamic RHM recommended speed limit (km/h) computed by hydrostatic controller.
 ---UA: Повертає динамічний рекомендований ліміт швидкості (км/год).
 ---@param vehicle table|nil
----@return number|nil speedKmh or nil if unmanaged
+---@return number speedKmh
 function RHM_Api.getRecommendedSpeed(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator:getSpeedLimit() or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns header working width in meters.
 ---UA: Повертає робочу ширину жатки в метрах.
 ---@param vehicle table|nil
----@return number|nil widthMeters or nil if unmanaged
+---@return number widthMeters
 function RHM_Api.getWorkingWidth(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if not combine or not combine.spec_rhm_Combine then
-        return nil
+        return 0.0
     end
+
+    local function resolveObjWidth(obj)
+        if not obj then return 0 end
+        local w = 0
+        if obj.getWorkingWidth then
+            local raw = obj:getWorkingWidth()
+            if raw and tonumber(raw) and tonumber(raw) > 0 then
+                w = tonumber(raw)
+            end
+        end
+        if w == 0 and obj.spec_cutter and obj.spec_cutter.workingWidth then
+            local raw = obj.spec_cutter.workingWidth
+            if raw and tonumber(raw) and tonumber(raw) > 0 then
+                w = tonumber(raw)
+            end
+        end
+        if w == 0 and obj.configFileName and g_storeManager and g_storeManager.getItemByXMLFilename then
+            local item = g_storeManager:getItemByXMLFilename(obj.configFileName)
+            if item and item.specs and item.specs.workingWidth then
+                local rawW = tostring(item.specs.workingWidth)
+                local parsed = tonumber(string.match(rawW, "%d+%.?%d*"))
+                if parsed and parsed > 0 then
+                    w = parsed
+                end
+            end
+        end
+        if w == 0 and obj.xmlFile and obj.xmlFile.getValue then
+            local rawW = obj.xmlFile:getValue("vehicle.storeData.specs.workingWidth")
+            if rawW then
+                local parsed = tonumber(string.match(tostring(rawW), "%d+%.?%d*"))
+                if parsed and parsed > 0 then
+                    w = parsed
+                end
+            end
+        end
+        if w == 0 and obj.spec_workArea and obj.spec_workArea.workAreas and MathUtil and getWorldTranslation then
+            for _, wa in pairs(obj.spec_workArea.workAreas) do
+                if wa.start and wa.width then
+                    local sx, _, sz = getWorldTranslation(wa.start)
+                    local wx, _, wz = getWorldTranslation(wa.width)
+                    local areaWidth = MathUtil.vector2Length(wx - sx, wz - sz)
+                    if areaWidth > w then w = areaWidth end
+                end
+            end
+        end
+        return w
+    end
+
+    local bestWidth = 0
     if combine.spec_combine and combine.spec_combine.attachedCutters then
         for cutter, _ in pairs(combine.spec_combine.attachedCutters) do
-            if cutter.getWorkingWidth then
-                local w = cutter:getWorkingWidth()
-                if w and w > 0 then return w end
-            end
-            if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
-                return cutter.spec_cutter.workingWidth
+            local cw = resolveObjWidth(cutter)
+            if cw > bestWidth then bestWidth = cw end
+        end
+    end
+    if bestWidth == 0 and combine.getAttachedImplements then
+        for _, imp in pairs(combine:getAttachedImplements()) do
+            local obj = imp.object
+            if obj then
+                local cw = resolveObjWidth(obj)
+                if cw > bestWidth then bestWidth = cw end
             end
         end
     end
-    if combine.getWorkingWidth then
-        local w = combine:getWorkingWidth()
-        if w and w > 0 then return w end
+    if bestWidth == 0 then
+        bestWidth = resolveObjWidth(combine)
     end
-    return 0.0
+    return bestWidth > 0 and bestWidth or 0.0
 end
 
 -- ============================================================================
@@ -387,7 +553,7 @@ end
 ---EN: Returns instantaneous processed throughput in metric tonnes per hour (t/h).
 ---UA: Повертає поточну продуктивність комбайна в тоннах за годину (т/год).
 ---@param vehicle table|nil
----@return number|nil tonPerHour or nil if unmanaged
+---@return number tonPerHour
 function RHM_Api.getTonPerHour(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -395,15 +561,34 @@ function RHM_Api.getTonPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.tonPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getTonPerHour() or 0.0
     end
-    return nil
+    return 0.0
+end
+
+---EN: Returns instantaneous mass flow rate in active or specified unit system (kg/s, lbs/s, or bu/min).
+---UA: Повертає миттєвий потік маси у вказаній або активній системі одиниць (кг/с, фунт/с або буш/хв).
+---@param vehicle table|nil
+---@param system number|nil Optional unit system (1=Metric, 2=Imperial, 3=Bushels)
+---@return number flowRate
+---@return string unitSuffix
+function RHM_Api.getFlowRate(vehicle, system)
+    local tph = RHM_Api.getTonPerHour(vehicle)
+    if tph > 0 and RHM_UnitConverter and RHM_UnitConverter.convertFlowRate then
+        local combine = RHM_Api.findCombine(vehicle)
+        local fruitType = combine and combine.spec_combine and combine.spec_combine.lastValidInputFruitType
+        local lph = RHM_Api.getLitersPerHour(vehicle) or 0
+        return RHM_UnitConverter.convertFlowRate(tph, system, fruitType, lph)
+    end
+    return 0.0, (system == 2 and "lbs/s") or (system == 3 and "bu/min") or "kg/s"
 end
 
 ---EN: Returns instantaneous processed throughput in liters per hour (L/h).
 ---UA: Повертає об'ємну продуктивність у літрах за годину (л/год).
 ---@param vehicle table|nil
----@return number|nil litersPerHour or nil if unmanaged
+---@return number litersPerHour
 function RHM_Api.getLitersPerHour(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -411,15 +596,17 @@ function RHM_Api.getLitersPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.litersPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getLitersPerHour() or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns harvested area productivity rate in hectares per hour (ha/h).
 ---UA: Повертає продуктивність обробки площі в гектарах за годину (га/год).
 ---@param vehicle table|nil
----@return number|nil hectaresPerHour or nil if unmanaged
+---@return number hectaresPerHour
 function RHM_Api.getHectaresPerHour(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -427,57 +614,63 @@ function RHM_Api.getHectaresPerHour(vehicle)
         if currentSpeed < 0.5 then
             return 0.0
         end
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.hectaresPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getHectaresPerHour() or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns rolling field yield monitor in metric tonnes per hectare (t/ha).
 ---UA: Повертає середню врожайність поля в тоннах на гектар (т/га).
 ---@param vehicle table|nil
----@return number|nil yieldTonPerHa or nil if unmanaged
+---@return number yieldTonPerHa
 function RHM_Api.getYield(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.yield or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator.currentYield or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns last valid non-zero field yield in metric tonnes per hectare (t/ha).
 ---UA: Повертає останню валідну ненульову врожайність поля в тоннах на гектар (т/га).
 ---@param vehicle table|nil
----@return number|nil lastValidYield or nil if unmanaged
+---@return number lastValidYield
 function RHM_Api.getLastValidYield(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.lastValidYield or 0.0
+        local spec = combine.spec_rhm_Combine
+        if not combine.isServer and spec.data then return spec.data.lastValidYield or 0.0 end
+        return spec.loadCalculator.lastValidYield or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns total accumulated harvested mass for this session in kilograms (kg).
 ---UA: Повертає загальну накопичену зібрану масу за сесію в кілограмах (кг).
 ---@param vehicle table|nil
----@return number|nil massKg or nil if unmanaged
+---@return number massKg
 function RHM_Api.getTotalHarvestedMass(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator.totalOutputMass or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns full synced telemetry data table (load, moisture, cropLoss, tonPerHour, yield, etc.).
 ---UA: Повертає повну синхронізовану таблицю живої телеметрії.
 ---@param vehicle table|nil
----@return table|nil
+---@return table
 function RHM_Api.getTelemetry(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine then
-        return combine.spec_rhm_Combine.data
+        return combine.spec_rhm_Combine.data or {}
     end
-    return nil
+    return {}
 end
 
 -- ============================================================================
@@ -487,19 +680,19 @@ end
 ---EN: Returns active crop name (e.g. "WHEAT", "BARLEY", "CORN").
 ---UA: Повертає назву поточної культури (наприклад, "WHEAT", "CORN").
 ---@param vehicle table|nil
----@return string|nil
+---@return string
 function RHM_Api.getCurrentCrop(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.combineMemory then
-        return combine.spec_rhm_Combine.combineMemory.currentCrop
+        return combine.spec_rhm_Combine.combineMemory.currentCrop or "--"
     end
-    return nil
+    return "--"
 end
 
 ---EN: Returns live moisture percentage of standing crop (0.0 to 100.0 %).
 ---UA: Повертає поточну вологість культури (%).
 ---@param vehicle table|nil
----@return number|nil moisturePct or nil if unmanaged
+---@return number moisturePct
 function RHM_Api.getMoisture(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.data then
@@ -510,49 +703,48 @@ function RHM_Api.getMoisture(vehicle)
         end
         return m
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns upper moisture limit (%) before drying penalty applies for this crop.
 ---UA: Повертає гранично допустиму вологість культури (%).
 ---@param vehicle table|nil
----@return number|nil limitPct or nil if unmanaged or no active crop
+---@return number limitPct
 function RHM_Api.getMoistureLimit(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
-    if not combine or not combine.spec_rhm_Combine then
-        return nil
-    end
-    local crop = RHM_Api.getCurrentCrop(combine)
-    if crop and crop ~= "" and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getSettingsForCrop then
-        local settings = RHM_CombineSettingsDatabase:getSettingsForCrop(crop)
-        if settings and settings.moistureLimit then
-            return settings.moistureLimit
+    if combine and combine.spec_rhm_Combine then
+        local crop = RHM_Api.getCurrentCrop(combine)
+        if crop and crop ~= "" and crop ~= "--" and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getSettingsForCrop then
+            local settings = RHM_CombineSettingsDatabase:getSettingsForCrop(crop)
+            if settings and settings.moistureLimit then
+                return settings.moistureLimit
+            end
         end
     end
-    return nil
+    return 14.0
 end
 
 ---EN: Returns true if current moisture exceeds acceptable threshing threshold.
 ---UA: Повертає true, якщо вологість перевищує норму.
 ---@param vehicle table|nil
----@return boolean|nil
+---@return boolean
 function RHM_Api.isMoistureExceeded(vehicle)
     local m = RHM_Api.getMoisture(vehicle)
     local lim = RHM_Api.getMoistureLimit(vehicle)
-    if m == nil or lim == nil then return nil end
+    if m <= 0.0 or lim <= 0.0 then return false end
     return m > lim
 end
 
 ---EN: Returns current live weed infestation ratio at cutterbar (0.00 to 1.00).
 ---UA: Повертає поточний рівень забур'яненості на жатці (від 0.00 до 1.00).
 ---@param vehicle table|nil
----@return number|nil weedRatio or nil if unmanaged
+---@return number weedRatio
 function RHM_Api.getWeedRatio(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.data then
         return combine.spec_rhm_Combine.data.weedRatio or 0.0
     end
-    return nil
+    return 0.0
 end
 
 -- ============================================================================
@@ -562,80 +754,105 @@ end
 ---EN: Returns total crop loss percentage (0.0 to 50.0 %).
 ---UA: Повертає загальний відсоток втрат врожаю (0.0 .. 50.0 %).
 ---@param vehicle table|nil
----@return number|nil totalLossPct or nil if unmanaged
+---@return number totalLossPct
 function RHM_Api.getTotalCropLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.data then
         return combine.spec_rhm_Combine.data.cropLoss or 0.0
     end
-    return nil
+    return 0.0
 end
+
+---EN: Alias for getTotalCropLoss. Returns total crop loss percentage (0.0 to 50.0 %).
+---UA: Псевдонім для getTotalCropLoss. Повертає загальний відсоток втрат врожаю (0.0 .. 50.0 %).
+---@param vehicle table|nil
+---@return number cropLossPct
+function RHM_Api.getCropLoss(vehicle)
+    return RHM_Api.getTotalCropLoss(vehicle)
+end
+
 
 ---EN: Returns crop loss percentage caused purely by engine & thresher overload.
 ---UA: Повертає втрати від фізичного перевантаження молотарки (%).
 ---@param vehicle table|nil
----@return number|nil overloadLossPct or nil if unmanaged
+---@return number overloadLossPct
 function RHM_Api.getOverloadLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
-        return combine.spec_rhm_Combine.loadCalculator.cropLoss or 0.0
+        local calc = combine.spec_rhm_Combine.loadCalculator
+        return calc.baseLoss or calc.overloadLoss or 0.0
     end
-    return nil
+    return 0.0
 end
+
+---EN: Returns instantaneous moisture-induced crop loss percentage (%).
+---UA: Повертає моментальні втрати від надмірної вологості культури (%).
+---@param vehicle table|nil
+---@return number moistureLossPct
+function RHM_Api.getMoistureLoss(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
+        return combine.spec_rhm_Combine.loadCalculator.moistureLoss or 0.0
+    end
+    return 0.0
+end
+
 
 ---EN: Returns crop loss percentage caused by misaligned operator threshing settings.
 ---UA: Повертає втрати від неточних налаштувань обмолоту (%).
 ---@param vehicle table|nil
----@return number|nil settingsLossPct or nil if unmanaged
+---@return number settingsLossPct
 function RHM_Api.getSettingsLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator.settingsLoss or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns mechanical wear crop loss breakdown: totalWearLoss (%), cutterWearLoss (%), combineWearLoss (%).
 ---UA: Повертає втрати від механічного зносу: загальні (%), від жатки (%), від молотарки (%).
 ---@param vehicle table|nil
----@return number|nil totalWearLoss, number|nil cutterWearLoss, number|nil combineWearLoss
+---@return number totalWearLoss
+---@return number cutterWearLoss
+---@return number combineWearLoss
 function RHM_Api.getWearLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         local calc = combine.spec_rhm_Combine.loadCalculator
         return calc.totalWearLoss or 0.0, calc.cutterWearLoss or 0.0, calc.combineWearLoss or 0.0
     end
-    return nil, nil, nil
+    return 0.0, 0.0, 0.0
 end
 
 ---EN: Returns instantaneous slope-induced crop loss percentage (%).
 ---UA: Повертає моментальні втрати від нахилу комбайна (%).
 ---@param vehicle table|nil
----@return number|nil slopeLossPct or nil if unmanaged
+---@return number slopeLossPct
 function RHM_Api.getSlopeLoss(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator.slopeLoss or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns attached cutter mechanical damage amount (0.0 to 1.0).
 ---UA: Повертає рівень механічного зносу приєднаної жатки (0.0 .. 1.0).
 ---@param vehicle table|nil
----@return number|nil cutterDamage or nil if unmanaged
+---@return number cutterDamage
 function RHM_Api.getCutterDamage(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
         return combine.spec_rhm_Combine.loadCalculator.lastCutterDamage or 0.0
     end
-    return nil
+    return 0.0
 end
 
 ---EN: Returns combine harvester base chassis/thresher damage amount (0.0 to 1.0).
 ---UA: Повертає рівень механічного зносу самого комбайна/молотарки (0.0 .. 1.0).
 ---@param vehicle table|nil
----@return number|nil combineDamage or nil if unmanaged
+---@return number combineDamage
 function RHM_Api.getCombineDamage(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.loadCalculator then
@@ -644,7 +861,7 @@ function RHM_Api.getCombineDamage(vehicle)
     if combine and combine.getDamageAmount then
         return combine:getDamageAmount() or 0.0
     end
-    return nil
+    return 0.0
 end
 
 -- ============================================================================
@@ -655,13 +872,13 @@ end
 ---    { drumSpeed, concaveGap, fanSpeed, upperSieve, lowerSieve, targetEngineLoad }.
 ---UA: Повертає поточні налаштування обмолоту.
 ---@param vehicle table|nil
----@return table|nil
+---@return table
 function RHM_Api.getSettings(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if combine and combine.spec_rhm_Combine and combine.spec_rhm_Combine.combineMemory then
-        return combine.spec_rhm_Combine.combineMemory.currentSettings
+        return combine.spec_rhm_Combine.combineMemory.currentSettings or {}
     end
-    return nil
+    return {}
 end
 
 ---EN: Returns optimal factory preset settings for the active crop.
@@ -682,15 +899,16 @@ function RHM_Api.getOptimalSettings(vehicle)
             end
             local m = (rhmSpec.data and rhmSpec.data.moisture) or 0
             if m <= 0 and RHM_MoistureAdapter and RHM_MoistureAdapter.getStandingCropMoisture then
-                local fillType = rhmSpec.lastFillType or (rhmSpec.combineMemory and rhmSpec.combineMemory.currentCrop)
+                local fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex) or (rhmSpec.combineMemory and rhmSpec.combineMemory.currentCrop)
                 m = RHM_MoistureAdapter.getStandingCropMoisture(combine, fillType) or 0
             end
             context = {
                 machineType = rhmSpec.machineType or "grain",
                 moisture = m,
                 yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
-                isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-                fillType = rhmSpec.lastFillType,
+                weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or 0,
+                isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+                fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
                 fruitType = rhmSpec.lastFruitType,
                 dayTime = dayTimeHours,
                 isRaining = isRaining,
@@ -778,7 +996,7 @@ function RHM_Api.unregisterEventListener(eventName, callback)
     end
 end
 
----EN: Dispatches an internal event to registered listeners safely (pcall).
+---EN: Dispatches an internal event to registered listeners; errors remain visible in the game log.
 ---UA: Безпечно розсилає подію зареєстрованим слухачам.
 ---@param eventName string
 ---@param ... any
@@ -786,10 +1004,7 @@ function RHM_Api.dispatch(eventName, ...)
     local list = RHM_Api.listeners[eventName]
     if list == nil then return end
     for _, callback in ipairs(list) do
-        local ok, err = pcall(callback, ...)
-        if not ok then
-            rhm_log(string.format("RHM [API Event Error] %s: %s", eventName, tostring(err)))
-        end
+        callback(...)
     end
 end
 
@@ -808,7 +1023,7 @@ end
 function RHM_Api.getFarmTrip(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        local farm = tracker:getFarmData(farmId or 1)
+        local farm = tracker:getFarmData(farmId or RHM_Api.getActiveFarmId())
         return farm and farm.currentTrip
     end
     return nil
@@ -821,12 +1036,17 @@ end
 function RHM_Api.getCombineTrip(vehicle)
     local combine = RHM_Api.findCombine(vehicle)
     if not combine then return nil end
+    local sTrip = combine.spec_rhm_Combine and combine.spec_rhm_Combine.trip
+    if sTrip and ((sTrip.harvestedLiters and sTrip.harvestedLiters > 0) or (sTrip.harvestedAreaHa and sTrip.harvestedAreaHa > 0.001) or (sTrip.sessionDuration and sTrip.sessionDuration > 0)) then
+        return sTrip
+    end
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        local farmId = (combine.getOwnerFarmId and combine:getOwnerFarmId()) or 1
+        local farmId = (combine.getOwnerFarmId and combine:getOwnerFarmId()) or RHM_Api.getActiveFarmId()
         local farm = tracker:getFarmData(farmId)
+        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(combine)) or combine.configFileName or
+            (combine.getFullName and combine:getFullName()) or "Harvester"
         if farm and farm.combineTrips then
-            local machineKey = combine.configFileName or (combine.getFullName and combine:getFullName()) or "Harvester"
             if farm.combineTrips[machineKey] then
                 if combine.spec_rhm_Combine then
                     combine.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
@@ -834,11 +1054,13 @@ function RHM_Api.getCombineTrip(vehicle)
                 return farm.combineTrips[machineKey]
             end
         end
+        if farm and farm.currentTrip and farm.currentTrip.lastMachineKey == machineKey
+            and ((farm.currentTrip.harvestedLiters and farm.currentTrip.harvestedLiters > 0) or (farm.currentTrip.harvestedAreaHa and
+            farm.currentTrip.harvestedAreaHa > 0.001)) then
+            return farm.currentTrip
+        end
     end
-    if combine.spec_rhm_Combine and combine.spec_rhm_Combine.trip then
-        return combine.spec_rhm_Combine.trip
-    end
-    return nil
+    return sTrip
 end
 
 ---EN: Resolves the combine harvester currently occupied or driven by the local player.
@@ -856,7 +1078,7 @@ end
 function RHM_Api.getFarmFleetStats(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        local farm = tracker:getFarmData(farmId or 1)
+        local farm = tracker:getFarmData(farmId or RHM_Api.getActiveFarmId())
         return farm and farm.fleetStats
     end
     return nil
@@ -885,7 +1107,7 @@ end
 function RHM_Api.getFarmHistory(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        local farm = tracker:getFarmData(farmId or 1)
+        local farm = tracker:getFarmData(farmId or RHM_Api.getActiveFarmId())
         return farm and farm.seasonHistory
     end
     return nil
@@ -902,7 +1124,14 @@ end
 function RHM_Api.resetFarmTrip(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker then
-        return tracker:resetTrip(farmId or 1, nil)
+        local resolvedFarmId = farmId or RHM_Api.getActiveFarmId()
+        if g_currentMission and not g_currentMission:getIsServer() then
+            local connection = g_client and g_client:getServerConnection()
+            if not connection then return false end
+            connection:sendEvent(RHM_HarvestResetTripEvent.new(resolvedFarmId, nil))
+            return true
+        end
+        return tracker:resetTrip(resolvedFarmId, nil)
     end
     return false
 end
@@ -912,7 +1141,7 @@ end
 function RHM_Api.getFieldHeatmap(farmId, fieldId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker and fieldId and fieldId > 0 then
-        local farm = tracker:getFarmData(farmId or 1)
+        local farm = tracker:getFarmData(farmId or RHM_Api.getActiveFarmId())
         if farm and farm.fieldHeatmaps and farm.fieldHeatmaps[fieldId] then
             return farm.fieldHeatmaps[fieldId].points
         end
@@ -925,7 +1154,7 @@ end
 function RHM_Api.getAvailableSeasons(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker and tracker.getAvailableYears then
-        return tracker:getAvailableYears(farmId or 1)
+        return tracker:getAvailableYears(farmId or RHM_Api.getActiveFarmId())
     end
     return { 1, "ALL" }
 end
@@ -935,7 +1164,7 @@ end
 function RHM_Api.getFarmSeasonSummary(farmId, year)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker and tracker.getSeasonSummary then
-        return tracker:getSeasonSummary(farmId or 1, year)
+        return tracker:getSeasonSummary(farmId or RHM_Api.getActiveFarmId(), year)
     end
     return nil
 end
@@ -945,7 +1174,7 @@ end
 function RHM_Api.getFarmAllTimeSummary(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker and tracker.getSeasonSummary then
-        return tracker:getSeasonSummary(farmId or 1, "ALL")
+        return tracker:getSeasonSummary(farmId or RHM_Api.getActiveFarmId(), "ALL")
     end
     return nil
 end
@@ -957,7 +1186,7 @@ end
 ---@return boolean
 function RHM_Api.isContractField(fieldId, farmId)
     if RHM_HarvestTracker and RHM_HarvestTracker.isContractField then
-        return RHM_HarvestTracker.isContractField(fieldId, farmId)
+        return RHM_HarvestTracker.isContractField(fieldId, farmId or RHM_Api.getActiveFarmId())
     end
     return false
 end
@@ -969,7 +1198,7 @@ end
 function RHM_Api.getFarmFields(farmId)
     local tracker = RHM_Api.getHarvestTracker()
     if tracker and tracker.getFarmFields then
-        return tracker:getFarmFields(farmId or 1)
+        return tracker:getFarmFields(farmId or RHM_Api.getActiveFarmId())
     end
     return {}
 end
@@ -981,28 +1210,41 @@ end
 ---@return table|nil
 function RHM_Api.getFieldStats(fieldId, farmId)
     local tracker = RHM_Api.getHarvestTracker()
-    if tracker and tracker.getFarmFields and fieldId and fieldId > 0 then
-        local fields = tracker:getFarmFields(farmId or 1)
-        for _, f in ipairs(fields) do
-            if f.fieldId == fieldId then
-                return f
+    local resolvedFarmId = farmId or RHM_Api.getActiveFarmId()
+    if tracker and fieldId and fieldId > 0 then
+        local farm = tracker:getFarmData(resolvedFarmId)
+        if farm and farm.fieldStats and farm.fieldStats[fieldId] then
+            return farm.fieldStats[fieldId]
+        end
+        if farm and farm.fieldClusterMembers and farm.fieldClusterMembers[fieldId] then
+            local masterId = farm.fieldClusterMembers[fieldId]
+            if farm.fieldStats and farm.fieldStats[masterId] then
+                return farm.fieldStats[masterId]
+            end
+        end
+        if tracker.getFarmFields then
+            local fields = tracker:getFarmFields(resolvedFarmId)
+            for _, f in ipairs(fields) do
+                if f.fieldId == fieldId then
+                    return f
+                end
             end
         end
     end
     return nil
 end
 
----EN: Returns the dominant loss factor ("speed", "moisture", "wear", "slope") for a specific field.
----UA: Повертає домінуючий фактор втрат ("speed", "moisture", "wear", "slope") для вказаного поля.
+---EN: Returns the dominant loss factor ("speed", "moisture", "wear", "slope", or "none") for a specific field.
+---UA: Повертає домінуючий фактор втрат ("speed", "moisture", "wear", "slope" або "none") для вказаного поля.
 ---@param fieldId number
 ---@param farmId number|nil
----@return string|nil
+---@return string factor Dominant loss factor or "none"
 function RHM_Api.getFieldDominantLossFactor(fieldId, farmId)
     local fStat = RHM_Api.getFieldStats(fieldId, farmId)
     if fStat and fStat.reasons and RHM_HarvestTracker and RHM_HarvestTracker.getDominantLossFactor then
-        return RHM_HarvestTracker.getDominantLossFactor(fStat.reasons)
+        return RHM_HarvestTracker.getDominantLossFactor(fStat.reasons) or "none"
     end
-    return nil
+    return "none"
 end
 
 ---EN: Resolves field, fieldId, and farmlandId for world coordinates (wx, wz).
@@ -1018,6 +1260,98 @@ function RHM_Api.getFieldAtWorldPosition(wx, wz, vehicle)
         return RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, vehicle)
     end
     return nil, 0, 0
+end
+
+---EN: Returns total diesel fuel consumed (in liters) by a specific combine harvester during current trip.
+---UA: Повертає загальну витрату дизельного пального (у літрах) конкретним комбайном за поточну сесію.
+---@param vehicle table|nil
+---@return number fuelUsedL
+function RHM_Api.getCombineFuelUsed(vehicle)
+    local trip = RHM_Api.getCombineTrip(vehicle)
+    if trip then
+        return trip.fuelUsedL or 0
+    end
+    return 0
+end
+
+---EN: Returns fuel consumption rates per hectare and per metric ton for a specific combine.
+---UA: Повертає питому витрату пального на гектар (л/га) та на тонну (л/т) для комбайна.
+---@param vehicle table|nil
+---@return number lPerHa
+---@return number lPerTon
+function RHM_Api.getCombineFuelRate(vehicle)
+    local trip = RHM_Api.getCombineTrip(vehicle)
+    if trip then
+        local fuelL = trip.fuelUsedL or 0
+        local areaHa = trip.harvestedAreaHa or 0.0
+        local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(trip.fillTypeIndex or trip.cropName)) or 0.00075
+        local massTons = (trip.harvestedMassKg and trip.harvestedMassKg > 0) and (trip.harvestedMassKg / 1000.0) or ((trip.harvestedLiters or 0) * cDensity)
+        local lPerHa = (areaHa > 0.01) and (fuelL / areaHa) or 0
+        local lPerTon = (massTons > 0.01) and (fuelL / massTons) or 0
+        return lPerHa, lPerTon
+    end
+    return 0, 0
+end
+
+---EN: Returns the master field ID and member list for any clustered / merged field.
+---UA: Повертає майстер-номер поля та список об'єднаних контурів для заданого поля.
+---@param fieldId number
+---@param farmId number|nil
+---@return number masterFieldId
+---@return table members
+function RHM_Api.getFieldCluster(fieldId, farmId)
+    local tracker = RHM_Api.getHarvestTracker()
+    if tracker and fieldId and fieldId > 0 then
+        local farm = tracker:getFarmData(farmId or RHM_Api.getActiveFarmId())
+        if farm then
+            local masterId = (farm.fieldClusterMembers and farm.fieldClusterMembers[fieldId]) or fieldId
+            local members = (farm.fieldClusters and farm.fieldClusters[masterId] and farm.fieldClusters[masterId].members) or { [masterId] = true }
+            local memberList = {}
+            for mId, _ in pairs(members) do
+                table.insert(memberList, mId)
+            end
+            table.sort(memberList)
+            return masterId, memberList
+        end
+    end
+    return fieldId or 0, { fieldId or 0 }
+end
+
+---EN: Returns authentic nominal area of a field in hectares (aggregated if part of a cluster).
+---UA: Повертає номінальну площу поля в гектарах (об'єднану якщо це кластер).
+---@param fieldId number
+---@param farmId number|nil
+---@return number nominalAreaHa
+function RHM_Api.getFieldNominalArea(fieldId, farmId)
+    if RHM_HarvestTracker and RHM_HarvestTracker.getFieldNominalAreaHa then
+        return RHM_HarvestTracker.getFieldNominalAreaHa(fieldId, nil, nil, farmId or RHM_Api.getActiveFarmId()) or 0
+    end
+    return 0
+end
+
+---EN: Returns economic ledger metrics (gross revenue, fuel expense, grain loss money, net operating margin) for a field.
+---UA: Повертає фінансовий баланс поля (валовий дохід, витрати на пальне, вартість втрат, чистий операційний прибуток).
+---@param fieldId number
+---@param farmId number|nil
+---@return table ledger
+function RHM_Api.getFieldEconomicLedger(fieldId, farmId)
+    local fStat = RHM_Api.getFieldStats(fieldId, farmId)
+    if fStat then
+        return {
+            grossRevenue = fStat.grossRevenue or 0,
+            fuelExpense = fStat.fuelExpense or 0,
+            fuelUsedL = fStat.fuelUsedL or 0,
+            lossMoney = fStat.lossMoney or 0,
+            netMargin = fStat.netMargin or 0
+        }
+    end
+    return {
+        grossRevenue = 0,
+        fuelExpense = 0,
+        fuelUsedL = 0,
+        lossMoney = 0,
+        netMargin = 0
+    }
 end
 
 -- ============================================================================
@@ -1131,6 +1465,100 @@ end
 function RHM_Api.isMouseCursorVisible()
     return (g_realisticHarvestManager and g_realisticHarvestManager.isCursorVisible == true) or false
 end
+
+---EN: Returns unified UI color palette database
+---UA: Повертає базу єдиної кольорової палітри інтерфейсу
+---@return table|nil
+function RHM_Api.getUIColors()
+    return RHM_UIColors
+end
+
+---EN: Returns active HUD display style (1=Compact 4 cells, 2=Yield Monitor 8 cells).
+---UA: Повертає активний стиль відображення HUD (1=Компактний 4 комірки, 2=Монітор врожайності 8 комірок).
+---@return number
+function RHM_Api.getHudStyle()
+    return (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.hudStyle) or 2
+end
+
+---EN: Sets active HUD display style (1=Compact 4 cells, 2=Yield Monitor 8 cells).
+---UA: Встановлює активний стиль відображення HUD (1=Компактний 4 комірки, 2=Монітор врожайності 8 комірок).
+---@param style number
+function RHM_Api.setHudStyle(style)
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        g_realisticHarvestManager.settings:setHudStyle(style)
+    end
+end
+
+---EN: Returns active HUD layout variant (1=OEM Modern, 2=Precision Card, 3=Minimalist Clean, 4=Classic Stacked).
+---UA: Повертає активний варіант розкладки HUD (1=OEM Modern, 2=Precision Card, 3=Minimalist Clean, 4=Classic Stacked).
+---@return number
+function RHM_Api.getHudLayout()
+    return (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.hudLayout) or 1
+end
+
+---EN: Sets active HUD layout variant (1=OEM Modern, 2=Precision Card, 3=Minimalist Clean, 4=Classic Stacked).
+---UA: Встановлює активний варіант розкладки HUD (1=OEM Modern, 2=Precision Card, 3=Minimalist Clean, 4=Classic Stacked).
+---@param layout number
+function RHM_Api.setHudLayout(layout)
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings then
+        g_realisticHarvestManager.settings:setHudLayout(layout)
+    end
+end
+
+-- ============================================================================
+-- 10. ACTIVE FARM & UTILITY HELPERS
+-- ============================================================================
+
+---EN: Resolves active player farm ID reliably across FS25 singleplayer and dedicated server.
+---UA: Надійно визначає ID активної ферми гравця в FS25 (синглплеєр та мультиплеєр).
+---@return number farmId
+function RHM_Api.getActiveFarmId()
+    local farmId = 1
+    if g_currentMission ~= nil then
+        if g_currentMission.player ~= nil and g_currentMission.player.getFarmId ~= nil then
+            local pFarm = g_currentMission.player:getFarmId()
+            if pFarm ~= nil and pFarm ~= 0 and (FarmManager == nil or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = pFarm
+            end
+        elseif g_currentMission.player ~= nil and g_currentMission.player.farmId ~= nil then
+            local pFarm = g_currentMission.player.farmId
+            if pFarm ~= nil and pFarm ~= 0 and (FarmManager == nil or pFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = pFarm
+            end
+        elseif g_currentMission.getFarmId ~= nil then
+            local mFarm = g_currentMission:getFarmId()
+            if mFarm ~= nil and mFarm ~= 0 and (FarmManager == nil or mFarm ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = mFarm
+            end
+        end
+    end
+    return tonumber(farmId) or 1
+end
+
+---EN: Resolves crop density in kg per liter (kg/L) through RHM_UnitConverter.
+---UA: Визначає густину культури в кг на літр (кг/л) через RHM_UnitConverter.
+---@param cropNameOrFillType string|number
+---@return number densityKgPerL
+function RHM_Api.getCropDensityKgPerLiter(cropNameOrFillType)
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter then
+        return RHM_UnitConverter.getCropDensityKgPerLiter(cropNameOrFillType)
+    end
+    return 0.75
+end
+
+---EN: Resolves crop density in metric tons per liter (t/L) through RHM_UnitConverter.
+---UA: Визначає густину культури в метричних тоннах на літр (т/л) через RHM_UnitConverter.
+---@param cropNameOrFillType string|number
+---@return number densityTonsPerL
+function RHM_Api.getCropDensityTonsPerLiter(cropNameOrFillType)
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter then
+        return RHM_UnitConverter.getCropDensityTonsPerLiter(cropNameOrFillType)
+    end
+    return 0.00075
+end
+
+
+
 
 
 

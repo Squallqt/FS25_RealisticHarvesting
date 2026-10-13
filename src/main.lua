@@ -23,6 +23,7 @@ end
 -- EN: Load all subsystem scripts in dependency order.
 -- UA: Завантажуємо всі підсистемні скрипти у порядку залежностей.
 source(modDirectory .. "src/utils/RHM_Debug.lua")
+source(modDirectory .. "src/utils/RHM_DiagnosticTool.lua")
 source(modDirectory .. "src/settings/RHM_Configuration.lua")
 source(modDirectory .. "src/settings/RHM_SettingsManager.lua")
 source(modDirectory .. "src/settings/RHM_Settings.lua")
@@ -31,6 +32,7 @@ source(modDirectory .. "src/network/RHM_SettingsSyncEvent.lua")
 source(modDirectory .. "src/network/RHM_SettingsSync.lua")
 source(modDirectory .. "src/utils/RHM_InputUtil.lua")
 source(modDirectory .. "src/utils/RHM_UnitConverter.lua")
+source(modDirectory .. "src/utils/RHM_UIColors.lua")
 source(modDirectory .. "src/integration/RHM_MoistureAdapter.lua")
 source(modDirectory .. "src/settings/RHM_SettingsUI.lua")
 source(modDirectory .. "src/hud/RHM_NotificationManager.lua")
@@ -97,6 +99,10 @@ local function loadedMission(mission, node)
         RHM_UnitConverter.initBushelCoefficients()
     end
 
+    if RHM_DiagnosticTool and RHM_DiagnosticTool.init then
+        RHM_DiagnosticTool:init()
+    end
+
     if RHM_MoistureAdapter and RHM_MoistureAdapter.initialize then
         RHM_MoistureAdapter.initialize()
     end
@@ -116,13 +122,17 @@ local function loadedMission(mission, node)
     -- EN: Load persistent harvest trip and fleet statistics on the server
     -- UA: Завантажуємо збережені дані одометра та парку техніки на сервері
     if mission:getIsServer() and mission.missionInfo and mission.missionInfo.savegameDirectory then
-        local xmlPath = mission.missionInfo.savegameDirectory .. "/realisticHarvestingData.xml"
-        if fileExists(xmlPath) and rhm and rhm.harvestTracker then
+        local xmlPath = Utils.getFilename("realisticHarvestingData.xml", mission.missionInfo.savegameDirectory)
+        local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
+        if fileExists(xmlPath) and tracker then
             local xmlFile = loadXMLFile("RHM_Data", xmlPath)
             if xmlFile ~= 0 then
-                rhm.harvestTracker:loadFromXMLFile(xmlFile, "realisticHarvesting")
+                tracker:loadFromXMLFile(xmlFile, "realisticHarvesting")
                 delete(xmlFile)
+                rhm_log(string.format("RHM: [LOAD] Successfully restored harvest tracker data from %s", xmlPath))
             end
+        else
+            rhm_log(string.format("RHM: [LOAD] No existing realisticHarvestingData.xml found at %s (fresh start or first run)", xmlPath))
         end
     end
 
@@ -135,7 +145,7 @@ end
 --     Creates the main manager instance and initializes the RHM_ProfileManager.
 -- UA: Викликається при початку завантаження місії.
 --     Створює головний екземпляр менеджера та ініціалізує RHM_ProfileManager.
-local function load(mission)
+local function loadMission(mission)
     if rhm == nil then
         rhm = RHM_RealisticHarvestManager.new(mission, modDirectory, modName)
         -- EN: Expose manager globally so other scripts can access it via g_realisticHarvestManager.
@@ -169,13 +179,59 @@ end
 --     які вже мають базову спеціалізацію Combine.
 local function validateTypes(manager)
     if manager.typeName == "vehicle" then
-        -- EN: Add the specialization to every vehicle type that has a Combine spec.
-        -- UA: Додаємо спеціалізацію до кожного типу транспорту, який має спеціалізацію Combine.
+        -- EN: Add the specialization to genuine harvesters (grain, forage, root, specialty)
+        --     while strictly excluding non-combines (balers, cutting balers, mobile pelletizers, bale shredders).
+        -- UA: Додаємо спеціалізацію лише до справжніх комбайнів (зернових, силосних, коренеплодів, спецтехніки),
+        --     суворо виключаючи не-комбайни (тюкопреси, гранулятори, подрібнювачі тюків).
         for typeName, typeEntry in pairs(g_vehicleTypeManager:getTypes()) do
             local hasCombine = SpecializationUtil.hasSpecialization(Combine, typeEntry.specializations)
             local hasForage = (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, typeEntry.specializations))
-            if hasCombine or hasForage then
-                g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
+            local hasCotton = (CottonHarvester ~= nil and SpecializationUtil.hasSpecialization(CottonHarvester, typeEntry.specializations))
+                or (typeName and typeName:lower():find("cotton") ~= nil)
+                or (typeEntry.specializationsByName and (typeEntry.specializationsByName["cottonharvester"] ~= nil or typeEntry.specializationsByName["cottonHarvester"] ~= nil))
+
+            if hasCombine or hasForage or hasCotton then
+                local isExcludedNonCombine = false
+
+                if not hasCotton then
+                    -- 1. Check if vehicle has Baler specialization (e.g. cutting balers like BioBaler WB-55, round/square balers)
+                    if Baler ~= nil and SpecializationUtil.hasSpecialization(Baler, typeEntry.specializations) then
+                        isExcludedNonCombine = true
+                    end
+
+                    -- 2. Check typeName string for known non-combine processing equipment
+                    if not isExcludedNonCombine and typeName then
+                        local tLower = typeName:lower()
+                        if tLower:find("baler") or tLower:find("pellet") or tLower:find("premos") or tLower:find("baleshredder") or tLower:find("biobaler") then
+                            isExcludedNonCombine = true
+                        end
+                    end
+
+                    -- 3. Check specializationsByName / specializationNames
+                    if not isExcludedNonCombine and typeEntry.specializationsByName then
+                        for sName, _ in pairs(typeEntry.specializationsByName) do
+                            local sLower = tostring(sName):lower()
+                            if sLower:find("baler") or sLower:find("pelletizer") or sLower:find("baleshredder") then
+                                isExcludedNonCombine = true
+                                break
+                            end
+                        end
+                    end
+
+                    if not isExcludedNonCombine and typeEntry.specializationNames then
+                        for _, sName in ipairs(typeEntry.specializationNames) do
+                            local sLower = tostring(sName):lower()
+                            if sLower:find("baler") or sLower:find("pelletizer") or sLower:find("baleshredder") then
+                                isExcludedNonCombine = true
+                                break
+                            end
+                        end
+                    end
+                end
+
+                if not isExcludedNonCombine then
+                    g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
+                end
             end
         end
     end
@@ -183,30 +239,66 @@ end
 
 -- EN: Hook into the mission lifecycle using FS25's Utils.appendedFunction/prependedFunction pattern.
 -- UA: Підключаємось до життєвого циклу місії через Utils.appendedFunction/prependedFunction від FS25.
-Mission00.load = Utils.prependedFunction(Mission00.load, load)
+Mission00.load = Utils.prependedFunction(Mission00.load, loadMission)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, loadedMission)
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
--- EN: Hook savegame saving to persist realisticHarvestingData.xml on server
--- UA: Підключаємось до збереження гри для запису realisticHarvestingData.xml на сервері
+-- EN: Helper to persist realisticHarvestingData.xml on server or career save
+-- UA: Допоміжна функція для запису realisticHarvestingData.xml на сервері чи збереженні кар'єри
+local function saveRealisticHarvestingData(savegameDirectory)
+    if not savegameDirectory or savegameDirectory == "" then return end
+    local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
+    if not tracker then return end
+    local xmlPath = Utils.getFilename("realisticHarvestingData.xml", savegameDirectory)
+    local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
+    if xmlFile ~= 0 then
+        tracker:saveToXMLFile(xmlFile, "realisticHarvesting")
+        saveXMLFile(xmlFile)
+        delete(xmlFile)
+        rhm_log(string.format("RHM: [SAVE] Successfully saved realisticHarvestingData.xml to %s", xmlPath))
+    end
+end
+
+-- EN: Hook interactive menu saving (Single Player / Client Host)
+-- UA: Підключаємось до збереження через меню (Одиночна гра / Клієнт-хост)
 local function onSaveSavegame(self)
-    if self:getIsServer() and self.missionInfo and self.missionInfo.savegameDirectory then
-        local xmlPath = self.missionInfo.savegameDirectory .. "/realisticHarvestingData.xml"
-        local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
-        if xmlFile ~= 0 and rhm and rhm.harvestTracker then
-            rhm.harvestTracker:saveToXMLFile(xmlFile, "realisticHarvesting")
-            saveXMLFile(xmlFile)
-            delete(xmlFile)
-        end
+    local saveDir = (self.missionInfo and self.missionInfo.savegameDirectory)
+        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+    if self:getIsServer() and saveDir then
+        saveRealisticHarvestingData(saveDir)
     end
 end
 FSBaseMission.saveSavegame = Utils.appendedFunction(FSBaseMission.saveSavegame, onSaveSavegame)
 
--- EN: Hook initial client state transmission in multiplayer to sync farm data to joining player
--- UA: Передаємо повний стан ферми гравцю, який приєднується до сесії мультиплеєра
-local function onSendInitialClientState(self, connection, user, farm)
-    if self.isMultiplayer and connection and not connection:getIsServer() and rhm and rhm.harvestTracker and farm then
-        connection:sendEvent(RHM_HarvestSyncInitialEvent.new(farm.farmId))
+-- EN: Hook dedicated server autosave & career XML serialization (Dedicated Server)
+-- UA: Підключаємось до збереження виділеного сервера (Dedicated Server)
+local function onCareerMissionInfoSaveToXMLFile(missionInfo)
+    local saveDir = (missionInfo and missionInfo.savegameDirectory)
+        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+    if saveDir then
+        saveRealisticHarvestingData(saveDir)
+    end
+end
+if FSCareerMissionInfo and FSCareerMissionInfo.saveToXMLFile then
+    FSCareerMissionInfo.saveToXMLFile = Utils.appendedFunction(FSCareerMissionInfo.saveToXMLFile, onCareerMissionInfoSaveToXMLFile)
+end
+
+-- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
+-- UA: Передаємо повний стан ферм та налаштування гравцю, який приєднується до сесії мультиплеєра
+local function onSendInitialClientState(mission, connection, isReconnect)
+    if mission and mission.missionDynamicInfo.isMultiplayer and connection and rhm and rhm.harvestTracker then
+        -- Sync active global physics & farm settings
+        if rhm.settings and RHM_SettingsSyncEvent then
+            connection:sendEvent(RHM_SettingsSyncEvent.new(rhm.settings))
+        end
+        -- Sync all farm statistics, combine trips, and season history
+        if rhm.harvestTracker.farms then
+            for farmId, farmData in pairs(rhm.harvestTracker.farms) do
+                if farmData and RHM_HarvestSyncInitialEvent then
+                    connection:sendEvent(RHM_HarvestSyncInitialEvent.new(farmId, farmData))
+                end
+            end
+        end
     end
 end
 FSBaseMission.sendInitialClientState = Utils.appendedFunction(FSBaseMission.sendInitialClientState, onSendInitialClientState)
@@ -224,6 +316,10 @@ local function onMissionUpdate(mission, dt)
 
     if rhm then
         rhm:update(dt)
+    end
+
+    if RHM_DiagnosticTool and RHM_DiagnosticTool.update then
+        RHM_DiagnosticTool:update(dt)
     end
 
     isUpdating = false

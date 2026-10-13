@@ -16,8 +16,7 @@ rhm_Combine.debug = false
 -- UA: Перевіряє чи транспортний засіб має базову спеціалізацію Combine.
 --     Повертає true для всіх машин, включаючи модульні системи на кшталт NEXAT.
 function rhm_Combine.prerequisitesPresent(specializations)
-    return SpecializationUtil.hasSpecialization(Combine, specializations)
-        or (ForageHarvester ~= nil and SpecializationUtil.hasSpecialization(ForageHarvester, specializations))
+    return true
 end
 
 -- EN: Natively called by the engine during specialization registration.
@@ -49,13 +48,19 @@ end
 --     Ці функції перехоплюють основні поведінки комбайна для вбудованої логіки навантаження і швидкості.
 function rhm_Combine.registerOverwrittenFunctions(vehicleType)
     rhm_log("RHM [Combine]: RHM: Registering overwritten functions for rhm_Combine")
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "addCutterArea", rhm_Combine.addCutterArea)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "addFillUnitFillLevel", rhm_Combine.addFillUnitFillLevel)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "getSpeedLimit", rhm_Combine.getSpeedLimit)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "startThreshing", rhm_Combine.startThreshing)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "stopThreshing", rhm_Combine.stopThreshing)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "verifyCombine", rhm_Combine.verifyCombine)
-    SpecializationUtil.registerOverwrittenFunction(vehicleType, "getCanBeTurnedOn", rhm_Combine.getCanBeTurnedOn)
+    local function safeRegisterOverwrittenFunction(funcName, targetFunc)
+        if vehicleType and vehicleType.functions and vehicleType.functions[funcName] ~= nil then
+            SpecializationUtil.registerOverwrittenFunction(vehicleType, funcName, targetFunc)
+        end
+    end
+
+    safeRegisterOverwrittenFunction("addCutterArea", rhm_Combine.addCutterArea)
+    safeRegisterOverwrittenFunction("addFillUnitFillLevel", rhm_Combine.addFillUnitFillLevel)
+    safeRegisterOverwrittenFunction("getSpeedLimit", rhm_Combine.getSpeedLimit)
+    safeRegisterOverwrittenFunction("startThreshing", rhm_Combine.startThreshing)
+    safeRegisterOverwrittenFunction("stopThreshing", rhm_Combine.stopThreshing)
+    safeRegisterOverwrittenFunction("verifyCombine", rhm_Combine.verifyCombine)
+    safeRegisterOverwrittenFunction("getCanBeTurnedOn", rhm_Combine.getCanBeTurnedOn)
 end
 
 -- EN: Registers XML paths for vehicle config (shop/modDesc XML). Persists combine settings per-vehicle.
@@ -73,6 +78,26 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.INT,    cur .. "#targetEngineLoad", "Target engine load", 80)
     schema:register(XMLValueType.BOOL,   cur .. "#isCalibrated",    "Combine calibration status", true)
     schema:register(XMLValueType.STRING, cur .. "#calibratedCrops", "List of calibrated crops", "")
+    schema:register(XMLValueType.STRING, cur .. "#machineId",       "Persistent machine identifier", "")
+
+    local tripKey = basePath .. ".trip"
+    schema:register(XMLValueType.INT,    tripKey .. "#fieldId",          "Active harvest field id", 0)
+    schema:register(XMLValueType.STRING, tripKey .. "#cropName",         "Active harvest crop name", "--")
+    schema:register(XMLValueType.INT,    tripKey .. "#fillTypeIndex",    "Active harvest fill type index", FillType.UNKNOWN)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedAreaHa",  "Active harvested area in hectares", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedLiters",  "Active harvested volume in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#harvestedMassKg",  "Active harvested mass in kg", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#lostLiters",       "Active grain loss volume in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#lossMoney",        "Active grain loss in money", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#fuelUsedL",        "Active fuel consumed in liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#sessionDuration",  "Active harvesting duration in seconds", 0)
+    schema:register(XMLValueType.STRING, tripKey .. "#efficiencyRank",   "Active efficiency rank", "A")
+    schema:register(XMLValueType.BOOL,   tripKey .. "#isActive",         "Active harvesting status", false)
+    schema:register(XMLValueType.BOOL,   tripKey .. "#isContract",       "Contract field work flag", false)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#avgSpeedSum",      "Average speed accumulator", 0)
+    schema:register(XMLValueType.INT,    tripKey .. "#avgSpeedCount",    "Average speed samples count", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. "#avgLoadSum",       "Average load accumulator", 0)
+    schema:register(XMLValueType.INT,    tripKey .. "#avgLoadCount",     "Average load samples count", 0)
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -113,7 +138,8 @@ function rhm_Combine.registerEventListeners(vehicleType)
     -- INPUT: Реєструємо події введення
     SpecializationUtil.registerEventListener(vehicleType, "onRegisterActionEvents", rhm_Combine)
 
-    -- LIFECYCLE: Видалення та вихід з техніки
+    -- LIFECYCLE: Вхід, вихід та видалення техніки
+    SpecializationUtil.registerEventListener(vehicleType, "onEnterVehicle", rhm_Combine)
     SpecializationUtil.registerEventListener(vehicleType, "onDelete", rhm_Combine)
     SpecializationUtil.registerEventListener(vehicleType, "onLeaveVehicle", rhm_Combine)
 end
@@ -130,7 +156,7 @@ end
 
 local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isActiveForInputIgnoreSelection)
     -- Skip if this is already a combine with our spec (handled by rhm_Combine:onRegisterActionEvents)
-    if vehicle.spec_rhm_Combine then
+    if not vehicle or vehicle.spec_rhm_Combine then
         return
     end
     
@@ -138,6 +164,7 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     local canRegister = isActiveForInputIgnoreSelection
         or vehicle.isActiveForInputIgnoreSelectionIgnoreAI
         or (vehicle.getIsEntered and vehicle:getIsEntered())
+        or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
 
     if not canRegister then
         return
@@ -147,12 +174,18 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     if not vehicle.isClient then
         return
     end
+
+    local currentFrame = (g_currentMission and g_currentMission.frameIndex) or (g_currentMission and g_currentMission.time) or g_time or 1
+    if vehicle._rhmActionEventsFrame == currentFrame then
+        return
+    end
+    vehicle._rhmActionEventsFrame = currentFrame
     
     -- Check if there's a combine with our spec in the hierarchy
     local function hasCombineInHierarchy(v, visited)
         if not v or visited[v] then return false end
         visited[v] = true
-        if v.spec_rhm_Combine then return true end
+        if v.spec_rhm_Combine and v.spec_rhm_Combine.isRhmCombine == true then return true end
         if v.rootVehicle and hasCombineInHierarchy(v.rootVehicle, visited) then return true end
         if v.attacherVehicle and hasCombineInHierarchy(v.attacherVehicle, visited) then return true end
         if v.getAttachedImplements then
@@ -164,52 +197,53 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
     end
     
     local searchRoot = vehicle.rootVehicle or vehicle
-    if not hasCombineInHierarchy(searchRoot, {}) then
-        return
-    end
+    local hasCombine = hasCombineInHierarchy(searchRoot, {})
     
-    -- Register RHM_OPEN_MENU for this NEXAT-style vehicle
+    -- Register action events for this non-combine vehicle
     if not vehicle._rhmActionEvents then
         vehicle._rhmActionEvents = {}
     end
     vehicle:clearActionEventsTable(vehicle._rhmActionEvents)
     
-    if InputAction.RHM_OPEN_MENU then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_MENU, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleMenu(self)
+    if hasCombine then
+        if InputAction.RHM_OPEN_MENU then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_MENU, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleMenu(self)
+                    end
+                end, false, true, false, true, nil)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
+                if g_i18n:hasText("input_RHM_OPEN_MENU") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_MENU"))
                 end
-            end, false, true, false, true, nil)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
-            if g_i18n:hasText("input_RHM_OPEN_MENU") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_OPEN_MENU"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
+            -- RHM_Debug.log("Combine", "RHM: [NEXAT] Registered RHM_OPEN_MENU for non-combine vehicle: " .. tostring(vehicle:getFullName()))
         end
-        -- RHM_Debug.log("Combine", "RHM: [NEXAT] Registered RHM_OPEN_MENU for non-combine vehicle: " .. tostring(vehicle:getFullName()))
-    end
-    if InputAction.RHM_TOGGLE_HUD then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_HUD, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleHUD()
+        if InputAction.RHM_TOGGLE_HUD then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_HUD, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleHUD()
+                    end
+                end, false, true, false, true, nil)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
+                if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_HUD"))
                 end
-            end, false, true, false, true, nil)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
-            if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_HUD"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
     end
+    -- Harvest History & Fleet Telemetry Menu is globally accessible in ANY entered vehicle (tractor, car, truck, etc.)
     if InputAction.RHM_OPEN_HARVEST_MENU then
         local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_OPEN_HARVEST_MENU, vehicle,
             function(self, ...)
                 if g_realisticHarvestManager then
-                    g_realisticHarvestManager:showHarvestHistoryGUI()
+                    g_realisticHarvestManager:showHarvestHistoryGUI(self)
                 end
             end, false, true, false, true, nil)
         if eventId then
@@ -220,32 +254,93 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
             g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
     end
-    if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
-        local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, vehicle,
-            function(self, ...)
-                if g_realisticHarvestManager then
-                    g_realisticHarvestManager:toggleMouseCursor(self)
+    if hasCombine then
+        if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
+            local _, eventId = vehicle:addActionEvent(vehicle._rhmActionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, vehicle,
+                function(self, ...)
+                    if g_realisticHarvestManager then
+                        g_realisticHarvestManager:toggleMouseCursor(self)
+                    end
+                end, false, true, false, true, nil, nil, true, true)
+            if eventId then
+                g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
+                if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then
+                    g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_MOUSE_CURSOR"))
                 end
-            end, false, true, false, true, nil, nil, true, true)
-        if eventId then
-            g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
-            if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then
-                g_inputBinding:setActionEventText(eventId, g_i18n:getText("input_RHM_TOGGLE_MOUSE_CURSOR"))
+                g_inputBinding:setActionEventTextVisibility(eventId, true)
             end
-            g_inputBinding:setActionEventTextVisibility(eventId, true)
         end
+    end
+
+end
+
+---EN: Applies global action event hooks to non-combine vehicles across Enterable, Drivable, and Vehicle classes.
+---UA: Застосовує глобальні хуки реєстрації подій для транспорту без спеціалізації комбайна (Enterable, Drivable, Vehicle).
+function rhm_Combine.applyGlobalVehicleHooks()
+    if rhm_Combine._globalVehicleHooksApplied then
+        return
+    end
+
+    local hookedAny = false
+
+    -- 1. Hook Enterable specialization object from g_specializationManager (native to all enterable machinery in FS25)
+    local enterableSpec = (g_specializationManager and g_specializationManager:getSpecializationObjectByName("enterable"))
+        or _G.Enterable
+    if enterableSpec and enterableSpec.onRegisterActionEvents then
+        enterableSpec.onRegisterActionEvents = Utils.appendedFunction(
+            enterableSpec.onRegisterActionEvents,
+            RHM_globalOnRegisterActionEvents
+        )
+        rhm_log("RHM [Combine]: Global Enterable.onRegisterActionEvents hook applied.")
+        hookedAny = true
+    end
+
+    -- 2. Hook Drivable specialization object from g_specializationManager as reinforcement
+    local drivableSpec = (g_specializationManager and g_specializationManager:getSpecializationObjectByName("drivable"))
+        or _G.Drivable
+    if drivableSpec and drivableSpec.onRegisterActionEvents then
+        drivableSpec.onRegisterActionEvents = Utils.appendedFunction(
+            drivableSpec.onRegisterActionEvents,
+            RHM_globalOnRegisterActionEvents
+        )
+        rhm_log("RHM [Combine]: Global Drivable.onRegisterActionEvents hook applied.")
+        hookedAny = true
+    end
+
+    -- 3. Hook Vehicle.registerActionEvents as context-wrapped fallback
+    if Vehicle and Vehicle.registerActionEvents then
+        Vehicle.registerActionEvents = Utils.appendedFunction(
+            Vehicle.registerActionEvents,
+            function(vehicle, ...)
+                if not vehicle or vehicle.spec_rhm_Combine or not vehicle.isClient then
+                    return
+                end
+                local currentFrame = (g_currentMission and g_currentMission.frameIndex) or (g_currentMission and g_currentMission.time) or g_time or 1
+                if vehicle._rhmActionEventsFrame == currentFrame then
+                    return
+                end
+                local canRegister = (vehicle.getIsActiveForInput and vehicle:getIsActiveForInput(true))
+                    or (vehicle.getIsEntered and vehicle:getIsEntered())
+                    or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
+                if canRegister and g_inputBinding and InputAction and InputAction.RHM_OPEN_HARVEST_MENU then
+                    local contextName = Vehicle.INPUT_CONTEXT_NAME or "VEHICLE"
+                    g_inputBinding:beginActionEventsModification(contextName)
+                    RHM_globalOnRegisterActionEvents(vehicle, true, true)
+                    g_inputBinding:endActionEventsModification()
+                end
+            end
+        )
+        rhm_log("RHM [Combine]: Global Vehicle.registerActionEvents context-wrapped fallback hook applied.")
+        hookedAny = true
+    end
+
+    if hookedAny then
+        rhm_Combine._globalVehicleHooksApplied = true
     end
 end
 
--- Apply global hook ONCE (guard against double-loading)
-if not rhm_Combine._nexatHookApplied then
-    rhm_Combine._nexatHookApplied = true
-    Vehicle.onRegisterActionEvents = Utils.appendedFunction(
-        Vehicle.onRegisterActionEvents,
-        RHM_globalOnRegisterActionEvents
-    )
-    rhm_log("RHM [Combine]: RHM: [NEXAT] Global Vehicle.onRegisterActionEvents hook applied.")
-end
+-- Try applying global hooks immediately at script load time
+rhm_Combine.applyGlobalVehicleHooks()
 
 ---EN: Safely gets or lazy-initializes RHM_CombineMemory to guarantee it is never nil.
 ---UA: Безпечно повертає або ліниво ініціалізує RHM_CombineMemory для гарантії захисту від nil.
@@ -285,6 +380,28 @@ function rhm_Combine:onLoad(savegame)
         Logging.error("RHM: Failed to initialize spec for combine: %s (specName: %s)", 
             tostring(self:getFullName()), tostring(specName))
         return
+    end
+
+    local storeItem = g_storeManager:getItemByXMLFilename(self.configFileName)
+    local storeCat = (storeItem and storeItem.categoryName) and storeItem.categoryName:lower() or ""
+    local isCottonHarvester = (self.spec_cottonHarvester ~= nil)
+        or (CottonHarvester ~= nil and SpecializationUtil.hasSpecialization(CottonHarvester, self.specializations))
+        or (self.typeName and self.typeName:lower():find("cotton") ~= nil)
+        or (self.configFileName and self.configFileName:lower():find("cotton") ~= nil)
+        or (self.xmlFile and self.xmlFile:hasProperty("vehicle.cottonHarvester"))
+        or storeCat:find("cotton") ~= nil
+
+    if not isCottonHarvester then
+        if self.spec_baler ~= nil
+            or self.spec_pelletizer ~= nil
+            or self.spec_strawHarvestPelletizer ~= nil
+            or self.spec_baleShredder ~= nil
+            or (self.typeName and (self.typeName:lower():find("baler") or self.typeName:lower():find("pellet") or self.typeName:lower():find("premos") or
+                self.typeName:lower():find("baleshredder") or self.typeName:lower():find("biobaler")))
+            or (self.xmlFile and (self.xmlFile:hasProperty("vehicle.baler") or self.xmlFile:hasProperty("vehicle.pelletizer") or self.xmlFile:hasProperty("vehicle.baleShredder"))) then
+            spec.isRhmCombine = false
+            return
+        end
     end
 
     spec.isRhmCombine = true
@@ -370,11 +487,14 @@ function rhm_Combine:onLoad(savegame)
         machineType = "grain"
     elseif category == "forageHarvesters" or category == "forageHarvesterVehicles" or category == "forageHarvesting" or catLower:find("forage") ~= nil or typeName:find("forage") ~= nil then
         machineType = "forage"
-    elseif category == "cottonVehicles" or category == "cottonHarvesting" then
+    elseif category == "cottonVehicles" or category == "cottonHarvesting" or catLower:find("cotton") ~= nil or typeName:find("cotton") ~= nil or self.spec_cottonHarvester ~= nil then
         machineType = "cotton"
     elseif category == "beetVehicles" or category == "beetHarvesting" 
        or category == "potatoVehicles" or category == "potatoHarvesting"
        or category == "vegetableVehicles" or category == "vegetableHarvesting"
+       or category == "peaHarvesters" or catLower:find("pea") ~= nil
+       or category == "greenBeanHarvesters" or catLower:find("greenbean") ~= nil
+       or catLower:find("spinach") ~= nil
        or category == "sugarCaneVehicles" or category == "sugarCaneHarvesting" then
         machineType = "root"
     elseif category == "grapeVehicles" or category == "grapeHarvesting" then
@@ -423,7 +543,8 @@ function rhm_Combine:onLoad(savegame)
                                     elseif name:find("POTATO") or name:find("BEET") or name:find("CARROT")
                                        or name:find("PARSNIP") or name:find("ONION") or name:find("GARLIC")
                                        or name:find("SPINACH") or name:find("GREENBEAN") or name:find("GREEN_BEAN")
-                                       or name:find("SUGARCANE") or name:find("CABBAGE") then
+                                       or name:find("SUGARCANE") or name:find("CABBAGE")
+                                       or name == "PEA" or name == "PEAS" then
                                         hasRootFill = true
                                     elseif name == "COTTON" then
                                         hasCottonFill = true
@@ -597,9 +718,25 @@ function rhm_Combine:onPostLoad(savegame)
     if tracker then
         local farmId = (self.getOwnerFarmId and self:getOwnerFarmId()) or 1
         local farm = tracker.farms and tracker.farms[farmId]
-        local machineKey = self.configFileName or (self.getFullName and self:getFullName()) or "Harvester"
-        if farm and farm.combineTrips and farm.combineTrips[machineKey] then
-            self.spec_rhm_Combine.trip = farm.combineTrips[machineKey]
+        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or "Harvester"
+        if farm and farm.combineTrips then
+            local mTrip = farm.combineTrips[machineKey]
+            if not mTrip and self.configFileName then
+                for k, v in pairs(farm.combineTrips) do
+                    if k:sub(1, #self.configFileName) == self.configFileName then
+                        mTrip = v
+                        break
+                    end
+                end
+            end
+            if mTrip then
+                self.spec_rhm_Combine.trip = mTrip
+            elseif self.spec_rhm_Combine.trip then
+                farm.combineTrips[machineKey] = self.spec_rhm_Combine.trip
+            end
+        elseif farm and self.spec_rhm_Combine.trip then
+            farm.combineTrips = farm.combineTrips or {}
+            farm.combineTrips[machineKey] = self.spec_rhm_Combine.trip
         end
     end
 end
@@ -616,10 +753,10 @@ function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
     
     local spec = self.spec_rhm_Combine
     if spec and actualAdded and type(actualAdded) == "number" and actualAdded > 0 then
-        -- Рахуємо якщо ми активно косимо (lastRawArea > 0) або це увімкнений виноградо/оливкозбиральний комбайн
+        -- Рахуємо якщо ми активно косимо (всередині addCutterArea, або lastRawArea > 0, або виноградо/оливкозбиральний комбайн)
         local isGrapeOrOlive = (spec.machineType == "grape" or spec.machineType == "olive" 
             or (spec.combineMemory and (spec.combineMemory.machineType == "grape" or spec.combineMemory.machineType == "olive")))
-        local isHarvestingActive = (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
+        local isHarvestingActive = spec._isInsideAddCutterArea or (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
         if isHarvestingActive then
             -- EN: Cotton Harvester fix: Ignore massive instant internal transfers (e.g. spool unloading)
             -- UA: Фікс бавовняних комбайнів: ігноруємо масивні миттєві внутрішні переміщення (напр. розвантаження котушки)
@@ -726,12 +863,16 @@ end
 function rhm_Combine:addCutterArea(superFunc, ...)
     local area, realArea, inputFruitType, outputFillType, strawRatio, strawGroundType, farmId, cutterLoad = ...
     
-    -- EN: Call super first to get the real data (liters, crop type) before we intercept.
-    -- UA: Викликаємо super спочатку щоб отримати реальні дані (літри, тип культури) перед перехопленням.
+    local spec = self.spec_rhm_Combine
+    if spec then
+        spec._isInsideAddCutterArea = true
+    end
     local r1, r2, r3, r4, r5, r6, r7, r8, r9, r10 = superFunc(self, ...)
+    if spec then
+        spec._isInsideAddCutterArea = false
+    end
     local retLiters = r1
     
-    local spec = self.spec_rhm_Combine
     if not spec or not spec.loadCalculator then
         return r1, r2, r3, r4, r5, r6, r7, r8, r9, r10
     end
@@ -1049,7 +1190,8 @@ function rhm_Combine:onCropTypeChanged(newCropName)
 
     if spec.loadCalculator then
         spec.loadCalculator.currentCrop = newCropName
-        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
+        local canonical = newCropName and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+            RHM_CombineSettingsDatabase:getCanonicalCropName(newCropName) or newCropName
         local remembered = spec.loadCalculator.cropHarvestingSpeeds and (spec.loadCalculator.cropHarvestingSpeeds[canonical] or spec.loadCalculator.cropHarvestingSpeeds[newCropName])
         remembered = remembered or spec.loadCalculator.lastHarvestingSpeed or (spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 and spec.loadCalculator.speedLimit)
         if remembered and remembered > 0 then
@@ -1159,6 +1301,10 @@ end
 ---    Суворо ігнорує засохлі/оприскані бур'яни та чистий ґрунт без бур'янів.
 ---    Повертає коефіцієнт забур'яненості в діапазоні [0.00, 1.00].
 function rhm_Combine.getLiveWeedRatio(vehicle)
+    if g_realisticHarvestManager and g_realisticHarvestManager.settings and not g_realisticHarvestManager.settings:getEnableWeedLoad() then
+        return 0.0
+    end
+
     local mission = g_currentMission
     if not mission then
         return 0.0
@@ -1172,19 +1318,39 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     end
 
     if rhm_Combine.weedLiveStates == nil then
-        local liveStates = {}
+        local liveStates = { [3] = true, [4] = true, [5] = true, [6] = true }
         local deadStates = {}
         local rep = weedSystem.getHerbicideReplacements and weedSystem:getHerbicideReplacements()
-        if rep and rep.weed and rep.weed.replacements then
-            for sourceState, targetState in pairs(rep.weed.replacements) do
-                -- In GIANTS Engine FS25:
-                -- sourceState represents active growing weed stages.
-                -- targetState represents withered/dead weed stages produced by herbicide application.
-                liveStates[sourceState] = true
-                if targetState ~= 0 then
-                    deadStates[targetState] = true
+        local repTable = nil
+        if type(rep) == "table" then
+            if rep.weed and rep.weed.replacements then
+                repTable = rep.weed.replacements
+            elseif rep.replacements then
+                repTable = rep.replacements
+            else
+                repTable = rep
+            end
+        end
+
+        if repTable then
+            liveStates = {}
+            for sourceState, targetState in pairs(repTable) do
+                if type(sourceState) == "number" and type(targetState) == "number" then
+                    -- GIANTS Engine 10: targetState == 0 represents preventative spraying on invisible seedbed states (1 & 2).
+                    -- Only targetState ~= 0 represents actual visible growing weeds (states 3, 4, 5, 6).
+                    if targetState ~= 0 and sourceState ~= 0 then
+                        liveStates[sourceState] = true
+                    end
+                    if targetState ~= 0 then
+                        deadStates[targetState] = true
+                    end
                 end
             end
+        end
+
+        -- Fallback if repTable was empty or unconfigured
+        if not next(liveStates) then
+            liveStates = { [3] = true, [4] = true, [5] = true, [6] = true }
         end
 
         -- Strictly remove any withered/dead/sprayed states from liveStates
@@ -1192,26 +1358,10 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
             liveStates[deadState] = nil
         end
 
-        -- Fallback: if replacements table is empty, query weedSystem factors
-        if not next(liveStates) and type(weedSystem.getFactors) == "function" then
-            local factors = weedSystem:getFactors()
-            if factors then
-                for st, f in pairs(factors) do
-                    if f and f > 0 then
-                        liveStates[st] = true
-                    end
-                end
-            end
-        end
-
-        -- Fallback default for FS25 standard weed density map:
-        -- In FS25: 1 (small pre-emergent), 2 (medium pre-emergent), 3 (small),
-        -- 4 (medium), 5 (large/flowering), 6 (partial) are live; 7..9 are withered.
-        if not next(liveStates) then
-            for st = 1, 6 do
-                liveStates[st] = true
-            end
-        end
+        -- Strictly enforce state 0 (clean soil), state 1, and state 2 (invisible seedbed) are NEVER treated as live weeds
+        liveStates[0] = nil
+        liveStates[1] = nil
+        liveStates[2] = nil
 
         local mapId, firstChannel, numChannels = weedSystem:getDensityMapData()
         rhm_Combine.weedMapId = mapId
@@ -1231,7 +1381,7 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
     local spec_combine = vehicle.spec_combine
     if spec_combine and spec_combine.attachedCutters then
         for cutter, _ in pairs(spec_combine.attachedCutters) do
-            if cutter:getIsTurnedOn() then
+            if cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
                 activeCutter = cutter
                 break
             end
@@ -1239,6 +1389,47 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
                 activeCutter = cutter
             end
         end
+    end
+
+    if not activeCutter and vehicle.getAttachedImplements then
+        for _, impl in pairs(vehicle:getAttachedImplements()) do
+            local obj = impl.object
+            if obj and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter) then
+                if obj.getIsTurnedOn and obj:getIsTurnedOn() then
+                    activeCutter = obj
+                    break
+                end
+                if not activeCutter then
+                    activeCutter = obj
+                end
+            end
+        end
+    end
+
+    if not activeCutter and vehicle.spec_cutter then
+        activeCutter = vehicle
+    end
+
+    local isCutterOn = false
+    local isCutterLowered = false
+    if activeCutter then
+        if activeCutter.getIsTurnedOn then
+            isCutterOn = activeCutter:getIsTurnedOn()
+        else
+            isCutterOn = true
+        end
+
+        if activeCutter.getIsLowered then
+            isCutterLowered = activeCutter:getIsLowered(true)
+        elseif activeCutter.spec_cutter and activeCutter.spec_cutter.allowCuttingWhileRaised then
+            isCutterLowered = true
+        else
+            isCutterLowered = true
+        end
+    end
+
+    if not activeCutter or not isCutterOn or not isCutterLowered then
+        return 0.0
     end
 
     local sx, sy, sz = nil, nil, nil
@@ -1313,31 +1504,51 @@ function rhm_Combine.getLiveWeedRatio(vehicle)
         return 0.0
     end
 
-    -- Look-ahead distance: 1.2m ahead of the cutterbar into uncut crop
-    -- to sample standing weeds BEFORE the knife destroys them in the density map
-    local lookAhead = 1.2
+    -- Look-ahead distance: 1.0m ahead of the cutterbar into uncut crop
+    local lookAhead = 1.0
     local numSamples = math.max(3, math.min(9, math.ceil(cutterWidth / 1.8)))
-    local firstChan = rhm_Combine.weedFirstChannel
-    local mask = rhm_Combine.weedChannelMask
-    local liveStates = rhm_Combine.weedLiveStates
+    local firstChan = rhm_Combine.weedFirstChannel or 0
+    local mask = rhm_Combine.weedChannelMask or 15
+    local liveStates = rhm_Combine.weedLiveStates or { [3] = true, [4] = true, [5] = true, [6] = true }
 
     local liveCount = 0
+    local validSamples = 0
     local terrainRoot = mission.terrainRootNode
 
     for i = 0, numSamples - 1 do
-        local t = (numSamples == 1) and 0.5 or (0.05 + 0.90 * (i / (numSamples - 1)))
+        -- Sample strictly within the central 70% swath (0.15 to 0.85) to avoid ditch/roadside verge overhang
+        local t = (numSamples == 1) and 0.5 or (0.15 + 0.70 * (i / (numSamples - 1)))
         local px = sx + (wx - sx) * t + fx * lookAhead
         local pz = sz + (wz - sz) * t + fz * lookAhead
         local py = (terrainRoot and getTerrainHeightAtWorldPos(terrainRoot, px, 0, pz)) or (sy + (wy - sy) * t)
 
-        local d = getDensityAtWorldPos(mapId, px, py, pz)
-        local s = bit32.band(bit32.rshift(d, firstChan), mask)
-        if liveStates[s] then
-            liveCount = liveCount + 1
+        -- 1. Ensure sample coordinate is within an authentic cultivated field
+        local inField = false
+        if g_fieldManager and g_fieldManager.getFieldAtWorldPosition then
+            local f = g_fieldManager:getFieldAtWorldPosition(px, pz)
+            if f ~= nil then
+                inField = true
+            end
+        end
+        if not inField and FSDensityMapUtil and FSDensityMapUtil.getFieldDataAtWorldPosition then
+            inField = FSDensityMapUtil.getFieldDataAtWorldPosition(px, py, pz) ~= nil
+        end
+
+        if inField then
+            validSamples = validSamples + 1
+            local d = getDensityAtWorldPos(mapId, px, py, pz)
+            local s = bit32.band(bit32.rshift(d, firstChan), mask)
+            if liveStates[s] then
+                liveCount = liveCount + 1
+            end
         end
     end
 
-    return liveCount / numSamples
+    if validSamples == 0 then
+        return 0.0
+    end
+
+    return liveCount / validSamples
 end
 
 -- EN: Override for getSpeedLimit. Returns a dynamically calculated speed cap from RHM_LoadCalculator
@@ -1355,9 +1566,9 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     -- UA: Викликаємо оригінал щоб отримати базовий ліміт швидкості гри і прапорець перевірки.
     local limit, doCheckSpeedLimit = superFunc(self, onlyIfWorking)
     
-    -- EN: If spec not initialized (vehicle loading), return original limit unchanged.
-    -- UA: Якщо spec не ініціалізований (завантаження транспорту), повертаємо оригінальний ліміт без змін.
-    if not spec or not spec.loadCalculator then
+    -- EN: If spec not initialized or not genuine RHM combine, return original limit unchanged.
+    -- UA: Якщо spec не ініціалізований або не є справжнім комбайном RHM, повертаємо оригінальний ліміт без змін.
+    if not spec or not spec.loadCalculator or spec.isRhmCombine ~= true then
         return limit, doCheckSpeedLimit
     end
     
@@ -1473,7 +1684,7 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
             -- Apply synced limit if it's actively limiting (< genuineSpeedLimit)
             if syncedLimit < spec.loadCalculator.genuineSpeedLimit then
                 spec.isSpeedLimitActive = true
-                limit = syncedLimit
+                limit = math.min(limit, syncedLimit)
             else
                 spec.isSpeedLimitActive = false
             end
@@ -1483,8 +1694,9 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
     end
     
     -- === SERVER: Continue with normal RHM_LoadCalculator logic ===
-    -- Отримуємо обмеження з RHM_LoadCalculator
-    local calculatedLimit = spec.loadCalculator:getSpeedLimit()
+    -- EN: Prefer smoothed hydrostatic limit so AI helpers and cruise control never experience discontinuous steps
+    -- UA: Надаємо перевагу згладженому гідростатичному ліміту щоб помічники і круїз-контроль не отримували ривків
+    local calculatedLimit = spec._rhmSmoothedMotorLimit or spec.loadCalculator:getSpeedLimit()
     local engineLoad = spec.loadCalculator:getEngineLoad()
     
     -- Діагностика: логуємо розрахунки (рідше)
@@ -1591,13 +1803,17 @@ function rhm_Combine:startThreshing(superFunc)
         local isTurning = type(self.rootVehicle.getAIFieldWorkerIsTurning) == "function" and self.rootVehicle:getAIFieldWorkerIsTurning()
         local allowLowering = not isAIActive or not isTurning
         
-        for _, cutter in pairs(spec_combine.attachedCutters) do
-            if allowLowering and cutter ~= self then
-                local jointDescIndex = self:getAttacherJointIndexFromObject(cutter)
-                self:setJointMoveDown(jointDescIndex, true, true)
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if type(cutter) == "table" then
+                if allowLowering and cutter ~= self then
+                    local jointDescIndex = self:getAttacherJointIndexFromObject(cutter)
+                    self:setJointMoveDown(jointDescIndex, true, true)
+                end
+                
+                if cutter.setIsTurnedOn then
+                    cutter:setIsTurnedOn(true, true)
+                end
             end
-            
-            cutter:setIsTurnedOn(true, true)
         end
     end
     
@@ -1877,6 +2093,71 @@ function rhm_Combine:updateSounds(dt)
     end
 end
 
+-- Use the same working-cutter checks on both peers; harvesting physics remain server-only.
+function rhm_Combine.getIsCutterWorking(self)
+    local spec = self.spec_rhm_Combine
+    local spec_combine = self.spec_combine
+    -- EN: Check if the cutter is working. Evaluates:
+    --     isTurnedOn AND speed > 0.5 AND lowered (or allowCuttingWhileRaised).
+    --     Avoids directional flags that can become indeterminate during automated path following.
+    -- UA: Перевіряємо чи жатка працює. Оцінює:
+    --     isTurnedOn І speed > 0.5 І опущена (або allowCuttingWhileRaised).
+    --     Уникає прапорців напрямку, які можуть бути невизначеними під час руху по траєкторії.
+    local cutterIsTurnedOn = false
+    if spec_combine and spec_combine.attachedCutters then
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if cutter.spec_cutter then
+                local spec_cutter = cutter.spec_cutter
+                if cutter:getIsTurnedOn()
+                    and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
+                    cutterIsTurnedOn = true
+                    break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
+                end
+            end
+        end
+    end
+
+    -- EN: Check attached implements for forage harvesters, tool carriers, and system vehicles
+    -- UA: Перевірка прикріплених знарядь для силосних комбайнів, носіїв та системних тракторів
+    if not cutterIsTurnedOn and self.getAttachedImplements then
+        for _, impl in pairs(self:getAttachedImplements()) do
+            local cutter = impl.object
+            if cutter and cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
+                local spec_cutter = cutter.spec_cutter
+                local isCutterSpec = (spec_cutter ~= nil) or (cutter.spec_forageHarvesterCutter ~= nil) or (cutter.spec_forageCutter ~= nil)
+                if isCutterSpec then
+                    local allowRaised = (spec_cutter and spec_cutter.allowCuttingWhileRaised) or false
+                    if allowRaised or (cutter.getIsLowered and cutter:getIsLowered(true)) then
+                        cutterIsTurnedOn = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    -- EN: Fallback for self-propelled harvesters with integrated cutter (e.g. root/vegetable/specialized)
+    -- UA: Перевірка для самохідних комбайнів із вбудованою жаткою
+    if not cutterIsTurnedOn and self.spec_cutter then
+        local spec_cutter = self.spec_cutter
+        if self:getIsTurnedOn()
+            and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
+            cutterIsTurnedOn = true
+        end
+    end
+
+    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
+    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
+    if not cutterIsTurnedOn and (spec.machineType == "grape" or spec.machineType == "olive"
+        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
+        if self:getIsTurnedOn() then
+            cutterIsTurnedOn = true
+        end
+    end
+
+    return cutterIsTurnedOn
+end
+
 -- EN: Called on every game tick. Runs warning checks on client, load/yield/speed calculations on server.
 --     Server side: detects if thresher or cutter is off and resets HUD data accordingly.
 --     Passes harvested mass and area to RHM_LoadCalculator for physics-based engine load calculation.
@@ -1884,19 +2165,84 @@ end
 --     Серверна сторона: визначає якщо молотарка або жатка вимкнена і скидає дані HUD відповідно.
 --     Передає зібрану масу та площу до RHM_LoadCalculator для фізичного розрахунку навантаження двигуна.
 function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
-    -- EN: Client-side: update safety warnings and audio feedback.
-    -- UA: Клієнтська сторона: оновлення попереджень безпеки та звуків.
+    local spec = self.spec_rhm_Combine
+    if not spec or spec.isRhmCombine ~= true then return end
+
+
+    -- EN: Client-side: update safety warnings, audio feedback, and quick trip reset hold.
+    -- UA: Клієнтська сторона: оновлення попереджень безпеки, звуків та швидкого скидання одометра.
     if self.isClient then
         rhm_Combine.updateWarnings(self, dt)
         rhm_Combine.updateSounds(self, dt)
+
+        -- CLIENT: Quick Trip Reset Hold Handling (1.5 seconds)
+        if spec.isHoldingReset then
+            spec.resetHoldTimer = (spec.resetHoldTimer or 0) + dt
+            spec.resetHoldProgress = math.min(1.0, spec.resetHoldTimer / 1500)
+            if spec.resetHoldTimer >= 1500 then
+                spec.isHoldingReset = false
+                spec.resetHoldTimer = 0
+                spec.resetHoldProgress = 0
+
+                local farmId = self:getOwnerFarmId() or 1
+                local isMultiplayer = g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer
+                local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
+
+                local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or ""
+                if isDedicatedClient and g_client and g_client:getServerConnection() then
+                    spec.pendingQuickTripReset = true
+                    g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId, self, nil, machineKey))
+                else
+                    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+                    if tracker then tracker:resetTripForCombine(farmId, self, nil) end
+                end
+
+                if not isDedicatedClient and g_currentMission and g_currentMission.showBlinkingWarning then
+                    local msg = (g_i18n and g_i18n:hasText("rhm_trip_reset_done") and g_i18n:getText("rhm_trip_reset_done")) or "Harvest Trip Reset!"
+                    g_currentMission:showBlinkingWarning(msg, 2000)
+                end
+            end
+        elseif not spec.isHoldingReset then
+            spec.resetHoldTimer = 0
+            spec.resetHoldProgress = 0
+        end
     end
     
+    -- EN: Dedicated Server Profile Sync: If an automated worker is harvesting on a dedicated server,
+    --     the client owning/controlling this combine automatically sends their locally saved crop preset (if any).
+    -- UA: Синхронізація профілю для виділеного сервера: якщо автоматичний помічник збирає врожай на виділеному сервері,
+    --     клієнт що володіє/керує цим комбайном автоматично надсилає свій локально збережений пресет культури (якщо є).
+    if not self.isServer and self.isClient and rhm_Combine.getIsCutterWorking(self) then
+        local isAi = rhm_Combine.isAiWorkerActive(self)
+        local settings = g_realisticHarvestManager and g_realisticHarvestManager.settings
+        if isAi and (not settings or settings.aiHelperTuning ~= 3) then
+            local isMyVehicle = (self.getIsEntered and self:getIsEntered())
+                or (self.getIsControlled and self:getIsControlled())
+                or (g_currentMission and g_currentMission.player and self:getOwnerFarmId() == g_currentMission.player.farmId)
+            if isMyVehicle then
+                local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+                if currentCrop and currentCrop ~= "" and spec._lastAiClientTunedCrop ~= currentCrop then
+                    -- The server distinguishes helper fallback tuning from protected player settings.
+                    local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
+                    if pm and pm:getProfile(currentCrop) and spec.combineMemory:loadUserPreset(true) then
+                        spec._lastAiClientTunedCrop = currentCrop
+                    end
+                end
+            end
+        else
+            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
+            if spec._lastAiClientTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
+                spec._lastAiClientTunedCrop = nil
+            end
+        end
+    end
+
     if not self.isServer then
         return
     end
     
-    local spec = self.spec_rhm_Combine
     local spec_combine = self.spec_combine
+
     
     if not spec or not spec.loadCalculator then
         return
@@ -1920,6 +2266,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
+        spec._rhmSmoothedMotorLimit = nil
         spec.loadCalculator:reset()
         spec.currentWeedRatio = 0
         if spec.data then
@@ -1943,42 +2290,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         return
     end
     
-    -- EN: Check if the cutter is working. Evaluates:
-    --     isTurnedOn AND speed > 0.5 AND lowered (or allowCuttingWhileRaised).
-    --     Avoids directional flags that can become indeterminate during automated path following.
-    -- UA: Перевіряємо чи жатка працює. Оцінює:
-    --     isTurnedOn І speed > 0.5 І опущена (або allowCuttingWhileRaised).
-    --     Уникає прапорців напрямку, які можуть бути невизначеними під час руху по траєкторії.
-    local cutterIsTurnedOn = false
-    for cutter, _ in pairs(spec_combine.attachedCutters) do
-        if cutter.spec_cutter then
-            local spec_cutter = cutter.spec_cutter
-            if cutter:getIsTurnedOn() 
-                and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
-                cutterIsTurnedOn = true
-                break  -- EN: Found a working cutter — exit / UA: Знайшли працюючу — виходимо
-            end
-        end
-    end
-    
-    -- EN: Fallback for self-propelled harvesters with integrated cutter (e.g. root/vegetable/specialized)
-    -- UA: Перевірка для самохідних комбайнів із вбудованою жаткою
-    if not cutterIsTurnedOn and self.spec_cutter then
-        local spec_cutter = self.spec_cutter
-        if self:getIsTurnedOn() 
-            and (spec_cutter.allowCuttingWhileRaised or self:getIsLowered(true)) then
-            cutterIsTurnedOn = true
-        end
-    end
-
-    -- EN: Support self-propelled grape, olive, and straddle harvesters with integrated shaker tunnels
-    -- UA: Підтримка самохідних виноградо- та оливкозбиральних комбайнів із вбудованими струшувачами
-    if not cutterIsTurnedOn and (spec.machineType == "grape" or spec.machineType == "olive"
-        or (spec_combine and not next(spec_combine.attachedCutters) and self.spec_cutter == nil)) then
-        if self:getIsTurnedOn() then
-            cutterIsTurnedOn = true
-        end
-    end
+    local cutterIsTurnedOn = rhm_Combine.getIsCutterWorking(self)
 
     -- EN: Field transit and road tracking for smart auto-reset of field trip odometer
     -- UA: Відстеження переїздів та доріг для розумного авто-скидання лічильника поля
@@ -1994,6 +2306,20 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         end
     end
 
+    -- EN: Continuously refresh motorized carrier fuel reference so driving transit never leaks into harvest tickets
+    -- UA: Безперервно оновлюємо показник палива носія, щоб переїзд до поля не потрапляв у лічильник збирання
+    local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(self)) or self
+    if carrier and carrier.getFillUnitFillLevel and carrier.spec_motorized then
+        local fuelIdx = (RHM_HarvestTracker and RHM_HarvestTracker.getFuelFillUnitIndex and RHM_HarvestTracker.getFuelFillUnitIndex(carrier))
+        if fuelIdx then
+            local currFuel = carrier:getFillUnitFillLevel(fuelIdx) or 0
+            if spec._rhmCutterWasDisengaged or (spec._rhmTimeSinceLastHarvest or 0) > 2.0 or carrier._rhmLastHarvestFuel == nil then
+                carrier._rhmLastHarvestFuel = currFuel
+            end
+            carrier._rhmLastFuelLevel = currFuel
+        end
+    end
+
     spec._rhmRoadCheckTimer = (spec._rhmRoadCheckTimer or 0) + dt
     if spec._rhmRoadCheckTimer >= 500 then
         spec._rhmRoadCheckTimer = 0
@@ -2001,8 +2327,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             local wx, _, wz = getWorldTranslation(self.rootNode)
             local fid = 0
             if RHM_HarvestTracker and RHM_HarvestTracker.getFieldAtWorldPosition then
-                local _, detectedFid = RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, self)
-                fid = detectedFid or 0
+                local _, detectedFid, detectedFml = RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, self)
+                fid = (detectedFid and detectedFid > 0 and detectedFid) or (detectedFml and detectedFml > 0 and detectedFml) or 0
             end
             if fid == 0 then
                 spec._rhmTimeOutsideField = (spec._rhmTimeOutsideField or 0) + 0.5
@@ -2019,7 +2345,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         -- UA: Зберігаємо робочу швидкість перед скиданням щоб розвороти на краю поля не стирали пам'ять
         if spec.loadCalculator and spec.loadCalculator.speedLimit and spec.loadCalculator.speedLimit > 5.5 then
             local activeCrop = spec.loadCalculator.currentCrop or (spec.combineMemory and spec.combineMemory.currentCrop)
-            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
+            local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
+                RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
             spec.loadCalculator.lastHarvestingSpeed = spec.loadCalculator.speedLimit
             if activeCrop then
                 spec.loadCalculator.cropHarvestingSpeeds = spec.loadCalculator.cropHarvestingSpeeds or {}
@@ -2039,6 +2366,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
             spec._rhmLastMotorSpeedLimit = nil
         end
+        spec._rhmSmoothedMotorLimit = nil
         spec.loadCalculator:reset() 
         spec.currentWeedRatio = 0
         if spec.data then
@@ -2091,19 +2419,10 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     end
     
     if liters > 0 then
-        if spec.lastFillType and g_fillTypeManager then
-            local fillType = g_fillTypeManager:getFillTypeByIndex(spec.lastFillType)
-            if fillType and fillType.massPerLiter then
-                -- EN: IMPORTANT: massPerLiter in FS25 is stored in TONS per liter, so multiply by 1000 to get kg.
-                -- UA: ВАЖЛИВО: massPerLiter в FS25 зберігається в ТОННАХ на літр, тому множимо на 1000 щоб отримати кг.
-                massKg = liters * fillType.massPerLiter * 1000
-            else
-                massKg = liters * 0.75 -- EN: Fallback density / UA: Запасна густота
-            end
-        else
-            massKg = liters * 0.75 -- EN: Fallback density / UA: Запасна густота
-        end
+        local densityKgPerL = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(spec.lastFillType)) or 0.75
+        massKg = liters * densityKgPerL
     end
+
     
     -- EN: Use lastRawArea (actual geometric area) for yield calculation.
     -- UA: Використовуємо lastRawArea (реальну геометричну площу) для розрахунку врожайності.
@@ -2135,8 +2454,42 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         end
     end
 
-    -- WEEDS: Retrieve live weed presence at cutter bar (strictly ignoring sprayed/withered dead weeds)
-    local rawWeed = rhm_Combine.getLiveWeedRatio(self)
+    local currentSpeed = (self.getLastSpeed and self:getLastSpeed()) or 0
+
+    -- WEEDS: Retrieve live weed presence at cutter bar (throttled to 350ms intervals to preserve FPS)
+    local isCutterTurnedOn = false
+    if self.spec_combine and self.spec_combine.attachedCutters then
+        for cutter, _ in pairs(self.spec_combine.attachedCutters) do
+            if cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
+                isCutterTurnedOn = true
+                break
+            end
+        end
+    end
+    if not isCutterTurnedOn and self.getAttachedImplements then
+        for _, impl in pairs(self:getAttachedImplements()) do
+            local obj = impl.object
+            if obj and obj.getIsTurnedOn and obj:getIsTurnedOn() and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter) then
+                isCutterTurnedOn = true
+                break
+            end
+        end
+    end
+    if not isCutterTurnedOn and self.spec_cutter and self.getIsTurnedOn and self:getIsTurnedOn() then
+        isCutterTurnedOn = true
+    end
+
+    if not isCutterTurnedOn or currentSpeed < 0.5 then
+        spec.rawWeedRatio = 0.0
+        spec.currentWeedRatio = 0.0
+    else
+        spec.weedSampleTimer = (spec.weedSampleTimer or 0) + dt
+        if spec.weedSampleTimer >= 350 or spec.rawWeedRatio == nil then
+            spec.weedSampleTimer = 0
+            spec.rawWeedRatio = rhm_Combine.getLiveWeedRatio(self)
+        end
+    end
+    local rawWeed = spec.rawWeedRatio or 0.0
     local prevWeed = spec.currentWeedRatio or 0
     local alphaWeed = 1.0 - math.exp(-dt / 1500.0)
     local smoothedWeed = prevWeed + (rawWeed - prevWeed) * alphaWeed
@@ -2153,7 +2506,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     
     -- EN: Suppress stationary mass flow (< 0.5 km/h) so lowering header while waiting doesn't generate false t/h
     -- UA: Блокуємо розрахунок потоку при зупинці (< 0.5 км/год) щоб опускання жатки на місці не давало хибних т/год
-    local currentSpeed = (self.getLastSpeed and self:getLastSpeed()) or 0
     if currentSpeed < 0.5 then
         massKg = 0
         liters = 0
@@ -2175,6 +2527,24 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Застосовуємо фізичні втрати врожаю: видаляємо втрачене зерно з fill unit на сервері.
     --     Це робить втрати врожаю видимими як реальне зменшення рівня наповнення бункера.
     local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss(self)
+
+    -- EN: Accumulate telemetry deltas across frames so pulsed cutter deliveries conserve all area, time and grain.
+    -- UA: Накопичуємо дельти телеметрії між кадрами, щоб дискретні імпульси жатки зберігали всю площу, час та зерно.
+    local isActivelyHarvesting = isCutterTurnedOn and currentSpeed >= 0.5 and (liters > 0 or (spec._rhmTimeSinceLastHarvest or 0) < 1.0)
+    if isActivelyHarvesting then
+        spec._trackerDtBuffer = (spec._trackerDtBuffer or 0) + dt
+        spec._trackerAreaBuffer = (spec._trackerAreaBuffer or 0) + (areaForYield or 0)
+        spec._trackerLitersBuffer = (spec._trackerLitersBuffer or 0) + (liters or 0)
+        spec._trackerMassBuffer = (spec._trackerMassBuffer or 0) + (massKg or 0)
+    else
+        -- If machine is stopped or disengaged, discard empty idle delta if no pending grain remains
+        if (spec._trackerLitersBuffer or 0) <= 0 then
+            spec._trackerDtBuffer = 0
+            spec._trackerAreaBuffer = 0
+            spec._trackerLitersBuffer = 0
+            spec._trackerMassBuffer = 0
+        end
+    end
 
     if liters > 0 and self.isServer then
         -- EN: Calculate total crop loss including settings deviation penalty.
@@ -2207,25 +2577,46 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                 end
             end
         end
+    end
 
-        -- HARVEST TRACKER & FIELD TRIP TELEMETRY INTEGRATION
-        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
-        if tracker then
-            local fieldId = 0
-            local wx, _, wz = getWorldTranslation(self.rootNode)
+    -- HARVEST TRACKER & FIELD TRIP TELEMETRY INTEGRATION
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+    if tracker and self.isServer and (spec._trackerLitersBuffer or 0) > 0 then
+        local wx, _, wz = getWorldTranslation(self.rootNode)
+        spec._fieldCheckTimer = (spec._fieldCheckTimer or 0) + dt
+        local distMovedSq = (wx - (spec._lastFieldCheckX or 0))^2 + (wz - (spec._lastFieldCheckZ or 0))^2
+        if spec._fieldCheckTimer >= 1000 or distMovedSq >= 36.0 or spec._lastDetectedFieldId == nil or spec._lastDetectedFieldId == 0 then
+            spec._fieldCheckTimer = 0
+            spec._lastFieldCheckX = wx
+            spec._lastFieldCheckZ = wz
             if RHM_HarvestTracker and RHM_HarvestTracker.getFieldAtWorldPosition then
-                local _, fid = RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, self)
-                fieldId = fid or 0
+                local _, fid, fmlId = RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, self)
+                spec._lastDetectedFieldId = (fid and fid > 0 and fid) or (fmlId and fmlId > 0 and fmlId) or 0
             end
-
-            local farmId = self:getOwnerFarmId() or 1
-            local lossReasons = spec.loadCalculator:getLossBreakdown()
-            local speedKmh = self:getLastSpeed()
-            local loadRatio = spec.loadCalculator.engineLoad or 0
-            local areaHaThisTick = (areaForYield or 0) / 10000.0
-
-            tracker:onCombineHarvestTick(self, farmId, liters, massKg, areaHaThisTick, fieldId, totalCropLossThisTick, lossReasons, speedKmh, loadRatio, dt)
         end
+        local fieldId = spec._lastDetectedFieldId or 0
+
+        local farmId = self:getOwnerFarmId() or 1
+        local lossReasons = spec.loadCalculator:getLossBreakdown()
+        local speedKmh = self:getLastSpeed()
+        local loadRatio = spec.loadCalculator.engineLoad or 0
+        local areaHaThisTick = (spec._trackerAreaBuffer or 0) / 10000.0
+        local flushLiters = spec._trackerLitersBuffer
+        local flushMassKg = spec._trackerMassBuffer
+        local flushDt = spec._trackerDtBuffer or dt
+
+        local wearLossPct = (lossReasons and lossReasons.wearPct) or 0
+        local physicalLossPct = math.max(0, totalCropLossThisTick - wearLossPct)
+        local flushLostLiters = flushLiters * (physicalLossPct / 100.0)
+
+        -- Clear buffers once transferred to tracker
+        spec._trackerLitersBuffer = 0
+        spec._trackerMassBuffer = 0
+        spec._trackerAreaBuffer = 0
+        spec._trackerDtBuffer = 0
+
+        tracker:onCombineHarvestTick(self, farmId, flushLiters, flushMassKg, areaHaThisTick, fieldId, totalCropLossThisTick, lossReasons, speedKmh, loadRatio, flushDt, flushLostLiters)
+
     end
     -- ========================================================================
     
@@ -2242,6 +2633,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec.data.moisture = (moisture and moisture > 0) and moisture or spec.data.moisture or 0
         spec.data.weedRatio = spec.currentWeedRatio or spec.data.weedRatio or 0
         spec.data.load = spec.loadCalculator:getEngineLoad()
+        spec.data.effectiveHp = spec.loadCalculator.lastEffectiveHp or 0
         spec.data.cropLoss = totalCropLossThisTick
         spec.data.cutterWearLoss = spec.loadCalculator.cutterWearLoss or 0
         spec.data.combineWearLoss = spec.loadCalculator.combineWearLoss or 0
@@ -2263,7 +2655,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec.data.recommendedSpeed = 0
             spec.data.targetSpeed = 0
         else
-            spec.data.recommendedSpeed = spec.loadCalculator:getSpeedLimit()
+            spec.data.recommendedSpeed = spec._rhmSmoothedMotorLimit or spec.loadCalculator:getSpeedLimit()
             spec.data.targetSpeed = spec.data.recommendedSpeed
         end
         -- NEW: Yield Monitor Data
@@ -2308,7 +2700,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                         tankCrop = "MAIZE_FORAGE"
                     end
                     if tankCrop and tankCrop ~= spec.combineMemory.currentCrop then
-                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel), tostring(spec.combineMemory.currentCrop)))
+                        rhm_log(string.format("RHM [Combine]: RHM: [TICK] Hopper sync detected: %s (in tank: %d L) vs current %s", tankCrop, math.floor(tankFillLevel),
+                            tostring(spec.combineMemory.currentCrop)))
                         rhm_Combine.onCropTypeChanged(self, tankCrop)
                     end
                 end
@@ -2333,39 +2726,6 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
             if spec._lastAiTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
                 spec._lastAiTunedCrop = nil
-            end
-        end
-    end
-
-    -- EN: Dedicated Server Profile Sync: If an automated worker is harvesting on a dedicated server,
-    --     the client owning/controlling this combine automatically sends their locally saved crop preset (if any).
-    -- UA: Синхронізація профілю для виділеного сервера: якщо автоматичний помічник збирає врожай на виділеному сервері,
-    --     клієнт що володіє/керує цим комбайном автоматично надсилає свій локально збережений пресет культури (якщо є).
-    if not self.isServer and self.isClient and cutterIsTurnedOn then
-        local isAi = rhm_Combine.isAiWorkerActive(self)
-        if isAi then
-            local isMyVehicle = (self.getIsEntered and self:getIsEntered())
-                or (self.getIsControlled and self:getIsControlled())
-                or (g_currentMission and g_currentMission.player and self:getOwnerFarmId() == g_currentMission.player.farmId)
-            if isMyVehicle then
-                local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
-                if currentCrop and currentCrop ~= "" and spec._lastAiClientTunedCrop ~= currentCrop then
-                    spec._lastAiClientTunedCrop = currentCrop
-                    -- EN: Only auto-send saved profile if combine is NOT already calibrated by player
-                    -- UA: Автоматично надсилаємо збережений профіль тільки якщо комбайн ЩЕ НЕ налаштований гравцем
-                    local isCalib = spec.combineMemory and (spec.combineMemory.isCalibrated or (spec.combineMemory.calibratedCrops and spec.combineMemory.calibratedCrops[currentCrop]))
-                    if not isCalib then
-                        local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
-                        if pm and pm:getProfile(currentCrop) then
-                            spec.combineMemory:loadUserPreset()
-                        end
-                    end
-                end
-            end
-        else
-            local currentCrop = spec.combineMemory and spec.combineMemory.currentCrop
-            if spec._lastAiClientTunedCrop ~= currentCrop or not (spec.combineMemory and spec.combineMemory.isCalibrated) then
-                spec._lastAiClientTunedCrop = nil
             end
         end
     end
@@ -2401,6 +2761,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                         motor:setSpeedLimit(math.huge)
                         spec._rhmLastMotorSpeedLimit = nil
                     end
+                    spec._rhmSmoothedMotorLimit = nil
                 else
                     local ceiling = spec.loadCalculator.genuineSpeedLimit
                     if ceiling and ceiling > 0 then
@@ -2408,12 +2769,30 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                     end
 
                     if currentLimit and currentLimit > 0 and currentLimit ~= math.huge then
-                        -- EN: Skip redundant motor updates when limit barely changes (getSpeedLimit/onTick fire often).
-                        -- UA: Не шлемо в мотор той самий ліміт щотік — getSpeedLimit/onTick дуже часті.
+                        -- EN: Continuous frame-level hydrostatic ramping prevents chunky speed staircase steps
+                        -- UA: Безперервне пофреймове згладжування гідростатики запобігає драбинчастим ривкам
+                        local smoothed = spec._rhmSmoothedMotorLimit
+                        if smoothed == nil then
+                            smoothed = currentLimit
+                        else
+                            local dtSec = math.min(0.1, dt * 0.001)
+                            if currentLimit < smoothed then
+                                local isHighLoad = (spec.data and spec.data.load and spec.data.load > 115)
+                                local maxDecelRate = isHighLoad and 1.4 or 0.65
+                                local maxStep = maxDecelRate * dtSec
+                                smoothed = math.max(currentLimit, smoothed - maxStep)
+                            elseif currentLimit > smoothed then
+                                local maxAccelRate = 0.35
+                                local maxStep = maxAccelRate * dtSec
+                                smoothed = math.min(currentLimit, smoothed + maxStep)
+                            end
+                        end
+                        spec._rhmSmoothedMotorLimit = smoothed
+
                         local prev = spec._rhmLastMotorSpeedLimit
-                        if prev == nil or math.abs(prev - currentLimit) >= 0.05 then
-                            spec._rhmLastMotorSpeedLimit = currentLimit
-                            motor:setSpeedLimit(currentLimit)
+                        if prev == nil or math.abs(prev - smoothed) >= 0.05 then
+                            spec._rhmLastMotorSpeedLimit = smoothed
+                            motor:setSpeedLimit(smoothed)
                         end
                     end
                 end
@@ -2480,38 +2859,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
         end
     end
-
-    -- CLIENT: Quick Trip Reset Hold Handling (1.5 seconds)
-    if self.isClient and spec.isHoldingReset then
-        spec.resetHoldTimer = (spec.resetHoldTimer or 0) + dt
-        spec.resetHoldProgress = math.min(1.0, spec.resetHoldTimer / 1500)
-        if spec.resetHoldTimer >= 1500 then
-            spec.isHoldingReset = false
-            spec.resetHoldTimer = 0
-            spec.resetHoldProgress = 0
-
-            local farmId = self:getOwnerFarmId() or 1
-            local isMultiplayer = g_currentMission and g_currentMission.isMultiplayer
-            local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
-
-            if isDedicatedClient and g_client and g_client:getServerConnection() then
-                g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId))
-            else
-                local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
-                if tracker then tracker:resetTripForCombine(farmId, self, nil) end
-                if self.resetTrip then self:resetTrip() end
-            end
-
-            if g_currentMission and g_currentMission.showBlinkingWarning then
-                local msg = (g_i18n and g_i18n:hasText("rhm_trip_reset_done") and g_i18n:getText("rhm_trip_reset_done")) or "Harvest Trip Reset!"
-                g_currentMission:showBlinkingWarning(msg, 2000)
-            end
-        end
-    elseif self.isClient and not spec.isHoldingReset then
-        spec.resetHoldTimer = 0
-        spec.resetHoldProgress = 0
-    end
 end
+
+
 
 -- EN: Called every frame when the player is in the combine.
 --     HUD is drawn centrally in RHM_RealisticHarvestManager:draw() via hierarchy scanning,
@@ -2536,7 +2886,7 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     
     local cur = key .. ".combineMemory.current"
     local mem = spec.combineMemory
-    local settings = mem.currentSettings
+    local settings = mem.currentSettings or {}
     
     xmlFile:setValue(cur .. "#mode",              mem.mode or "MANUAL")
     xmlFile:setValue(cur .. "#autoSwitch",         mem.autoSwitchEnabled ~= false)
@@ -2548,8 +2898,8 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     xmlFile:setValue(cur .. "#feeder",             settings.feeder or 50)
     xmlFile:setValue(cur .. "#targetEngineLoad",   settings.targetEngineLoad or 80)
     
-    local isCalib = mem.isCalibrated == true or mem.hasManualTuning == true or (mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true)
-    xmlFile:setValue(cur .. "#isCalibrated", isCalib)
+    local isCalib = (mem.isCalibrated == true) or (mem.hasManualTuning == true) or (mem.calibratedCrops ~= nil and mem.currentCrop ~= nil and mem.calibratedCrops[mem.currentCrop] == true)
+    xmlFile:setValue(cur .. "#isCalibrated",       isCalib == true)
 
     local calibList = {}
     if mem.calibratedCrops then
@@ -2562,8 +2912,35 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     if #calibList > 0 then
         xmlFile:setValue(cur .. "#calibratedCrops", table.concat(calibList, " "))
     end
+
+    if spec.machineId and spec.machineId ~= "" and not spec.machineId:find("#%d+$") then
+        xmlFile:setValue(cur .. "#machineId", spec.machineId)
+    end
+
+    -- Save active trip odometer directly in vehicles.xml
+    local trip = spec.trip
+    if trip then
+        local tKey = key .. ".trip"
+        xmlFile:setValue(tKey .. "#fieldId",          trip.fieldId or 0)
+        xmlFile:setValue(tKey .. "#cropName",         trip.cropName or "--")
+        xmlFile:setValue(tKey .. "#fillTypeIndex",    trip.fillTypeIndex or FillType.UNKNOWN)
+        xmlFile:setValue(tKey .. "#harvestedAreaHa",  trip.harvestedAreaHa or 0)
+        xmlFile:setValue(tKey .. "#harvestedLiters",  trip.harvestedLiters or 0)
+        xmlFile:setValue(tKey .. "#harvestedMassKg",  trip.harvestedMassKg or 0)
+        xmlFile:setValue(tKey .. "#lostLiters",       trip.lostLiters or 0)
+        xmlFile:setValue(tKey .. "#lossMoney",        trip.lossMoney or 0)
+        xmlFile:setValue(tKey .. "#fuelUsedL",        trip.fuelUsedL or 0)
+        xmlFile:setValue(tKey .. "#sessionDuration",  trip.sessionDuration or 0)
+        xmlFile:setValue(tKey .. "#efficiencyRank",   trip.efficiencyRank or "A")
+        xmlFile:setValue(tKey .. "#isActive",         trip.isActive == true)
+        xmlFile:setValue(tKey .. "#isContract",       trip.isContract == true)
+        xmlFile:setValue(tKey .. "#avgSpeedSum",      trip.avgSpeedSum or 0)
+        xmlFile:setValue(tKey .. "#avgSpeedCount",    trip.avgSpeedCount or 0)
+        xmlFile:setValue(tKey .. "#avgLoadSum",       trip.avgLoadSum or 0)
+        xmlFile:setValue(tKey .. "#avgLoadCount",     trip.avgLoadCount or 0)
+    end
     
-    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+    rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s, tripLiters=%.0f", 
         self:getName() or "?",
         tostring(mem.currentCrop),
         tostring(settings.fan),
@@ -2571,7 +2948,8 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
         tostring(settings.lowerSieve),
         tostring(settings.rotor),
         tostring(settings.feeder),
-        tostring(settings.targetEngineLoad)))
+        tostring(settings.targetEngineLoad),
+        trip and trip.harvestedLiters or 0))
 end
 
 ---Завантаження стану з savegame
@@ -2593,28 +2971,6 @@ function rhm_Combine:loadFromSavegame(savegame)
         or (g_realisticHarvestManager and g_realisticHarvestManager.modName)
         or "FS25_RealisticHarvesting"
 
-    local candidateKeys = {
-        savegame.key .. ".combineMemory.current",
-        string.format("%s.%s.rhm_Combine.combineMemory.current", savegame.key, modName),
-        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.combineMemory.current", savegame.key),
-        string.format("%s.rhm_Combine.combineMemory.current", savegame.key),
-        string.format("%s.combineMemory.current", savegame.key),
-    }
-
-    local cur = nil
-    for _, path in ipairs(candidateKeys) do
-        if xmlFile:hasProperty(path) then
-            cur = path
-            break
-        end
-    end
-
-    if not cur then
-        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] No saved combine settings found for %s in savegame (tested key: %s)",
-            self:getFullName() or "?", tostring(candidateKeys[2])))
-        return false
-    end
-
     local function readInt(path, def)
         if not xmlFile:hasProperty(path) then
             return def
@@ -2624,6 +2980,21 @@ function rhm_Combine:loadFromSavegame(savegame)
             val = xmlFile:getInt(path)
         elseif XMLValueType and XMLValueType.INT then
             val = xmlFile:getValue(path, XMLValueType.INT)
+        else
+            val = xmlFile:getValue(path)
+        end
+        return (val ~= nil and tonumber(val)) or def
+    end
+
+    local function readFloat(path, def)
+        if not xmlFile:hasProperty(path) then
+            return def
+        end
+        local val = nil
+        if xmlFile.getFloat then
+            val = xmlFile:getFloat(path)
+        elseif XMLValueType and XMLValueType.FLOAT then
+            val = xmlFile:getValue(path, XMLValueType.FLOAT)
         else
             val = xmlFile:getValue(path)
         end
@@ -2662,73 +3033,156 @@ function rhm_Combine:loadFromSavegame(savegame)
         return tostring(val):lower() == "true"
     end
 
-    local isTier4 = (spec.packageLevel or 1) >= 4
-    local loadedMode = readString(cur .. "#mode", "MANUAL")
-    local loadedAutoSwitch = readBool(cur .. "#autoSwitch", false)
-    if isTier4 then
-        spec.combineMemory.mode              = loadedMode
-        spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
-    else
-        spec.combineMemory.mode              = "MANUAL"
-        spec.combineMemory.autoSwitchEnabled = false
-    end
+    local candidateKeys = {
+        savegame.key .. ".combineMemory.current",
+        string.format("%s.%s.rhm_Combine.combineMemory.current", savegame.key, modName),
+        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.rhm_Combine.combineMemory.current", savegame.key),
+        string.format("%s.combineMemory.current", savegame.key),
+    }
 
-    local savedCrop = readString(cur .. "#currentCrop", "")
-    if savedCrop and savedCrop ~= "" then
-        spec.combineMemory.currentCrop = savedCrop
-        if spec.loadCalculator then
-            spec.loadCalculator.currentCrop = savedCrop
+    local cur = nil
+    for _, path in ipairs(candidateKeys) do
+        if xmlFile:hasProperty(path) then
+            cur = path
+            break
         end
     end
 
-    local curSettings = spec.combineMemory.currentSettings
-    if curSettings then
-        local loadedFan = readInt(cur .. "#fan", nil)
-        local loadedUpper = readInt(cur .. "#upperSieve", nil)
-        local loadedLower = readInt(cur .. "#lowerSieve", nil)
-        local loadedRotor = readInt(cur .. "#rotor", nil)
-        local loadedFeeder = readInt(cur .. "#feeder", nil)
-        local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
-        
-        if loadedFan ~= nil then curSettings.fan = loadedFan end
-        if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
-        if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
-        if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
-        if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
-        if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
-    end
+    local tripCandidateKeys = {
+        savegame.key .. ".trip",
+        string.format("%s.%s.rhm_Combine.trip", savegame.key, modName),
+        string.format("%s.FS25_RealisticHarvesting.rhm_Combine.trip", savegame.key),
+        string.format("%s.rhm_Combine.trip", savegame.key),
+    }
 
-    local isCalibrated = readBool(cur .. "#isCalibrated", true)
-    spec.combineMemory.isCalibrated = isCalibrated
-    spec.combineMemory.hasManualTuning = isCalibrated
-    spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
-
-    if savedCrop and savedCrop ~= "" then
-        spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
-        spec._lastAiTunedCrop = savedCrop
-        spec._lastAiClientTunedCrop = savedCrop
-    end
-
-    local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
-    if savedCalibCropsStr and savedCalibCropsStr ~= "" then
-        for crop in string.gmatch(savedCalibCropsStr, "%S+") do
-            spec.combineMemory.calibratedCrops[crop] = true
+    local tripKey = nil
+    for _, path in ipairs(tripCandidateKeys) do
+        if xmlFile:hasProperty(path) then
+            tripKey = path
+            break
         end
     end
 
-    self._rhmSettingsLoadedFromSavegame = true
+    if not cur and not tripKey then
+        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] No saved combine settings or trip found for %s in savegame (tested key: %s)",
+            self:getFullName() or "?", tostring(candidateKeys[2])))
+        return false
+    end
 
-    Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
-        tostring(self:getFullName()),
-        tostring(spec.combineMemory.currentCrop),
-        tostring(spec.combineMemory.mode),
-        tostring(spec.combineMemory.autoSwitchEnabled),
-        tostring(curSettings and curSettings.fan),
-        tostring(curSettings and curSettings.upperSieve),
-        tostring(curSettings and curSettings.lowerSieve),
-        tostring(curSettings and curSettings.rotor),
-        tostring(curSettings and curSettings.feeder),
-        tostring(curSettings and curSettings.targetEngineLoad)))
+    if cur then
+        local isTier4 = (spec.packageLevel or 1) >= 4
+        local loadedMode = readString(cur .. "#mode", "MANUAL")
+        local loadedAutoSwitch = readBool(cur .. "#autoSwitch", false)
+        if isTier4 then
+            spec.combineMemory.mode              = loadedMode
+            spec.combineMemory.autoSwitchEnabled = loadedAutoSwitch
+        else
+            spec.combineMemory.mode              = "MANUAL"
+            spec.combineMemory.autoSwitchEnabled = false
+        end
+
+        local savedCrop = readString(cur .. "#currentCrop", "")
+        if savedCrop and savedCrop ~= "" then
+            spec.combineMemory.currentCrop = savedCrop
+            if spec.loadCalculator then
+                spec.loadCalculator.currentCrop = savedCrop
+            end
+        end
+
+        local curSettings = spec.combineMemory.currentSettings
+        if curSettings then
+            local loadedFan = readInt(cur .. "#fan", nil)
+            local loadedUpper = readInt(cur .. "#upperSieve", nil)
+            local loadedLower = readInt(cur .. "#lowerSieve", nil)
+            local loadedRotor = readInt(cur .. "#rotor", nil)
+            local loadedFeeder = readInt(cur .. "#feeder", nil)
+            local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
+            
+            if loadedFan ~= nil then curSettings.fan = loadedFan end
+            if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
+            if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
+            if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
+            if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
+            if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+        end
+
+        local isCalibrated = readBool(cur .. "#isCalibrated", true)
+        spec.combineMemory.isCalibrated = isCalibrated
+        spec.combineMemory.hasManualTuning = isCalibrated
+        spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+
+        if savedCrop and savedCrop ~= "" then
+            spec.combineMemory.calibratedCrops[savedCrop] = isCalibrated
+            spec._lastAiTunedCrop = savedCrop
+            spec._lastAiClientTunedCrop = savedCrop
+        end
+
+        local savedCalibCropsStr = readString(cur .. "#calibratedCrops", "")
+        if savedCalibCropsStr and savedCalibCropsStr ~= "" then
+            for crop in string.gmatch(savedCalibCropsStr, "%S+") do
+                spec.combineMemory.calibratedCrops[crop] = true
+            end
+        end
+
+        local savedMachineId = readString(cur .. "#machineId", nil)
+        if savedMachineId and savedMachineId ~= "" and not savedMachineId:find("#%d+$") then
+            spec.machineId = savedMachineId
+        end
+
+        self._rhmSettingsLoadedFromSavegame = true
+
+        Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+            tostring(self:getFullName()),
+            tostring(spec.combineMemory.currentCrop),
+            tostring(spec.combineMemory.mode),
+            tostring(spec.combineMemory.autoSwitchEnabled),
+            tostring(curSettings and curSettings.fan),
+            tostring(curSettings and curSettings.upperSieve),
+            tostring(curSettings and curSettings.lowerSieve),
+            tostring(curSettings and curSettings.rotor),
+            tostring(curSettings and curSettings.feeder),
+            tostring(curSettings and curSettings.targetEngineLoad)))
+    end
+
+    if tripKey then
+        local savedTrip = {
+            fieldId          = readInt(tripKey .. "#fieldId", 0),
+            cropName         = readString(tripKey .. "#cropName", "--"),
+            fillTypeIndex    = readInt(tripKey .. "#fillTypeIndex", FillType.UNKNOWN),
+            harvestedAreaHa  = readFloat(tripKey .. "#harvestedAreaHa", 0),
+            harvestedLiters  = readFloat(tripKey .. "#harvestedLiters", 0),
+            harvestedMassKg  = readFloat(tripKey .. "#harvestedMassKg", 0),
+            lostLiters       = readFloat(tripKey .. "#lostLiters", 0),
+            lossMoney        = readFloat(tripKey .. "#lossMoney", 0),
+            fuelUsedL        = readFloat(tripKey .. "#fuelUsedL", 0),
+            sessionDuration  = readFloat(tripKey .. "#sessionDuration", 0),
+            efficiencyRank   = readString(tripKey .. "#efficiencyRank", "A"),
+            isActive         = readBool(tripKey .. "#isActive", false),
+            isContract       = readBool(tripKey .. "#isContract", false),
+            avgSpeedSum      = readFloat(tripKey .. "#avgSpeedSum", 0),
+            avgSpeedCount    = readInt(tripKey .. "#avgSpeedCount", 0),
+            avgLoadSum       = readFloat(tripKey .. "#avgLoadSum", 0),
+            avgLoadCount     = readInt(tripKey .. "#avgLoadCount", 0),
+        }
+        spec.trip = savedTrip
+
+        local farmId = self:getOwnerFarmId()
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        if tracker and farmId and farmId ~= 0 then
+            local farmData = tracker:getFarmData(farmId)
+            if farmData then
+                farmData.combineTrips = farmData.combineTrips or {}
+                local machineKey = RHM_HarvestTracker.getMachineKey(self)
+                if machineKey then
+                    farmData.combineTrips[machineKey] = savedTrip
+                end
+            end
+        end
+
+        rhm_log(string.format("RHM [Combine]: RHM: [LOAD] Restored vehicle trip odometer from savegame for %s: area=%.2f ha, liters=%.0f L, fuel=%.1f L",
+            self:getFullName() or "?", savedTrip.harvestedAreaHa or 0, savedTrip.harvestedLiters or 0, savedTrip.fuelUsedL or 0))
+    end
 
     return true
 end
@@ -2749,6 +3203,7 @@ end
 ---Початкова синхронізація: Сервер пише дані коли клієнт підключається
 function rhm_Combine:onWriteStream(streamId, connection)
     local spec = self.spec_rhm_Combine
+    streamWriteString(streamId, spec and RHM_HarvestTracker.getMachineKey(self) or "")
     if not spec or not spec.data then
         -- Пишемо нулі якщо немає даних
         streamWriteFloat32(streamId, 0)
@@ -2761,6 +3216,12 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 0)   -- overloadLevel
         streamWriteFloat32(streamId, 0) -- moisture
         streamWriteUInt8(streamId, 0)   -- weedRatio
+        streamWriteFloat32(streamId, 0) -- effective horsepower
+        streamWriteBool(streamId, false) -- pickup context
+        streamWriteFloat32(streamId, 0) -- tutorial slope context
+        streamWriteFloat32(streamId, 0) -- tutorial wear losses
+        streamWriteBool(streamId, false) -- straw chopper activity
+        streamWriteFloat32(streamId, 0) -- last measured yield
         -- RHM_CombineMemory: write defaults
         streamWriteUInt8(streamId, 50)  -- fan
         streamWriteUInt8(streamId, 50)  -- rotor
@@ -2770,6 +3231,8 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 80)  -- targetEngineLoad
         streamWriteString(streamId, "AUTO")  -- mode
         streamWriteString(streamId, "")      -- currentCrop (empty = nil)
+        streamWriteBool(streamId, false) -- crop calibration
+        streamWriteBool(streamId, false)     -- hasTrip
         return
     end
     
@@ -2784,6 +3247,12 @@ function rhm_Combine:onWriteStream(streamId, connection)
     streamWriteUInt8(streamId, spec.data.overloadLevel or 0)
     streamWriteFloat32(streamId, spec.data.moisture or 0)
     streamWriteUInt8(streamId, math.floor(math.min(100, math.max(0, (spec.data.weedRatio or 0) * 100)) + 0.5))
+    streamWriteFloat32(streamId, spec.data.effectiveHp or 0)
+    streamWriteBool(streamId, spec.data.isPickup == true)
+    streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.smoothedSlopeAngle) or 0)
+    streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.wearLoss) or 0)
+    streamWriteBool(streamId, spec.loadCalculator and spec.loadCalculator.isStrawChopperActive == true or false)
+    streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.lastValidYield) or 0)
     
     -- RHM_CombineMemory settings (sync on initial connect)
     local mem = spec.combineMemory
@@ -2797,6 +3266,7 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 80)
         streamWriteString(streamId, isTier4 and (mem.mode or "MANUAL") or "MANUAL")
         streamWriteString(streamId, mem.currentCrop or "")
+        streamWriteBool(streamId, mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true or false)
     else
         streamWriteUInt8(streamId, 50)
         streamWriteUInt8(streamId, 50)
@@ -2806,12 +3276,44 @@ function rhm_Combine:onWriteStream(streamId, connection)
         streamWriteUInt8(streamId, 80)
         streamWriteString(streamId, "MANUAL")
         streamWriteString(streamId, "")
+        streamWriteBool(streamId, false)
+    end
+
+    -- spec.trip (sync active vehicle trip odometer to connecting client)
+    local trip = spec.trip
+    if trip then
+        streamWriteBool(streamId, true)
+        streamWriteInt32(streamId, trip.fieldId or 0)
+        streamWriteString(streamId, trip.cropName or "")
+        streamWriteInt32(streamId, trip.fillTypeIndex or 0)
+        streamWriteFloat32(streamId, trip.harvestedAreaHa or 0)
+        streamWriteFloat32(streamId, trip.harvestedLiters or 0)
+        streamWriteFloat32(streamId, trip.harvestedMassKg or 0)
+        streamWriteFloat32(streamId, trip.lostLiters or 0)
+        streamWriteFloat32(streamId, trip.lossMoney or 0)
+        streamWriteFloat32(streamId, trip.fuelUsedL or 0)
+        streamWriteFloat32(streamId, trip.sessionDuration or 0)
+        streamWriteString(streamId, trip.efficiencyRank or "A")
+        streamWriteBool(streamId, trip.isActive == true)
+        streamWriteBool(streamId, trip.isContract == true)
+        streamWriteFloat32(streamId, trip.avgSpeedSum or 0)
+        streamWriteInt32(streamId, trip.avgSpeedCount or 0)
+        streamWriteFloat32(streamId, trip.avgLoadSum or 0)
+        streamWriteInt32(streamId, trip.avgLoadCount or 0)
+        local reasons = trip.reasons or {}
+        for _, reason in ipairs({ "speed", "settings", "moisture", "wear", "slope" }) do
+            streamWriteFloat32(streamId, reasons[reason] or 0)
+        end
+    else
+        streamWriteBool(streamId, false)
     end
 end
 
 ---Початкова синхронізація: Клієнт читає дані при підключенні
 function rhm_Combine:onReadStream(streamId, connection)
     local spec = self.spec_rhm_Combine
+    local machineId = streamReadString(streamId)
+    if spec and machineId ~= "" then spec.machineId = machineId end
     if not spec then
         -- Пропускаємо дані якщо немає spec
         streamReadFloat32(streamId)
@@ -2824,6 +3326,12 @@ function rhm_Combine:onReadStream(streamId, connection)
         streamReadUInt8(streamId)   -- overloadLevel
         streamReadFloat32(streamId) -- moisture
         streamReadUInt8(streamId)   -- weedRatio
+        streamReadFloat32(streamId) -- effective horsepower
+        streamReadBool(streamId)    -- pickup context
+        streamReadFloat32(streamId) -- tutorial slope context
+        streamReadFloat32(streamId) -- tutorial wear losses
+        streamReadBool(streamId)    -- straw chopper activity
+        streamReadFloat32(streamId) -- last measured yield
         -- RHM_CombineMemory defaults (skip)
         streamReadUInt8(streamId)
         streamReadUInt8(streamId)
@@ -2833,6 +3341,28 @@ function rhm_Combine:onReadStream(streamId, connection)
         streamReadUInt8(streamId)   -- targetEngineLoad
         streamReadString(streamId)
         streamReadString(streamId)
+        streamReadBool(streamId)
+        local hasTrip = streamReadBool(streamId)
+        if hasTrip then
+            streamReadInt32(streamId)
+            streamReadString(streamId)
+            streamReadInt32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadFloat32(streamId)
+            streamReadString(streamId)
+            streamReadBool(streamId)
+            streamReadBool(streamId)
+            streamReadFloat32(streamId)
+            streamReadInt32(streamId)
+            streamReadFloat32(streamId)
+            streamReadInt32(streamId)
+            for _ = 1, 5 do streamReadFloat32(streamId) end
+        end
         return
     end
     
@@ -2851,6 +3381,12 @@ function rhm_Combine:onReadStream(streamId, connection)
     spec.data.overloadLevel = streamReadUInt8(streamId)
     spec.data.moisture = streamReadFloat32(streamId)
     spec.data.weedRatio = streamReadUInt8(streamId) / 100.0
+    spec.data.effectiveHp = streamReadFloat32(streamId)
+    spec.data.isPickup = streamReadBool(streamId)
+    spec.data.slopeAngle = streamReadFloat32(streamId)
+    spec.data.wearLoss = streamReadFloat32(streamId)
+    spec.data.isStrawChopperActive = streamReadBool(streamId)
+    spec.data.lastValidYield = streamReadFloat32(streamId)
     
     -- RHM_CombineMemory settings
     local fan = streamReadUInt8(streamId)
@@ -2861,6 +3397,7 @@ function rhm_Combine:onReadStream(streamId, connection)
     local targetEngineLoad = streamReadUInt8(streamId)
     local mode = streamReadString(streamId)
     local currentCrop = streamReadString(streamId)
+    local cropCalibrated = streamReadBool(streamId)
     
     -- Apply to combineMemory if available
     if spec.combineMemory then
@@ -2879,6 +3416,51 @@ function rhm_Combine:onReadStream(streamId, connection)
             spec.combineMemory.autoSwitchEnabled = false
         end
         spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
+        spec.combineMemory.isCalibrated = cropCalibrated
+        spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+        if currentCrop ~= "" then spec.combineMemory.calibratedCrops[currentCrop] = cropCalibrated or nil end
+    end
+
+    -- spec.trip initial connect sync
+    local hasTrip = streamReadBool(streamId)
+    if hasTrip then
+        local trip = {
+            fieldId          = streamReadInt32(streamId),
+            cropName         = streamReadString(streamId),
+            fillTypeIndex    = streamReadInt32(streamId),
+            harvestedAreaHa  = streamReadFloat32(streamId),
+            harvestedLiters  = streamReadFloat32(streamId),
+            harvestedMassKg  = streamReadFloat32(streamId),
+            lostLiters       = streamReadFloat32(streamId),
+            lossMoney        = streamReadFloat32(streamId),
+            fuelUsedL        = streamReadFloat32(streamId),
+            sessionDuration  = streamReadFloat32(streamId),
+            efficiencyRank   = streamReadString(streamId),
+            isActive         = streamReadBool(streamId),
+            isContract       = streamReadBool(streamId),
+            avgSpeedSum      = streamReadFloat32(streamId),
+            avgSpeedCount    = streamReadInt32(streamId),
+            avgLoadSum       = streamReadFloat32(streamId),
+            avgLoadCount     = streamReadInt32(streamId),
+        }
+        trip.reasons = {}
+        for _, reason in ipairs({ "speed", "settings", "moisture", "wear", "slope" }) do
+            trip.reasons[reason] = streamReadFloat32(streamId)
+        end
+        spec.trip = trip
+
+        local farmId = self:getOwnerFarmId()
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        if tracker and farmId and farmId ~= 0 then
+            local farmData = tracker:getFarmData(farmId)
+            if farmData then
+                farmData.combineTrips = farmData.combineTrips or {}
+                local machineKey = RHM_HarvestTracker.getMachineKey(self)
+                if machineKey then
+                    farmData.combineTrips[machineKey] = trip
+                end
+            end
+        end
     end
 end
 
@@ -2910,6 +3492,24 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             spec.data.overloadLevel = streamReadUInt8(streamId)
             spec.data.moisture = streamReadFloat32(streamId)
             spec.data.weedRatio = streamReadUInt8(streamId) / 100.0
+            spec.data.effectiveHp = streamReadFloat32(streamId)
+            spec.data.isPickup = streamReadBool(streamId)
+            spec.data.slopeAngle = streamReadFloat32(streamId)
+            spec.data.wearLoss = streamReadFloat32(streamId)
+            spec.data.isStrawChopperActive = streamReadBool(streamId)
+            spec.data.lastValidYield = streamReadFloat32(streamId)
+
+            -- Active machine trip odometer
+            local hasTrip = streamReadBool(streamId)
+            if hasTrip then
+                spec.trip = spec.trip or {}
+                spec.trip.harvestedAreaHa = streamReadFloat32(streamId)
+                spec.trip.harvestedLiters = streamReadFloat32(streamId)
+                spec.trip.harvestedMassKg = streamReadFloat32(streamId)
+                spec.trip.sessionDuration = streamReadFloat32(streamId)
+                spec.trip.fieldId = streamReadInt32(streamId)
+                spec.trip.lostLiters = streamReadFloat32(streamId)
+            end
         end
 
         if hasSettingsUpdate then
@@ -2922,6 +3522,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             local targetEngineLoad = streamReadUInt8(streamId)
             local mode = streamReadString(streamId)
             local currentCrop = streamReadString(streamId)
+            local cropCalibrated = streamReadBool(streamId)
             
             if spec.combineMemory then
                 spec.combineMemory.currentSettings.fan = fan
@@ -2939,6 +3540,9 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
                     spec.combineMemory.autoSwitchEnabled = false
                 end
                 spec.combineMemory.currentCrop = (currentCrop ~= "" and currentCrop) or nil
+                spec.combineMemory.isCalibrated = cropCalibrated
+                spec.combineMemory.calibratedCrops = spec.combineMemory.calibratedCrops or {}
+                if currentCrop ~= "" then spec.combineMemory.calibratedCrops[currentCrop] = cropCalibrated or nil end
             end
         end
     end
@@ -2950,12 +3554,20 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
         local spec = self.spec_rhm_Combine
         if not spec then
             streamWriteBool(streamId, false)
+            streamWriteBool(streamId, false)
             return
         end
         
-        -- Перевіряємо чи є зміни
-        local hasDataUpdate = bitAND(dirtyMask, spec.dataDirtyFlag) ~= 0
-        local hasSettingsUpdate = bitAND(dirtyMask, spec.settingsDirtyFlag) ~= 0
+        -- Перевіряємо чи є зміни (GIANTS Engine 10: bit32.band)
+        local hasDataUpdate = false
+        if spec.dataDirtyFlag and type(spec.dataDirtyFlag) == "number" and bit32 and bit32.band then
+            hasDataUpdate = bit32.band(dirtyMask, spec.dataDirtyFlag) ~= 0
+        end
+
+        local hasSettingsUpdate = false
+        if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" and bit32 and bit32.band then
+            hasSettingsUpdate = bit32.band(dirtyMask, spec.settingsDirtyFlag) ~= 0
+        end
         
         streamWriteBool(streamId, hasDataUpdate)
         streamWriteBool(streamId, hasSettingsUpdate)
@@ -2973,6 +3585,25 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
             streamWriteUInt8(streamId, data.overloadLevel or 0)
             streamWriteFloat32(streamId, data.moisture or 0)
             streamWriteUInt8(streamId, math.floor(math.min(100, math.max(0, (data.weedRatio or 0) * 100)) + 0.5))
+            streamWriteFloat32(streamId, data.effectiveHp or 0)
+            streamWriteBool(streamId, data.isPickup == true)
+            streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.smoothedSlopeAngle) or 0)
+            streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.wearLoss) or 0)
+            streamWriteBool(streamId, spec.loadCalculator and spec.loadCalculator.isStrawChopperActive == true or false)
+            streamWriteFloat32(streamId, (spec.loadCalculator and spec.loadCalculator.lastValidYield) or 0)
+
+            -- Active machine trip odometer
+            local trip = spec.trip
+            local hasTrip = (trip ~= nil)
+            streamWriteBool(streamId, hasTrip)
+            if hasTrip then
+                streamWriteFloat32(streamId, trip.harvestedAreaHa or 0)
+                streamWriteFloat32(streamId, trip.harvestedLiters or 0)
+                streamWriteFloat32(streamId, trip.harvestedMassKg or 0)
+                streamWriteFloat32(streamId, trip.sessionDuration or 0)
+                streamWriteInt32(streamId, trip.fieldId or 0)
+                streamWriteFloat32(streamId, trip.lostLiters or 0)
+            end
         end
 
         if hasSettingsUpdate then
@@ -2988,6 +3619,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 local isTier4 = (spec.packageLevel or 1) >= 4
                 streamWriteString(streamId, isTier4 and (mem.mode or "MANUAL") or "MANUAL")
                 streamWriteString(streamId, mem.currentCrop or "")
+                streamWriteBool(streamId, mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true or false)
             else
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
@@ -2997,6 +3629,7 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, 80)
                 streamWriteString(streamId, "MANUAL")
                 streamWriteString(streamId, "")
+                streamWriteBool(streamId, false)
             end
         end
     end
@@ -3010,6 +3643,9 @@ end
 function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIgnoreSelection)
     if self.isClient then
         local spec = self.spec_rhm_Combine
+        if not spec or spec.isRhmCombine ~= true then
+            return
+        end
         self:clearActionEventsTable(spec.actionEvents)
         
         -- EN: Allow registration when player is inside the combine, even while an automated worker is operating it.
@@ -3065,7 +3701,8 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
             end
             -- Реєструємо дію Перемикання Курсора Миші (MMB / Middle Mouse Click)
             if InputAction.RHM_TOGGLE_MOUSE_CURSOR then
-                local _, cursorEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, self, rhm_Combine.actionToggleMouseCursor, false, true, false, true, nil, nil, true, true)
+                local _, cursorEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_MOUSE_CURSOR, self, rhm_Combine.actionToggleMouseCursor, false, true, false,
+                    true, nil, nil, true, true)
                 if cursorEventId then
                     g_inputBinding:setActionEventTextPriority(cursorEventId, GS_PRIO_NORMAL)
                     if g_i18n:hasText("input_RHM_TOGGLE_MOUSE_CURSOR") then
@@ -3086,7 +3723,7 @@ end
 
 function rhm_Combine:actionOpenHarvestMenu(actionName, inputValue, callbackState, isAnalog)
     if g_realisticHarvestManager then
-        g_realisticHarvestManager:showHarvestHistoryGUI()
+        g_realisticHarvestManager:showHarvestHistoryGUI(self)
     end
 end
 
@@ -3114,6 +3751,31 @@ function rhm_Combine:actionToggleMouseCursor(actionName, inputValue, callbackSta
     end
 end
 
+-- EN: Self-healing check on vehicle enter: ensure indoor cameras keep allowTranslation = false.
+-- UA: Самозцілення при вході в комбайн: гарантуємо, що салонні камери мають allowTranslation = false.
+function rhm_Combine:onEnterVehicle(isControlling)
+    if self.isClient and self.spec_enterable and self.spec_enterable.cameras then
+        for _, camera in pairs(self.spec_enterable.cameras) do
+            local isIndoor = camera.isInside or (camera.rotateNode ~= nil and camera.rotateNode == camera.cameraNode)
+            if isIndoor then
+                if camera.allowTranslation then
+                    camera.allowTranslation = false
+                end
+                if camera.origTransX ~= nil and camera.origTransY ~= nil and camera.origTransZ ~= nil then
+                    if camera.transX ~= camera.origTransX or camera.transY ~= camera.origTransY or camera.transZ ~= camera.origTransZ then
+                        camera.transX = camera.origTransX
+                        camera.transY = camera.origTransY
+                        camera.transZ = camera.origTransZ
+                        if camera.cameraNode and entityExists(camera.cameraNode) then
+                            setTranslation(camera.cameraNode, camera.origTransX, camera.origTransY, camera.origTransZ)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- EN: Clean up cursor, camera states, and audio when leaving the vehicle.
 -- UA: Очищаємо стани курсора, камери та звуків при виході з транспортного засобу.
 function rhm_Combine:onLeaveVehicle(wasEntered)
@@ -3134,7 +3796,20 @@ function rhm_Combine:onLeaveVehicle(wasEntered)
         if self.spec_enterable and self.spec_enterable.cameras then
             for _, camera in pairs(self.spec_enterable.cameras) do
                 camera.isRotatable = true
-                camera.allowTranslation = true
+                local isIndoor = camera.isInside or (camera.rotateNode ~= nil and camera.rotateNode == camera.cameraNode)
+                if isIndoor then
+                    camera.allowTranslation = false
+                    if camera.origTransX ~= nil and camera.origTransY ~= nil and camera.origTransZ ~= nil then
+                        camera.transX = camera.origTransX
+                        camera.transY = camera.origTransY
+                        camera.transZ = camera.origTransZ
+                        if camera.cameraNode and entityExists(camera.cameraNode) then
+                            setTranslation(camera.cameraNode, camera.origTransX, camera.origTransY, camera.origTransZ)
+                        end
+                    end
+                else
+                    camera.allowTranslation = true
+                end
                 camera.allowZoom = true
                 if camera.rotSpeed == 0 and camera._rhmSavedRotSpeed then
                     camera.rotSpeed = camera._rhmSavedRotSpeed
@@ -3185,7 +3860,7 @@ function rhm_Combine:resetTrip()
     if tracker then
         local farmId = (self.getOwnerFarmId and self:getOwnerFarmId()) or 1
         local farm = tracker:getFarmData(farmId)
-        local machineKey = self.configFileName or (self.getFullName and self:getFullName()) or "Harvester"
+        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(self)) or self.configFileName or "Harvester"
         if farm and farm.combineTrips and farm.combineTrips[machineKey] then
             farm.combineTrips[machineKey] = spec.trip
         end

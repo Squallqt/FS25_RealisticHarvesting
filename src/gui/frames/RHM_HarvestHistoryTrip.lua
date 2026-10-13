@@ -17,6 +17,14 @@ end
 
 function RHM_HarvestHistoryTrip:onGuiSetupFinished()
     RHM_HarvestHistoryTrip:superClass().onGuiSetupFinished(self)
+    if self.resetButton then
+        self.resetButton.target = self
+        self.resetButton:setCallback("onClick", "onClickResetTrip", self)
+        for _, child in ipairs(self.resetButton.elements or {}) do
+            child.mouseEvent = function() return false end
+            child.handleFocus = false
+        end
+    end
 end
 
 function RHM_HarvestHistoryTrip:onFrameOpen()
@@ -40,71 +48,44 @@ function RHM_HarvestHistoryTrip:update(dt)
 end
 
 function RHM_HarvestHistoryTrip:getActiveTrip()
-    local farmId = 1
-    if g_currentMission then
-        if g_currentMission.getFarmId then
-            farmId = g_currentMission:getFarmId()
-        elseif g_currentMission.player and g_currentMission.player.farmId then
-            farmId = g_currentMission.player.farmId
-        end
-    end
-    if farmId == nil or farmId == 0 or (FarmManager and farmId == FarmManager.SPECTATOR_FARM_ID) then
-        farmId = 1
-    end
+    local farmId = (RHM_Api and RHM_Api.getActiveFarmId and RHM_Api.getActiveFarmId()) or 1
+
 
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     local farm = tracker and tracker:getFarmData(farmId)
 
     -- 1. If player is currently driving or sitting in a combine, track THIS specific combine!
-    local activeCombine = RHM_HarvestTracker and RHM_HarvestTracker.findPlayerEnteredCombine and RHM_HarvestTracker.findPlayerEnteredCombine()
+    local activeCombine = self.targetCombine or (RHM_HarvestTracker and RHM_HarvestTracker.findPlayerEnteredCombine and RHM_HarvestTracker.findPlayerEnteredCombine())
     if activeCombine then
+        if activeCombine.getOwnerFarmId then
+            local cFarmId = activeCombine:getOwnerFarmId()
+            if cFarmId and cFarmId ~= 0 and (not FarmManager or cFarmId ~= FarmManager.SPECTATOR_FARM_ID) then
+                farmId = cFarmId
+                farm = tracker and tracker:getFarmData(farmId)
+            end
+        end
         local trip = nil
-        local machineKey = activeCombine.configFileName or (activeCombine.getFullName and activeCombine:getFullName()) or "Harvester"
+        local machineKey = (RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(activeCombine)) or activeCombine.configFileName or "Harvester"
 
-        -- First check persistent per-machine trip table
-        if farm and farm.combineTrips and farm.combineTrips[machineKey] then
-            trip = farm.combineTrips[machineKey]
+        -- First check if combine spec itself already holds an active isolated trip
+        if activeCombine.spec_rhm_Combine and activeCombine.spec_rhm_Combine.trip then
+            trip = activeCombine.spec_rhm_Combine.trip
         end
 
-        -- Second check if combine spec itself already holds an active non-empty trip
-        if (not trip or (trip.harvestedLiters or 0) <= 0) and activeCombine.spec_rhm_Combine and activeCombine.spec_rhm_Combine.trip and (activeCombine.spec_rhm_Combine.trip.harvestedLiters or 0) > 0 then
-            trip = activeCombine.spec_rhm_Combine.trip
-            if farm then
-                farm.combineTrips = farm.combineTrips or {}
-                farm.combineTrips[machineKey] = trip
+        -- Second check persistent per-machine trip table
+        if not trip and farm and farm.combineTrips then
+            if farm.combineTrips[machineKey] then
+                trip = farm.combineTrips[machineKey]
             end
         end
 
-        -- Third check: fallback to farm.currentTrip ONLY if it belonged to THIS combine
-        if (not trip or (trip.harvestedLiters or 0) <= 0) and farm and farm.currentTrip and (farm.currentTrip.harvestedLiters or 0) > 0 then
-            if farm.currentTrip.lastMachineKey ~= nil and farm.currentTrip.lastMachineKey == machineKey then
+        -- Third check: fallback to farm.currentTrip ONLY if trip is still nil
+        if not trip and farm and farm.currentTrip then
+            local isMatchingMachine = farm.currentTrip.lastMachineKey == machineKey
+            if isMatchingMachine then
+                trip = farm.currentTrip
                 farm.combineTrips = farm.combineTrips or {}
-                if not farm.combineTrips[machineKey] then
-                    farm.combineTrips[machineKey] = {
-                        fieldId = farm.currentTrip.fieldId or 0,
-                        cropName = farm.currentTrip.cropName or "--",
-                        fillTypeIndex = farm.currentTrip.fillTypeIndex or FillType.UNKNOWN,
-                        harvestedAreaHa = farm.currentTrip.harvestedAreaHa or 0,
-                        harvestedLiters = farm.currentTrip.harvestedLiters or 0,
-                        harvestedMassKg = farm.currentTrip.harvestedMassKg or 0,
-                        lostLiters = farm.currentTrip.lostLiters or 0,
-                        lossMoney = farm.currentTrip.lossMoney or 0,
-                        sessionDuration = farm.currentTrip.sessionDuration or 0,
-                        avgSpeedSum = farm.currentTrip.avgSpeedSum or 0,
-                        avgSpeedCount = farm.currentTrip.avgSpeedCount or 0,
-                        avgLoadSum = farm.currentTrip.avgLoadSum or 0,
-                        avgLoadCount = farm.currentTrip.avgLoadCount or 0,
-                        efficiencyRank = farm.currentTrip.efficiencyRank or RHM_HarvestTracker.RANK_A,
-                        reasons = {
-                            speed = farm.currentTrip.reasons and farm.currentTrip.reasons.speed or 0,
-                            moisture = farm.currentTrip.reasons and farm.currentTrip.reasons.moisture or 0,
-                            wear = farm.currentTrip.reasons and farm.currentTrip.reasons.wear or 0,
-                            slope = farm.currentTrip.reasons and farm.currentTrip.reasons.slope or 0
-                        },
-                        isActive = farm.currentTrip.isActive or false
-                    }
-                end
-                trip = farm.combineTrips[machineKey]
+                farm.combineTrips[machineKey] = farm.currentTrip
             end
         end
 
@@ -150,6 +131,7 @@ function RHM_HarvestHistoryTrip:getActiveTrip()
     if farm and farm.combineTrips then
         for machineKey, mTrip in pairs(farm.combineTrips) do
             if mTrip.isActive or (mTrip.sessionDuration and mTrip.sessionDuration > 0) or (mTrip.harvestedLiters and mTrip.harvestedLiters > 0) then
+                mTrip.lastMachineKey = machineKey
                 return mTrip, nil, farmId
             end
         end
@@ -185,6 +167,14 @@ function RHM_HarvestHistoryTrip:updateData()
         end
     end
 
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+    local masterId = fieldId
+    local clusterMembers = nil
+    if fieldId > 0 and tracker then
+        masterId = (tracker.getMasterFieldId and tracker:getMasterFieldId(farmId, fieldId)) or fieldId
+        clusterMembers = (tracker.getClusterMembers and tracker:getClusterMembers(farmId, masterId)) or nil
+    end
+
     local isContract = (trip.isContract == true)
     if not isContract and fieldId > 0 and RHM_HarvestTracker and RHM_HarvestTracker.isContractField then
         isContract = RHM_HarvestTracker.isContractField(fieldId, farmId)
@@ -198,7 +188,11 @@ function RHM_HarvestHistoryTrip:updateData()
 
     local fieldStr = ""
     if fieldId > 0 then
-        fieldStr = tostring(fieldId) .. contractTag
+        if clusterMembers and #clusterMembers > 1 then
+            fieldStr = string.format("%d (%s)%s", masterId, table.concat(clusterMembers, ", "), contractTag)
+        else
+            fieldStr = tostring(fieldId) .. contractTag
+        end
     elseif isAtYard then
         fieldStr = (g_i18n and g_i18n:getText("rhm_field_yard")) or "Yard / Base"
     else
@@ -223,7 +217,9 @@ function RHM_HarvestHistoryTrip:updateData()
         local ft = g_fillTypeManager:getFillTypeByIndex(trip.fillTypeIndex)
         if ft and ft.title then cropStr = ft.title end
     end
-    if self.fieldNumberText then self.fieldNumberText:setText(fieldStr) end
+    if self.fieldNumberText then
+        self.fieldNumberText:setText(fieldStr)
+    end
     if self.cropTypeText then self.cropTypeText:setText(cropStr) end
 
     -- Status Band & Header Summary Box
@@ -271,9 +267,22 @@ function RHM_HarvestHistoryTrip:updateData()
     -- Harvested Area & Volume
     local areaHa = trip.harvestedAreaHa or 0
     local harvestedL = trip.harvestedLiters or 0
-    local harvestedTons = (trip.harvestedMassKg and trip.harvestedMassKg > 0) and (trip.harvestedMassKg / 1000.0) or (harvestedL * 0.00075)
+    local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(trip.fillTypeIndex or trip.cropName)) or 0.00075
+    local harvestedTons = (trip.harvestedMassKg and trip.harvestedMassKg > 0) and (trip.harvestedMassKg / 1000.0) or (harvestedL * cDensity)
+    local nominalArea = (fieldId > 0 and RHM_HarvestTracker and RHM_HarvestTracker.getFieldNominalAreaHa and RHM_HarvestTracker.getFieldNominalAreaHa(masterId, nil, nil, farmId)) or 0
     if self.harvestedAreaText then
         self.harvestedAreaText:setText(RHM_UnitConverter.formatArea(areaHa, sys))
+    end
+    if self.harvestedAreaSubText then
+        if nominalArea > 0.01 then
+            local progressPct = math.min(100.0, (areaHa / nominalArea) * 100.0)
+            local nominalLabel = (g_i18n and g_i18n:hasText("rhm_fields_nominal_area")) and g_i18n:getText("rhm_fields_nominal_area") or "Nominal Area"
+            self.harvestedAreaSubText:setText(string.format("%s: %s (%.1f%%)", nominalLabel, RHM_UnitConverter.formatArea(nominalArea, sys), progressPct))
+        else
+            local detailAreaKey = "rhm_detail_area"
+            local areaDetailStr = (g_i18n and g_i18n:hasText(detailAreaKey)) and g_i18n:getText(detailAreaKey) or "effective harvested area"
+            self.harvestedAreaSubText:setText(areaDetailStr)
+        end
     end
     if self.harvestedVolumeText then
         self.harvestedVolumeText:setText(RHM_UnitConverter.formatMass(harvestedTons, sys, trip.fillTypeIndex, harvestedL))
@@ -296,7 +305,7 @@ function RHM_HarvestHistoryTrip:updateData()
     if isCropLossEnabled and trip.harvestedLiters and trip.harvestedLiters > 0 and harvestedTons > 0 then
         lostTons = (lostL / trip.harvestedLiters) * harvestedTons
     elseif isCropLossEnabled then
-        lostTons = lostL * 0.00075
+        lostTons = lostL * cDensity
     end
     local totalBio = harvestedL + lostL
     local lossPct = (isCropLossEnabled and totalBio > 0) and ((lostL / totalBio) * 100.0) or 0
@@ -304,8 +313,10 @@ function RHM_HarvestHistoryTrip:updateData()
     if self.lossVolumeText then
         if isCropLossEnabled then
             self.lossVolumeText:setText(RHM_UnitConverter.formatMass(lostTons, sys, trip.fillTypeIndex, lostL))
+            RHM_UIColors.applyTextColor(self.lossVolumeText, RHM_UIColors.getLossColor(lossPct))
         else
             self.lossVolumeText:setText("--")
+            RHM_UIColors.applyTextColor(self.lossVolumeText, RHM_UIColors.GRAY)
         end
     end
     if self.lossVolumeSubText then
@@ -320,8 +331,10 @@ function RHM_HarvestHistoryTrip:updateData()
     if self.lossPercentText then
         if isCropLossEnabled then
             self.lossPercentText:setText(string.format("%.2f%%", lossPct))
+            RHM_UIColors.applyTextColor(self.lossPercentText, RHM_UIColors.getLossColor(lossPct))
         else
             self.lossPercentText:setText("OFF")
+            RHM_UIColors.applyTextColor(self.lossPercentText, RHM_UIColors.GRAY)
         end
     end
     if self.lossRatingSubText then
@@ -339,19 +352,15 @@ function RHM_HarvestHistoryTrip:updateData()
     end
 
     -- Loss Progress Bar (normalized width, untouched height)
+    local lossBarCol = RHM_UIColors.getLossColor(lossPct)
     if self.lossBarFill and self.lossBarBg and self.lossBarBg.size then
         local bgW = self.lossBarBg.size[1] or (308 / 1920)
         local lossRatio = isCropLossEnabled and math.min(1.0, math.max(0.0, lossPct / 5.0)) or 0
         local fillW = math.max(0.002, lossRatio * bgW)
         self.lossBarFill:setSize(fillW, nil)
-        if lossPct >= 4.5 then
-            self.lossBarFill:setImageColor(nil, 0.96, 0.28, 0.28, 1.0)
-        elseif lossPct >= 1.5 then
-            self.lossBarFill:setImageColor(nil, 0.98, 0.55, 0.15, 1.0)
-        else
-            self.lossBarFill:setImageColor(nil, 0.61, 0.91, 0.15, 1.0)
-        end
+        self.lossBarFill:setImageColor(nil, lossBarCol[1], lossBarCol[2], lossBarCol[3], lossBarCol[4] or 1.0)
     end
+
 
     local moneyVal = isCropLossEnabled and (trip.lossMoney or 0) or 0
     local moneyStr = "-$0"
@@ -360,23 +369,17 @@ function RHM_HarvestHistoryTrip:updateData()
     else
         moneyStr = string.format("-$%.0f", moneyVal)
     end
-    if self.lossMoneyText then self.lossMoneyText:setText(moneyStr) end
+    if self.lossMoneyText then
+        self.lossMoneyText:setText(moneyStr)
+        RHM_UIColors.applyTextColor(self.lossMoneyText, moneyVal > 0 and RHM_UIColors.RED or RHM_UIColors.WHITE)
+    end
 
     -- Efficiency Rank & Emblem
     local rank = isCropLossEnabled and (trip.efficiencyRank or "A") or "A"
-    local r, g, b = 0.58, 0.77, 0.11
-    if rank == "B" then
-        r, g, b = 0.75, 0.85, 0.15
-    elseif rank == "C" then
-        r, g, b = 0.95, 0.60, 0.15
-    elseif rank == "D" then
-        r, g, b = 0.92, 0.28, 0.28
-    end
+    local rankCol = RHM_UIColors.getRankColor(rank)
     if self.efficiencyRankBadge then
         self.efficiencyRankBadge:setText("[" .. rank .. "]")
-        if self.efficiencyRankBadge.setTextColor then
-            self.efficiencyRankBadge:setTextColor(r, g, b, 1.0)
-        end
+        RHM_UIColors.applyTextColor(self.efficiencyRankBadge, rankCol)
     end
 
     local rankKey = "rhm_rank_desc_" .. string.lower(rank)
@@ -386,7 +389,10 @@ function RHM_HarvestHistoryTrip:updateData()
     if not isCropLossEnabled then
         rankDesc = (g_i18n and g_i18n:hasText("rhm_loss_disabled_desc")) and g_i18n:getText("rhm_loss_disabled_desc") or "Loss simulation is disabled in mod settings."
     end
-    if self.efficiencyRankTitle then self.efficiencyRankTitle:setText(rankTitle) end
+    if self.efficiencyRankTitle then
+        self.efficiencyRankTitle:setText(rankTitle)
+        RHM_UIColors.applyTextColor(self.efficiencyRankTitle, rankCol)
+    end
     if self.efficiencyRankDesc then self.efficiencyRankDesc:setText(rankDesc) end
 
     -- Dominant Cause / Advice
@@ -396,9 +402,10 @@ function RHM_HarvestHistoryTrip:updateData()
             adviceKey = "rhm_cause_none"
         elseif lossPct >= 1.5 and trip.reasons then
             local r_reasons = trip.reasons
-            local maxVal = math.max(r_reasons.speed or 0, r_reasons.moisture or 0, r_reasons.wear or 0, r_reasons.slope or 0)
+            local maxVal = math.max(r_reasons.speed or 0, r_reasons.settings or 0, r_reasons.moisture or 0, r_reasons.wear or 0, r_reasons.slope or 0)
             if maxVal > 0 then
                 if maxVal == (r_reasons.speed or 0) then adviceKey = "rhm_advice_speed"
+                elseif maxVal == (r_reasons.settings or 0) then adviceKey = "rhm_advice_settings"
                 elseif maxVal == (r_reasons.moisture or 0) then adviceKey = "rhm_advice_moisture"
                 elseif maxVal == (r_reasons.wear or 0) then adviceKey = "rhm_advice_wear"
                 elseif maxVal == (r_reasons.slope or 0) then adviceKey = "rhm_advice_slope"
@@ -407,6 +414,17 @@ function RHM_HarvestHistoryTrip:updateData()
         end
         local adviceStr = (g_i18n and g_i18n:hasText(adviceKey)) and g_i18n:getText(adviceKey) or ""
         self.dominantCauseText:setText(adviceStr)
+    end
+
+    -- Fuel Telemetry
+    local fuelL = trip.fuelUsedL or 0
+    if self.fuelUsedText then
+        self.fuelUsedText:setText(string.format("%.1f L", fuelL))
+    end
+    if self.fuelRateText then
+        local lPerHa = (areaHa > 0.01) and (fuelL / areaHa) or 0
+        local lPerTon = (harvestedTons > 0.01) and (fuelL / harvestedTons) or 0
+        self.fuelRateText:setText(string.format("%.1f L/ha · %.1f L/t", lPerHa, lPerTon))
     end
 
     -- Averages & Duration
@@ -418,31 +436,30 @@ function RHM_HarvestHistoryTrip:updateData()
     local durSecRem = math.floor(durSec % 60)
     local durStr = (durHours > 0) and string.format("%02d:%02d:%02d", durHours, durMin, durSecRem) or string.format("%02d:%02d", durMin, durSecRem)
 
+    local loadRatio = math.min(1.0, math.max(0.0, avgLoad / 100.0))
+    local loadCol = RHM_UIColors.getLoadColor(loadRatio)
+
     if self.avgSpeedText then
         self.avgSpeedText:setText(RHM_UnitConverter.formatSpeed(avgSpeed, sys))
     end
-    if self.avgLoadText then self.avgLoadText:setText(string.format("%.0f%%", avgLoad)) end
+    if self.avgLoadText then
+        self.avgLoadText:setText(string.format("%.0f%%", avgLoad))
+        RHM_UIColors.applyTextColor(self.avgLoadText, loadCol)
+    end
     local durElem = self.durationText or self.sessionDurationText
     if durElem then durElem:setText(durStr) end
 
     -- Engine Load Progress Bar (normalized width, untouched height)
     if self.loadBarFill and self.loadBarBg and self.loadBarBg.size then
         local bgW = self.loadBarBg.size[1] or (308 / 1920)
-        local loadRatio = math.min(1.0, math.max(0.0, avgLoad / 100.0))
         local fillW = math.max(0.002, loadRatio * bgW)
         self.loadBarFill:setSize(fillW, nil)
-        if avgLoad >= 98 then
-            self.loadBarFill:setImageColor(nil, 0.96, 0.28, 0.28, 1.0)
-        elseif avgLoad >= 85 then
-            self.loadBarFill:setImageColor(nil, 0.61, 0.91, 0.15, 1.0)
-        else
-            self.loadBarFill:setImageColor(nil, 0.40, 0.70, 0.15, 1.0)
-        end
+        self.loadBarFill:setImageColor(nil, loadCol[1], loadCol[2], loadCol[3], loadCol[4] or 1.0)
     end
 
     -- Combine Model Name
-    local modelName = (activeCombine and activeCombine.getFullName and activeCombine:getFullName())
-                   or (activeCombine and activeCombine.getName and activeCombine:getName())
+    local modelName = (activeCombine and activeCombine.getName and activeCombine:getName())
+                   or (activeCombine and activeCombine.getFullName and activeCombine:getFullName())
                    or "Harvester"
     if self.combineModelText then
         self.combineModelText:setText(modelName)
@@ -460,7 +477,10 @@ function RHM_HarvestHistoryTrip:updateData()
     -- Machine Wear
     local wearVal = (activeCombine and activeCombine.getDamageAmount and activeCombine:getDamageAmount()) or 0
     local wearElem = self.wearDeltaText or self.machineWearText
-    if wearElem then wearElem:setText(string.format("%.0f%%", wearVal * 100.0)) end
+    if wearElem then
+        wearElem:setText(string.format("%.0f%%", wearVal * 100.0))
+        RHM_UIColors.applyTextColor(wearElem, RHM_UIColors.getWearColor(wearVal))
+    end
 
     -- Powertrain Status Guidance
     if self.powertrainStatusText then
@@ -479,14 +499,17 @@ function RHM_HarvestHistoryTrip:updateData()
 
     -- Enable / disable Reset Trip button based on user permissions
     local canManage = true
-    if g_currentMission and g_currentMission.isMultiplayer and g_currentMission.player and g_farmManager then
+    if g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer and g_currentMission.player and g_farmManager then
         local user = g_currentMission.userManager and g_currentMission.userManager:getUserByUserId(g_currentMission.player.userId)
         local realFarm = g_farmManager:getFarmById(farmId)
         if realFarm and user then
-            canManage = (realFarm.ownerUserId == user.userId) 
+            canManage = (activeCombine ~= nil)
+                or (user.farmId and user.farmId == farmId)
+                or (realFarm.ownerUserId == user.userId) 
                 or (realFarm.isUserFarmManager and realFarm:isUserFarmManager(user.userId))
                 or (realFarm.getIsUserFarmManager and realFarm:getIsUserFarmManager(user.userId))
                 or (realFarm.isFarmManager and realFarm:isFarmManager(user.userId))
+                or (realFarm.isUserPlayer and realFarm:isUserPlayer(user.userId))
                 or g_currentMission:getIsServer()
         end
     end
@@ -496,24 +519,31 @@ end
 function RHM_HarvestHistoryTrip:onClickResetTrip()
     local trip, activeCombine, farmId = self:getActiveTrip()
 
-    local isMultiplayer = g_currentMission and g_currentMission.isMultiplayer
+    local isMultiplayer = g_currentMission and g_currentMission.missionDynamicInfo.isMultiplayer
     local isDedicatedClient = isMultiplayer and not g_currentMission:getIsServer()
 
+    local machineKey = (activeCombine and RHM_HarvestTracker and RHM_HarvestTracker.getMachineKey and RHM_HarvestTracker.getMachineKey(activeCombine)) or (trip and trip.lastMachineKey) or ""
+
+    local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     if isDedicatedClient and g_client and g_client:getServerConnection() then
-        g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId))
+        g_client:getServerConnection():sendEvent(RHM_HarvestResetTripEvent.new(farmId, activeCombine, nil, machineKey))
     else
-        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
         if tracker then
             if activeCombine then
                 tracker:resetTripForCombine(farmId, activeCombine, nil)
+            elseif machineKey ~= "" then
+                tracker:resetTripForMachineKey(farmId, machineKey, nil)
             else
                 tracker:resetTrip(farmId, nil)
             end
         end
-        if activeCombine and activeCombine.resetTrip then
-            activeCombine:resetTrip()
-        end
     end
 
+    -- 3. Clear visual selected state from button
+    if self.resetButton and self.resetButton.setSelected then
+        self.resetButton:setSelected(false)
+    end
+
+    -- 4. Force immediate redraw of frame
     self:updateData()
 end

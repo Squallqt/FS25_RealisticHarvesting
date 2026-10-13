@@ -428,7 +428,7 @@
         <text name="rhm_col_loss" text="Verlies" />
         <text name="rhm_col_tank" text="Graantank" />
         <text name="rhm_col_area" text="Oppervlakte" />
-        <text name="rhm_col_money" text="Verlies ($)" />
+        <text name="rhm_col_money" text="Verlies" />
         <text name="rhm_col_driver" text="Bestuurder" />
         <text name="rhm_col_cutter" text="Maaibord" />
         <text name="rhm_col_throughput" text="Capaciteit" />
@@ -500,5 +500,55 @@
         <text name="rhm_weedload_long" text="Vezelig onkruid wikkelt zich om de dorscilinder en verhoogt de mechanische weerstand en motorbelasting (tot +25%). Uitschakelen om invloed op motorvermogen te voorkomen." />
             <text name="rhm_fleet_badge_mission" text="[Contract]" />
         <text name="rhm_fleet_badge_leased" text="[Gehuurd]" />
+        <text name="rhm_cause_settings" text="Machine-instellingen &amp; kalibratie" />
+        <text name="rhm_advice_settings" text="Overheersend verlies door niet-geoptimaliseerde kalibratie. Pas dorskorfspleet, trommelsnelheid en zeven aan voor het huidige gewas." />
+        <text name="rhm_fuel_consumption" text="Brandstofverbruik" />
+        <text name="rhm_fuel_used" text="Verbruikte brandstof" />
+        <text name="rhm_fuel_rate" text="Brandstofverbruik" />
+        <text name="rhm_cluster_merged" text="Samengevoegd veld" />
+        <text name="rhm_gross_revenue" text="Bruto oogstopbrengst" />
+        <text name="rhm_fuel_expense" text="Brandstofkosten" />
+        <text name="rhm_net_margin" text="Netto operationele marge" />
+        <text name="rhm_tut_calib_warn_title" text="MAAIDORSER KALIBRATIE" />
+        <text name="rhm_tut_calib_warn_msg" text="De maaidorser is nog niet gekalibreerd voor %s! Onjuiste afstellingen veroorzaken extra motorbelasting en graanverliezen. Druk op Shift+K om fabrieksinstellingen te laden." />
+        <text name="rhm_tut_calib_warn_params_msg" text="Suboptimale instellingen gedetecteerd voor %s (%s buiten tolerantie)! Dit verlaagt capaciteit en verhoogt verliezen. Druk op Shift+K om te kalibreren." />
+        <text name="rhm_tut_calib_ok_title" text="OPTIMALE INSTELLINGEN BEVESTIGD" />
+        <text name="rhm_tut_calib_ok_msg" text="Alle dors- en reinigingssystemen zijn binnen optimale tolerantie afgesteld voor %s. Maximale capaciteit actief!" />
+        <text name="rhm_tut_weed_title" text="ONKRUIDWEERSTAND" />
+        <text name="rhm_tut_weed_msg" text="Dichte onkruidplekken onder het maaibord verhogen de snij- en dorsweerstand aanzienlijk (+15–25% motorlast). Rijsnelheid wordt automatisch verlaagd om verstopping te voorkomen." />
+        <text name="rhm_tut_slope_title" text="HELLINGVERLIEZEN" />
+        <text name="rhm_tut_slope_msg" text="Werken op hellingen kantelt de zeefkast waardoor graan naar één kant schuift en overloopt. Verlaag uw rijsnelheid op hellingen." />
+        <text name="rhm_tut_wear_title" text="SLIJTAGE MES EN DORSORGANEN" />
+        <text name="rhm_tut_wear_msg" text="Versleten messecties en botte dorstrommelelementen verhogen de weerstand en veroorzaken maaibordverliezen. Laat uw machine onderhouden in de werkplaats." />
+        <text name="rhm_field_progress" text="Oogstvoortgang" />
+        <text name="rhm_filter_owned" text="Eigen" />
+        <text name="rhm_filter_contracts" text="Contracten" />
+        <text name="rhm_hud_style_title" text="HUD-weergavemodus" />
+        <text name="rhm_hud_style_desc" text="Kies tussen de compacte telemetriebalk van één rij (4 cellen) en de uitgebreide opbrengstmonitor (8 cellen met massastroom, gemiddelde opbrengst, veldvoortgang en kilometerteller)." />
+        <text name="rhm_hud_style_compact" text="Compact (4 cellen)" />
+        <text name="rhm_hud_style_expanded" text="Opbrengstmonitor (8 cellen)" />
+        <!-- HUD Layout Variants & Headers -->
+        <text name="rhm_hud_layout_title" text="HUD Layout Variant" />
+        <text name="rhm_hud_layout_desc" text="Choose the visual cell arrangement: OEM Modern (inline units on fixed baseline), Precision Card (micro-headers on top), Minimalist Clean (uncluttered icons and values), or Classic Stacked (two-tier text)." />
+        <text name="rhm_hud_layout_oem" text="OEM Modern (Inline)" />
+        <text name="rhm_hud_layout_card" text="Precision Card (Header Top)" />
+        <text name="rhm_hud_layout_clean" text="Minimalist Clean" />
+        <text name="rhm_hud_layout_stacked" text="Classic Stacked" />
+        <text name="rhm_hud_hdr_load" text="LOAD" />
+        <text name="rhm_hud_hdr_loss" text="LOSS" />
+        <text name="rhm_hud_hdr_speed" text="SPEED" />
+        <text name="rhm_hud_hdr_moisture" text="MOISTURE" />
+        <text name="rhm_hud_hdr_weed" text="WEED" />
+        <text name="rhm_hud_hdr_productivity" text="FLOW RATE" />
+        <text name="rhm_hud_hdr_yield" text="YIELD" />
+        <text name="rhm_hud_hdr_area_rate" text="WORK RATE" />
+        <text name="rhm_hud_hdr_field" text="AREA" />
+        <text name="rhm_hud_hdr_trip" text="TOTAL MASS" />
+        <text name="rhm_hud_hdr_history" text="WORK TIME" />
+        <text name="rhm_hud_hdr_power" text="POWER" />
+        <text name="rhm_hud_hdr_weed_drag" text="WEED DRAG" />
+        <text name="rhm_hud_hdr_throughput" text="THROUGHPUT" />
+        <text name="rhm_hud_hdr_avg_yield" text="AVG YIELD" />
+        <text name="rhm_hud_hdr_volume" text="VOLUME" />
     </texts>
 </l10n>

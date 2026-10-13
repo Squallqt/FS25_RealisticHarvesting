@@ -210,38 +210,17 @@ function RHMCombineCalibrationGUI:open(vehicle)
     if self.isOpen then return end
 
     local combineVehicle = vehicle
-    if vehicle and not vehicle.spec_rhm_Combine then
-        local function findCombine(v, visited)
-            if not v or visited[v] then return nil end
-            visited[v] = true
-            if v.spec_rhm_Combine then return v end
-            if v.rootVehicle then
-                local r = findCombine(v.rootVehicle, visited)
-                if r then return r end
-            end
-            if v.attacherVehicle then
-                local r = findCombine(v.attacherVehicle, visited)
-                if r then return r end
-            end
-            if v.getAttachedImplements then
-                for _, impl in ipairs(v:getAttachedImplements() or {}) do
-                    if impl.object then
-                        local r = findCombine(impl.object, visited)
-                        if r then return r end
-                    end
-                end
-            end
-            return nil
-        end
-        local found = findCombine(vehicle.rootVehicle or vehicle, {})
-        if found then
+    if vehicle and not (vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.isRhmCombine == true) then
+        local found = RHM_Api and RHM_Api.findCombine and RHM_Api.findCombine(vehicle)
+        if found and found.spec_rhm_Combine and found.spec_rhm_Combine.isRhmCombine == true then
             combineVehicle = found
-            rhm_log(string.format("RHM [UI]: RHM: [GUI] NEXAT: found combine vehicle in hierarchy: %s", tostring(combineVehicle)))
+            rhm_log(string.format("RHM [UI]: RHM: [GUI] found combine vehicle in hierarchy: %s", tostring(combineVehicle)))
         else
             rhm_log("RHM [UI]: RHM: [GUI] No combine with spec_rhm_Combine found in vehicle hierarchy — GUI will not open")
             return
         end
     end
+
 
     self.isOpen = true
 
@@ -872,7 +851,9 @@ function RHMCombineCalibrationGUI:draw()
         local cardH = ui.statsHeight
         local startX = x + ui.margin
 
-        local load = (spec.loadCalculator and spec.loadCalculator.engineLoad or 0) * 100
+        local load = (spec.data and spec.data.load)
+            or (spec.loadCalculator and spec.loadCalculator.getEngineLoad and spec.loadCalculator:getEngineLoad())
+            or ((spec.loadCalculator and spec.loadCalculator.engineLoad or 0) * 100)
         local effPenalty = 0
         local lossPenalty = 0
         if memory.currentCrop then
@@ -928,11 +909,15 @@ function RHMCombineCalibrationGUI:draw()
             renderText(cx3 + cardW * 0.5, cy + cardH * 0.14, ui.fontSize, offLabel)
         else
             local settingsLoss = math.max(0, lossPenalty)
-            local wearLoss = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+            local wearLoss = 0
+            if spec.loadCalculator and self.activeVehicle then
+                wearLoss = spec.loadCalculator:calculateWearLoss(self.activeVehicle) or 0
+            end
             local isWearEnabled = (g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableWearLoss ~= false)
             if not isWearEnabled or isArcadeLoss then
                 wearLoss = 0
             end
+
             local displayLoss = settingsLoss + wearLoss
             local lossColor = (displayLoss <= 0.05) and ui.colors.success or ((displayLoss <= 2.0) and ui.colors.warning or ui.colors.error)
             setTextColor(unpack(lossColor))
@@ -1838,8 +1823,8 @@ function RHMCombineCalibrationGUI:getHarvestContext(machineType)
             moisture = m,
             weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or (rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentWeedRatio) or 0,
             yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
-            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-            fillType = rhmSpec.lastFillType,
+            isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+            fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
             fruitType = rhmSpec.lastFruitType,
             dayTime = dayTimeHours,
             isRaining = isRaining,

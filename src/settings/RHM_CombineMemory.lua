@@ -65,11 +65,22 @@ end
 function RHM_CombineMemory:saveCurrentProfile(cropName)
     local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
     if pm then
+        local wasCalibrated = self.calibratedCrops and self.calibratedCrops[cropName]
         pm:saveProfile(cropName, self.currentSettings)
+        self.aiTunedCrop = nil
         self.isCalibrated = true
         if cropName and cropName ~= "" then
             self.calibratedCrops = self.calibratedCrops or {}
             self.calibratedCrops[cropName] = true
+        end
+        if not wasCalibrated and cropName == self.currentCrop and self.combine then
+            if g_server then
+                local spec = self.combine.spec_rhm_Combine
+                if spec and spec.settingsDirtyFlag then self.combine:raiseDirtyFlags(spec.settingsDirtyFlag) end
+            elseif g_client then
+                local event = RHM_CombineSettingsEvent.new(self.combine, "CALIBRATE", 0, false, nil, cropName)
+                g_client:getServerConnection():sendEvent(event)
+            end
         end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: [OK] Profile saved globally: %s", cropName))
         return true
@@ -98,8 +109,8 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
             moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
             yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
             weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or (rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentWeedRatio) or 0,
-            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-            fillType = rhmSpec.lastFillType,
+            isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+            fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
             fruitType = rhmSpec.lastFruitType,
             dayTime = dayTimeHours,
             isRaining = isRaining,
@@ -120,6 +131,7 @@ function RHM_CombineMemory:autoConfigureForCrop(cropName, forceOptimal, context)
     end
     local canAutoOptimal = (pkgLevel >= 4)
 
+    self.aiTunedCrop = nil
     if forceOptimal and canAutoOptimal and optimalSettings then
         -- EN: AUTO mode: sets calculated optimal values (Opti-Harvest Level 4 exclusive).
         -- UA: AUTO режим: встановлює розраховані оптимальні значення (ексклюзив для Opti-Harvest 4 рівня).
@@ -178,7 +190,7 @@ end
 ---    based on the machine's installed electronics package level (Tiers 1–4).
 ---UA: Автоматично налаштовує комбайн для наймита або автопілота відповідно до встановленого
 ---    рівня електроніки (Тір 1–4).
-function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
+function RHM_CombineMemory:applyAiWorkerTuning(cropName, context, suppliedProfile)
     if not cropName or cropName == "" then
         cropName = self.currentCrop
     end
@@ -215,7 +227,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
 
     -- EN: If player settings are prioritized and machine is already calibrated, keep settings untouched!
     -- UA: Якщо налаштування гравця в пріоритеті і комбайн уже відкалібрований, зберігаємо налаштування без змін!
-    if aiTuningMode == 1 and isAlreadyCalibrated then
+    if aiTuningMode == 1 and isAlreadyCalibrated and not (suppliedProfile and self.aiTunedCrop == cropName) then
         self.currentCrop = cropName
         self.isCalibrated = true
         self.calibratedCrops = self.calibratedCrops or {}
@@ -254,9 +266,10 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
 
     -- 1. Prioritize user-saved profile for this crop if player has previously saved one
     local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
-    local userProfile = pm and pm:getProfile(cropName)
+    local userProfile = suppliedProfile or (pm and pm:getProfile(cropName))
 
     if userProfile then
+        self.aiTunedCrop = nil
         for _, pName in ipairs(activeParams) do
             if userProfile[pName] ~= nil then
                 self.currentSettings[pName] = userProfile[pName]
@@ -327,8 +340,8 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
             moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
             yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
             weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or (rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentWeedRatio) or 0,
-            isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-            fillType = rhmSpec.lastFillType,
+            isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+            fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
             fruitType = rhmSpec.lastFruitType,
             dayTime = dayTimeHours,
             isRaining = isRaining,
@@ -431,6 +444,7 @@ function RHM_CombineMemory:applyAiWorkerTuning(cropName, context)
         end
     end
 
+    self.aiTunedCrop = cropName
     self.isCalibrated = true
     self.calibratedCrops = self.calibratedCrops or {}
     self.calibratedCrops[cropName] = true
@@ -476,21 +490,18 @@ function RHM_CombineMemory:requestAutoSettings()
         return
     end
 
-    if g_client and self.combine then
-        self.isCalibrated = true
-        if self.currentCrop and self.currentCrop ~= "" then
-            self.calibratedCrops = self.calibratedCrops or {}
-            self.calibratedCrops[self.currentCrop] = true
-        end
-        local event = RHM_CombineSettingsEvent.new(self.combine, "AUTO_SET", 1)
-        if not g_server then
-            g_client:getServerConnection():sendEvent(event)
-        else
-            event:run(nil) -- EN: Singleplayer: process locally / UA: Однокористувацька: обробляємо локально
-        end
-        rhm_log("RHM [RHM_CombineMemory]: RHM: [Sync] Requested AUTO settings from server")
+    if not self.combine or not (g_client or g_server) then return false end
+    local event = RHM_CombineSettingsEvent.new(self.combine, "AUTO_SET", 1, false, nil, self.currentCrop)
+    if g_server then
+        event:run(nil)
+    else
+        g_client:getServerConnection():sendEvent(event)
     end
+    return true
+end
 
+-- Show success only after the server has applied the requested calibration.
+function RHM_CombineMemory:showAutoSettingsApplied()
     local cropTitle = self.currentCrop
     if RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCropTitle then
         cropTitle = RHM_CombineSettingsDatabase:getCropTitle(self.currentCrop)
@@ -526,7 +537,7 @@ end
 -- UA: Завантажує глобально збережений профіль користувача для поточної культури з RHM_ProfileManager.
 --     У мультиплеєрі (клієнт) надсилає RHM_CombineSettingsEvent з повним профілем.
 --     Повертає false якщо профіль відсутній.
-function RHM_CombineMemory:loadUserPreset()
+function RHM_CombineMemory:loadUserPreset(forAiWorker)
     if not self.currentCrop then return false end
 
     local pm = g_realisticHarvestManager and g_realisticHarvestManager.profileManager
@@ -535,7 +546,8 @@ function RHM_CombineMemory:loadUserPreset()
     local profile = pm:getProfile(self.currentCrop)
     if profile then
         if g_client and self.combine then
-            local event = RHM_CombineSettingsEvent.new(self.combine, "", 0, true, profile, self.currentCrop, "MANUAL")
+            local event = RHM_CombineSettingsEvent.new(self.combine, forAiWorker and "AI_PRESET" or "",
+                0, true, profile, self.currentCrop, "MANUAL")
             if not g_server then
                 g_client:getServerConnection():sendEvent(event)
             else
@@ -587,8 +599,8 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarning
         ctx.moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0
         ctx.yield = (rhmSpec.data and rhmSpec.data.yield) or 0
         ctx.weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or (rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentWeedRatio) or 0
-        ctx.isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false
-        ctx.fillType = rhmSpec.lastFillType
+        ctx.isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false
+        ctx.fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex)
         ctx.fruitType = rhmSpec.lastFruitType
         ctx.dayTime = dayTimeHours
         ctx.isRaining = isRaining
@@ -715,6 +727,7 @@ end
 -- UA: Встановлює значення одного параметру (0-100) і перемикає в MANUAL режим.
 function RHM_CombineMemory:setParameter(paramName, value)
     if self.currentSettings[paramName] ~= nil then
+        self.aiTunedCrop = nil
         if paramName == "targetEngineLoad" then
             self.currentSettings[paramName] = math.max(70, math.min(100, value))
             return true
@@ -742,6 +755,7 @@ end
 --           на виділеному сервері без культури — позначає очікуючий AUTO і чекає.
 --     MANUAL: вимикає автоконфігурацію.
 function RHM_CombineMemory:setMode(mode)
+    self.aiTunedCrop = nil
     local pkgLevel = 1
     if self.combine and self.combine.spec_rhm_Combine then
         pkgLevel = self.combine.spec_rhm_Combine.packageLevel or 1
@@ -799,16 +813,8 @@ function RHM_CombineMemory:updateStatistics(harvestedLiters, cropLoss, cropName)
 
         -- EN: Get density from fill type manager, fallback to 0.75 kg/L if not available.
         -- UA: Отримуємо густину з менеджера типів врожаю, запасний варіант 0.75 кг/л.
-        local density = 0.75
-        if cropName and g_fillTypeManager and RHM_CombineSettingsDatabase then
-            local cropData = RHM_CombineSettingsDatabase:getCropData(cropName)
-            if cropData and cropData.fillType then
-                local fillTypeObj = g_fillTypeManager:getFillTypeByIndex(cropData.fillType)
-                if fillTypeObj and fillTypeObj.massPerLiter and fillTypeObj.massPerLiter > 0 then
-                    density = fillTypeObj.massPerLiter * 1000 -- EN: t/L → kg/L / UA: т/л → кг/л
-                end
-            end
-        end
+        local density = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(cropName)) or 0.75
+
 
         local tons = harvestedLiters * density / 1000
         profile.stats.totalHarvested = profile.stats.totalHarvested + tons
@@ -862,6 +868,7 @@ function RHM_CombineMemory:switchCrop(newCropName)
     end
 
     self.currentCrop = newCropName
+    self.aiTunedCrop = nil
     if self.calibratedCrops and self.calibratedCrops[newCropName] then
         self.isCalibrated = true
     else
@@ -919,7 +926,7 @@ function RHM_CombineMemory:updateSetting(param, value)
             RHM_Api.dispatch("onSettingsChanged", self.combine, self.currentSettings, self.mode)
         end
 
-        if g_client and self.combine then
+        if (g_client or g_server) and self.combine then
             local event = RHM_CombineSettingsEvent.new(self.combine, param, self.currentSettings[param], false, nil)
             if not g_server then
                 g_client:getServerConnection():sendEvent(event)
@@ -969,6 +976,8 @@ function RHM_CombineMemory:toggleAutoMode()
         else
             self.mode = "MANUAL"
         end
+        local spec = self.combine and self.combine.spec_rhm_Combine
+        if g_server and spec and spec.settingsDirtyFlag then self.combine:raiseDirtyFlags(spec.settingsDirtyFlag) end
         rhm_log(string.format("RHM [RHM_CombineMemory]: RHM: Auto Switch %s", self.autoSwitchEnabled and "ENABLED" or "DISABLED"))
     end
 end
@@ -1012,8 +1021,8 @@ function RHM_CombineMemory:updateAutoTrim(dt)
         moisture = (rhmSpec.data and rhmSpec.data.moisture) or 0,
         yield = (rhmSpec.data and rhmSpec.data.yield) or 0,
         weedRatio = (rhmSpec.data and rhmSpec.data.weedRatio) or (rhmSpec.loadCalculator and rhmSpec.loadCalculator.currentWeedRatio) or 0,
-        isPickup = (rhmSpec.loadCalculator and rhmSpec.loadCalculator.isPickup) or false,
-        fillType = rhmSpec.lastFillType,
+        isPickup = (rhmSpec.data and rhmSpec.data.isPickup) or false,
+        fillType = rhmSpec.lastFillType or (rhmSpec.trip and rhmSpec.trip.fillTypeIndex),
         fruitType = rhmSpec.lastFruitType,
         dayTime = dayTimeHours,
         isRaining = isRaining,

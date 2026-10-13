@@ -47,6 +47,18 @@ RHMSettings.AUTO_RESET_SMART = 1       -- EN: Smart (Field or Crop change, merge
 RHMSettings.AUTO_RESET_CROP_ONLY = 2  -- EN: Crop Change Only / UA: Лише зміна культури
 RHMSettings.AUTO_RESET_DISABLED = 3   -- EN: Disabled (Manual Only) / UA: Вимкнено (Вручну)
 
+-- EN: HUD layout style constants.
+-- UA: Константи стилю компонування HUD.
+RHMSettings.HUD_STYLE_COMPACT = 1     -- EN: Compact (1 row, 4 cells) / UA: Компактний (1 рядок, 4 комірки)
+RHMSettings.HUD_STYLE_EXPANDED = 2    -- EN: Yield Monitor (2 rows, 8 cells) / UA: Монітор врожайності (2 рядки, 8 комірок)
+
+-- EN: HUD cell layout variant constants (rendering style of numbers, labels, and units inside cells).
+-- UA: Константи варіантів розмітки комірок HUD (стиль відображення чисел, підписів та одиниць у комірці).
+RHMSettings.HUD_LAYOUT_OEM = 1        -- EN: OEM Modern Terminal (inline units, unified baseline) / UA: Сучасний OEM (в один рядок)
+RHMSettings.HUD_LAYOUT_CARD = 2       -- EN: Precision Farming Card (micro-header on top, value below) / UA: Картка точного землеробства (підпис зверху)
+RHMSettings.HUD_LAYOUT_CLEAN = 3      -- EN: Minimalist Clean (icons + values only, zero clutter) / UA: Чистий мінімалізм (іконки та числа)
+RHMSettings.HUD_LAYOUT_STACKED = 4    -- EN: Classic Stacked (2-floor stacked layout) / UA: Двоповерховий класичний (підписи знизу)
+
 -- EN: Creates and initializes a new RHMSettings instance with default values.
 -- UA: Створює та ініціалізує новий екземпляр RHMSettings зі значеннями за замовчуванням.
 function RHMSettings.new(manager)
@@ -82,6 +94,8 @@ function RHMSettings.new(manager)
     self.showCropLoss = true
     self.showSpeed = true
     self.showMoisture = true
+    self.hudStyle = RHMSettings.HUD_STYLE_EXPANDED -- EN: 1=Compact (4 cells), 2=Yield Monitor (8 cells)
+    self.hudLayout = RHMSettings.HUD_LAYOUT_OEM    -- EN: 1=OEM, 2=Card, 3=Clean, 4=Stacked
 
     -- EN: HUD position (client-side). nil = automatic positioning.
     -- UA: Позиція HUD (клієнтська). nil = автоматичне позиціонування.
@@ -216,39 +230,51 @@ function RHMSettings:save()
     self.manager:saveSettings(self)
 end
 
-function RHMSettings:saveAndSync()
+function RHMSettings:saveAndSync(settingName)
+    if self:isAdmin() and (settingName == nil or settingName == "autoResetTripMode") then
+        local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
+        for _, farm in pairs(tracker and tracker.farms or {}) do
+            if farm.farmSettings then
+                farm.farmSettings.autoResetMode = self.autoResetTripMode
+                farm.farmSettings.autoResetOnFieldChange = self.autoResetTripMode ~= 3
+            end
+        end
+    end
     self:save()
     if g_currentMission.missionDynamicInfo.isMultiplayer and
        self:isAdmin() and
        RHM_SettingsSync then
-        RHM_SettingsSync:sendToClients(self)
+        RHM_SettingsSync:sendToClients(self, settingName)
     end
 end
 
 -- EN: Resets all settings to their factory default values and saves immediately.
 -- UA: Скидає всі налаштування до заводських значень за замовчуванням і негайно зберігає.
 function RHMSettings:resetToDefaults()
-    self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
-    self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
-    self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
-    self.autoResetTripMode = RHMSettings.AUTO_RESET_SMART
-    self.enableSpeedLimit = true
-    self.enableCropLoss = true
-    self.enableWearLoss = true
-    self.enableSlopeLoss = true
-    self.enableWeedLoad = true
-    self.enableMoisture = true
+    if self:canChangeServerSettings() then
+        self.difficultyLoss = RHMSettings.DIFFICULTY_NORMAL
+        self.difficultyMotor = RHMSettings.DIFFICULTY_NORMAL
+        self.aiHelperTuning = RHMSettings.AI_TUNING_KEEP_PLAYER
+        self.autoResetTripMode = RHMSettings.AUTO_RESET_SMART
+        self.enableSpeedLimit = true
+        self.enableCropLoss = true
+        self.enableWearLoss = true
+        self.enableSlopeLoss = true
+        self.enableWeedLoad = true
+        self.enableMoisture = true
+        self.enableIndependentLaunch = true
+    end
     self.showHUD = true
     self.showLoad = true
     self.showProductivity = true
     self.showCropLoss = true
     self.showSpeed = true
     self.showMoisture = true
-    self.enableIndependentLaunch = true
     self.enableTutorials = true
     self.alarmMode = RHMSettings.ALARM_MODE_SMART
     self.enableAlarmSound = true
     self.soundVolume = 1.0
+    self.hudLayout = RHMSettings.HUD_LAYOUT_OEM
     self.hudPosX = nil -- EN: Reset to automatic HUD positioning / UA: Скидаємо на автоматичну позицію HUD
     self.hudPosY = nil
 
@@ -266,10 +292,9 @@ end
 ---EN: Sets whether wear-based crop loss is enabled
 ---UA: Встановлює чи увімкнено втрати від зносу техніки
 function RHMSettings:setEnableWearLoss(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableWearLoss = enabled
-    if self.save then
-        self:save()
-    end
+    self:saveAndSync("enableWearLoss")
 end
 
 ---EN: Gets whether tutorial hints are enabled
@@ -296,10 +321,9 @@ end
 ---EN: Sets whether slope loss simulation is enabled
 ---UA: Встановлює чи увімкнено втрати від нахилу рельєфу
 function RHMSettings:setEnableSlopeLoss(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableSlopeLoss = enabled
-    if self.save then
-        self:save()
-    end
+    self:saveAndSync("enableSlopeLoss")
 end
 
 ---EN: Gets whether weed resistance on engine load is enabled
@@ -311,10 +335,44 @@ end
 ---EN: Sets whether weed resistance on engine load is enabled
 ---UA: Встановлює чи увімкнено опір та навантаження від бур'янів
 function RHMSettings:setEnableWeedLoad(enabled)
+    if not self:canChangeServerSettings() then return end
     self.enableWeedLoad = enabled
+    self:saveAndSync("enableWeedLoad")
+end
+
+---EN: Gets HUD layout style (1=Compact, 2=Yield Monitor)
+---UA: Повертає стиль HUD (1=Компактний, 2=Монітор врожайності)
+function RHMSettings:getHudStyle()
+    return self.hudStyle or RHMSettings.HUD_STYLE_EXPANDED
+end
+
+---EN: Sets HUD layout style (1=Compact, 2=Yield Monitor)
+---UA: Встановлює стиль HUD (1=Компактний, 2=Монітор врожайності)
+function RHMSettings:setHudStyle(style)
+    self.hudStyle = style or RHMSettings.HUD_STYLE_EXPANDED
     if self.save then
         self:save()
     end
 end
+
+---EN: Gets HUD cell layout variant (1=OEM Modern, 2=Precision Card)
+---UA: Повертає варіант розмітки комірок HUD (1=Сучасний OEM, 2=Картка точного землеробства)
+function RHMSettings:getHudLayout()
+    return (self.hudLayout == 2) and 2 or 1
+end
+
+---EN: Sets HUD cell layout variant (1=OEM Modern, 2=Precision Card)
+---UA: Встановлює варіант розмітки комірок HUD (1=Сучасний OEM, 2=Картка точного землеробства)
+function RHMSettings:setHudLayout(layout)
+    self.hudLayout = (layout == 2) and 2 or 1
+    if self.save then
+        self:save()
+    end
+    if g_realisticHarvestManager and g_realisticHarvestManager.hud and g_realisticHarvestManager.hud.updateLayout then
+        g_realisticHarvestManager.hud:updateLayout()
+    end
+end
+
+
 
 

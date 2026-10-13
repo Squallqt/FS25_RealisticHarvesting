@@ -297,9 +297,12 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
 
     -- 2. Bulk Density (kg/L)
     local densityKgPerL = 0.75
-    if fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
+    if RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter then
+        densityKgPerL = RHM_UnitConverter.getCropDensityKgPerLiter(fillTypeDesc and fillTypeDesc.index or cropName)
+    elseif fillTypeDesc and fillTypeDesc.massPerLiter and fillTypeDesc.massPerLiter > 0 then
         densityKgPerL = fillTypeDesc.massPerLiter * 1000
     else
+
         local knownDensities = {
             WHEAT = 0.78, BARLEY = 0.62, OAT = 0.52, OATS = 0.52,
             CANOLA = 0.42, SUNFLOWER = 0.42, SAFFLOWER = 0.42,
@@ -405,7 +408,7 @@ function RHM_CombineSettingsDatabase:calculatePhysicalOptimalSettings(cropName, 
                 feeder = {optimal = 65, min = 45, max = 85, tolerance = 8},
                 moistureLimit = 22,
             }
-        elseif cropName:find("GREENBEAN") then
+        elseif cropName:find("GREENBEAN") or cropName:find("PEA") then
             template = {
                 fan    = {optimal = 45, min = 25, max = 65, tolerance = 8},
                 rotor  = {optimal = 35, min = 15, max = 55, tolerance = 8},
@@ -1505,23 +1508,57 @@ function RHM_CombineSettingsDatabase:initMapCrops()
 end
 
 -- EN: Returns a sorted list of crop names that match the specified machine type and exist on the current map.
---     Optionally filters by the active vehicle's hopper/tank supported fill types if provided.
+--     Filters precisely by the active vehicle's hopper/bunker supported fill types AND attached cutter fruit types.
 -- UA: Повертає відсортований список назв культур що відповідають типу машини та існують на поточній карті.
---     Опціонально фільтрує за підтримуваними типами в бункері комбайна якщо вказано техніку.
+--     Точно фільтрує за підтримуваними типами бункера техніки ТА культурами під'єднаної жатки/різального апарата.
 function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, vehicle)
     self:initMapCrops()
 
-    -- Gather supported fillType indices from vehicle hopper/tank if available
+    -- 1. Identify non-cargo fill types (fuels, liquids, chemicals, consumables) to avoid treating fuel tanks as bunkers
+    local nonCargoFillTypes = {}
+    if FillType then
+        local excludedNames = {
+            "DIESEL", "DEF", "AIR", "GREASE", "ELECTRICCHARGE", "METHANE",
+            "WATER", "SILAGE_ADDITIVE", "HERBICIDE", "FERTILIZER",
+            "LIQUIDFERTILIZER", "MINERAL_FEED", "ROUNDBALE", "SQUAREBALE"
+        }
+        for _, name in ipairs(excludedNames) do
+            if FillType[name] then
+                nonCargoFillTypes[FillType[name]] = true
+            end
+        end
+    end
+
+    -- 2. Gather supported fillType indices from vehicle hopper/bunker (cargo only)
     local supportedFillTypes = nil
-    if vehicle and vehicle.getFillUnits then
-        local fillUnits = vehicle:getFillUnits()
+    local hasCargoBunker = false
+    if vehicle then
+        local fillUnits = (type(vehicle.getFillUnits) == "function" and vehicle:getFillUnits())
+                       or (vehicle.spec_fillUnit and vehicle.spec_fillUnit.fillUnits)
+
+        -- If vehicle itself has no fill units, probe attached implements (e.g. trailed harvester attached to carrier)
+        if (not fillUnits or #fillUnits == 0) and vehicle.getAttachedImplements then
+            for _, impl in pairs(vehicle:getAttachedImplements()) do
+                local obj = impl.object
+                if obj and (type(obj.getFillUnits) == "function" or obj.spec_fillUnit) then
+                    local implFUs = (type(obj.getFillUnits) == "function" and obj:getFillUnits())
+                                 or (obj.spec_fillUnit and obj.spec_fillUnit.fillUnits)
+                    if implFUs and #implFUs > 0 then
+                        fillUnits = implFUs
+                        break
+                    end
+                end
+            end
+        end
+
         if fillUnits and #fillUnits > 0 then
             for _, fu in ipairs(fillUnits) do
                 if fu.supportedFillTypes and next(fu.supportedFillTypes) ~= nil then
-                    supportedFillTypes = supportedFillTypes or {}
                     for ftIdx, isSupp in pairs(fu.supportedFillTypes) do
-                        if isSupp then
+                        if isSupp and not nonCargoFillTypes[ftIdx] then
+                            supportedFillTypes = supportedFillTypes or {}
                             supportedFillTypes[ftIdx] = true
+                            hasCargoBunker = true
                         end
                     end
                 end
@@ -1529,30 +1566,142 @@ function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, veh
         end
     end
 
+    -- 3. Gather supported fruitType indices from attached or integrated cutters/headers
+    local cutterFruitTypes = nil
+    local hasAttachedCutter = false
+    if vehicle then
+        local cutters = {}
+        -- 3a. Integrated cutter directly on vehicle (e.g. grape/olive/cotton harvesters, self-propelled root harvesters)
+        if vehicle.spec_cutter then
+            table.insert(cutters, vehicle)
+        end
+        -- 3b. Attached cutters registered on spec_combine
+        if vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+            for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
+                table.insert(cutters, c)
+            end
+        end
+        -- 3c. Attached implements and sub-implements
+        local function collectCutters(veh, depth)
+            if not veh or not veh.getAttachedImplements or depth > 3 then return end
+            for _, impl in pairs(veh:getAttachedImplements()) do
+                local obj = impl.object
+                if obj then
+                    if obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter or obj.spec_pickup then
+                        table.insert(cutters, obj)
+                    end
+                    collectCutters(obj, depth + 1)
+                end
+            end
+        end
+        collectCutters(vehicle, 1)
+
+        -- Extract fruitTypes from all detected cutters
+        for _, cutter in ipairs(cutters) do
+            local sc = cutter.spec_cutter or cutter.spec_forageHarvesterCutter or cutter.spec_forageCutter
+            if sc and sc.fruitTypes and next(sc.fruitTypes) ~= nil then
+                hasAttachedCutter = true
+                cutterFruitTypes = cutterFruitTypes or {}
+                for k, v in pairs(sc.fruitTypes) do
+                    if type(k) == "number" and type(v) == "number" then
+                        cutterFruitTypes[v] = true
+                    elseif type(k) == "number" and (v == true or v == 1) then
+                        cutterFruitTypes[k] = true
+                    end
+                end
+            elseif cutter.spec_pickup ~= nil then
+                hasAttachedCutter = true
+            end
+        end
+    end
+
+    local hasCutterFilter = (cutterFruitTypes ~= nil and next(cutterFruitTypes) ~= nil)
+
+    -- 4. Helper to resolve fillTypeIndex and fruitTypeIndex for any crop
+    local function resolveCropIndices(cropName, cropData, canonical)
+        local fillTypeIdx = cropData.fillType
+        if (not fillTypeIdx or fillTypeIdx == 0) and g_fillTypeManager and g_fillTypeManager.getFillTypeIndexByName then
+            fillTypeIdx = g_fillTypeManager:getFillTypeIndexByName(cropName)
+                       or (canonical and g_fillTypeManager:getFillTypeIndexByName(canonical))
+            if fillTypeIdx and fillTypeIdx > 0 then
+                cropData.fillType = fillTypeIdx
+            end
+        end
+
+        local fruitTypeIdx = cropData.fruitType
+        if (not fruitTypeIdx or fruitTypeIdx == 0) and g_fruitTypeManager and g_fruitTypeManager.getFruitTypeIndexByName then
+            fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName(cropName)
+                        or (canonical and g_fruitTypeManager:getFruitTypeIndexByName(canonical))
+            if fruitTypeIdx and fruitTypeIdx > 0 then
+                cropData.fruitType = fruitTypeIdx
+            end
+        end
+
+        -- Forage and windrow mappings
+        if not fruitTypeIdx and g_fruitTypeManager and g_fruitTypeManager.getFruitTypeIndexByName then
+            if canonical == "MAIZE_FORAGE" then
+                fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName("MAIZE")
+            elseif canonical == "STRAW_WINDROW" then
+                fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName("WHEAT")
+            elseif canonical == "GRASS_WINDROW" or canonical == "DRYGRASS_WINDROW" then
+                fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName("GRASS")
+            elseif canonical == "ALFALFA_WINDROW" then
+                fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName("ALFALFA") or g_fruitTypeManager:getFruitTypeIndexByName("LUCERNE")
+            elseif canonical == "CLOVER_WINDROW" then
+                fruitTypeIdx = g_fruitTypeManager:getFruitTypeIndexByName("CLOVER")
+            end
+        end
+
+        return fillTypeIdx, fruitTypeIdx
+    end
+
     local names = {}
     local seenCanonical = {}
     local seenDisplayNames = {}
 
-    local function tryAddCrop(cropName, cropData)
-        if cropData.machineType ~= machineType then
-            local isGrapeOlivePair = (machineType == "grape" or machineType == "olive") and (cropData.machineType == "grape" or cropData.machineType == "olive")
-            if not isGrapeOlivePair then
-                return
+    local function tryAddCrop(cropName, cropData, applyCutterFilter)
+        local canonical = self:getCanonicalCropName(cropName)
+
+        -- Machine type compatibility check (strictly separate grape and olive, allow PEA for root and grain)
+        local matchMachineType = (cropData.machineType == machineType)
+        if not matchMachineType then
+            if (canonical == "PEA" or canonical == "PEAS") and (machineType == "root" or machineType == "grain") then
+                matchMachineType = true
             end
         end
-        local canonical = self:getCanonicalCropName(cropName)
+        if not matchMachineType then
+            return
+        end
+
         if self.validMapCrops and not (self.validMapCrops[cropName] or self.validMapCrops[canonical]) then
             return
         end
 
-        local isSupported = true
-        if supportedFillTypes and cropData.fillType then
-            if not supportedFillTypes[cropData.fillType] then
-                isSupported = false
+        local fillTypeIdx, fruitTypeIdx = resolveCropIndices(cropName, cropData, canonical)
+
+        -- Bunker / Hopper filter: if machine has a cargo bunker, crop MUST be accepted by the bunker
+        if hasCargoBunker then
+            if not fillTypeIdx or not supportedFillTypes[fillTypeIdx] then
+                return
             end
         end
-        if not isSupported then
-            return
+
+        -- Cutter / Header filter: if a header with defined fruitTypes is attached, header MUST support this crop
+        if applyCutterFilter and hasCutterFilter then
+            local cutterMatch = false
+            if fruitTypeIdx and cutterFruitTypes[fruitTypeIdx] then
+                cutterMatch = true
+            elseif canonical == "STRAW_WINDROW" and g_fruitTypeManager and g_fruitTypeManager.getFruitTypeIndexByName then
+                local ftWheat = g_fruitTypeManager:getFruitTypeIndexByName("WHEAT")
+                local ftBarley = g_fruitTypeManager:getFruitTypeIndexByName("BARLEY")
+                local ftOat = g_fruitTypeManager:getFruitTypeIndexByName("OAT")
+                if (ftWheat and cutterFruitTypes[ftWheat]) or (ftBarley and cutterFruitTypes[ftBarley]) or (ftOat and cutterFruitTypes[ftOat]) then
+                    cutterMatch = true
+                end
+            end
+            if not cutterMatch then
+                return
+            end
         end
 
         if seenCanonical[canonical] then
@@ -1571,12 +1720,23 @@ function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, veh
         table.insert(names, canonical)
     end
 
+    -- Run intersection filter (bunker + cutter)
     for cropName, cropData in pairs(self.crops) do
-        tryAddCrop(cropName, cropData)
+        tryAddCrop(cropName, cropData, true)
     end
 
-    -- Fallback to all map crops of this machineType if vehicle hopper filter was empty
-    if #names == 0 and supportedFillTypes ~= nil then
+    -- Fallback 1: If an attached header produced 0 matches with the bunker (e.g. incompatible header or mod anomaly),
+    -- fall back to bunker-compatible crops so player still has valid bunker crops available.
+    if #names == 0 and hasCargoBunker and hasCutterFilter then
+        seenCanonical = {}
+        seenDisplayNames = {}
+        for cropName, cropData in pairs(self.crops) do
+            tryAddCrop(cropName, cropData, false)
+        end
+    end
+
+    -- Fallback 2: Generic query without vehicle instance (documentation / preview)
+    if #names == 0 and not vehicle then
         seenCanonical = {}
         seenDisplayNames = {}
         for cropName, cropData in pairs(self.crops) do

@@ -54,11 +54,11 @@ function RHMSettingsGUI:consoleCommandSetDifficultyMotor(difficulty)
         return "Error: Admin only"
     end
     local diff = tonumber(difficulty)
-    if not diff or diff < 1 or diff > 3 then
+    if not diff or diff % 1 ~= 0 or diff < 1 or diff > 3 then
         return "Invalid value. Use 1 (Arcade), 2 (Normal), or 3 (Realistic)"
     end
     settings.difficultyMotor = diff
-    settings:save()
+    settings:saveAndSync("difficultyMotor")
     local names = {"Arcade", "Normal", "Realistic"}
     return string.format("Difficulty Motor set to: %s", names[diff] or "?")
 end
@@ -74,11 +74,11 @@ function RHMSettingsGUI:consoleCommandSetDifficultyLoss(difficulty)
         return "Error: Admin only"
     end
     local diff = tonumber(difficulty)
-    if not diff or diff < 1 or diff > 3 then
+    if not diff or diff % 1 ~= 0 or diff < 1 or diff > 3 then
         return "Invalid value. Use 1 (Arcade), 2 (Normal), or 3 (Realistic)"
     end
     settings.difficultyLoss = diff
-    settings:save()
+    settings:saveAndSync("difficultyLoss")
     local names = {"Arcade", "Normal", "Realistic"}
     return string.format("Difficulty Loss set to: %s", names[diff] or "?")
 end
@@ -97,7 +97,7 @@ function RHMSettingsGUI:consoleCommandToggleSpeedLimit()
     end
 
     settings.enableSpeedLimit = not settings.enableSpeedLimit
-    settings:save()
+    settings:saveAndSync("enableSpeedLimit")
     return string.format("Speed Limiting: %s", settings.enableSpeedLimit and "ON" or "OFF")
 end
 
@@ -115,7 +115,7 @@ function RHMSettingsGUI:consoleCommandToggleCropLoss()
     end
 
     settings.enableCropLoss = not settings.enableCropLoss
-    settings:save()
+    settings:saveAndSync("enableCropLoss")
     return string.format("Crop Loss: %s", settings.enableCropLoss and "ON" or "OFF")
 end
 
@@ -297,8 +297,8 @@ function RHMSettingsGUI:consoleCommandCombineAuto()
         return "[X] Combine Memory not found"
     end
 
-    spec.combineMemory:setMode("AUTO")
-    return "[OK] Mode set to AUTO"
+    if spec.combineMemory:requestAutoSettings() then return "[OK] AUTO calibration requested" end
+    return "[X] AUTO calibration unavailable for the current machine or crop"
 end
 
 -- EN: Activates MANUAL mode for the current combine.
@@ -315,6 +315,11 @@ function RHMSettingsGUI:consoleCommandCombineManual()
     end
 
     spec.combineMemory:setMode("MANUAL")
+    if g_client and not g_server then
+        g_client:getServerConnection():sendEvent(RHM_CombineSettingsEvent.new(vehicle, "AUTO_MODE", 0))
+    elseif g_server then
+        vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
+    end
     return "[OK] Mode set to MANUAL"
 end
 
@@ -336,11 +341,11 @@ function RHMSettingsGUI:consoleCommandCombineSet(param, value)
     end
 
     local val = tonumber(value)
-    if not val then
-        return "[X] Value must be a number"
+    if not val or val % 1 ~= 0 then
+        return "[X] Value must be an integer"
     end
 
-    local success = spec.combineMemory:setParameter(param, val)
+    local success = spec.combineMemory:updateSetting(param, val)
     if success then
         return string.format("[OK] %s set to %d%%", param, val)
     else

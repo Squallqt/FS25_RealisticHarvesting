@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
-<modDesc descVersion="111">
+<modDesc descVersion="113">
     <author>exekx</author>
     <manufacturer>exekx</manufacturer>
-    <version>1.6.2.0</version>
+    <version>1.6.3.0</version>
     <modName>FS25_RealisticHarvesting</modName>
     <title>
         <en>Realistic Harvesting</en>
-        <de>Realistic Harvesting</de>
-        <fr>Realistic Harvesting</fr>
+        <de>Realistische Ernte</de>
+        <fr>Récolte Réaliste</fr>
     </title>
     <description>
 <en><![CDATA[Adds realistic harvesting mechanics to your combines.

@@ -17,17 +17,18 @@ function RHM_CombineSettingsEvent.emptyNew()
 end
 
 -- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
--- EN: Creates a new event targeting a specific vehicle and carrying setting change data.
 -- UA: Створює нову подію, що цілить на конкретний транспорт і несе дані зміни налаштувань.
-function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings, cropName, mode)
+function RHM_CombineSettingsEvent.new(vehicle, parameter, value, isFullProfile, fullSettings, cropName, mode, cropCalibrated, autoAccepted)
     local self = RHM_CombineSettingsEvent.emptyNew()
     self.vehicle = vehicle
     self.parameter = parameter or ""
     self.value = value or 0
     self.isFullProfile = isFullProfile == true
     self.fullSettings = fullSettings
-    self.cropName = cropName or ""
+    self.cropName = cropName or (parameter == "AUTO_SET" and vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.combineMemory.currentCrop) or ""
     self.mode = mode or ""
+    self.cropCalibrated = cropCalibrated == true
+    self.autoAccepted = autoAccepted == true
     return self
 end
 
@@ -49,12 +50,15 @@ function RHM_CombineSettingsEvent:readStream(streamId, connection)
         self.fullSettings.targetEngineLoad = streamReadUInt8(streamId)
         self.cropName = streamReadString(streamId)
         self.mode = streamReadString(streamId)
+        self.cropCalibrated = streamReadBool(streamId)
+        self.parameter = streamReadString(streamId)
+        if self.parameter == "AUTO_SET" then self.autoAccepted = streamReadBool(streamId) end
     else
         -- EN: Single parameter mode: read parameter name and its value.
         -- UA: Режим одного параметру: зчитуємо назву параметру і його значення.
         self.parameter = streamReadString(streamId)
         self.value = streamReadInt16(streamId)
-        if self.parameter == "CROP" then
+        if self.parameter == "CROP" or self.parameter == "CALIBRATE" or self.parameter == "AUTO_SET" then
             self.cropName = streamReadString(streamId)
         end
     end
@@ -79,12 +83,15 @@ function RHM_CombineSettingsEvent:writeStream(streamId, connection)
         streamWriteUInt8(streamId, s.targetEngineLoad or 80)
         streamWriteString(streamId, self.cropName or "")
         streamWriteString(streamId, self.mode or "")
+        streamWriteBool(streamId, self.cropCalibrated == true)
+        streamWriteString(streamId, self.parameter or "")
+        if self.parameter == "AUTO_SET" then streamWriteBool(streamId, self.autoAccepted == true) end
     else
         -- EN: Write single parameter name and value.
         -- UA: Записуємо назву та значення одного параметру.
         streamWriteString(streamId, self.parameter)
         streamWriteInt16(streamId, self.value)
-        if self.parameter == "CROP" then
+        if self.parameter == "CROP" or self.parameter == "CALIBRATE" or self.parameter == "AUTO_SET" then
             streamWriteString(streamId, self.cropName or "")
         end
     end
@@ -108,23 +115,60 @@ function RHM_CombineSettingsEvent:run(connection)
     local mem = self.vehicle.spec_rhm_Combine.combineMemory
 
     if g_server ~= nil then
-        if self.isFullProfile then
+        local autoAccepted = false
+        if self.isFullProfile and self.parameter == "AI_PRESET" then
+            local user = connection and not connection:getIsServer() and g_currentMission.userManager:getUserByConnection(connection)
+            local farm = user and g_farmManager:getFarmForUniqueUserId(user:getUniqueUserId())
+            local settings = g_realisticHarvestManager and g_realisticHarvestManager.settings
+            local crop = mem.currentCrop
+            local isProtected = mem.hasManualTuning and (not mem.manualTunedCrop or mem.manualTunedCrop == crop)
+                or self.vehicle._rhmSettingsLoadedFromSavegame
+                or ((mem.isCalibrated or (mem.calibratedCrops and mem.calibratedCrops[crop])) and mem.aiTunedCrop ~= crop)
+            if farm and farm.farmId == self.vehicle:getOwnerFarmId() and crop and self.cropName == crop
+                and rhm_Combine.isAiWorkerActive(self.vehicle) and (not settings or settings.aiHelperTuning ~= 3)
+                and not isProtected then
+                local profile = self.fullSettings
+                for _, name in ipairs({ "fan", "rotor", "upperSieve", "lowerSieve", "feeder", "targetEngineLoad" }) do
+                    if profile[name] ~= nil then
+                        profile[name] = math.max(name == "targetEngineLoad" and 70 or 0, math.min(100, profile[name]))
+                    end
+                end
+                -- Reuse the developer's helper profile path, including its electronics-tier mode.
+                if mem:applyAiWorkerTuning(crop, nil, profile) then
+                    self.vehicle.spec_rhm_Combine._lastAiTunedCrop = crop
+                end
+            end
+        elseif self.isFullProfile then
+            mem.aiTunedCrop = nil
             -- EN: Apply a complete user preset profile to the combine memory.
             -- UA: Застосовуємо повний профіль користувача до пам'яті комбайна.
             if self.fullSettings then
-                mem.currentSettings.fan = self.fullSettings.fan or mem.currentSettings.fan
-                mem.currentSettings.rotor = self.fullSettings.rotor or mem.currentSettings.rotor
-                mem.currentSettings.upperSieve = self.fullSettings.upperSieve or mem.currentSettings.upperSieve
-                mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve or mem.currentSettings.lowerSieve
-                mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
-                mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
+                if self.fullSettings.fan ~= nil then
+                    mem.currentSettings.fan = math.max(0, math.min(100, self.fullSettings.fan))
+                end
+                if self.fullSettings.rotor ~= nil then
+                    mem.currentSettings.rotor = math.max(0, math.min(100, self.fullSettings.rotor))
+                end
+                if self.fullSettings.upperSieve ~= nil then
+                    mem.currentSettings.upperSieve = math.max(0, math.min(100, self.fullSettings.upperSieve))
+                end
+                if self.fullSettings.lowerSieve ~= nil then
+                    mem.currentSettings.lowerSieve = math.max(0, math.min(100, self.fullSettings.lowerSieve))
+                end
+                if self.fullSettings.feeder ~= nil then
+                    mem.currentSettings.feeder = math.max(0, math.min(100, self.fullSettings.feeder))
+                end
+                if self.fullSettings.targetEngineLoad ~= nil then
+                    mem.currentSettings.targetEngineLoad = math.max(70, math.min(100, self.fullSettings.targetEngineLoad))
+                end
             end
             if self.cropName and self.cropName ~= "" and mem.currentCrop ~= self.cropName then
                 mem:switchCrop(self.cropName)
             end
             if self.mode and self.mode ~= "" then
-                mem.mode = self.mode
-                mem.autoSwitchEnabled = (self.mode == "AUTO")
+                local tier = self.vehicle.spec_rhm_Combine.packageLevel or 1
+                mem.mode = self.mode == "AUTO" and tier >= 4 and "AUTO" or "MANUAL"
+                mem.autoSwitchEnabled = mem.mode == "AUTO"
             else
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
@@ -142,27 +186,21 @@ function RHM_CombineSettingsEvent:run(connection)
                     mem:switchCrop(self.cropName)
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied crop switch to %s", self.cropName))
                 end
+            elseif self.parameter == "CALIBRATE" then
+                -- Saving a local preset must not reapply a stale copy of the machine settings.
+                if self.cropName ~= "" and self.cropName == mem.currentCrop then
+                    mem.aiTunedCrop = nil
+                    mem.isCalibrated = true
+                    mem.calibratedCrops = mem.calibratedCrops or {}
+                    mem.calibratedCrops[mem.currentCrop] = true
+                end
             elseif self.parameter == "AUTO_SET" then
                 -- EN: Client requested AUTO mode — configure optimal settings for current crop (Tier 4 exclusive).
                 -- UA: Клієнт запросив AUTO режим — налаштовуємо оптимальні значення для поточної культури (тільки Тір 4).
                 local spec = self.vehicle.spec_rhm_Combine
                 local pkgLevel = spec and (spec.packageLevel or 1) or 1
-                if pkgLevel >= 4 then
-                    mem.autoSwitchEnabled = true
-                    mem.mode = "AUTO"
-                    mem.isCalibrated = true
-                    if mem.currentCrop and mem.currentCrop ~= "" then
-                        mem.calibratedCrops = mem.calibratedCrops or {}
-                        mem.calibratedCrops[mem.currentCrop] = true
-                    end
-                    if mem.currentCrop then
-                        mem:autoConfigureForCrop(mem.currentCrop, true)
-                        rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied AUTO mode for %s", mem.currentCrop))
-                    end
-                else
-                    rhm_log(string.format("RHM [Network]: RHM: [!] Server rejected AUTO_SET: packageLevel %d < 4", pkgLevel))
-                    mem.autoSwitchEnabled = false
-                    mem.mode = "MANUAL"
+                if pkgLevel >= 4 and mem.currentCrop and self.cropName == mem.currentCrop then
+                    autoAccepted = mem:autoConfigureForCrop(mem.currentCrop, true) == true and mem.mode == "AUTO"
                 end
             elseif self.parameter == "RESET_SET" then
                 -- EN: Client requested RESET — revert all settings to neutral 50%.
@@ -179,6 +217,7 @@ function RHM_CombineSettingsEvent:run(connection)
                     rhm_log(string.format("RHM [Network]: RHM: [Sync] Server applied RESET to 50%% for %s", mem.currentCrop))
                 end
             elseif self.parameter == "AUTO_MODE" then
+                mem.aiTunedCrop = nil
                 -- EN: Toggle the auto-switch behavior flag (Tier 4 exclusive).
                 -- UA: Перемикаємо прапорець автоматичного перемикання (тільки Тір 4).
                 local spec = self.vehicle.spec_rhm_Combine
@@ -186,6 +225,7 @@ function RHM_CombineSettingsEvent:run(connection)
                 if pkgLevel >= 4 then
                     mem.autoSwitchEnabled = (self.value == 1)
                     mem.mode = mem.autoSwitchEnabled and "AUTO" or "MANUAL"
+                    if mem.autoSwitchEnabled and mem.currentCrop then mem:autoConfigureForCrop(mem.currentCrop, true) end
                 else
                     mem.autoSwitchEnabled = false
                     mem.mode = "MANUAL"
@@ -193,26 +233,14 @@ function RHM_CombineSettingsEvent:run(connection)
             else
                 -- EN: Apply a single parameter change (e.g. "fan" = 65).
                 -- UA: Застосовуємо зміну одного параметру (наприклад "fan" = 65).
-                if mem.currentSettings[self.parameter] ~= nil then
-                    local minVal = self.parameter == "targetEngineLoad" and 70 or 0
-                    local maxVal = 100
-                    mem.currentSettings[self.parameter] = math.max(minVal, math.min(maxVal, self.value))
-                    if self.parameter ~= "targetEngineLoad" then
-                        mem.autoSwitchEnabled = false
-                        mem.mode = "MANUAL"
-                    end
-                    mem.isCalibrated = true
-                    mem.hasManualTuning = true
-                    if mem.currentCrop and mem.currentCrop ~= "" then
-                        mem.calibratedCrops = mem.calibratedCrops or {}
-                        mem.calibratedCrops[mem.currentCrop] = true
-                    end
-                    rhm_log(string.format("RHM [Network]: RHM: [Sync] Received parameter update: %s = %d", self.parameter, self.value))
+                mem:setParameter(self.parameter, self.value)
+                if self.parameter ~= "targetEngineLoad" and mem.currentSettings[self.parameter] ~= nil then
+                    mem.autoSwitchEnabled = false
                 end
             end
         end
 
-        -- EN: Server always broadcasts the full state so clients sync perfectly without duplicate calculations.
+        -- EN: Include the requester in the accepted state, including server-calculated AUTO settings.
         local fullSettings = {
             fan = mem.currentSettings.fan,
             rotor = mem.currentSettings.rotor,
@@ -221,20 +249,20 @@ function RHM_CombineSettingsEvent:run(connection)
             feeder = mem.currentSettings.feeder,
             targetEngineLoad = mem.currentSettings.targetEngineLoad
         }
-        g_server:broadcastEvent(
-            RHM_CombineSettingsEvent.new(
-                self.vehicle,
-                "",
-                0,
-                true,
-                fullSettings,
-                mem.currentCrop or "",
-                mem.mode or "MANUAL"
-            ),
-            nil,
-            connection,
-            self.vehicle
-        )
+        local calibrated = mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true
+        local state = RHM_CombineSettingsEvent.new(self.vehicle, "", 0, true, fullSettings,
+            mem.currentCrop or "", mem.mode or "MANUAL", calibrated)
+        if self.parameter == "AUTO_SET" and connection then
+            -- Match the native request/response pattern: only the requester receives the result.
+            g_server:broadcastEvent(state, nil, connection, self.vehicle)
+            connection:sendEvent(RHM_CombineSettingsEvent.new(self.vehicle, "AUTO_SET", 0, true, fullSettings,
+                mem.currentCrop or "", mem.mode or "MANUAL", calibrated, autoAccepted))
+        else
+            g_server:broadcastEvent(state, nil, nil, self.vehicle)
+            if self.parameter == "AUTO_SET" and autoAccepted and g_currentMission:getIsClient() then
+                mem:showAutoSettingsApplied()
+            end
+        end
         local spec = self.vehicle.spec_rhm_Combine
         if spec then
             local flag = (spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" and spec.settingsDirtyFlag)
@@ -245,6 +273,7 @@ function RHM_CombineSettingsEvent:run(connection)
         end
 
     else
+        if not connection or not connection:getIsServer() then return end
         -- EN: Client execution branch - apply the values and update mode state
         -- UA: Гілка клієнта - застосовує значення та оновлює стан режиму
         if self.isFullProfile then
@@ -256,11 +285,9 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
                 mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
             end
-            if self.cropName and self.cropName ~= "" then
-                mem.currentCrop = self.cropName
-                if self.vehicle.spec_rhm_Combine and self.vehicle.spec_rhm_Combine.loadCalculator then
-                    self.vehicle.spec_rhm_Combine.loadCalculator.currentCrop = self.cropName
-                end
+            mem.currentCrop = self.cropName ~= "" and self.cropName or nil
+            if self.vehicle.spec_rhm_Combine.loadCalculator then
+                self.vehicle.spec_rhm_Combine.loadCalculator.currentCrop = mem.currentCrop
             end
             if self.mode and self.mode ~= "" then
                 mem.mode = self.mode
@@ -269,11 +296,14 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.autoSwitchEnabled = false
                 mem.mode = "MANUAL"
             end
-            mem.isCalibrated = true
-            mem.hasManualTuning = true
+            mem.isCalibrated = self.cropCalibrated == true
+            if not mem.isCalibrated then mem.hasManualTuning = false end
             if mem.currentCrop and mem.currentCrop ~= "" then
                 mem.calibratedCrops = mem.calibratedCrops or {}
-                mem.calibratedCrops[mem.currentCrop] = true
+                mem.calibratedCrops[mem.currentCrop] = self.cropCalibrated == true or nil
+            end
+            if self.parameter == "AUTO_SET" and self.autoAccepted == true then
+                mem:showAutoSettingsApplied()
             end
         elseif self.parameter == "CROP" then
             if self.cropName and self.cropName ~= "" then
