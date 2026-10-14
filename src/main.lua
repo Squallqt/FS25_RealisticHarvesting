@@ -78,6 +78,39 @@ local function isEnabled()
     return rhm ~= nil
 end
 
+-- EN: Helper to construct normalized savegame file paths with guaranteed directory separator
+-- UA: Допоміжна функція для побудови нормалізованих шляхів збереження з гарантованим розділювачем директорій
+local function getSavegameFilePath(saveDir, filename)
+    if not saveDir or saveDir == "" then return nil end
+    local cleanDir = tostring(saveDir):gsub("\\", "/")
+    if not cleanDir:match("/$") then
+        cleanDir = cleanDir .. "/"
+    end
+    return cleanDir .. filename
+end
+
+-- EN: Helper to reliably locate the active savegame folder across all game modes & dedicated servers
+-- UA: Допоміжна функція для надійного визначення директорії збереження в усіх режимах гри та на виділеному сервері
+local function resolveSavegameDirectory(context)
+    -- Priority 1: missionInfo.savegameDirectory (authentic permanent savegame folder e.g. "savegame6")
+    local saveDir = (context and context.missionInfo and context.missionInfo.savegameDirectory)
+        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+    -- Priority 2: direct savegameDirectory property (fallback)
+    if not saveDir or saveDir == "" or saveDir == "tempsavegame" then
+        local direct = (context and context.savegameDirectory)
+            or (g_currentMission and g_currentMission.savegameDirectory)
+        if direct and direct ~= "" and direct ~= "tempsavegame" then
+            saveDir = direct
+        end
+    end
+    -- Priority 3: Fallback to any provided savegameDirectory
+    if not saveDir or saveDir == "" then
+        saveDir = (context and context.savegameDirectory)
+            or (g_currentMission and g_currentMission.savegameDirectory)
+    end
+    return saveDir
+end
+
 -- EN: Called after the mission finishes loading.
 --     Initializes unit converter bushel coefficients (requires FruitType to be available),
 --     then triggers the manager's post-load routine (HUD setup, etc.).
@@ -121,10 +154,12 @@ local function loadedMission(mission, node)
 
     -- EN: Load persistent harvest trip and fleet statistics on the server
     -- UA: Завантажуємо збережені дані одометра та парку техніки на сервері
-    if mission:getIsServer() and mission.missionInfo and mission.missionInfo.savegameDirectory then
-        local xmlPath = Utils.getFilename("realisticHarvestingData.xml", mission.missionInfo.savegameDirectory)
+    local isServer = (mission and mission.getIsServer and mission:getIsServer()) or (g_server ~= nil)
+    local saveDir = resolveSavegameDirectory(mission)
+    if isServer and saveDir then
+        local xmlPath = getSavegameFilePath(saveDir, "realisticHarvestingData.xml")
         local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
-        if fileExists(xmlPath) and tracker then
+        if xmlPath and fileExists(xmlPath) and tracker then
             local xmlFile = loadXMLFile("RHM_Data", xmlPath)
             if xmlFile ~= 0 then
                 tracker:loadFromXMLFile(xmlFile, "realisticHarvesting")
@@ -132,7 +167,7 @@ local function loadedMission(mission, node)
                 rhm_log(string.format("RHM: [LOAD] Successfully restored harvest tracker data from %s", xmlPath))
             end
         else
-            rhm_log(string.format("RHM: [LOAD] No existing realisticHarvestingData.xml found at %s (fresh start or first run)", xmlPath))
+            rhm_log(string.format("RHM: [LOAD] No existing realisticHarvestingData.xml found at %s (fresh start or first run)", tostring(xmlPath)))
         end
     end
 
@@ -243,44 +278,75 @@ Mission00.load = Utils.prependedFunction(Mission00.load, loadMission)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, loadedMission)
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
--- EN: Helper to persist realisticHarvestingData.xml on server or career save
--- UA: Допоміжна функція для запису realisticHarvestingData.xml на сервері чи збереженні кар'єри
+-- EN: Helper to persist realisticHarvestingData.xml on server or career save with atomic verification & backup
+-- UA: Допоміжна функція для запису realisticHarvestingData.xml на сервері чи збереженні кар'єри з атомарною перевіркою та бекапом
 local function saveRealisticHarvestingData(savegameDirectory)
     if not savegameDirectory or savegameDirectory == "" then return end
     local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
     if not tracker then return end
-    local xmlPath = Utils.getFilename("realisticHarvestingData.xml", savegameDirectory)
-    local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
+
+    local xmlPath = getSavegameFilePath(savegameDirectory, "realisticHarvestingData.xml")
+    if not xmlPath then return end
+
+    local tempPath = xmlPath .. ".tmp"
+    local xmlFile = createXMLFile("RHM_Data", tempPath, "realisticHarvesting")
     if xmlFile ~= 0 then
         tracker:saveToXMLFile(xmlFile, "realisticHarvesting")
         saveXMLFile(xmlFile)
         delete(xmlFile)
-        rhm_log(string.format("RHM: [SAVE] Successfully saved realisticHarvestingData.xml to %s", xmlPath))
+
+        -- Verification: confirm that temporary file was written and can be read back
+        local checkFile = loadXMLFile("RHM_Check", tempPath)
+        if checkFile ~= 0 then
+            delete(checkFile)
+
+            -- Create backup of existing save file if present
+            if fileExists(xmlPath) then
+                copyFile(xmlPath, xmlPath .. ".bak", true)
+            end
+
+            -- Commit temporary file to permanent destination
+            copyFile(tempPath, xmlPath, true)
+            deleteFile(tempPath)
+            rhm_log(string.format("RHM: [SAVE] Successfully verified and saved realisticHarvestingData.xml to %s", xmlPath))
+        else
+            Logging.devWarning(string.format("RHM: [SAVE] Written temp file at %s could not be verified; keeping previous save intact", tempPath))
+        end
     end
 end
 
 -- EN: Hook interactive menu saving (Single Player / Client Host)
 -- UA: Підключаємось до збереження через меню (Одиночна гра / Клієнт-хост)
 local function onSaveSavegame(self)
-    local saveDir = (self.missionInfo and self.missionInfo.savegameDirectory)
-        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
-    if self:getIsServer() and saveDir then
+    local isServer = (self and self.getIsServer and self:getIsServer())
+        or (g_currentMission and g_currentMission.getIsServer and g_currentMission:getIsServer())
+        or (g_server ~= nil)
+    local saveDir = resolveSavegameDirectory(self)
+    if isServer and saveDir then
         saveRealisticHarvestingData(saveDir)
     end
 end
-FSBaseMission.saveSavegame = Utils.appendedFunction(FSBaseMission.saveSavegame, onSaveSavegame)
+if FSBaseMission and FSBaseMission.saveSavegame then
+    FSBaseMission.saveSavegame = Utils.appendedFunction(FSBaseMission.saveSavegame, onSaveSavegame)
+end
+if Mission00 and Mission00.saveSavegame and Mission00.saveSavegame ~= FSBaseMission.saveSavegame then
+    Mission00.saveSavegame = Utils.appendedFunction(Mission00.saveSavegame, onSaveSavegame)
+end
 
 -- EN: Hook dedicated server autosave & career XML serialization (Dedicated Server)
 -- UA: Підключаємось до збереження виділеного сервера (Dedicated Server)
-local function onCareerMissionInfoSaveToXMLFile(missionInfo)
-    local saveDir = (missionInfo and missionInfo.savegameDirectory)
-        or (g_currentMission and g_currentMission.missionInfo and g_currentMission.missionInfo.savegameDirectory)
+local function onCareerMissionInfoSaveToXMLFile(missionInfo, customSavegameDirectory)
+    local saveDir = (customSavegameDirectory and customSavegameDirectory ~= "" and customSavegameDirectory)
+        or resolveSavegameDirectory(missionInfo)
     if saveDir then
         saveRealisticHarvestingData(saveDir)
     end
 end
 if FSCareerMissionInfo and FSCareerMissionInfo.saveToXMLFile then
     FSCareerMissionInfo.saveToXMLFile = Utils.appendedFunction(FSCareerMissionInfo.saveToXMLFile, onCareerMissionInfoSaveToXMLFile)
+end
+if FSMissionInfo and FSMissionInfo.saveToXMLFile and FSMissionInfo.saveToXMLFile ~= FSCareerMissionInfo.saveToXMLFile then
+    FSMissionInfo.saveToXMLFile = Utils.appendedFunction(FSMissionInfo.saveToXMLFile, onCareerMissionInfoSaveToXMLFile)
 end
 
 -- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
