@@ -278,40 +278,36 @@ Mission00.load = Utils.prependedFunction(Mission00.load, loadMission)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, loadedMission)
 FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, unload)
 
--- EN: Helper to persist realisticHarvestingData.xml on server or career save with atomic verification & backup
--- UA: Допоміжна функція для запису realisticHarvestingData.xml на сервері чи збереженні кар'єри з атомарною перевіркою та бекапом
+-- EN: Helper to persist realisticHarvestingData.xml on server or career save using native GIANTS Engine XML API
+-- UA: Допоміжна функція для запису realisticHarvestingData.xml через нативний GIANTS XML API (без блокованих пісочницею copyFile/deleteFile)
+local lastSavedDir = nil
+local lastSavedTime = 0
+
 local function saveRealisticHarvestingData(savegameDirectory)
     if not savegameDirectory or savegameDirectory == "" then return end
     local tracker = (rhm and rhm.harvestTracker) or (g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker)
     if not tracker then return end
 
+    local now = (g_currentMission and g_currentMission.time) or g_time or 0
+    -- EN: Prevent duplicate saves within the same save cycle (e.g. FSCareerMissionInfo and FSBaseMission hooks firing together)
+    -- UA: Запобігаємо подвійному запису протягом одного сейв-циклу
+    if lastSavedDir == savegameDirectory and math.abs(now - lastSavedTime) < 5000 then
+        return
+    end
+
     local xmlPath = getSavegameFilePath(savegameDirectory, "realisticHarvestingData.xml")
     if not xmlPath then return end
 
-    local tempPath = xmlPath .. ".tmp"
-    local xmlFile = createXMLFile("RHM_Data", tempPath, "realisticHarvesting")
+    local xmlFile = createXMLFile("RHM_Data", xmlPath, "realisticHarvesting")
     if xmlFile ~= 0 then
         tracker:saveToXMLFile(xmlFile, "realisticHarvesting")
         saveXMLFile(xmlFile)
         delete(xmlFile)
-
-        -- Verification: confirm that temporary file was written and can be read back
-        local checkFile = loadXMLFile("RHM_Check", tempPath)
-        if checkFile ~= 0 then
-            delete(checkFile)
-
-            -- Create backup of existing save file if present
-            if fileExists(xmlPath) then
-                copyFile(xmlPath, xmlPath .. ".bak", true)
-            end
-
-            -- Commit temporary file to permanent destination
-            copyFile(tempPath, xmlPath, true)
-            deleteFile(tempPath)
-            rhm_log(string.format("RHM: [SAVE] Successfully verified and saved realisticHarvestingData.xml to %s", xmlPath))
-        else
-            Logging.devWarning(string.format("RHM: [SAVE] Written temp file at %s could not be verified; keeping previous save intact", tempPath))
-        end
+        lastSavedDir = savegameDirectory
+        lastSavedTime = now
+        rhm_log(string.format("RHM: [SAVE] Successfully saved realisticHarvestingData.xml to %s", xmlPath))
+    else
+        Logging.devWarning(string.format("RHM: [SAVE] Failed to create XML file at %s", xmlPath))
     end
 end
 
@@ -351,15 +347,17 @@ end
 
 -- EN: Hook initial client state transmission in multiplayer to sync farm data & settings to joining player
 -- UA: Передаємо повний стан ферм та налаштування гравцю, який приєднується до сесії мультиплеєра
-local function onSendInitialClientState(mission, connection, isReconnect)
-    if mission and mission.missionDynamicInfo.isMultiplayer and connection and rhm and rhm.harvestTracker then
+local function onSendInitialClientState(mission, connection, user, isReconnect)
+    local manager = rhm or g_realisticHarvestManager
+    local tracker = manager and manager.harvestTracker
+    if mission and connection and tracker and (g_server ~= nil or (mission.missionDynamicInfo and mission.missionDynamicInfo.isMultiplayer)) then
         -- Sync active global physics & farm settings
-        if rhm.settings and RHM_SettingsSyncEvent then
-            connection:sendEvent(RHM_SettingsSyncEvent.new(rhm.settings))
+        if manager.settings and RHM_SettingsSyncEvent then
+            connection:sendEvent(RHM_SettingsSyncEvent.new(manager.settings))
         end
         -- Sync all farm statistics, combine trips, and season history
-        if rhm.harvestTracker.farms then
-            for farmId, farmData in pairs(rhm.harvestTracker.farms) do
+        if tracker.farms then
+            for farmId, farmData in pairs(tracker.farms) do
                 if farmData and RHM_HarvestSyncInitialEvent then
                     connection:sendEvent(RHM_HarvestSyncInitialEvent.new(farmId, farmData))
                 end

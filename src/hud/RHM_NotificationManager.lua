@@ -543,12 +543,17 @@ end
 function RHM_NotificationManager.getIsCutterActive(combineVehicle)
     if not combineVehicle then return false end
 
+    if rhm_Combine and rhm_Combine.getIsCutterWorking then
+        return rhm_Combine.getIsCutterWorking(combineVehicle)
+    end
+
     local spec_combine = combineVehicle.spec_combine
     if spec_combine and spec_combine.attachedCutters then
         for cutter, _ in pairs(spec_combine.attachedCutters) do
             if cutter.spec_cutter then
                 local spec_cutter = cutter.spec_cutter
-                if cutter:getIsTurnedOn() and (spec_cutter.allowCuttingWhileRaised or cutter:getIsLowered(true)) then
+                local isLowered = spec_cutter.allowCuttingWhileRaised or (cutter.getIsLowered and cutter:getIsLowered(false))
+                if cutter:getIsTurnedOn() and isLowered then
                     return true
                 end
             end
@@ -557,7 +562,8 @@ function RHM_NotificationManager.getIsCutterActive(combineVehicle)
 
     if combineVehicle.spec_cutter then
         local spec_cutter = combineVehicle.spec_cutter
-        if combineVehicle:getIsTurnedOn() and (spec_cutter.allowCuttingWhileRaised or combineVehicle:getIsLowered(true)) then
+        local isLowered = spec_cutter.allowCuttingWhileRaised or (combineVehicle.getIsLowered and combineVehicle:getIsLowered(false))
+        if combineVehicle:getIsTurnedOn() and isLowered then
             return true
         end
     end
