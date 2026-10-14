@@ -234,7 +234,7 @@ function RHM_DiagnosticTool:update(dt)
                     end
                     if cutter.spec_cutter then
                         if cutter.getIsLowered then
-                            cutterLowered = cutter:getIsLowered(true)
+                            cutterLowered = cutter:getIsLowered(false)
                         end
                         if cutter.getIsTurnedOn then
                             cutterTurnedOn = cutter:getIsTurnedOn()
