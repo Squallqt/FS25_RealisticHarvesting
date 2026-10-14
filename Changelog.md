@@ -1,15 +1,14 @@
 # Realistic Harvesting - Changelog
 
-Changelog 1.6.4.0:
+Changelog 1.6.3.2:
+- FIXED: Automated field worker and path-following helper telemetry on dedicated servers, resolving an issue where headless worker routines and engine bitwise stream handling prevented live telemetry replication and speed governing on multiplayer clients.
+- FIXED: Continuous network state replication from dedicated servers to clients using native GIANTS bitwise operations, ensuring real-time engine load, crop loss, throughput, yield, and recommended speed update seamlessly on client HUDs.
+- FIXED: Headland turn speed governing and attacher joint height evaluation, prioritizing feeder house hydraulics over unfolded header states to guarantee harvesters accelerate smoothly to normal headland maneuvering speeds when lifting the header.
 - FIXED: Automated field helper and path-following worker synchronization when separate header start is enabled, ensuring attached headers stop and start synchronously with the combine during helper operations while preserving independent manual control for players.
 - FIXED: Live driver handover and hot helper takeover on the move, preventing load calculation resets, 0% telemetry lockouts, and unconstrained motor speed limits when automated helpers engage during active harvesting.
 - FIXED: Combine thresher auto-engagement when automated helpers initiate fieldwork with a running header, preventing silent grain throughput into the hopper with an unpowered separator.
 - FIXED: Reverser and deceleration velocity guard, preventing service braking and forward pedal release from falsely triggering reverse gear detection and clearing active harvest telemetry.
-- FIXED: Dedicated server client speed enforcement and 2.0-second disengagement grace period, maintaining governed cruise speed limits during transient maneuvers and headland turns.
-
-Changelog 1.6.3.2:
-- FIXED: Automated field worker and path-following helper telemetry on dedicated servers, resolving an issue where headless worker routines and engine bitwise stream handling prevented live telemetry replication and speed governing on multiplayer clients.
-- FIXED: Continuous network state replication from dedicated servers to clients using native GIANTS bitwise operations, ensuring real-time engine load, crop loss, throughput, yield, and recommended speed update seamlessly on client HUDs.
+- FIXED: Dedicated server client speed enforcement and disengagement grace period, maintaining governed cruise speed limits during transient maneuvers while releasing limits instantly when raised on headlands.
 - FIXED: Dedicated server and single-player savegame persistence reliability with native GIANTS XML serialization, save-cycle debouncing, and robust multiplayer client state synchronization.
 
 Changelog 1.6.3.1:

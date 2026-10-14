@@ -1209,6 +1209,54 @@ function rhm_Combine.isAiWorkerActive(vehicle)
     return false
 end
 
+---EN: Checks if vehicle is currently performing a headland turn or transitional maneuver under automated guidance.
+---UA: Перевіряє чи виконує техніка розворот на краю поля або перехідний маневр під автоматичним керуванням.
+function rhm_Combine.getIsHelperTurning(vehicle)
+    if not vehicle then return false end
+
+    -- 1. Check direct vehicle and root vehicle
+    local root = vehicle.rootVehicle or (vehicle.getRootVehicle and vehicle:getRootVehicle()) or vehicle
+
+    -- GIANTS Engine 10 AI FieldWorker turning state
+    if root.getAIFieldWorkerIsTurning and root:getAIFieldWorkerIsTurning() then
+        return true
+    end
+    if vehicle.getAIFieldWorkerIsTurning and vehicle:getAIFieldWorkerIsTurning() then
+        return true
+    end
+    if root.spec_aiFieldWorker and root.spec_aiFieldWorker.isTurning then
+        return true
+    end
+    if vehicle.spec_aiFieldWorker and vehicle.spec_aiFieldWorker.isTurning then
+        return true
+    end
+
+    -- External automated guidance turning / transitional stages / temporary course
+    if vehicle.cp and (vehicle.cp.isTurning or (vehicle.cp.turnStage and vehicle.cp.turnStage > 0) or vehicle.cp.hasTemporaryCourse or vehicle.cp.isTemporaryCourse or (vehicle.cp.temporaryCourse ~= nil and vehicle.cp.temporaryCourse ~= false)) then
+        return true
+    end
+    if root.cp and (root.cp.isTurning or (root.cp.turnStage and root.cp.turnStage > 0) or root.cp.hasTemporaryCourse or root.cp.isTemporaryCourse or (root.cp.temporaryCourse ~= nil and root.cp.temporaryCourse ~= false)) then
+        return true
+    end
+    if vehicle.spec_courseplay and (vehicle.spec_courseplay.isTurning or (vehicle.spec_courseplay.turnStage and vehicle.spec_courseplay.turnStage > 0) or vehicle.spec_courseplay.hasTemporaryCourse or vehicle.spec_courseplay.isTemporaryCourse) then
+        return true
+    end
+    if root.spec_courseplay and (root.spec_courseplay.isTurning or (root.spec_courseplay.turnStage and root.spec_courseplay.turnStage > 0) or root.spec_courseplay.hasTemporaryCourse or root.spec_courseplay.isTemporaryCourse) then
+        return true
+    end
+
+    -- Check attacher carrier for modular/trailed combines
+    local attacher = vehicle.attacherVehicle or (vehicle.getAttacherVehicle and vehicle:getAttacherVehicle())
+    if attacher and attacher ~= vehicle and attacher ~= root then
+        if attacher.getAIFieldWorkerIsTurning and attacher:getAIFieldWorkerIsTurning() then return true end
+        if attacher.spec_aiFieldWorker and attacher.spec_aiFieldWorker.isTurning then return true end
+        if attacher.cp and (attacher.cp.isTurning or (attacher.cp.turnStage and attacher.cp.turnStage > 0) or attacher.cp.hasTemporaryCourse or attacher.cp.isTemporaryCourse or (attacher.cp.temporaryCourse ~= nil and attacher.cp.temporaryCourse ~= false)) then return true end
+        if attacher.spec_courseplay and (attacher.spec_courseplay.isTurning or (attacher.spec_courseplay.turnStage and attacher.spec_courseplay.turnStage > 0) or attacher.spec_courseplay.hasTemporaryCourse or attacher.spec_courseplay.isTemporaryCourse) then return true end
+    end
+
+    return false
+end
+
 -- EN: Called when the detected crop type changes. Delegates to RHM_CombineMemory:switchCrop which
 --     updates the active crop and triggers network sync without altering physical settings.
 --     Does NOT set currentCrop directly — switchCrop handles all state transitions.
@@ -1349,33 +1397,126 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
     if not cutter then
         return false
     end
-    if cutter.spec_cutter and cutter.spec_cutter.allowCuttingWhileRaised then
-        return true
+
+    -- 1. Helper turning check: Harvesters turning on headlands are NOT lowered for harvesting
+    if rhm_Combine.getIsHelperTurning(combine) or rhm_Combine.getIsHelperTurning(cutter) then
+        return false
     end
-    -- 1. Check cutter's own getIsLowered if available
-    if cutter.getIsLowered and cutter:getIsLowered(false) then
-        return true
-    end
-    -- 2. Query combine's attacherJointDesc for this cutter (native GIANTS Engine 10)
-    if combine and combine.getAttacherJointDescFromObject then
-        local jointDesc = combine:getAttacherJointDescFromObject(cutter)
-        if jointDesc and jointDesc.moveDown ~= nil then
-            return jointDesc.moveDown
+
+    -- 2. GIANTS Engine 10 native Implement Chain lowering validation (Attachable:getIsImplementChainLowered)
+    --    Validates both the implement itself and all upstream parent attacher joints in the hydraulic hierarchy.
+    if cutter.getIsImplementChainLowered then
+        local chainLowered = cutter:getIsImplementChainLowered(false)
+        if chainLowered == false then
+            return false
         end
     end
-    -- 3. Query combine's attachedImplements wrapper
-    if combine and combine.getAttachedImplements and combine.getIsImplementLowered then
+
+    -- 3. Direct GIANTS Engine 10 AttacherJoints getJointMoveDown verification on parent combine
+    if combine and combine.getAttacherJointIndexFromObject and combine.getJointMoveDown then
+        local idx = combine:getAttacherJointIndexFromObject(cutter)
+        if idx ~= nil then
+            local isDown = combine:getJointMoveDown(idx)
+            if isDown == false then
+                return false
+            end
+        end
+    end
+
+    -- 4. Check attacher carrier for modular, trailed, or intermediate adapter attachments
+    local attacherVeh = (cutter.getAttacherVehicle and cutter:getAttacherVehicle()) or combine
+    if attacherVeh and attacherVeh ~= combine and attacherVeh.getAttacherJointIndexFromObject and attacherVeh.getJointMoveDown then
+        local aIdx = attacherVeh:getAttacherJointIndexFromObject(cutter)
+        if aIdx ~= nil then
+            local isDown = attacherVeh:getJointMoveDown(aIdx)
+            if isDown == false then
+                return false
+            end
+        end
+    end
+
+    -- 5. Query combine's attachedImplements wrapper
+    if combine and combine.getAttachedImplements then
+        for _, impl in pairs(combine:getAttachedImplements()) do
+            if impl.object == cutter and impl.jointDescIndex then
+                if combine.getJointMoveDown then
+                    local isDown = combine:getJointMoveDown(impl.jointDescIndex)
+                    if isDown == false then
+                        return false
+                    end
+                end
+                local jDesc = combine.spec_attacherJoints and combine.spec_attacherJoints.attacherJoints and combine.spec_attacherJoints.attacherJoints[impl.jointDescIndex]
+                if jDesc and jDesc.moveDown == false then
+                    return false
+                end
+                break
+            end
+        end
+    end
+
+    -- 6. Query combine's attacherJointDesc for this cutter (native GIANTS Engine 10 AttacherJoints).
+    --    Feeder house hydraulics (jointDesc.moveDown) definitively reflect whether the header is raised in transport/turns.
+    local jointDesc = nil
+    if attacherVeh and attacherVeh.getAttacherJointDescFromObject then
+        jointDesc = attacherVeh:getAttacherJointDescFromObject(cutter)
+    end
+    if not jointDesc and combine and combine.getAttacherJointDescFromObject then
+        jointDesc = combine:getAttacherJointDescFromObject(cutter)
+    end
+    if not jointDesc and combine and combine.getAttacherJointIndexFromObject then
+        local idx = combine:getAttacherJointIndexFromObject(cutter)
+        if idx and combine.spec_attacherJoints and combine.spec_attacherJoints.attacherJoints then
+            jointDesc = combine.spec_attacherJoints.attacherJoints[idx]
+        end
+    end
+
+    if jointDesc then
+        -- Native GIANTS Engine 10 AttacherJoints moveDown state:
+        -- false = Attacher joint / feeder house commanded to RAISED transport position
+        -- true  = Attacher joint / feeder house commanded to LOWERED working position
+        if jointDesc.moveDown == false then
+            return false
+        end
+
+        -- Hydraulic cylinder stroke progress validation
+        if jointDesc.moveAlpha ~= nil and jointDesc.upperAlpha ~= nil and jointDesc.lowerAlpha ~= nil then
+            local stroke = jointDesc.lowerAlpha - jointDesc.upperAlpha
+            if math.abs(stroke) > 0.001 then
+                local progress = (jointDesc.moveAlpha - jointDesc.upperAlpha) / stroke
+                if progress < 0.65 then
+                    return false
+                end
+            end
+        elseif jointDesc.moveAlpha ~= nil and jointDesc.moveAlpha < 0.65 then
+            return false
+        end
+    end
+
+    -- 7. Query cutter's own getIsLowered (native GIANTS Engine 10 Foldable / Attachable)
+    if cutter.getIsLowered then
+        local cutterLowered = cutter:getIsLowered(false)
+        if cutterLowered == false then
+            return false
+        end
+    end
+
+    -- 8. Attached implement wrapper fallback
+    if combine and combine.getIsImplementLowered and cutter ~= combine then
         for _, impl in pairs(combine:getAttachedImplements()) do
             if impl.object == cutter then
                 return combine:getIsImplementLowered(impl)
             end
         end
     end
-    -- 4. Fallback if cutter is self-propelled (combine == cutter)
-    if cutter == combine and cutter.getIsLowered then
-        return cutter:getIsLowered(false)
+
+    -- 9. Self-propelled or integrated cutter fallback (e.g. root/grape harvesters where cutter == combine)
+    if cutter == combine then
+        if cutter.getIsLowered then
+            return cutter:getIsLowered(false)
+        end
     end
-    return false
+
+    return true
 end
 
 ---EN: Samples live weed density at the cutterbar.
@@ -1682,10 +1823,37 @@ function rhm_Combine:getSpeedLimit(superFunc, onlyIfWorking)
         end
     end
 
+    local isHelperTurning = rhm_Combine.getIsHelperTurning(self)
+    if isHelperTurning then
+        spec.isSpeedLimitActive = false
+        return limit, doCheckSpeedLimit
+    end
+
+    local isAnyCutterLowered = false
+    if spec_combine and spec_combine.attachedCutters then
+        for cutter, _ in pairs(spec_combine.attachedCutters) do
+            if rhm_Combine.getIsCutterLowered(self, cutter) then
+                isAnyCutterLowered = true
+                break
+            end
+        end
+    end
+    if not isAnyCutterLowered and self.getAttachedImplements then
+        for _, impl in pairs(self:getAttachedImplements()) do
+            local cutter = impl.object
+            if cutter and (cutter.spec_cutter ~= nil or cutter.spec_forageHarvesterCutter ~= nil or cutter.spec_forageCutter ~= nil) then
+                if rhm_Combine.getIsCutterLowered(self, cutter) then
+                    isAnyCutterLowered = true
+                    break
+                end
+            end
+        end
+    end
+
     local cutterIsWorking = rhm_Combine.getIsCutterWorking(self)
     local isReversing = rhm_Combine.getIsVehicleReversing(self)
     local isThreshing = (self.getIsTurnedOn and self:getIsTurnedOn()) or (spec_combine and spec_combine.isThreshing)
-    local isCutterGraceActive = (not cutterIsWorking) and (not isReversing) and isThreshing
+    local isCutterGraceActive = (not isHelperTurning) and (not cutterIsWorking) and (not isReversing) and isThreshing and isAnyCutterLowered
         and ((spec._rhmCutterDisengagedTime or spec._rhmClientDisengagedTime or 0) < 2.0)
         and (spec._rhmSmoothedMotorLimit ~= nil or (spec.data and spec.data.recommendedSpeed and spec.data.recommendedSpeed > 0))
 
@@ -2177,6 +2345,11 @@ end
 
 -- Use the same working-cutter checks on both peers; harvesting physics remain server-only.
 function rhm_Combine.getIsCutterWorking(self)
+    -- Early exit: Automated helpers turning on headlands are NOT actively cutting
+    if rhm_Combine.getIsHelperTurning(self) then
+        return false
+    end
+
     local spec = self.spec_rhm_Combine
     local spec_combine = self.spec_combine
     local missionTime = (g_currentMission and g_currentMission.time) or 0
@@ -2185,28 +2358,17 @@ function rhm_Combine.getIsCutterWorking(self)
     local cutterIsTurnedOn = false
     if spec_combine and spec_combine.attachedCutters then
         for cutter, _ in pairs(spec_combine.attachedCutters) do
-            local spec_cutter = cutter.spec_cutter
-
-            -- 1. Ground truth: active physical cutting metrics from GIANTS engine or intercepted crop flow
-            local isCuttingActive = hasIncomingCrop
-                or (cutter.getCutterLoad and cutter:getCutterLoad() > 0)
-                or (spec_cutter and spec_cutter.lastAreaBiggerZeroTime and spec_cutter.lastAreaBiggerZeroTime >= (missionTime - 1000))
-
-            if isCuttingActive then
-                cutterIsTurnedOn = true
-                break
-            end
-
-            -- 2. State indicators (running and lowered, even before hitting the first plant on swath entry)
-            local isTurned = (cutter.getIsTurnedOn == nil or (cutter.getIsTurnedOn and cutter:getIsTurnedOn()))
-                or (spec_combine and spec_combine.isThreshing)
-                or (self.getIsTurnedOn and self:getIsTurnedOn())
-
+            -- MANDATORY: Cutter MUST be physically lowered in working position
             local isLowered = rhm_Combine.getIsCutterLowered(self, cutter)
+            if isLowered then
+                local isTurned = (cutter.getIsTurnedOn == nil or (cutter.getIsTurnedOn and cutter:getIsTurnedOn()))
+                    or (spec_combine and spec_combine.isThreshing)
+                    or (self.getIsTurnedOn and self:getIsTurnedOn())
 
-            if isTurned and isLowered then
-                cutterIsTurnedOn = true
-                break
+                if isTurned or hasIncomingCrop then
+                    cutterIsTurnedOn = true
+                    break
+                end
             end
         end
     end
@@ -2220,24 +2382,16 @@ function rhm_Combine.getIsCutterWorking(self)
                 local spec_cutter = cutter.spec_cutter
                 local isCutterSpec = (spec_cutter ~= nil) or (cutter.spec_forageHarvesterCutter ~= nil) or (cutter.spec_forageCutter ~= nil)
                 if isCutterSpec then
-                    local isCuttingActive = hasIncomingCrop
-                        or (cutter.getCutterLoad and cutter:getCutterLoad() > 0)
-                        or (spec_cutter and spec_cutter.lastAreaBiggerZeroTime and spec_cutter.lastAreaBiggerZeroTime >= (missionTime - 1000))
-
-                    if isCuttingActive then
-                        cutterIsTurnedOn = true
-                        break
-                    end
-
-                    local isTurned = (cutter.getIsTurnedOn == nil or (cutter.getIsTurnedOn and cutter:getIsTurnedOn()))
-                        or (spec_combine and spec_combine.isThreshing)
-                        or (self.getIsTurnedOn and self:getIsTurnedOn())
-
                     local isLowered = rhm_Combine.getIsCutterLowered(self, cutter)
+                    if isLowered then
+                        local isTurned = (cutter.getIsTurnedOn == nil or (cutter.getIsTurnedOn and cutter:getIsTurnedOn()))
+                            or (spec_combine and spec_combine.isThreshing)
+                            or (self.getIsTurnedOn and self:getIsTurnedOn())
 
-                    if isTurned and isLowered then
-                        cutterIsTurnedOn = true
-                        break
+                        if isTurned or hasIncomingCrop then
+                            cutterIsTurnedOn = true
+                            break
+                        end
                     end
                 end
             end
@@ -2247,18 +2401,11 @@ function rhm_Combine.getIsCutterWorking(self)
     -- EN: Fallback for self-propelled harvesters with integrated cutter (e.g. root/vegetable/specialized)
     -- UA: Перевірка для самохідних комбайнів із вбудованою жаткою
     if not cutterIsTurnedOn and self.spec_cutter then
-        local spec_cutter = self.spec_cutter
-        local isCuttingActive = hasIncomingCrop
-            or (self.getCutterLoad and self:getCutterLoad() > 0)
-            or (spec_cutter.lastAreaBiggerZeroTime and spec_cutter.lastAreaBiggerZeroTime >= (missionTime - 1000))
-
-        if isCuttingActive then
-            cutterIsTurnedOn = true
-        else
+        local isLowered = rhm_Combine.getIsCutterLowered(self, self)
+        if isLowered then
             local isTurned = (self.getIsTurnedOn and self:getIsTurnedOn())
                 or (spec_combine and spec_combine.isThreshing)
-            local isLowered = rhm_Combine.getIsCutterLowered(self, self)
-            if isTurned and isLowered then
+            if isTurned or hasIncomingCrop then
                 cutterIsTurnedOn = true
             end
         end
@@ -2373,14 +2520,39 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Примусове обмеження швидкості на клієнті для виділеного сервера:
     --     Коли автоматичний помічник чи круїз-контроль керують комбайном на клієнті, застосовуємо синхронізовану швидкість безпосередньо до мотора.
     if not self.isServer and self.isClient then
-        local cutterIsWorking = rhm_Combine.getIsCutterWorking(self)
+        local isHelperTurning = rhm_Combine.getIsHelperTurning(self)
+        local spec_combine = self.spec_combine
+        local isAnyCutterLowered = false
+        if not isHelperTurning then
+            if spec_combine and spec_combine.attachedCutters then
+                for cutter, _ in pairs(spec_combine.attachedCutters) do
+                    if rhm_Combine.getIsCutterLowered(self, cutter) then
+                        isAnyCutterLowered = true
+                        break
+                    end
+                end
+            end
+            if not isAnyCutterLowered and self.getAttachedImplements then
+                for _, impl in pairs(self:getAttachedImplements()) do
+                    local cutter = impl.object
+                    if cutter and (cutter.spec_cutter ~= nil or cutter.spec_forageHarvesterCutter ~= nil or cutter.spec_forageCutter ~= nil) then
+                        if rhm_Combine.getIsCutterLowered(self, cutter) then
+                            isAnyCutterLowered = true
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        local cutterIsWorking = (not isHelperTurning) and rhm_Combine.getIsCutterWorking(self)
         local isReversing = rhm_Combine.getIsVehicleReversing(self)
         local isThreshing = (self.getIsTurnedOn and self:getIsTurnedOn()) or (self.spec_combine and self.spec_combine.isThreshing)
         local settings = g_realisticHarvestManager and g_realisticHarvestManager.settings
         local speedLimitEnabled = not settings or settings.enableSpeedLimit
         local isArcade = settings and settings.difficultyMotor == 1
 
-        if cutterIsWorking and not isReversing then
+        if cutterIsWorking and not isReversing and not isHelperTurning then
             spec._rhmClientDisengagedTime = 0
             local syncedLimit = spec.data and spec.data.recommendedSpeed
             if speedLimitEnabled and not isArcade and syncedLimit and syncedLimit > 0 and syncedLimit ~= math.huge then
@@ -2397,7 +2569,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
                     end
                 end
             end
-        elseif not isReversing and isThreshing and ((spec._rhmClientDisengagedTime or 0) < 2.0) and (spec._rhmLastMotorSpeedLimit ~= nil) and speedLimitEnabled and not isArcade then
+        elseif not isReversing and not isHelperTurning and isThreshing and isAnyCutterLowered and ((spec._rhmClientDisengagedTime or 0) < 2.0) and (spec._rhmLastMotorSpeedLimit ~= nil) and speedLimitEnabled and not isArcade then
             -- EN: Client grace period: maintain last governed speed limit during transient disengagement/handover
             -- UA: Пільговий період клієнта: утримуємо останній ліміт швидкості під час тимчасового перепідключення чи маневру
             spec._rhmClientDisengagedTime = (spec._rhmClientDisengagedTime or 0) + (dt * 0.001)
@@ -2548,11 +2720,35 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         end
     end
     
-    local isCutterGraceActive = (not cutterIsTurnedOn) and (not isReversing) and isTurnedOn
+    local isHelperTurning = rhm_Combine.getIsHelperTurning(self)
+    local isAnyCutterLowered = false
+    if not isHelperTurning then
+        if spec_combine and spec_combine.attachedCutters then
+            for cutter, _ in pairs(spec_combine.attachedCutters) do
+                if rhm_Combine.getIsCutterLowered(self, cutter) then
+                    isAnyCutterLowered = true
+                    break
+                end
+            end
+        end
+        if not isAnyCutterLowered and self.getAttachedImplements then
+            for _, impl in pairs(self:getAttachedImplements()) do
+                local cutter = impl.object
+                if cutter and (cutter.spec_cutter ~= nil or cutter.spec_forageHarvesterCutter ~= nil or cutter.spec_forageCutter ~= nil) then
+                    if rhm_Combine.getIsCutterLowered(self, cutter) then
+                        isAnyCutterLowered = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    local isCutterGraceActive = (not isHelperTurning) and (not cutterIsTurnedOn) and (not isReversing) and isTurnedOn and isAnyCutterLowered
         and ((spec._rhmCutterDisengagedTime or 0) < 2.0)
         and ((spec._rhmTimeSinceLastHarvest or 0) < 3.0)
 
-    if not cutterIsTurnedOn and not isCutterGraceActive then
+    if (not cutterIsTurnedOn or isHelperTurning) and not isCutterGraceActive then
         spec._rhmCutterDisengagedTime = nil
         -- EN: Preserve cruise speed before reset if active so headland turns don't wipe memory
         -- UA: Зберігаємо робочу швидкість перед скиданням щоб розвороти на краю поля не стирали пам'ять
@@ -2570,8 +2766,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
         end
 
-        -- EN: Cutter not working — release motor speed limit and reset indicators so they don't stay visible.
-        -- UA: Жатка не працює — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
+        -- EN: Cutter not working or turning — release motor speed limit and reset indicators so they don't stay visible.
+        -- UA: Жатка не працює або розворот — відпускаємо ліміт швидкості мотора та скидаємо індикатори щоб вони не висіли.
         local motorObj = rhm_Combine.getMotorizedCarrier(self)
         if motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor then
             local currentMotorLimit = motorObj.spec_motorized.motor:getSpeedLimit()
