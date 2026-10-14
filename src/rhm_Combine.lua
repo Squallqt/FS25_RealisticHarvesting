@@ -2415,7 +2415,20 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     if machineType == "forage" or machineType == "cotton" then
         liters = spec._fallbackLiters or 0
     elseif liters <= 0 and (spec._fallbackLiters or 0) > 0 then
-        liters = spec._fallbackLiters
+        -- EN: Grain/root harvesters with hoppers only use fallback if hopper is empty or accepts this crop.
+        --     Never attribute foreign border crop that was rejected by the grain tank!
+        -- UA: Зернові/коренезбиральні з бункером беруть запасні літри лише якщо бункер порожній або приймає цю культуру.
+        --     Ніколи не зараховуємо чужу культуру з межі поля, яку бункер відкинув!
+        local hopperFillType = nil
+        if self.getFillUnitFillType and self.spec_combine and self.spec_combine.fillUnitIndex then
+            hopperFillType = self:getFillUnitFillType(self.spec_combine.fillUnitIndex)
+        end
+        if not hopperFillType or hopperFillType == FillType.UNKNOWN or hopperFillType == spec.lastFillType then
+            liters = spec._fallbackLiters
+        else
+            liters = 0
+            spec._fallbackLiters = 0
+        end
     end
     
     if liters > 0 then
@@ -2582,25 +2595,69 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- HARVEST TRACKER & FIELD TRIP TELEMETRY INTEGRATION
     local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
     if tracker and self.isServer and (spec._trackerLitersBuffer or 0) > 0 then
-        local wx, _, wz = getWorldTranslation(self.rootNode)
-        spec._fieldCheckTimer = (spec._fieldCheckTimer or 0) + dt
-        local distMovedSq = (wx - (spec._lastFieldCheckX or 0))^2 + (wz - (spec._lastFieldCheckZ or 0))^2
-        if spec._fieldCheckTimer >= 1000 or distMovedSq >= 36.0 or spec._lastDetectedFieldId == nil or spec._lastDetectedFieldId == 0 then
-            spec._fieldCheckTimer = 0
-            spec._lastFieldCheckX = wx
-            spec._lastFieldCheckZ = wz
-            if RHM_HarvestTracker and RHM_HarvestTracker.getFieldAtWorldPosition then
-                local _, fid, fmlId = RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, self)
-                spec._lastDetectedFieldId = (fid and fid > 0 and fid) or (fmlId and fmlId > 0 and fmlId) or 0
+        local areaHaThisTick = (spec._trackerAreaBuffer or 0) / 10000.0
+        local isActivelyCutting = (areaHaThisTick and areaHaThisTick > 0.0001)
+
+        -- EN: Sample world position strictly from the active cutting bar center (not the chassis rootNode),
+        --     preventing combine rear overhang from falsely sampling neighbor fields or road verges during headland turns.
+        -- UA: Знімаємо координати суворо з центру активної жатки (не з rootNode корпусу),
+        --     щоб занос корми комбайна на розворотах не фіксував сусідні поля чи узбіччя доріг.
+        local cutX, cutZ = nil, nil
+        if self.spec_combine and self.spec_combine.attachedCutters then
+            for cutter, _ in pairs(self.spec_combine.attachedCutters) do
+                if cutter.rootNode and entityExists(cutter.rootNode) then
+                    cutX, _, cutZ = getWorldTranslation(cutter.rootNode)
+                    break
+                end
             end
         end
-        local fieldId = spec._lastDetectedFieldId or 0
+        if not cutX and self.getAttachedImplements then
+            for _, impl in pairs(self:getAttachedImplements()) do
+                local obj = impl.object
+                if obj and (obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter) and obj.rootNode and entityExists(obj.rootNode) then
+                    cutX, _, cutZ = getWorldTranslation(obj.rootNode)
+                    break
+                end
+            end
+        end
+        if not cutX and self.rootNode and entityExists(self.rootNode) then
+            cutX, _, cutZ = getWorldTranslation(self.rootNode)
+        end
+
+        spec._fieldCheckTimer = (spec._fieldCheckTimer or 0) + dt
+        local distMovedSq = (cutX - (spec._lastFieldCheckX or 0))^2 + (cutZ - (spec._lastFieldCheckZ or 0))^2
+
+        -- EN: Update detected field ID ONLY when actively cutting standing crop on the ground.
+        --     When turning on headlands, roads, or verges with 0 area, field identity stays locked to
+        --     the harvested field so leftover flushing grain stays with the authentic field!
+        -- UA: Оновлюємо ID поля ТІЛЬКИ коли йде активний зріз рослин на землі.
+        --     Під час розвороту на хедленді чи дорозі з 0 площею ID зафіксовано за поточним полем,
+        --     щоб залишки зерна при зсипанні зараховувалися справжньому полю!
+        if isActivelyCutting then
+            if spec._fieldCheckTimer >= 800 or distMovedSq >= 25.0 or spec._lastDetectedFieldId == nil or spec._lastDetectedFieldId == 0 then
+                spec._fieldCheckTimer = 0
+                spec._lastFieldCheckX = cutX
+                spec._lastFieldCheckZ = cutZ
+                if RHM_HarvestTracker and RHM_HarvestTracker.getFieldAtWorldPosition then
+                    local _, fid, fmlId = RHM_HarvestTracker.getFieldAtWorldPosition(cutX, cutZ, self)
+                    local detectedId = (fid and fid > 0 and fid) or (fmlId and fmlId > 0 and fmlId) or 0
+                    if detectedId > 0 then
+                        spec._lastDetectedFieldId = detectedId
+                        spec._lastHarvestFieldId = detectedId
+                    end
+                end
+            end
+        end
+
+        local fieldId = (isActivelyCutting and spec._lastDetectedFieldId)
+                     or spec._lastHarvestFieldId
+                     or spec._lastDetectedFieldId
+                     or 0
 
         local farmId = self:getOwnerFarmId() or 1
         local lossReasons = spec.loadCalculator:getLossBreakdown()
         local speedKmh = self:getLastSpeed()
         local loadRatio = spec.loadCalculator.engineLoad or 0
-        local areaHaThisTick = (spec._trackerAreaBuffer or 0) / 10000.0
         local flushLiters = spec._trackerLitersBuffer
         local flushMassKg = spec._trackerMassBuffer
         local flushDt = spec._trackerDtBuffer or dt

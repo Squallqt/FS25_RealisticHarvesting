@@ -1,5 +1,13 @@
 # Realistic Harvesting - Changelog
 
+Changelog 1.6.3.1:
+- FIXED: AI helper speed controller deadlock where combines remained locked at minimum crawl speed after recovering from acute engine or grain overload.
+- FIXED: Erroneous neighbor field attribution during headland maneuvers caused by chassis swing-out and cleaning shoe grain flushing.
+- FIXED: Erroneous field clustering across distant parcels on large maps; fields now strictly require physical contiguous plowed ground to merge.
+- FIXED: Field statistics recovery from season history ensuring unclustered fields retain authentic harvested area, volume, and yield.
+- FIXED: Dedicated server and single-player savegame persistence reliability with atomic XML writes, file verification, directory normalization, and automatic backup.
+- FIXED: Crop volume breakdown persistence in field records.
+
 Changelog 1.6.3.0:
 - FIXED: Multiplayer calibration now confirms the applied settings and active crop status to the requesting player; host AUTO changes also reach other players.
 - FIXED: AUTO calibration announces success only after the server applies it, and does not calibrate another crop if the crop changes during the request.

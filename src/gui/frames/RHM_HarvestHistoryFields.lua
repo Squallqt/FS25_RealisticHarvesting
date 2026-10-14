@@ -293,13 +293,14 @@ function RHM_HarvestHistoryFields:updateData()
             local displayCov = math.min(100.0, cov)
             local statusStr = ""
             local statusCode = "OWNED"
+            local isSignificantHarvest = ((hArea or 0) >= 0.04) or ((harvL or 0) >= 250)
             if hasNominal and displayCov >= 95.0 then
                 statusStr = string.format("%.0f%% [%s]", displayCov, safeL10n("rhm_status_completed", "Completed"))
                 statusCode = "COMPLETED"
-            elseif hasNominal and displayCov > 0.5 then
+            elseif hasNominal and displayCov > 0.5 and isSignificantHarvest then
                 statusStr = string.format("%.0f%% [%s]", displayCov, safeL10n("rhm_status_in_progress", "In Progress"))
                 statusCode = "IN_PROGRESS"
-            elseif (hArea or 0) > 0.001 then
+            elseif isSignificantHarvest and (hArea or 0) > 0.001 then
                 statusStr = string.format("%.1f%% [%s]", displayCov, safeL10n("rhm_status_in_progress", "In Progress"))
                 statusCode = "IN_PROGRESS"
             elseif f.isContract then
@@ -633,13 +634,14 @@ function RHM_HarvestHistoryFields:updateData()
             for fId, fStat in pairs(farm.fieldStats) do
                 local statYear = fStat.lastYear or currentYear
                 if statYear == numYear then
-                    local masterFid = (tracker and tracker.getMasterFieldId and tracker:getMasterFieldId(farmId, fId)) or fId
-                    local cName = fStat.lastCropName or fStat.lastCrop or "--"
-                    local isContract = (fStat.isContract == true) or RHM_HarvestTracker.isContractField(masterFid, farmId)
-                    local groupKey = string.format("%d_%s_%s", masterFid, string.upper(tostring(cName)), isContract and "1" or "0")
-
                     local area = fStat.harvestedAreaHa or 0
                     local harvL = fStat.harvestedLiters or 0
+                    local isSignificant = (area >= 0.04) or (harvL >= 250)
+                    if isSignificant then
+                        local masterFid = (tracker and tracker.getMasterFieldId and tracker:getMasterFieldId(farmId, fId)) or fId
+                        local cName = fStat.lastCropName or fStat.lastCrop or "--"
+                        local isContract = (fStat.isContract == true) or RHM_HarvestTracker.isContractField(masterFid, farmId)
+                        local groupKey = string.format("%d_%s_%s", masterFid, string.upper(tostring(cName)), isContract and "1" or "0")
                     local lostL = isLossEnabled and (fStat.lostLiters or 0) or 0
                     local money = isLossEnabled and (fStat.lossMoney or 0) or 0
                     local cDensity = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityTonsPerLiter and RHM_UnitConverter.getCropDensityTonsPerLiter(cName)) or 0.00075
@@ -720,6 +722,7 @@ function RHM_HarvestHistoryFields:updateData()
                             reasons = fStat.reasons or { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 }
                         }
                         table.insert(groupOrder, groupKey)
+                    end
                     end
                 end
             end
@@ -858,14 +861,15 @@ function RHM_HarvestHistoryFields:updateData()
                 local displayCov = math.min(100.0, cov)
                 local statusStr = ""
                 local statusCode = "COMPLETED"
+                local isSignificantHarvest = (area >= 0.04) or (harvL >= 250)
                 if numYear == currentYear then
                     if hasNominal and displayCov >= 95.0 then
                         statusStr = string.format("%.0f%% [%s]", displayCov, safeL10n("rhm_status_completed", "Completed"))
                         statusCode = "COMPLETED"
-                    elseif hasNominal and displayCov > 0.5 then
+                    elseif hasNominal and displayCov > 0.5 and isSignificantHarvest then
                         statusStr = string.format("%.0f%% [%s]", displayCov, safeL10n("rhm_status_in_progress", "In Progress"))
                         statusCode = "IN_PROGRESS"
-                    elseif area > 0.001 then
+                    elseif isSignificantHarvest and area > 0.001 then
                         statusStr = string.format("%.1f%% [%s]", displayCov, safeL10n("rhm_status_in_progress", "In Progress"))
                         statusCode = "IN_PROGRESS"
                     else

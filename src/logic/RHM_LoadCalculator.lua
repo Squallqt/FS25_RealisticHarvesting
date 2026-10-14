@@ -1526,23 +1526,34 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         local dtMs = self.lastUpdateInterval or 300
         self.underloadTimer = (self.underloadTimer or 0) + dtMs
 
-        -- Confirmation window: only accelerate if light crop has been sustained for >= 4.0 seconds.
-        -- Transient tramlines (технічні колії), sprayer tracks, and micro-thin patches (2-5m) are completely ignored.
-        if self.underloadTimer >= 4000 then
-            -- Bound target acceleration: never surge straight to header max from steady harvesting
+        -- Responsive confirmation window:
+        -- In acute underload (engineLoad < targetLoad * 0.75, e.g. < 62% when target is 83%),
+        -- confirm in 1.5s so the combine promptly escapes low crawl speeds after overload.
+        -- In mild underload, confirm in 2.5s to filter transient tramlines and micro-dips.
+        local reqUnderloadTime = 2500
+        local curLoad = self.engineLoad or 0
+        if curLoad < (targetLoad * 0.75) then
+            reqUnderloadTime = 1500
+        end
+
+        if self.underloadTimer >= reqUnderloadTime then
+            -- Target acceleration: reach vEquilibrium directly when heavily underloaded
             local targetSpeed = vEquilibrium
             local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
             local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and
                 RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
             local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
-            if remembered and remembered > minSpeed then
-                targetSpeed = math.min(targetSpeed, remembered + 0.8)
+
+            -- Only bound acceleration to remembered speed if machine is already operating near target load.
+            -- If heavily underloaded (< 80% of target load), allow accelerating directly towards vEquilibrium!
+            if remembered and remembered > minSpeed and curLoad >= (targetLoad * 0.80) then
+                targetSpeed = math.min(targetSpeed, remembered + 1.2)
             end
 
-            -- Smooth hydrostatic acceleration (tau = 2.8s) with slew-rate cap (+0.25 km/h per sec)
-            local blend = 1.0 - math.exp(-dtSec / 2.8)
+            -- Smooth hydrostatic acceleration (tau = 2.0s) with slew-rate cap (+0.45 km/h per sec)
+            local blend = 1.0 - math.exp(-dtSec / 2.0)
             local speedDelta = (targetSpeed - currentLimit) * blend
-            local maxStep = 0.25 * dtSec
+            local maxStep = 0.45 * dtSec
             if speedDelta > maxStep then
                 speedDelta = maxStep
             end
@@ -1556,13 +1567,12 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
     -- Rolling average of steady-state harvesting speed:
     -- Samples ONLY whenever vehicle is actively harvesting in true steady state.
     -- Strict guards: requires active harvesting time >= 2.8s, real crop flow (mass >= 0.25 kg/s, tph >= 0.5),
-    -- and working engine load (>= 0.45).
-    -- This guarantees that running out of grain at the end of the pass (headland exit) NEVER contaminates
-    -- the remembered harvesting speed with high exit speeds (7-8 km/h)!
+    -- and working engine load near target (>= max(0.60, targetLoad - 0.15)).
+    -- This guarantees that underloaded crawl speeds (< 60% load) never pollute the remembered working speed!
     local isSteadyHarvesting = self.isActivelyHarvesting 
         and not isEntry 
         and (self.harvestActiveTime or 0) >= 2800 
-        and (self.engineLoad or 0) >= 0.45 
+        and (self.engineLoad or 0) >= math.max(0.60, targetLoad - 0.15)
         and (self.currentAvgMass or 0) >= 0.25 
         and (self.tonPerHour or 0) >= 0.50
         and (self.idleHarvestTime or 0) == 0
@@ -1597,9 +1607,9 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         self.speedLimit = math.max(minSpeed, self.speedLimit)
     end
 
-    -- AI SPEED LIMITER: Automatically slow down hired AI workers when speed-controllable loss exceeds farm limit.
+    -- AI SPEED LIMITER: Automatically cap hired AI workers when speed-controllable loss exceeds farm limit.
     -- Uncontrollable losses (environmental moisture/dew and mechanical blade wear) cannot be reduced by driving slower.
-    -- Features hysteresis: preserves brake damping across tramlines and gaps for 4.0s after loss drops to 0.
+    -- Features hysteresis: preserves brake damping across tramlines and gaps for 1.5s after loss clears to 0.
     if vehicle and rhm_Combine and rhm_Combine.isAiWorkerActive and rhm_Combine.isAiWorkerActive(vehicle) then
         local tracker = g_realisticHarvestManager and g_realisticHarvestManager.harvestTracker
         if tracker then
@@ -1615,16 +1625,18 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
                     self.aiBrakeFactor = math.min(self.aiBrakeFactor or 1.0, targetBrake)
                     self.aiLossClearTimer = 0
                 else
-                    -- Hold the brake factor across tramlines / gaps for at least 4.0 seconds after loss clears
+                    -- Hold the brake factor across tramlines / gaps for 1.5 seconds after loss clears
                     self.aiLossClearTimer = (self.aiLossClearTimer or 0) + (self.lastUpdateInterval or 300)
-                    if self.aiLossClearTimer > 4000 and self.aiBrakeFactor and self.aiBrakeFactor < 1.0 then
+                    if self.aiLossClearTimer > 1500 and self.aiBrakeFactor and self.aiBrakeFactor < 1.0 then
                         local dtSecRecovery = math.min(1.0, (self.lastUpdateInterval or 300) / 1000.0)
-                        self.aiBrakeFactor = math.min(1.0, self.aiBrakeFactor + (0.15 * dtSecRecovery))
+                        self.aiBrakeFactor = math.min(1.0, self.aiBrakeFactor + (0.35 * dtSecRecovery))
                     end
                 end
 
                 if self.aiBrakeFactor and self.aiBrakeFactor < 0.99 then
-                    self.speedLimit = math.max(minSpeed, self.speedLimit * self.aiBrakeFactor)
+                    -- Apply strictly as a dynamic speed ceiling cap, never as a recursive compounding multiplier on self.speedLimit!
+                    local aiCeiling = math.max(minSpeed, maxAllowedSpeed * self.aiBrakeFactor)
+                    self.speedLimit = math.min(self.speedLimit, aiCeiling)
                 end
             else
                 self.aiBrakeFactor = 1.0
