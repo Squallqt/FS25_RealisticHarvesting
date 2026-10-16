@@ -41,7 +41,7 @@ end
 function RHM_HarvestHistoryTrip:update(dt)
     RHM_HarvestHistoryTrip:superClass().update(self, dt)
     self.refreshTimer = (self.refreshTimer or 0) + dt
-    if self.refreshTimer >= 1000 then
+    if self.refreshTimer >= 250 then
         self.refreshTimer = 0
         self:updateData()
     end
@@ -470,8 +470,15 @@ function RHM_HarvestHistoryTrip:updateData()
 
     -- Throughput
     local throughput = (durSec > 10) and (harvestedTons / (durSec / 3600.0)) or 0
+    local liveTPH = (activeCombine and activeCombine.spec_rhm_Combine and activeCombine.spec_rhm_Combine.data and activeCombine.spec_rhm_Combine.data.tonPerHour) or 0
     if self.avgThroughputText then
-        self.avgThroughputText:setText(RHM_UnitConverter.formatProductivity(throughput, sys, trip.fillTypeIndex))
+        local avgStr = RHM_UnitConverter.formatProductivity(throughput, sys, trip.fillTypeIndex)
+        if liveTPH > 0.1 then
+            local liveStr = RHM_UnitConverter.formatProductivity(liveTPH, sys, trip.fillTypeIndex)
+            self.avgThroughputText:setText(string.format("%s (%s)", avgStr, liveStr))
+        else
+            self.avgThroughputText:setText(avgStr)
+        end
     end
 
     -- Machine Wear

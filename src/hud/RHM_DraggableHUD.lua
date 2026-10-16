@@ -212,9 +212,6 @@ local rhm_extraPrintCountThisFrame = 0
 local rhm_lastExtraPrintCount = 0
 
 local function rhm_initHudHooks()
-    if rhm_hooksInitialized then return end
-    rhm_hooksInitialized = true
-
     -- Prepend to Mission00.draw / FSBaseMission.draw to increment frame counter and intercept extra print texts
     local function rhm_onPreDraw(mission)
         rhm_currentDrawFrame = rhm_currentDrawFrame + 1
@@ -229,15 +226,21 @@ local function rhm_initHudHooks()
         rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
         rhm_extraPrintCountThisFrame = 0
     end
-    if Mission00 and Mission00.draw then
-        Mission00.draw = Utils.prependedFunction(Mission00.draw, rhm_onPreDraw)
-    end
-    if FSBaseMission and FSBaseMission.draw then
-        FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, rhm_onPreDraw)
+
+    if not RHMDraggableHUD.mission00Hooked then
+        if Mission00 and Mission00.draw then
+            RHMDraggableHUD.mission00Hooked = true
+            Mission00.draw = Utils.prependedFunction(Mission00.draw, rhm_onPreDraw)
+        end
+        if FSBaseMission and FSBaseMission.draw then
+            RHMDraggableHUD.mission00Hooked = true
+            FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, rhm_onPreDraw)
+        end
     end
 
     -- Hook auxiliary combine telemetry HUD extension for dynamic docking
-    if ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+    if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+        RHMDraggableHUD.pfHooked = true
         ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(self, superFunc, inputHelpDisplay, posX, posY)
             local ret = superFunc(self, inputHelpDisplay, posX, posY)
             self.rhm_lastBottomY = (self.backgroundBottom and self.backgroundBottom.y) or ret
@@ -247,6 +250,10 @@ local function rhm_initHudHooks()
             return ret
         end)
     end
+
+    if rhm_hooksInitialized then return end
+    if not InputHelpDisplay then return end
+    rhm_hooksInitialized = true
 
     -- Hook InputHelpDisplay main draw to capture active instance, count pending extra texts, and track baseline bottom Y
     if InputHelpDisplay and InputHelpDisplay.draw then
@@ -408,24 +415,6 @@ end
 function RHMDraggableHUD:getDockedPosition()
     rhm_initHudHooks()
 
-    -- Lazy hook Mission00.draw once mission is created
-    if not RHMDraggableHUD.mission00Hooked and Mission00 and Mission00.draw then
-        RHMDraggableHUD.mission00Hooked = true
-        Mission00.draw = Utils.prependedFunction(Mission00.draw, function(mission)
-            rhm_currentDrawFrame = rhm_currentDrawFrame + 1
-            if mission and not mission.rhm_extraPrintHooked and mission.addExtraPrintText then
-                mission.rhm_extraPrintHooked = true
-                local origAddExtra = mission.addExtraPrintText
-                mission.addExtraPrintText = function(mSelf, text, ...)
-                    rhm_extraPrintCountThisFrame = rhm_extraPrintCountThisFrame + 1
-                    return origAddExtra(mSelf, text, ...)
-                end
-            end
-            rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
-            rhm_extraPrintCountThisFrame = 0
-        end)
-    end
-
     local uiScale = self.uiScale or 1.0
     local defaultX = 0.016 * uiScale
     local defaultW = 0.176 * uiScale
@@ -435,19 +424,6 @@ function RHMDraggableHUD:getDockedPosition()
 
     local chX = (ch and ch.lineBg and ch.lineBg.x) or (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
     local chW = (ch and ch.lineBg and ch.lineBg.width) or (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
-
-    -- Lazy hook auxiliary combine telemetry HUD extension if loaded dynamically
-    if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
-        RHMDraggableHUD.pfHooked = true
-        ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(extSelf, superFunc, inputHelpDisplay, posX, posY)
-            local ret = superFunc(extSelf, inputHelpDisplay, posX, posY)
-            extSelf.rhm_lastBottomY = (extSelf.backgroundBottom and extSelf.backgroundBottom.y) or ret
-            extSelf.rhm_lastBottomX = (extSelf.backgroundBottom and extSelf.backgroundBottom.x) or posX
-            extSelf.rhm_lastWidth = extSelf.displayWidth
-            extSelf.rhm_lastDrawFrame = rhm_currentDrawFrame
-            return ret
-        end)
-    end
 
     local currentVeh = self.vehicle or (g_currentMission and g_currentMission.controlledVehicle)
 

@@ -551,5 +551,12 @@
         <text name="rhm_hud_hdr_throughput" text="ПРОДУКТИВНІСТЬ" />
         <text name="rhm_hud_hdr_avg_yield" text="СЕРЕДНІЙ УРОЖАЙ" />
         <text name="rhm_hud_hdr_volume" text="ОБ'ЄМ" />
+        <!-- Threshing System Badges -->
+        <text name="rhm_threshing_walker" text="Клавішний" />
+        <text name="rhm_threshing_rotor" text="Роторний" />
+        <text name="rhm_threshing_hybrid" text="Гібридний APS" />
+        <text name="rhm_threshing_forage" text="Кормозбиральний" />
+        <text name="rhm_threshing_root" text="Копач коренеплодів" />
+        <text name="rhm_threshing_specialty" text="Спеціальний" />
     </texts>
 </l10n>

@@ -13,7 +13,7 @@
 -- ============================================================================
 
 RHM_Api = {}
-RHM_Api.VERSION = "1.6.3.2"
+RHM_Api.VERSION = "1.6.4.0"
 RHM_Api.listeners = {}
 
 -- ============================================================================
@@ -212,6 +212,21 @@ function RHM_Api.getMachineType(vehicle)
         return combine.spec_rhm_Combine.combineMemory.machineType or "grain"
     end
     return "unknown"
+end
+
+---EN: Returns the threshing mechanism type: "walker", "rotor", "hybrid", "forage", "root", or "specialty".
+---UA: Повертає тип молотильної системи: "walker", "rotor", "hybrid", "forage", "root" або "specialty".
+---@param vehicle table|nil
+---@return string threshingType ("walker", "rotor", "hybrid", "forage", "root", "specialty")
+function RHM_Api.getThreshingType(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine then
+        return combine.spec_rhm_Combine.threshingType
+            or (combine.spec_rhm_Combine.combineMemory and combine.spec_rhm_Combine.combineMemory.threshingType)
+            or (combine.spec_rhm_Combine.loadCalculator and combine.spec_rhm_Combine.loadCalculator.threshingType)
+            or "walker"
+    end
+    return "walker"
 end
 
 ---EN: Returns true if target combine is a specialized grape harvester.

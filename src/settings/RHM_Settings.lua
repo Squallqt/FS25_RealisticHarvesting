@@ -202,6 +202,14 @@ function RHMSettings:isAdmin()
         return true
     end
 
+    if g_currentMission.getHasAdminRights and g_currentMission:getHasAdminRights() then
+        return true
+    end
+
+    if g_currentMission.isServerAdmin then
+        return true
+    end
+
     return false
 end
 

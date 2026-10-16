@@ -1,5 +1,20 @@
 # Realistic Harvesting - Changelog
 
+Changelog 1.6.4.0:
+- ADDED: Authentic GIANTS Engine 10 combine classification engine detecting straw walker, axial rotor, hybrid APS, forage harvester, root harvester, and specialty harvesters.
+- ADDED: Real-time Threshing System Indicator badge in Combine Calibration terminal (Shift+K) displaying active threshing mechanism.
+- ADDED: Public integration API method `RHM_Api.getThreshingType(vehicle)` for external vehicle introspection.
+- IMPROVED: Converted header/cutter connection handling into a native GIANTS Engine 10 specialization (`rhm_Cutter`), eliminating fragile engine hooks and ensuring rock-solid attachment lifecycle.
+- IMPROVED: Differentiated power balance and driveline tare drag across straw walker, axial rotor, hybrid APS, forage, and root harvesters.
+- IMPROVED: Nonlinear moisture processing resistance and grain separation loss curves calibrated specifically for combine threshing mechanisms (walker straw-mat clumping vs. rotary continuous flow).
+- IMPROVED: Symmetrical lockstep synchronization between concave clearance and feeder house parameters across client UI sliders, physics engine, and multiplayer network events.
+- IMPROVED: Real-time high-frequency network stream replication for harvester fuel burn, speed, load, concave clearance, and comprehensive 5-factor loss breakdown on multiplayer servers.
+- IMPROVED: Streamlined Yield Monitor HUD docking hooks with centralized idempotent guards, preventing duplicate render cycles and layout desyncs.
+- FIXED: Harvest History Analytics frame lifecycle refresh rate (250ms cadence) with automated reset handlers on frame open and close.
+- FIXED: Trip telemetry throughput indicator displaying simultaneous session average and instantaneous real-time tons per hour.
+- FIXED: Dedicated server admin permission detection verifying server admin rights.
+- FIXED: Prevented engine bitwise flag crash during vehicle dirty flag raising with numerical type validation.
+
 Changelog 1.6.3.2:
 - FIXED: Automated field worker and path-following helper telemetry on dedicated servers, resolving an issue where headless worker routines and engine bitwise stream handling prevented live telemetry replication and speed governing on multiplayer clients.
 - FIXED: Continuous network state replication from dedicated servers to clients using native GIANTS bitwise operations, ensuring real-time engine load, crop loss, throughput, yield, and recommended speed update seamlessly on client HUDs.

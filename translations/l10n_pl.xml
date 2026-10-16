@@ -552,5 +552,12 @@
         <text name="rhm_hud_hdr_throughput" text="PRZEPUSTOWOŚĆ" />
         <text name="rhm_hud_hdr_avg_yield" text="ŚREDNI PLON" />
         <text name="rhm_hud_hdr_volume" text="OBJĘTOŚĆ" />
+        <!-- Threshing System Badges -->
+        <text name="rhm_threshing_walker" text="Klawiszowy" />
+        <text name="rhm_threshing_rotor" text="Rotorowy" />
+        <text name="rhm_threshing_hybrid" text="Hybrydowy APS" />
+        <text name="rhm_threshing_forage" text="Sieczkarnia" />
+        <text name="rhm_threshing_root" text="Kombajn do okopowych" />
+        <text name="rhm_threshing_specialty" text="Specjalistyczny" />
     </texts>
 </l10n>

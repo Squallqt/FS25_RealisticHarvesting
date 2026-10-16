@@ -34,6 +34,35 @@ local PARAM_SECTION_MAP = {
     feeder           = "SEPARATION",
 }
 
+local function getParamSection(machineType, param)
+    if machineType == "forage" then
+        if param == "fan" or param == "blower" then
+            return "DISCHARGE"
+        end
+        return "SEPARATION"
+    elseif machineType == "root" then
+        if param == "fan" or param == "rotor" then
+            return "CLEANING"
+        end
+        return "SEPARATION"
+    elseif machineType == "grape" or machineType == "olive" then
+        if param == "fan" then
+            return "CLEANING"
+        end
+        return "SEPARATION"
+    end
+    return PARAM_SECTION_MAP[param] or "SEPARATION"
+end
+
+local THRESHING_TYPE_LABELS = {
+    walker    = { key = "rhm_threshing_walker",    default = "STRAW WALKER" },
+    rotor     = { key = "rhm_threshing_rotor",     default = "AXIAL ROTOR" },
+    hybrid    = { key = "rhm_threshing_hybrid",    default = "HYBRID APS" },
+    forage    = { key = "rhm_threshing_forage",    default = "FORAGE CHOPPER" },
+    root      = { key = "rhm_threshing_root",      default = "ROOT HARVESTER" },
+    specialty = { key = "rhm_threshing_specialty", default = "SPECIALTY" },
+}
+
 local SECTIONS_ORDERED = {
     { key = "SEPARATION", label = "rhm_ui_section_separation" },
     { key = "CLEANING",   label = "rhm_ui_section_cleaning"   },
@@ -507,7 +536,7 @@ function RHMCombineCalibrationGUI:draw()
         local sectionsShown = 0
         for _, section in ipairs(SECTIONS_ORDERED) do
             for _, p in ipairs(activeParams) do
-                local sKey = PARAM_SECTION_MAP[p] or "SEPARATION"
+                local sKey = getParamSection(machineType, p)
                 if sKey == section.key then
                     sectionsShown = sectionsShown + 1
                     break
@@ -631,6 +660,21 @@ function RHMCombineCalibrationGUI:draw()
         renderText(arcadeX + arcadeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, arcadeLabel)
         nextHeaderBadgeX = arcadeX + arcadeW
     end
+
+    -- Threshing System Indicator Badge (Walker, Rotor, Hybrid APS, Forage, Root, Specialty)
+    local threshType = (spec and spec.threshingType) or (spec and spec.combineMemory and spec.combineMemory.threshingType) or "walker"
+    local threshCfg = THRESHING_TYPE_LABELS[threshType] or THRESHING_TYPE_LABELS.walker
+    local threshText = (g_i18n and g_i18n:hasText(threshCfg.key)) and g_i18n:getText(threshCfg.key) or threshCfg.default
+    local threshUpper = string.upper(threshText)
+    local threshBadgeW = math.max(0.054, getTextWidth(ui.fontSize * 0.68, threshUpper) + 0.010)
+    local threshBadgeX = nextHeaderBadgeX + 0.004
+    self:drawRect(threshBadgeX, badgeY, threshBadgeW, badgeH, {0.04, 0.05, 0.08, 0.85})
+    self:drawBorder(threshBadgeX, badgeY, threshBadgeW, badgeH, {0.35, 0.55, 0.85, 0.60}, 1)
+    setTextAlignment(RenderText.ALIGN_CENTER)
+    setTextBold(true)
+    setTextColor(0.50, 0.78, 1.0, 1.0)
+    renderText(threshBadgeX + threshBadgeW * 0.5, badgeY + badgeH * 0.25, ui.fontSize * 0.68, threshUpper)
+    nextHeaderBadgeX = threshBadgeX + threshBadgeW
 
     -- Close Button [X] (Top Right)
     local closeBtnW = 0.018
@@ -1066,7 +1110,7 @@ function RHMCombineCalibrationGUI:draw()
     for _, section in ipairs(SECTIONS_ORDERED) do
         local hasAny = false
         for _, p in ipairs(activeParams) do
-            local sKey = PARAM_SECTION_MAP[p] or "SEPARATION"
+            local sKey = getParamSection(machineType, p)
             if sKey == section.key then
                 hasAny = true
                 break
@@ -1087,7 +1131,7 @@ function RHMCombineCalibrationGUI:draw()
             renderText(x + ui.margin + 0.006, cy + 0.006, ui.sectionSize, sLabel)
 
             for _, p in ipairs(activeParams) do
-                local sKey = PARAM_SECTION_MAP[p] or "SEPARATION"
+                local sKey = getParamSection(machineType, p)
                 if sKey == section.key and not drawnParams[p] then
                     cy = cy - ui.lineHeight
                     local labelKey = RHM_CombineSettingsDatabase:getParamLabel(machineType, p)

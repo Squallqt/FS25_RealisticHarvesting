@@ -102,6 +102,12 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.INT,    cur .. "#lowerSieve",      "Lower sieve", 50)
     schema:register(XMLValueType.INT,    cur .. "#rotor",           "Rotor", 50)
     schema:register(XMLValueType.INT,    cur .. "#feeder",          "Feeder", 50)
+    schema:register(XMLValueType.INT,    cur .. "#concave",         "Concave clearance", 50)
+    schema:register(XMLValueType.STRING, cur .. "#threshingType",   "Threshing system type", "walker")
+    schema:register(XMLValueType.INT,    cur .. "#chopLength",      "Forage chop length", 50)
+    schema:register(XMLValueType.INT,    cur .. "#kernelProcessor", "Kernel processor clearance", 50)
+    schema:register(XMLValueType.INT,    cur .. "#blower",          "Discharge blower accelerator", 50)
+    schema:register(XMLValueType.INT,    cur .. "#shakingIntensity","Root shaking intensity", 50)
     schema:register(XMLValueType.INT,    cur .. "#targetEngineLoad", "Target engine load", 80)
     schema:register(XMLValueType.BOOL,   cur .. "#isCalibrated",    "Combine calibration status", true)
     schema:register(XMLValueType.STRING, cur .. "#calibratedCrops", "List of calibrated crops", "")
@@ -125,6 +131,11 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.INT,    tripKey .. "#avgSpeedCount",    "Average speed samples count", 0)
     schema:register(XMLValueType.FLOAT,  tripKey .. "#avgLoadSum",       "Average load accumulator", 0)
     schema:register(XMLValueType.INT,    tripKey .. "#avgLoadCount",     "Average load samples count", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. ".reasons#speed",    "Speed loss liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. ".reasons#settings", "Settings loss liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. ".reasons#moisture", "Moisture loss liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. ".reasons#wear",     "Wear loss liters", 0)
+    schema:register(XMLValueType.FLOAT,  tripKey .. ".reasons#slope",    "Slope loss liters", 0)
 end
 
 -- EN: Mirrors registerXMLPaths for the savegame vehicles.xml schema.
@@ -384,7 +395,69 @@ function rhm_Combine.getOrInitCombineMemory(vehicle)
     end
     return spec.combineMemory
 end
--- ============================================================================
+-- EN: Detects threshing system type (walker, rotor, hybrid, forage, root, specialty)
+-- UA: Визначає тип молотильно-сепаруючої системи комбайна
+function rhm_Combine.detectThreshingType(vehicle, machineType)
+    if machineType == "forage" then
+        return "forage"
+    elseif machineType == "root" then
+        return "root"
+    elseif machineType == "cotton" or machineType == "grape" or machineType == "olive" then
+        return machineType
+    end
+
+    -- Grain Combine Harvester: Distinguish Walker vs Rotor vs Hybrid
+    local fullName = string.lower((vehicle.getFullName and vehicle:getFullName()) or (vehicle.getName and vehicle:getName()) or "")
+    local configName = string.lower(vehicle.configFileName or "")
+    local typeName = string.lower(vehicle.typeName or (vehicle.type and vehicle.type.name) or "")
+
+    -- 1. Check for Hybrid (APS + Twin Rotor or Dual Helix Rotor)
+    -- e.g. Claas Lexion 7000/8000 (APS Synflow Hybrid), Fendt IDEAL 7/8/9/10
+    if fullName:find("hybrid") or fullName:find("ideal") or fullName:find("lexion 7") or fullName:find("lexion 8") or fullName:find("lexion 9") or fullName:find("trion 7") then
+        return "hybrid"
+    end
+    if configName:find("lexion7") or configName:find("lexion8") or configName:find("lexion9") or configName:find("ideal") or configName:find("hybrid") then
+        return "hybrid"
+    end
+
+    -- 2. Check for Axial Rotor (Axial-Flow, Twin Rotor CR, JD S Series)
+    if fullName:find("axial") or fullName:find("rotor") or fullName:find("cr 1") or fullName:find("cr 9") or fullName:find("cr 8") or fullName:find("cr 7") or fullName:find("cr10") or fullName:find("cr11") or fullName:find("cr90") or fullName:find("s7") or fullName:find("s6") or fullName:find("s700") or fullName:find("s600") then
+        return "rotor"
+    end
+    if configName:find("axial") or configName:find("cr9") or configName:find("cr10") or configName:find("cr11") or configName:find("series_s") or configName:find("s700") or configName:find("rotor") then
+        return "rotor"
+    end
+
+    -- 3. Check for Straw Walkers (Walker / Schuettler / T-Series / Corus / TX / TC)
+    if fullName:find("walker") or fullName:find("trion 5") or fullName:find("trion 6") or fullName:find("lexion 5") or fullName:find("lexion 6") or fullName:find("tucano") or fullName:find("dominator") or fullName:find("corus") or fullName:find("topliner") or fullName:find("nova") or fullName:find("acros") or fullName:find("t5") or fullName:find("t6") or fullName:find("tx") or fullName:find("tc") then
+        return "walker"
+    end
+
+    -- 4. Check vehicle XML animation nodes for rotors or walkers
+    if vehicle.xmlFile ~= nil and type(vehicle.xmlFile.iterate) == "function" then
+        local hasRotorNode = false
+        local hasWalkerNode = false
+        vehicle.xmlFile:iterate("vehicle.combine.animationNodes.animationNode", function(_, nodeKey)
+            local nodeName = vehicle.xmlFile:getValue(nodeKey .. "#node")
+            local nodeStr = tostring(nodeName or ""):lower()
+            if nodeStr:find("rotor") or nodeStr:find("axial") then
+                hasRotorNode = true
+            elseif nodeStr:find("walker") or nodeStr:find("schuettler") or nodeStr:find("shaker") then
+                hasWalkerNode = true
+            end
+        end)
+        if hasRotorNode and hasWalkerNode then
+            return "hybrid"
+        elseif hasRotorNode then
+            return "rotor"
+        elseif hasWalkerNode then
+            return "walker"
+        end
+    end
+
+    -- Standard conventional grain combine baseline: Straw Walker
+    return "walker"
+end
 
 -- EN: Called when the combine vehicle is loaded. Creates and wires up all subsystems:
 --     RHM_LoadCalculator, machineType detection, RHM_CombineMemory, HUD data table, dirty flags,
@@ -447,7 +520,7 @@ function rhm_Combine:onLoad(savegame)
         avgLoadSum = 0,
         avgLoadCount = 0,
         efficiencyRank = "A",
-        reasons = { speed = 0, moisture = 0, wear = 0, slope = 0 },
+        reasons = { speed = 0, settings = 0, moisture = 0, wear = 0, slope = 0 },
         isActive = false
     }
     
@@ -613,8 +686,10 @@ function rhm_Combine:onLoad(savegame)
     end
 
     spec.machineType = machineType
-    rhm_log(string.format("RHM [Combine]: RHM: [OK] Machine type detected: %s (pipe=%s, cutter=%s, rainOK=%s, fruitPrep=%s)",
+    spec.threshingType = rhm_Combine.detectThreshingType(self, machineType)
+    rhm_log(string.format("RHM [Combine]: RHM: [OK] Machine type detected: %s | Threshing: %s (pipe=%s, cutter=%s, rainOK=%s, fruitPrep=%s)",
         machineType,
+        tostring(spec.threshingType),
         tostring(self.spec_pipe ~= nil),
         tostring(self.spec_cutter ~= nil),
         tostring(sc and sc.allowThreshingDuringRain),
@@ -629,7 +704,7 @@ function rhm_Combine:onLoad(savegame)
         return
     end
     
-    spec.combineMemory = RHM_CombineMemory.new(self, machineType)
+    spec.combineMemory = RHM_CombineMemory.new(self, machineType, spec.threshingType)
     if not spec.combineMemory then
         Logging.error("RHM: Failed to create RHM_CombineMemory for combine: %s", self:getFullName())
         return
@@ -637,6 +712,7 @@ function rhm_Combine:onLoad(savegame)
     
     if spec.loadCalculator then
         spec.loadCalculator.combineMemory = spec.combineMemory
+        spec.loadCalculator.threshingType = spec.threshingType
     end
     rhm_log("RHM [Combine]: RHM: [OK] Combine RHMSettings System initialized")
 
@@ -3375,7 +3451,14 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     xmlFile:setValue(cur .. "#upperSieve",         settings.upperSieve or 50)
     xmlFile:setValue(cur .. "#lowerSieve",         settings.lowerSieve or 50)
     xmlFile:setValue(cur .. "#rotor",              settings.rotor or 50)
-    xmlFile:setValue(cur .. "#feeder",             settings.feeder or 50)
+    local concaveVal = settings.concave or settings.feeder or 50
+    xmlFile:setValue(cur .. "#feeder",             concaveVal)
+    xmlFile:setValue(cur .. "#concave",            concaveVal)
+    xmlFile:setValue(cur .. "#threshingType",      spec.threshingType or "walker")
+    if settings.chopLength ~= nil then xmlFile:setValue(cur .. "#chopLength", settings.chopLength) end
+    if settings.kernelProcessor ~= nil then xmlFile:setValue(cur .. "#kernelProcessor", settings.kernelProcessor) end
+    if settings.blower ~= nil then xmlFile:setValue(cur .. "#blower", settings.blower) end
+    if settings.shakingIntensity ~= nil then xmlFile:setValue(cur .. "#shakingIntensity", settings.shakingIntensity) end
     xmlFile:setValue(cur .. "#targetEngineLoad",   settings.targetEngineLoad or 80)
     
     local isCalib = (mem.isCalibrated == true) or (mem.hasManualTuning == true) or (mem.calibratedCrops ~= nil and mem.currentCrop ~= nil and mem.calibratedCrops[mem.currentCrop] == true)
@@ -3418,6 +3501,13 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
         xmlFile:setValue(tKey .. "#avgSpeedCount",    trip.avgSpeedCount or 0)
         xmlFile:setValue(tKey .. "#avgLoadSum",       trip.avgLoadSum or 0)
         xmlFile:setValue(tKey .. "#avgLoadCount",     trip.avgLoadCount or 0)
+        if trip.reasons then
+            xmlFile:setValue(tKey .. ".reasons#speed",    trip.reasons.speed or 0)
+            xmlFile:setValue(tKey .. ".reasons#settings", trip.reasons.settings or 0)
+            xmlFile:setValue(tKey .. ".reasons#moisture", trip.reasons.moisture or 0)
+            xmlFile:setValue(tKey .. ".reasons#wear",     trip.reasons.wear or 0)
+            xmlFile:setValue(tKey .. ".reasons#slope",    trip.reasons.slope or 0)
+        end
     end
     
     rhm_log(string.format("RHM [Combine]: RHM: [SAVE] Saved combine state for %s: crop=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s, tripLiters=%.0f", 
@@ -3577,14 +3667,35 @@ function rhm_Combine:loadFromSavegame(savegame)
             local loadedLower = readInt(cur .. "#lowerSieve", nil)
             local loadedRotor = readInt(cur .. "#rotor", nil)
             local loadedFeeder = readInt(cur .. "#feeder", nil)
+            local loadedConcave = readInt(cur .. "#concave", nil)
+            local loadedChopLength = readInt(cur .. "#chopLength", nil)
+            local loadedKernel = readInt(cur .. "#kernelProcessor", nil)
+            local loadedBlower = readInt(cur .. "#blower", nil)
+            local loadedShaking = readInt(cur .. "#shakingIntensity", nil)
             local loadedTargetLoad = readInt(cur .. "#targetEngineLoad", nil)
             
             if loadedFan ~= nil then curSettings.fan = loadedFan end
             if loadedUpper ~= nil then curSettings.upperSieve = loadedUpper end
             if loadedLower ~= nil then curSettings.lowerSieve = loadedLower end
             if loadedRotor ~= nil then curSettings.rotor = loadedRotor end
-            if loadedFeeder ~= nil then curSettings.feeder = loadedFeeder end
+            if loadedConcave ~= nil then
+                curSettings.concave = loadedConcave
+                curSettings.feeder = loadedConcave
+            elseif loadedFeeder ~= nil then
+                curSettings.feeder = loadedFeeder
+                curSettings.concave = loadedFeeder
+            end
+            if loadedChopLength ~= nil then curSettings.chopLength = loadedChopLength end
+            if loadedKernel ~= nil then curSettings.kernelProcessor = loadedKernel end
+            if loadedBlower ~= nil then curSettings.blower = loadedBlower end
+            if loadedShaking ~= nil then curSettings.shakingIntensity = loadedShaking end
             if loadedTargetLoad ~= nil then curSettings.targetEngineLoad = loadedTargetLoad end
+            
+            local loadedThreshType = readString(cur .. "#threshingType", nil)
+            if loadedThreshType and loadedThreshType ~= "" then
+                spec.threshingType = loadedThreshType
+                if spec.loadCalculator then spec.loadCalculator.threshingType = loadedThreshType end
+            end
         end
 
         local isCalibrated = readBool(cur .. "#isCalibrated", true)
@@ -3996,6 +4107,19 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
                 spec.trip.sessionDuration = streamReadFloat32(streamId)
                 spec.trip.fieldId = streamReadInt32(streamId)
                 spec.trip.lostLiters = streamReadFloat32(streamId)
+                spec.trip.fuelUsedL = streamReadFloat32(streamId)
+                local avgSpd = streamReadFloat32(streamId)
+                local avgLd = streamReadFloat32(streamId)
+                spec.trip.avgSpeedSum = avgSpd
+                spec.trip.avgSpeedCount = 1
+                spec.trip.avgLoadSum = avgLd
+                spec.trip.avgLoadCount = 1
+                spec.trip.reasons = spec.trip.reasons or {}
+                spec.trip.reasons.speed = streamReadFloat32(streamId)
+                spec.trip.reasons.settings = streamReadFloat32(streamId)
+                spec.trip.reasons.moisture = streamReadFloat32(streamId)
+                spec.trip.reasons.wear = streamReadFloat32(streamId)
+                spec.trip.reasons.slope = streamReadFloat32(streamId)
             end
         end
 
@@ -4006,6 +4130,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
             local upperSieve = streamReadUInt8(streamId)
             local lowerSieve = streamReadUInt8(streamId)
             local feeder = streamReadUInt8(streamId)
+            local concave = streamReadUInt8(streamId)
             local targetEngineLoad = streamReadUInt8(streamId)
             local mode = streamReadString(streamId)
             local currentCrop = streamReadString(streamId)
@@ -4017,6 +4142,7 @@ function rhm_Combine:onReadUpdateStream(streamId, timestamp, connection)
                 spec.combineMemory.currentSettings.upperSieve = upperSieve
                 spec.combineMemory.currentSettings.lowerSieve = lowerSieve
                 spec.combineMemory.currentSettings.feeder = feeder
+                spec.combineMemory.currentSettings.concave = concave
                 spec.combineMemory.currentSettings.targetEngineLoad = targetEngineLoad or 80
                 local isTier4 = (spec.packageLevel or 1) >= 4
                 if isTier4 then
@@ -4090,6 +4216,17 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteFloat32(streamId, trip.sessionDuration or 0)
                 streamWriteInt32(streamId, trip.fieldId or 0)
                 streamWriteFloat32(streamId, trip.lostLiters or 0)
+                streamWriteFloat32(streamId, trip.fuelUsedL or 0)
+                local avgSpd = (trip.avgSpeedCount and trip.avgSpeedCount > 0) and (trip.avgSpeedSum / trip.avgSpeedCount) or 0
+                local avgLd = (trip.avgLoadCount and trip.avgLoadCount > 0) and (trip.avgLoadSum / trip.avgLoadCount) or 0
+                streamWriteFloat32(streamId, avgSpd)
+                streamWriteFloat32(streamId, avgLd)
+                local reasons = trip.reasons or {}
+                streamWriteFloat32(streamId, reasons.speed or 0)
+                streamWriteFloat32(streamId, reasons.settings or 0)
+                streamWriteFloat32(streamId, reasons.moisture or 0)
+                streamWriteFloat32(streamId, reasons.wear or 0)
+                streamWriteFloat32(streamId, reasons.slope or 0)
             end
         end
 
@@ -4102,12 +4239,14 @@ function rhm_Combine:onWriteUpdateStream(streamId, connection, dirtyMask)
                 streamWriteUInt8(streamId, mem.currentSettings.upperSieve or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.lowerSieve or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.feeder or 50)
+                streamWriteUInt8(streamId, mem.currentSettings.concave or mem.currentSettings.feeder or 50)
                 streamWriteUInt8(streamId, mem.currentSettings.targetEngineLoad or 80)
                 local isTier4 = (spec.packageLevel or 1) >= 4
                 streamWriteString(streamId, isTier4 and (mem.mode or "MANUAL") or "MANUAL")
                 streamWriteString(streamId, mem.currentCrop or "")
                 streamWriteBool(streamId, mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true or false)
             else
+                streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)
                 streamWriteUInt8(streamId, 50)

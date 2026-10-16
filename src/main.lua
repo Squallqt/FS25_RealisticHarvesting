@@ -268,6 +268,14 @@ local function validateTypes(manager)
                     g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Combine")
                 end
             end
+
+            -- EN: Register rhm_Cutter specialization on all genuine cutters
+            -- UA: Реєструємо спеціалізацію rhm_Cutter на всіх жатках
+            local hasCutter = (Cutter ~= nil and SpecializationUtil.hasSpecialization(Cutter, typeEntry.specializations))
+            local hasTurnOn = (TurnOnVehicle ~= nil and SpecializationUtil.hasSpecialization(TurnOnVehicle, typeEntry.specializations))
+            if hasCutter and hasTurnOn then
+                g_vehicleTypeManager:addSpecialization(typeName, modName .. ".rhm_Cutter")
+            end
         end
     end
 end
