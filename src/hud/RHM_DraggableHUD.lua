@@ -1567,9 +1567,37 @@ function RHMDraggableHUD:buildActiveCells()
             table.insert(cells, {
                 iconName = "area_rate",
                 headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+                headerBadge = "[LIVE]",
+                headerBadgeColor = {0.35, 0.75, 0.98, 0.95},
                 numStr = valStr,
                 unitStr = locAreaUnit,
-                subStr = tripAreaSubStr,
+                subStr = "[LIVE]",
+                subColor = {0.35, 0.75, 0.98, 0.95},
+                color = {0.98, 0.98, 0.98, 1.0}
+            })
+        elseif mode4 == "avgHectaresPerHour" then
+            local avgHa = 0
+            if tripAreaHa > 0.005 and tripDuration > 10 then
+                avgHa = tripAreaHa / (tripDuration / 3600.0)
+            end
+            local dispAvg = avgHa
+            local areaUnit = "ha/h"
+            if RHM_UnitConverter and RHM_UnitConverter.convertArea then
+                local areaVal, areaSuffix = RHM_UnitConverter.convertArea(avgHa, unitSystem)
+                dispAvg = areaVal
+                areaUnit = areaSuffix .. "/h"
+            end
+            local valStr = (avgHa <= 0.05) and "0.0" or string.format("%.1f", dispAvg)
+            local locAreaUnit = rhm_getLocalizedUnit(areaUnit)
+            table.insert(cells, {
+                iconName = "area_rate",
+                headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+                headerBadge = "[AVG]",
+                headerBadgeColor = {0.95, 0.85, 0.12, 1.0},
+                numStr = valStr,
+                unitStr = locAreaUnit,
+                subStr = "[AVG]",
+                subColor = {0.95, 0.85, 0.12, 1.0},
                 color = {0.98, 0.98, 0.98, 1.0}
             })
         elseif mode4 == "tonPerHour" then
@@ -1775,7 +1803,7 @@ function RHMDraggableHUD:buildActiveCells()
         end
     end
 
-    -- ── 7. Cell 7: Area & Work Rate (Session Area + % <-> ha/h) ──────
+    -- ── 7. Cell 7: Area & Work Rate (Session Area <-> Live Rate <-> Avg Rate) ──────
     local mode7 = self.displayModes.cell7 or "area"
     if mode7 == "workRate" then
         local haVal = d.hectaresPerHour or 0
@@ -1786,8 +1814,31 @@ function RHMDraggableHUD:buildActiveCells()
         table.insert(cells, {
             iconName = "area_rate",
             headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+            headerBadge = "[LIVE]",
+            headerBadgeColor = {0.35, 0.75, 0.98, 0.95},
             numStr = valStr,
             unitStr = unitLabel,
+            subStr = "[LIVE]",
+            subColor = {0.35, 0.75, 0.98, 0.95},
+            color = {0.98, 0.98, 0.98, 1.0}
+        })
+    elseif mode7 == "avgWorkRate" then
+        local avgHa = 0
+        if tripAreaHa > 0.005 and tripDuration > 10 then
+            avgHa = tripAreaHa / (tripDuration / 3600.0)
+        end
+        local dispAvg, areaSuffix = RHM_UnitConverter.convertArea(avgHa, unitSystem)
+        local valStr = (avgHa <= 0.05) and "0.0" or string.format("%.1f", dispAvg)
+        local unitLabel = rhm_getLocalizedUnit((areaSuffix or "ha") .. "/h")
+        table.insert(cells, {
+            iconName = "area_rate",
+            headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+            headerBadge = "[AVG]",
+            headerBadgeColor = {0.95, 0.85, 0.12, 1.0},
+            numStr = valStr,
+            unitStr = unitLabel,
+            subStr = "[AVG]",
+            subColor = {0.95, 0.85, 0.12, 1.0},
             color = {0.98, 0.98, 0.98, 1.0}
         })
     else
@@ -1957,6 +2008,8 @@ function RHMDraggableHUD:handleCellClickCompact(clickedCol)
             self.displayModes.cell4 = "tonPerHour"
         elseif curMode == "tonPerHour" then
             self.displayModes.cell4 = "hectaresPerHour"
+        elseif curMode == "hectaresPerHour" then
+            self.displayModes.cell4 = "avgHectaresPerHour"
         else
             self.displayModes.cell4 = "yield"
         end
@@ -2008,7 +2061,13 @@ function RHMDraggableHUD:handleCellClickExpanded(cellIndex)
         handled = true
     elseif cellIndex == 7 then
         local cur = self.displayModes.cell7 or "area"
-        self.displayModes.cell7 = (cur == "area") and "workRate" or "area"
+        if cur == "area" then
+            self.displayModes.cell7 = "workRate"
+        elseif cur == "workRate" then
+            self.displayModes.cell7 = "avgWorkRate"
+        else
+            self.displayModes.cell7 = "area"
+        end
         handled = true
     elseif cellIndex == 8 then
         local cur = self.displayModes.cell8 or "mass"

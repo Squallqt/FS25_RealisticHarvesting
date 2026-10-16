@@ -12,6 +12,8 @@ Changelog 1.6.4.0:
 - IMPROVED: Streamlined Yield Monitor HUD docking hooks with centralized idempotent guards, preventing duplicate render cycles and layout desyncs.
 - FIXED: Harvest History Analytics frame lifecycle refresh rate (250ms cadence) with automated reset handlers on frame open and close.
 - FIXED: Trip telemetry throughput indicator displaying simultaneous session average and instantaneous real-time tons per hour.
+- IMPROVED: Yield Monitor HUD Cell 7 and compact Cell 4 expanded with 3-way click-to-cycle modes (`AREA` <-> `WORK RATE [LIVE]` <-> `WORK RATE [AVG]`), enabling seamless switching between instantaneous cutting throughput and cumulative session average field work rate.
+- ADDED: Cumulative session average work rate (`ha/h`, `ac/h`) display in Trip statistics and public API method `RHM_Api.getAverageHectaresPerHour(vehicle)` for cross-mod parity with in-cab field terminals.
 - FIXED: Dedicated server admin permission detection verifying server admin rights.
 - FIXED: Prevented engine bitwise flag crash during vehicle dirty flag raising with numerical type validation.
 

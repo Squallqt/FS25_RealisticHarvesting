@@ -273,15 +273,22 @@ function RHM_HarvestHistoryTrip:updateData()
     if self.harvestedAreaText then
         self.harvestedAreaText:setText(RHM_UnitConverter.formatArea(areaHa, sys))
     end
+    local durSec = trip.sessionDuration or 0
+    local sessionRateHa = (durSec > 10 and areaHa > 0.005) and (areaHa / (durSec / 3600.0)) or 0
+    local rateStr = ""
+    if sessionRateHa > 0.05 then
+        local rVal, rSuffix = RHM_UnitConverter.convertArea(sessionRateHa, sys)
+        rateStr = string.format(" · %.1f %s/h", rVal, rSuffix or "ha")
+    end
     if self.harvestedAreaSubText then
         if nominalArea > 0.01 then
             local progressPct = math.min(100.0, (areaHa / nominalArea) * 100.0)
             local nominalLabel = (g_i18n and g_i18n:hasText("rhm_fields_nominal_area")) and g_i18n:getText("rhm_fields_nominal_area") or "Nominal Area"
-            self.harvestedAreaSubText:setText(string.format("%s: %s (%.1f%%)", nominalLabel, RHM_UnitConverter.formatArea(nominalArea, sys), progressPct))
+            self.harvestedAreaSubText:setText(string.format("%s: %s (%.1f%%)%s", nominalLabel, RHM_UnitConverter.formatArea(nominalArea, sys), progressPct, rateStr))
         else
             local detailAreaKey = "rhm_detail_area"
             local areaDetailStr = (g_i18n and g_i18n:hasText(detailAreaKey)) and g_i18n:getText(detailAreaKey) or "effective harvested area"
-            self.harvestedAreaSubText:setText(areaDetailStr)
+            self.harvestedAreaSubText:setText(string.format("%s%s", areaDetailStr, rateStr))
         end
     end
     if self.harvestedVolumeText then

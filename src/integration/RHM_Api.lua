@@ -636,6 +636,21 @@ function RHM_Api.getHectaresPerHour(vehicle)
     return 0.0
 end
 
+---EN: Returns cumulative trip session average area productivity rate in hectares per hour (ha/h).
+---UA: Повертає середньозмінну продуктивність поїздки в гектарах за годину (га/год).
+---@param vehicle table|nil
+---@return number avgHectaresPerHour
+function RHM_Api.getAverageHectaresPerHour(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine then
+        local trip = combine.spec_rhm_Combine.trip
+        if trip and (trip.harvestedAreaHa or 0) > 0.005 and (trip.sessionDuration or 0) > 10 then
+            return (trip.harvestedAreaHa) / (trip.sessionDuration / 3600.0)
+        end
+    end
+    return 0.0
+end
+
 ---EN: Returns rolling field yield monitor in metric tonnes per hectare (t/ha).
 ---UA: Повертає середню врожайність поля в тоннах на гектар (т/га).
 ---@param vehicle table|nil
