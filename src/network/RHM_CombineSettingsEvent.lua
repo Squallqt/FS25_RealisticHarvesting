@@ -156,7 +156,9 @@ function RHM_CombineSettingsEvent:run(connection)
                     mem.currentSettings.lowerSieve = math.max(0, math.min(100, self.fullSettings.lowerSieve))
                 end
                 if self.fullSettings.feeder ~= nil then
-                    mem.currentSettings.feeder = math.max(0, math.min(100, self.fullSettings.feeder))
+                    local fVal = math.max(0, math.min(100, self.fullSettings.feeder))
+                    mem.currentSettings.feeder = fVal
+                    mem.currentSettings.concave = fVal
                 end
                 if self.fullSettings.targetEngineLoad ~= nil then
                     mem.currentSettings.targetEngineLoad = math.max(70, math.min(100, self.fullSettings.targetEngineLoad))
@@ -246,7 +248,7 @@ function RHM_CombineSettingsEvent:run(connection)
             rotor = mem.currentSettings.rotor,
             upperSieve = mem.currentSettings.upperSieve,
             lowerSieve = mem.currentSettings.lowerSieve,
-            feeder = mem.currentSettings.feeder,
+            feeder = mem.currentSettings.feeder or mem.currentSettings.concave or 50,
             targetEngineLoad = mem.currentSettings.targetEngineLoad
         }
         local calibrated = mem.calibratedCrops and mem.currentCrop and mem.calibratedCrops[mem.currentCrop] == true
@@ -282,7 +284,9 @@ function RHM_CombineSettingsEvent:run(connection)
                 mem.currentSettings.rotor = self.fullSettings.rotor or mem.currentSettings.rotor
                 mem.currentSettings.upperSieve = self.fullSettings.upperSieve or mem.currentSettings.upperSieve
                 mem.currentSettings.lowerSieve = self.fullSettings.lowerSieve or mem.currentSettings.lowerSieve
-                mem.currentSettings.feeder = self.fullSettings.feeder or mem.currentSettings.feeder
+                local fVal = self.fullSettings.feeder or mem.currentSettings.feeder or mem.currentSettings.concave
+                mem.currentSettings.feeder = fVal
+                mem.currentSettings.concave = fVal
                 mem.currentSettings.targetEngineLoad = self.fullSettings.targetEngineLoad or mem.currentSettings.targetEngineLoad
             end
             mem.currentCrop = self.cropName ~= "" and self.cropName or nil

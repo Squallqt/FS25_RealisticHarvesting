@@ -552,5 +552,12 @@
         <text name="rhm_hud_hdr_throughput" text="DURCHSATZ" />
         <text name="rhm_hud_hdr_avg_yield" text="DURCHSCHN. ERTRAG" />
         <text name="rhm_hud_hdr_volume" text="VOLUMEN" />
+        <!-- Threshing System Badges -->
+        <text name="rhm_threshing_walker" text="Hordenschüttler" />
+        <text name="rhm_threshing_rotor" text="Axialrotor" />
+        <text name="rhm_threshing_hybrid" text="Hybrid APS" />
+        <text name="rhm_threshing_forage" text="Feldhäcksler" />
+        <text name="rhm_threshing_root" text="Rodemaschine" />
+        <text name="rhm_threshing_specialty" text="Spezialerntemaschine" />
     </texts>
 </l10n>

@@ -318,7 +318,9 @@ function RHMSettingsGUI:consoleCommandCombineManual()
     if g_client and not g_server then
         g_client:getServerConnection():sendEvent(RHM_CombineSettingsEvent.new(vehicle, "AUTO_MODE", 0))
     elseif g_server then
-        vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
+        if spec.settingsDirtyFlag and type(spec.settingsDirtyFlag) == "number" then
+            vehicle:raiseDirtyFlags(spec.settingsDirtyFlag)
+        end
     end
     return "[OK] Mode set to MANUAL"
 end

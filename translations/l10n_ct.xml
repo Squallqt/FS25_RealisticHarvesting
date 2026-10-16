@@ -548,5 +548,12 @@
         <text name="rhm_hud_hdr_throughput" text="THROUGHPUT" />
         <text name="rhm_hud_hdr_avg_yield" text="AVG YIELD" />
         <text name="rhm_hud_hdr_volume" text="VOLUME" />
+        <!-- Threshing System Badges -->
+        <text name="rhm_threshing_walker" text="Straw Walker" />
+        <text name="rhm_threshing_rotor" text="Axial Rotor" />
+        <text name="rhm_threshing_hybrid" text="Hybrid APS" />
+        <text name="rhm_threshing_forage" text="Forage Chopper" />
+        <text name="rhm_threshing_root" text="Root Harvester" />
+        <text name="rhm_threshing_specialty" text="Specialty" />
     </texts>
 </l10n>

@@ -13,6 +13,7 @@ Thumbs.db
 .idea/
 .Example/
 .agents/
+.agent/
 scratch/
 
 # Temp files

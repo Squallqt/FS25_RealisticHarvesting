@@ -1223,15 +1223,22 @@ function RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, vehicle)
     -- If position is outside map / outside any farmland, check attached implements (e.g. cutter ahead on field)
     if fmlId <= 0 and vehicle then
         local checkCutters = {}
-        if vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
-            for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            local cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+            for c, _ in pairs(cutters) do
                 table.insert(checkCutters, c)
             end
-        end
-        if vehicle.getAttachedImplements then
-            for _, impl in pairs(vehicle:getAttachedImplements()) do
-                if impl.object and impl.object.spec_cutter then
-                    table.insert(checkCutters, impl.object)
+        else
+            if vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+                for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
+                    table.insert(checkCutters, c)
+                end
+            end
+            if vehicle.getAttachedImplements then
+                for _, impl in pairs(vehicle:getAttachedImplements()) do
+                    if impl.object and impl.object.spec_cutter then
+                        table.insert(checkCutters, impl.object)
+                    end
                 end
             end
         end
@@ -1331,14 +1338,22 @@ function RHM_HarvestTracker.getFieldAtWorldPosition(wx, wz, vehicle)
     end
 
     -- Also check cutter node if combine is provided and fmlId did not find a field
-    if vehicle and vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
-        for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
-            if c.rootNode then
-                local cx, _, cz = getWorldTranslation(c.rootNode)
-                if math.abs(cx - wx) > 0.5 or math.abs(cz - wz) > 0.5 then
-                    local cf, cfid, cfml = RHM_HarvestTracker.getFieldAtWorldPosition(cx, cz, nil)
-                    if cfid and cfid > 0 then
-                        return cf, cfid, cfml
+    if vehicle then
+        local cutters = nil
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+        elseif vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+            cutters = vehicle.spec_combine.attachedCutters
+        end
+        if cutters then
+            for c, _ in pairs(cutters) do
+                if c.rootNode then
+                    local cx, _, cz = getWorldTranslation(c.rootNode)
+                    if math.abs(cx - wx) > 0.5 or math.abs(cz - wz) > 0.5 then
+                        local cf, cfid, cfml = RHM_HarvestTracker.getFieldAtWorldPosition(cx, cz, nil)
+                        if cfid and cfid > 0 then
+                            return cf, cfid, cfml
+                        end
                     end
                 end
             end

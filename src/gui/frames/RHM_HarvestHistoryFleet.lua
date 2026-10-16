@@ -388,10 +388,18 @@ local function getHarvesterWorkingWidth(targetHarv, vehicle)
         widthM = rhmSpec.loadCalculator.lastHeaderWidth
     end
 
-    if widthM <= 0 and targetHarv.spec_combine and targetHarv.spec_combine.attachedCutters then
-        for cutter, _ in pairs(targetHarv.spec_combine.attachedCutters) do
-            local cw = resolveCutterWidth(cutter)
-            if cw > widthM then widthM = cw end
+    if widthM <= 0 then
+        local cutters = nil
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            cutters = rhm_Combine.getAllAttachedCutters(targetHarv)
+        elseif targetHarv.spec_combine and targetHarv.spec_combine.attachedCutters then
+            cutters = targetHarv.spec_combine.attachedCutters
+        end
+        if cutters then
+            for cutter, _ in pairs(cutters) do
+                local cw = resolveCutterWidth(cutter)
+                if cw > widthM then widthM = cw end
+            end
         end
     end
 
@@ -671,8 +679,14 @@ function RHM_HarvestHistoryFleet:updateTables()
 
                     -- Check cutter active attachment state
                     local hasCutterOn = false
-                    if targetHarv.spec_combine and targetHarv.spec_combine.attachedCutters then
-                        for cutter, _ in pairs(targetHarv.spec_combine.attachedCutters) do
+                    local cutters = nil
+                    if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+                        cutters = rhm_Combine.getAllAttachedCutters(targetHarv)
+                    elseif targetHarv.spec_combine and targetHarv.spec_combine.attachedCutters then
+                        cutters = targetHarv.spec_combine.attachedCutters
+                    end
+                    if cutters then
+                        for cutter, _ in pairs(cutters) do
                             if cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
                                 hasCutterOn = true
                                 break

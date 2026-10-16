@@ -13,7 +13,7 @@
 -- ============================================================================
 
 RHM_Api = {}
-RHM_Api.VERSION = "1.6.3.2"
+RHM_Api.VERSION = "1.6.4.0"
 RHM_Api.listeners = {}
 
 -- ============================================================================
@@ -212,6 +212,21 @@ function RHM_Api.getMachineType(vehicle)
         return combine.spec_rhm_Combine.combineMemory.machineType or "grain"
     end
     return "unknown"
+end
+
+---EN: Returns the threshing mechanism type: "walker", "rotor", "hybrid", "forage", "root", or "specialty".
+---UA: Повертає тип молотильної системи: "walker", "rotor", "hybrid", "forage", "root" або "specialty".
+---@param vehicle table|nil
+---@return string threshingType ("walker", "rotor", "hybrid", "forage", "root", "specialty")
+function RHM_Api.getThreshingType(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine then
+        return combine.spec_rhm_Combine.threshingType
+            or (combine.spec_rhm_Combine.combineMemory and combine.spec_rhm_Combine.combineMemory.threshingType)
+            or (combine.spec_rhm_Combine.loadCalculator and combine.spec_rhm_Combine.loadCalculator.threshingType)
+            or "walker"
+    end
+    return "walker"
 end
 
 ---EN: Returns true if target combine is a specialized grape harvester.
@@ -525,8 +540,14 @@ function RHM_Api.getWorkingWidth(vehicle)
     end
 
     local bestWidth = 0
-    if combine.spec_combine and combine.spec_combine.attachedCutters then
-        for cutter, _ in pairs(combine.spec_combine.attachedCutters) do
+    local cutters = nil
+    if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+        cutters = rhm_Combine.getAllAttachedCutters(combine)
+    elseif combine.spec_combine and combine.spec_combine.attachedCutters then
+        cutters = combine.spec_combine.attachedCutters
+    end
+    if cutters then
+        for cutter, _ in pairs(cutters) do
             local cw = resolveObjWidth(cutter)
             if cw > bestWidth then bestWidth = cw end
         end
@@ -617,6 +638,21 @@ function RHM_Api.getHectaresPerHour(vehicle)
         local spec = combine.spec_rhm_Combine
         if not combine.isServer and spec.data then return spec.data.hectaresPerHour or 0.0 end
         return combine.spec_rhm_Combine.loadCalculator:getHectaresPerHour() or 0.0
+    end
+    return 0.0
+end
+
+---EN: Returns cumulative trip session average area productivity rate in hectares per hour (ha/h).
+---UA: Повертає середньозмінну продуктивність поїздки в гектарах за годину (га/год).
+---@param vehicle table|nil
+---@return number avgHectaresPerHour
+function RHM_Api.getAverageHectaresPerHour(vehicle)
+    local combine = RHM_Api.findCombine(vehicle)
+    if combine and combine.spec_rhm_Combine then
+        local trip = combine.spec_rhm_Combine.trip
+        if trip and (trip.harvestedAreaHa or 0) > 0.005 and (trip.sessionDuration or 0) > 10 then
+            return (trip.harvestedAreaHa) / (trip.sessionDuration / 3600.0)
+        end
     end
     return 0.0
 end

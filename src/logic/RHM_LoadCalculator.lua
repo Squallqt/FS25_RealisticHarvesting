@@ -65,6 +65,7 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- Combine RHMSettings System
     self.combineMemory = nil  -- EN: Will be set by rhm_Combine / UA: Буде встановлено з rhm_Combine
+    self.threshingType = "walker" -- EN: Threshing system type (walker, rotor, hybrid, forage, root) / UA: Тип молотильної системи
     self.currentCrop = nil    -- EN: Current crop for loss calc / UA: Поточна культура для розрахунку втрат
     self.lastHarvestingSpeed = nil -- EN: Remembered stable harvesting speed / UA: Запам'ятована швидкість збирання
     self.cropHarvestingSpeeds = {} -- EN: Per-crop remembered harvesting speeds / UA: Запам'ятовані швидкості по культурах
@@ -1001,9 +1002,17 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
         if machineType ~= "forage" and machineType ~= "root" then
             if currentMoisture > moistureLimit then
                 local diff = currentMoisture - moistureLimit
-                local penaltyPerPercent = 0.02 -- 2% difficulty per 1% moisture over limit
+                local penaltyPerPercent = 0.020 -- Default general penalty
+                local threshType = self.threshingType or ((rhmSpec and rhmSpec.threshingType) or "walker")
+                if threshType == "rotor" then
+                    penaltyPerPercent = 0.015 -- Rotor combines maintain continuous rubbing with lower relative surge
+                elseif threshType == "hybrid" then
+                    penaltyPerPercent = 0.017 -- APS tangential drum accelerates damp crop efficiently into rotors
+                elseif threshType == "walker" then
+                    penaltyPerPercent = 0.024 -- Straw walkers struggle with tough, damp, clumped straw mats
+                end
                 if rhmSpec.packageLevel and rhmSpec.packageLevel >= 4 then
-                    penaltyPerPercent = 0.01 -- Opti-Harvest reduces penalty by 50%
+                    penaltyPerPercent = penaltyPerPercent * 0.50 -- Opti-Harvest reduces penalty by 50%
                 end
                 moistureFactor = 1.0 + (diff * penaltyPerPercent)
             end
@@ -1077,10 +1086,24 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
 
     if isCutterActive or isActivelyHarvesting then
         -- Base mechanical & driveline losses:
-        -- Modern grain / forage combines: ~8% (efficient hydrostatic & variable transmissions)
+        -- Modern grain straw walker combines: ~8% (efficient belt/chain drives)
+        -- Axial rotary combines: ~11% (heavy rotor mass, high inertia, bevel gearboxes)
+        -- Hybrid combines (APS + rotors): ~9.5%
         -- Heavy hydrostatic root crop harvesters: ~10%
+        -- High-inertia forage harvesters: ~9%
+        local threshType = self.threshingType or ((rhmSpec and rhmSpec.threshingType) or "walker")
         if machineType == "root" then
             pBase = effectiveEngineHp * 0.10
+        elseif machineType == "forage" then
+            pBase = effectiveEngineHp * 0.09
+        elseif machineType == "grain" then
+            if threshType == "rotor" then
+                pBase = effectiveEngineHp * 0.11
+            elseif threshType == "hybrid" then
+                pBase = effectiveEngineHp * 0.095
+            else
+                pBase = effectiveEngineHp * 0.08
+            end
         else
             pBase = effectiveEngineHp * 0.08
         end
@@ -1228,15 +1251,23 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
             end
             if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
                 width = vehicle.spec_cutter.workingWidth
-            elseif width == 0 and vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
-                for cutter, _ in pairs(vehicle.spec_combine.attachedCutters) do
-                    if cutter.getWorkingWidth then
-                        local w = cutter:getWorkingWidth()
-                        if w and w > 0 then width = w break end
-                    end
-                    if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
-                        width = cutter.spec_cutter.workingWidth
-                        break
+            elseif width == 0 then
+                local cutters = nil
+                if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+                    cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+                elseif vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+                    cutters = vehicle.spec_combine.attachedCutters
+                end
+                if cutters then
+                    for cutter, _ in pairs(cutters) do
+                        if cutter.getWorkingWidth then
+                            local w = cutter:getWorkingWidth()
+                            if w and w > 0 then width = w break end
+                        end
+                        if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
+                            width = cutter.spec_cutter.workingWidth
+                            break
+                        end
                     end
                 end
             end
@@ -1908,8 +1939,14 @@ function RHM_LoadCalculator:calculateWearLoss(vehicle)
         -- Find attached cutter damage
         local spec_combine = vehicle.spec_combine
         local spec_cutter = vehicle.spec_cutter
-        if spec_combine and spec_combine.attachedCutters then
-            for cutter, _ in pairs(spec_combine.attachedCutters) do
+        local cutters = nil
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+        elseif spec_combine and spec_combine.attachedCutters then
+            cutters = spec_combine.attachedCutters
+        end
+        if cutters then
+            for cutter, _ in pairs(cutters) do
                 if cutter and cutter.getDamageAmount then
                     cutterDamage = math.max(cutterDamage, cutter:getDamageAmount() or 0)
                 end
@@ -2027,11 +2064,27 @@ function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
             currentMoisture = vehicle.spec_rhm_Combine.data.moisture or 0
         end
 
-        if currentMoisture > 14.0 then
-            -- Standard safe threshold: 14% moisture
-            -- For every 1% above 14%, separator losses increase by 0.35% due to wet straw matting
-            local excessMoisture = currentMoisture - 14.0
-            moistureLoss = math.min(8.0, excessMoisture * 0.35)
+        local moistureLimit = 14.0
+        if RHM_CombineSettingsDatabase and self.currentCrop then
+            local cropSettings = RHM_CombineSettingsDatabase:getSettingsForCrop(self.currentCrop)
+            if cropSettings and cropSettings.moistureLimit then
+                moistureLimit = cropSettings.moistureLimit
+            end
+        end
+
+        if currentMoisture > moistureLimit then
+            -- Excess moisture above safe threshing limit
+            local excessMoisture = currentMoisture - moistureLimit
+            local moistureLossRate = 0.35
+            local threshType = self.threshingType or (vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.threshingType) or "walker"
+            if threshType == "rotor" then
+                moistureLossRate = 0.25 -- Centrifugal force separates damp crop effectively
+            elseif threshType == "hybrid" then
+                moistureLossRate = 0.28 -- Tangential pre-accelerator drum thins straw mat
+            elseif threshType == "walker" then
+                moistureLossRate = 0.45 -- Wet straw mats clump on walkers, carrying unseparated grain out the rear
+            end
+            moistureLoss = math.min(8.0, excessMoisture * moistureLossRate)
         end
 
         -- Extra wet weather penalty if actively raining

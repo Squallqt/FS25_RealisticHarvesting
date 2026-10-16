@@ -20,11 +20,12 @@ RHM_CombineMemory.getEnvironmentContext = getEnvironmentContext
 --     Initializes all parameters to 50% and sets AUTO mode as default.
 -- UA: Створює новий екземпляр RHM_CombineMemory, прив'язаний до конкретного комбайна.
 --     Ініціалізує всі параметри до 50% та встановлює AUTO як режим за замовчуванням.
-function RHM_CombineMemory.new(combine, machineType)
+function RHM_CombineMemory.new(combine, machineType, threshingType)
     local self = setmetatable({}, CombineMemory_mt)
 
     self.combine = combine
     self.machineType = machineType or "grain"
+    self.threshingType = threshingType or "walker"
 
     self.currentProfile = nil -- EN: Name of the currently active profile / UA: Назва поточного активного профілю
     self.currentCrop = nil    -- EN: Currently detected crop name / UA: Поточна визначена культура
@@ -683,8 +684,8 @@ function RHM_CombineMemory:checkSettingsForCrop(cropName, context, returnWarning
                     effParamCount = effParamCount + 0.5
                     lossParamCount = lossParamCount + 0.5
                 end
-            elseif param == "rotor" or param == "concave" then
-                -- EN: GRAIN: rotor/concave control threshing → primarily efficiency
+            elseif param == "rotor" or param == "concave" or param == "feeder" then
+                -- EN: GRAIN: rotor/concave/feeder control threshing & intake → primarily efficiency
                 efficiencyScore = efficiencyScore + score
                 effParamCount = effParamCount + 1
             elseif param == "fan" or param == "upperSieve" or param == "lowerSieve" then
@@ -726,13 +727,27 @@ end
 -- EN: Sets a single parameter value (0-100) and switches to MANUAL mode.
 -- UA: Встановлює значення одного параметру (0-100) і перемикає в MANUAL режим.
 function RHM_CombineMemory:setParameter(paramName, value)
-    if self.currentSettings[paramName] ~= nil then
+    -- Symmetrical concave / feeder mapping for grain combine clearance
+    local altParam = nil
+    if paramName == "concave" and self.currentSettings["feeder"] ~= nil then
+        altParam = "feeder"
+    elseif paramName == "feeder" and self.currentSettings["concave"] ~= nil then
+        altParam = "concave"
+    end
+
+    if self.currentSettings[paramName] ~= nil or (altParam and self.currentSettings[altParam] ~= nil) then
         self.aiTunedCrop = nil
         if paramName == "targetEngineLoad" then
             self.currentSettings[paramName] = math.max(70, math.min(100, value))
             return true
         end
-        self.currentSettings[paramName] = math.max(0, math.min(100, value))
+        local clamped = math.max(0, math.min(100, value))
+        if self.currentSettings[paramName] ~= nil then
+            self.currentSettings[paramName] = clamped
+        end
+        if altParam and self.currentSettings[altParam] ~= nil then
+            self.currentSettings[altParam] = clamped
+        end
         self.mode = "MANUAL" -- EN: Any manual change overrides AUTO mode / UA: Будь-яка ручна зміна скасовує AUTO режим
         self.hasManualTuning = true
         self.manualTunedCrop = self.currentCrop

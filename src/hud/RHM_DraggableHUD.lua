@@ -212,9 +212,6 @@ local rhm_extraPrintCountThisFrame = 0
 local rhm_lastExtraPrintCount = 0
 
 local function rhm_initHudHooks()
-    if rhm_hooksInitialized then return end
-    rhm_hooksInitialized = true
-
     -- Prepend to Mission00.draw / FSBaseMission.draw to increment frame counter and intercept extra print texts
     local function rhm_onPreDraw(mission)
         rhm_currentDrawFrame = rhm_currentDrawFrame + 1
@@ -229,15 +226,21 @@ local function rhm_initHudHooks()
         rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
         rhm_extraPrintCountThisFrame = 0
     end
-    if Mission00 and Mission00.draw then
-        Mission00.draw = Utils.prependedFunction(Mission00.draw, rhm_onPreDraw)
-    end
-    if FSBaseMission and FSBaseMission.draw then
-        FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, rhm_onPreDraw)
+
+    if not RHMDraggableHUD.mission00Hooked then
+        if Mission00 and Mission00.draw then
+            RHMDraggableHUD.mission00Hooked = true
+            Mission00.draw = Utils.prependedFunction(Mission00.draw, rhm_onPreDraw)
+        end
+        if FSBaseMission and FSBaseMission.draw then
+            RHMDraggableHUD.mission00Hooked = true
+            FSBaseMission.draw = Utils.prependedFunction(FSBaseMission.draw, rhm_onPreDraw)
+        end
     end
 
     -- Hook auxiliary combine telemetry HUD extension for dynamic docking
-    if ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+    if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
+        RHMDraggableHUD.pfHooked = true
         ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(self, superFunc, inputHelpDisplay, posX, posY)
             local ret = superFunc(self, inputHelpDisplay, posX, posY)
             self.rhm_lastBottomY = (self.backgroundBottom and self.backgroundBottom.y) or ret
@@ -247,6 +250,10 @@ local function rhm_initHudHooks()
             return ret
         end)
     end
+
+    if rhm_hooksInitialized then return end
+    if not InputHelpDisplay then return end
+    rhm_hooksInitialized = true
 
     -- Hook InputHelpDisplay main draw to capture active instance, count pending extra texts, and track baseline bottom Y
     if InputHelpDisplay and InputHelpDisplay.draw then
@@ -408,24 +415,6 @@ end
 function RHMDraggableHUD:getDockedPosition()
     rhm_initHudHooks()
 
-    -- Lazy hook Mission00.draw once mission is created
-    if not RHMDraggableHUD.mission00Hooked and Mission00 and Mission00.draw then
-        RHMDraggableHUD.mission00Hooked = true
-        Mission00.draw = Utils.prependedFunction(Mission00.draw, function(mission)
-            rhm_currentDrawFrame = rhm_currentDrawFrame + 1
-            if mission and not mission.rhm_extraPrintHooked and mission.addExtraPrintText then
-                mission.rhm_extraPrintHooked = true
-                local origAddExtra = mission.addExtraPrintText
-                mission.addExtraPrintText = function(mSelf, text, ...)
-                    rhm_extraPrintCountThisFrame = rhm_extraPrintCountThisFrame + 1
-                    return origAddExtra(mSelf, text, ...)
-                end
-            end
-            rhm_lastExtraPrintCount = rhm_extraPrintCountThisFrame
-            rhm_extraPrintCountThisFrame = 0
-        end)
-    end
-
     local uiScale = self.uiScale or 1.0
     local defaultX = 0.016 * uiScale
     local defaultW = 0.176 * uiScale
@@ -435,19 +424,6 @@ function RHMDraggableHUD:getDockedPosition()
 
     local chX = (ch and ch.lineBg and ch.lineBg.x) or (ch and ch.getX and ch:getX()) or (ch and ch.x) or defaultX
     local chW = (ch and ch.lineBg and ch.lineBg.width) or (ch and ch.getWidth and ch:getWidth()) or (ch and ch.width) or defaultW
-
-    -- Lazy hook auxiliary combine telemetry HUD extension if loaded dynamically
-    if not RHMDraggableHUD.pfHooked and ExtendedCombineHUDExtension and ExtendedCombineHUDExtension.draw then
-        RHMDraggableHUD.pfHooked = true
-        ExtendedCombineHUDExtension.draw = Utils.overwrittenFunction(ExtendedCombineHUDExtension.draw, function(extSelf, superFunc, inputHelpDisplay, posX, posY)
-            local ret = superFunc(extSelf, inputHelpDisplay, posX, posY)
-            extSelf.rhm_lastBottomY = (extSelf.backgroundBottom and extSelf.backgroundBottom.y) or ret
-            extSelf.rhm_lastBottomX = (extSelf.backgroundBottom and extSelf.backgroundBottom.x) or posX
-            extSelf.rhm_lastWidth = extSelf.displayWidth
-            extSelf.rhm_lastDrawFrame = rhm_currentDrawFrame
-            return ret
-        end)
-    end
 
     local currentVeh = self.vehicle or (g_currentMission and g_currentMission.controlledVehicle)
 
@@ -624,7 +600,12 @@ function RHMDraggableHUD:setVehicle(vehicle)
             self.data.targetSpeed      = (vData and (vData.targetSpeed or vData.recommendedSpeed)) or 0
             self.data.moisture         = (vData and vData.moisture) or 0
             self.data.hectaresPerHour  = (vData and vData.hectaresPerHour) or 0
-            self.data.speed            = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+            local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle)) or vehicle
+            local vSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+            if vSpeed < 0.2 and carrier and carrier.getLastSpeed then
+                vSpeed = carrier:getLastSpeed()
+            end
+            self.data.speed            = vSpeed
             self.data.weedRatio        = (vData and vData.weedRatio) or 0
 
             for k, v in pairs(self.data) do
@@ -663,7 +644,12 @@ function RHMDraggableHUD:update(dt)
     self.data.targetSpeed      = spec.data.targetSpeed or spec.data.recommendedSpeed or 0
     self.data.moisture         = spec.data.moisture or 0
     self.data.hectaresPerHour  = spec.data.hectaresPerHour or 0
-    self.data.speed            = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+    local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle)) or vehicle
+    local vSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+    if vSpeed < 0.2 and carrier and carrier.getLastSpeed then
+        vSpeed = carrier:getLastSpeed()
+    end
+    self.data.speed            = vSpeed
     self.data.weedRatio        = spec.data.weedRatio or 0
 
     if not self.displayData then
@@ -1591,9 +1577,37 @@ function RHMDraggableHUD:buildActiveCells()
             table.insert(cells, {
                 iconName = "area_rate",
                 headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+                headerBadge = "[LIVE]",
+                headerBadgeColor = {0.35, 0.75, 0.98, 0.95},
                 numStr = valStr,
                 unitStr = locAreaUnit,
-                subStr = tripAreaSubStr,
+                subStr = "[LIVE]",
+                subColor = {0.35, 0.75, 0.98, 0.95},
+                color = {0.98, 0.98, 0.98, 1.0}
+            })
+        elseif mode4 == "avgHectaresPerHour" then
+            local avgHa = 0
+            if tripAreaHa > 0.005 and tripDuration > 10 then
+                avgHa = tripAreaHa / (tripDuration / 3600.0)
+            end
+            local dispAvg = avgHa
+            local areaUnit = "ha/h"
+            if RHM_UnitConverter and RHM_UnitConverter.convertArea then
+                local areaVal, areaSuffix = RHM_UnitConverter.convertArea(avgHa, unitSystem)
+                dispAvg = areaVal
+                areaUnit = areaSuffix .. "/h"
+            end
+            local valStr = (avgHa <= 0.05) and "0.0" or string.format("%.1f", dispAvg)
+            local locAreaUnit = rhm_getLocalizedUnit(areaUnit)
+            table.insert(cells, {
+                iconName = "area_rate",
+                headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+                headerBadge = "[AVG]",
+                headerBadgeColor = {0.95, 0.85, 0.12, 1.0},
+                numStr = valStr,
+                unitStr = locAreaUnit,
+                subStr = "[AVG]",
+                subColor = {0.95, 0.85, 0.12, 1.0},
                 color = {0.98, 0.98, 0.98, 1.0}
             })
         elseif mode4 == "tonPerHour" then
@@ -1799,7 +1813,7 @@ function RHMDraggableHUD:buildActiveCells()
         end
     end
 
-    -- ── 7. Cell 7: Area & Work Rate (Session Area + % <-> ha/h) ──────
+    -- ── 7. Cell 7: Area & Work Rate (Session Area <-> Live Rate <-> Avg Rate) ──────
     local mode7 = self.displayModes.cell7 or "area"
     if mode7 == "workRate" then
         local haVal = d.hectaresPerHour or 0
@@ -1810,8 +1824,31 @@ function RHMDraggableHUD:buildActiveCells()
         table.insert(cells, {
             iconName = "area_rate",
             headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+            headerBadge = "[LIVE]",
+            headerBadgeColor = {0.35, 0.75, 0.98, 0.95},
             numStr = valStr,
             unitStr = unitLabel,
+            subStr = "[LIVE]",
+            subColor = {0.35, 0.75, 0.98, 0.95},
+            color = {0.98, 0.98, 0.98, 1.0}
+        })
+    elseif mode7 == "avgWorkRate" then
+        local avgHa = 0
+        if tripAreaHa > 0.005 and tripDuration > 10 then
+            avgHa = tripAreaHa / (tripDuration / 3600.0)
+        end
+        local dispAvg, areaSuffix = RHM_UnitConverter.convertArea(avgHa, unitSystem)
+        local valStr = (avgHa <= 0.05) and "0.0" or string.format("%.1f", dispAvg)
+        local unitLabel = rhm_getLocalizedUnit((areaSuffix or "ha") .. "/h")
+        table.insert(cells, {
+            iconName = "area_rate",
+            headerStr = rhm_getText("rhm_hud_hdr_area_rate", "WORK RATE"),
+            headerBadge = "[AVG]",
+            headerBadgeColor = {0.95, 0.85, 0.12, 1.0},
+            numStr = valStr,
+            unitStr = unitLabel,
+            subStr = "[AVG]",
+            subColor = {0.95, 0.85, 0.12, 1.0},
             color = {0.98, 0.98, 0.98, 1.0}
         })
     else
@@ -1981,6 +2018,8 @@ function RHMDraggableHUD:handleCellClickCompact(clickedCol)
             self.displayModes.cell4 = "tonPerHour"
         elseif curMode == "tonPerHour" then
             self.displayModes.cell4 = "hectaresPerHour"
+        elseif curMode == "hectaresPerHour" then
+            self.displayModes.cell4 = "avgHectaresPerHour"
         else
             self.displayModes.cell4 = "yield"
         end
@@ -2032,7 +2071,13 @@ function RHMDraggableHUD:handleCellClickExpanded(cellIndex)
         handled = true
     elseif cellIndex == 7 then
         local cur = self.displayModes.cell7 or "area"
-        self.displayModes.cell7 = (cur == "area") and "workRate" or "area"
+        if cur == "area" then
+            self.displayModes.cell7 = "workRate"
+        elseif cur == "workRate" then
+            self.displayModes.cell7 = "avgWorkRate"
+        else
+            self.displayModes.cell7 = "area"
+        end
         handled = true
     elseif cellIndex == 8 then
         local cur = self.displayModes.cell8 or "mass"

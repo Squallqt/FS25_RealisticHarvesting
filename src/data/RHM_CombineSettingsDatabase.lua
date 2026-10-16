@@ -1571,30 +1571,37 @@ function RHM_CombineSettingsDatabase:getCropNamesForMachineType(machineType, veh
     local hasAttachedCutter = false
     if vehicle then
         local cutters = {}
-        -- 3a. Integrated cutter directly on vehicle (e.g. grape/olive/cotton harvesters, self-propelled root harvesters)
-        if vehicle.spec_cutter then
-            table.insert(cutters, vehicle)
-        end
-        -- 3b. Attached cutters registered on spec_combine
-        if vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
-            for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            local map = rhm_Combine.getAllAttachedCutters(vehicle)
+            for c, _ in pairs(map) do
                 table.insert(cutters, c)
             end
-        end
-        -- 3c. Attached implements and sub-implements
-        local function collectCutters(veh, depth)
-            if not veh or not veh.getAttachedImplements or depth > 3 then return end
-            for _, impl in pairs(veh:getAttachedImplements()) do
-                local obj = impl.object
-                if obj then
-                    if obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter or obj.spec_pickup then
-                        table.insert(cutters, obj)
-                    end
-                    collectCutters(obj, depth + 1)
+        else
+            -- 3a. Integrated cutter directly on vehicle (e.g. grape/olive/cotton harvesters, self-propelled root harvesters)
+            if vehicle.spec_cutter then
+                table.insert(cutters, vehicle)
+            end
+            -- 3b. Attached cutters registered on spec_combine
+            if vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+                for c, _ in pairs(vehicle.spec_combine.attachedCutters) do
+                    table.insert(cutters, c)
                 end
             end
+            -- 3c. Attached implements and sub-implements
+            local function collectCutters(veh, depth)
+                if not veh or not veh.getAttachedImplements or depth > 3 then return end
+                for _, impl in pairs(veh:getAttachedImplements()) do
+                    local obj = impl.object
+                    if obj then
+                        if obj.spec_cutter or obj.spec_forageHarvesterCutter or obj.spec_forageCutter or obj.spec_pickup then
+                            table.insert(cutters, obj)
+                        end
+                        collectCutters(obj, depth + 1)
+                    end
+                end
+            end
+            collectCutters(vehicle, 1)
         end
-        collectCutters(vehicle, 1)
 
         -- Extract fruitTypes from all detected cutters
         for _, cutter in ipairs(cutters) do

@@ -550,5 +550,12 @@
         <text name="rhm_hud_hdr_throughput" text="RENDIMENTO" />
         <text name="rhm_hud_hdr_avg_yield" text="PRODUTIV. MÉDIA" />
         <text name="rhm_hud_hdr_volume" text="VOLUME" />
+        <!-- Threshing System Badges -->
+        <text name="rhm_threshing_walker" text="Saca-palhas" />
+        <text name="rhm_threshing_rotor" text="Rotor axial" />
+        <text name="rhm_threshing_hybrid" text="Híbrido APS" />
+        <text name="rhm_threshing_forage" text="Colhedora de forragem" />
+        <text name="rhm_threshing_root" text="Colhedora de raízes" />
+        <text name="rhm_threshing_specialty" text="Especializada" />
     </texts>
 </l10n>

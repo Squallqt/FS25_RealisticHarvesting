@@ -21,11 +21,22 @@ end
 
 function RHM_HarvestHistoryAnalytics:onFrameOpen()
     RHM_HarvestHistoryAnalytics:superClass().onFrameOpen(self)
+    self.refreshTimer = 0
     self:updateData()
 end
 
 function RHM_HarvestHistoryAnalytics:onFrameClose()
     RHM_HarvestHistoryAnalytics:superClass().onFrameClose(self)
+    self.refreshTimer = 0
+end
+
+function RHM_HarvestHistoryAnalytics:update(dt)
+    RHM_HarvestHistoryAnalytics:superClass().update(self, dt)
+    self.refreshTimer = (self.refreshTimer or 0) + dt
+    if self.refreshTimer >= 250 then
+        self.refreshTimer = 0
+        self:updateData()
+    end
 end
 
 function RHM_HarvestHistoryAnalytics:getActiveTrip()
