@@ -740,10 +740,18 @@ function RHMCombineCalibrationGUI:draw()
         cutterWidth = spec.loadCalculator.lastHeaderWidth
     end
 
-    if cutterWidth == 0 and v and v.spec_combine and v.spec_combine.attachedCutters then
-        for cutter, _ in pairs(v.spec_combine.attachedCutters) do
-            local cw = resolveCutterWidth(cutter)
-            if cw > cutterWidth then cutterWidth = cw end
+    if cutterWidth == 0 and v then
+        local cutters = nil
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            cutters = rhm_Combine.getAllAttachedCutters(v)
+        elseif v.spec_combine and v.spec_combine.attachedCutters then
+            cutters = v.spec_combine.attachedCutters
+        end
+        if cutters then
+            for cutter, _ in pairs(cutters) do
+                local cw = resolveCutterWidth(cutter)
+                if cw > cutterWidth then cutterWidth = cw end
+            end
         end
     end
 

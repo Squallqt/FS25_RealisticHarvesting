@@ -224,7 +224,7 @@ function RHM_DiagnosticTool:update(dt)
             local cutterWidth = 0
             local cutterLowered = false
             local cutterTurnedOn = false
-            local cutters = veh.spec_combine and veh.spec_combine.attachedCutters
+            local cutters = (rhm_Combine and rhm_Combine.getAllAttachedCutters and rhm_Combine.getAllAttachedCutters(veh)) or (veh.spec_combine and veh.spec_combine.attachedCutters)
             if cutters then
                 for cutter, _ in pairs(cutters) do
                     if cutter.getWorkingWidth then

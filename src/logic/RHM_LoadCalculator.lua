@@ -1251,15 +1251,23 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
             end
             if width == 0 and vehicle.spec_cutter and vehicle.spec_cutter.workingWidth then
                 width = vehicle.spec_cutter.workingWidth
-            elseif width == 0 and vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
-                for cutter, _ in pairs(vehicle.spec_combine.attachedCutters) do
-                    if cutter.getWorkingWidth then
-                        local w = cutter:getWorkingWidth()
-                        if w and w > 0 then width = w break end
-                    end
-                    if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
-                        width = cutter.spec_cutter.workingWidth
-                        break
+            elseif width == 0 then
+                local cutters = nil
+                if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+                    cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+                elseif vehicle.spec_combine and vehicle.spec_combine.attachedCutters then
+                    cutters = vehicle.spec_combine.attachedCutters
+                end
+                if cutters then
+                    for cutter, _ in pairs(cutters) do
+                        if cutter.getWorkingWidth then
+                            local w = cutter:getWorkingWidth()
+                            if w and w > 0 then width = w break end
+                        end
+                        if cutter.spec_cutter and cutter.spec_cutter.workingWidth then
+                            width = cutter.spec_cutter.workingWidth
+                            break
+                        end
                     end
                 end
             end
@@ -1931,8 +1939,14 @@ function RHM_LoadCalculator:calculateWearLoss(vehicle)
         -- Find attached cutter damage
         local spec_combine = vehicle.spec_combine
         local spec_cutter = vehicle.spec_cutter
-        if spec_combine and spec_combine.attachedCutters then
-            for cutter, _ in pairs(spec_combine.attachedCutters) do
+        local cutters = nil
+        if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+            cutters = rhm_Combine.getAllAttachedCutters(vehicle, vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine._attachedCuttersBuffer)
+        elseif spec_combine and spec_combine.attachedCutters then
+            cutters = spec_combine.attachedCutters
+        end
+        if cutters then
+            for cutter, _ in pairs(cutters) do
                 if cutter and cutter.getDamageAmount then
                     cutterDamage = math.max(cutterDamage, cutter:getDamageAmount() or 0)
                 end

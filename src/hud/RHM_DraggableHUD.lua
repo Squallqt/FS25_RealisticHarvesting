@@ -600,7 +600,12 @@ function RHMDraggableHUD:setVehicle(vehicle)
             self.data.targetSpeed      = (vData and (vData.targetSpeed or vData.recommendedSpeed)) or 0
             self.data.moisture         = (vData and vData.moisture) or 0
             self.data.hectaresPerHour  = (vData and vData.hectaresPerHour) or 0
-            self.data.speed            = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+            local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle)) or vehicle
+            local vSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+            if vSpeed < 0.2 and carrier and carrier.getLastSpeed then
+                vSpeed = carrier:getLastSpeed()
+            end
+            self.data.speed            = vSpeed
             self.data.weedRatio        = (vData and vData.weedRatio) or 0
 
             for k, v in pairs(self.data) do
@@ -639,7 +644,12 @@ function RHMDraggableHUD:update(dt)
     self.data.targetSpeed      = spec.data.targetSpeed or spec.data.recommendedSpeed or 0
     self.data.moisture         = spec.data.moisture or 0
     self.data.hectaresPerHour  = spec.data.hectaresPerHour or 0
-    self.data.speed            = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+    local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle)) or vehicle
+    local vSpeed = (vehicle.getLastSpeed and vehicle:getLastSpeed()) or 0
+    if vSpeed < 0.2 and carrier and carrier.getLastSpeed then
+        vSpeed = carrier:getLastSpeed()
+    end
+    self.data.speed            = vSpeed
     self.data.weedRatio        = spec.data.weedRatio or 0
 
     if not self.displayData then

@@ -79,6 +79,12 @@ function rhm_Cutter:updateIndependentLaunchState(attacherVehicle)
             isAttachedToCombine = true
         end
     end
+    if not isAttachedToCombine and carrier and RHM_Api and RHM_Api.findCombine then
+        local combine = RHM_Api.findCombine(carrier)
+        if combine ~= nil and (combine.spec_rhm_Combine ~= nil or combine.spec_combine ~= nil) then
+            isAttachedToCombine = true
+        end
+    end
 
     if isIndependentLaunchEnabled and isAttachedToCombine then
         self.spec_turnOnVehicle.turnedOnByAttacherVehicle = false

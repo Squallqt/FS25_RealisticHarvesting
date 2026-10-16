@@ -228,8 +228,14 @@ function RHM_HarvestHistoryTrip:updateData()
         local statusLabel = ""
         local hasCutterOn = false
         if activeCombine then
-            if activeCombine.spec_combine and activeCombine.spec_combine.attachedCutters then
-                for cutter, _ in pairs(activeCombine.spec_combine.attachedCutters) do
+            local cutters = nil
+            if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+                cutters = rhm_Combine.getAllAttachedCutters(activeCombine)
+            elseif activeCombine.spec_combine and activeCombine.spec_combine.attachedCutters then
+                cutters = activeCombine.spec_combine.attachedCutters
+            end
+            if cutters then
+                for cutter, _ in pairs(cutters) do
                     if cutter.getIsTurnedOn and cutter:getIsTurnedOn() then
                         hasCutterOn = true
                         break

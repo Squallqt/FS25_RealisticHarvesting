@@ -540,8 +540,14 @@ function RHM_Api.getWorkingWidth(vehicle)
     end
 
     local bestWidth = 0
-    if combine.spec_combine and combine.spec_combine.attachedCutters then
-        for cutter, _ in pairs(combine.spec_combine.attachedCutters) do
+    local cutters = nil
+    if rhm_Combine and rhm_Combine.getAllAttachedCutters then
+        cutters = rhm_Combine.getAllAttachedCutters(combine)
+    elseif combine.spec_combine and combine.spec_combine.attachedCutters then
+        cutters = combine.spec_combine.attachedCutters
+    end
+    if cutters then
+        for cutter, _ in pairs(cutters) do
             local cw = resolveObjWidth(cutter)
             if cw > bestWidth then bestWidth = cw end
         end
