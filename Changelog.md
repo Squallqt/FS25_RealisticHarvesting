@@ -1,12 +1,10 @@
 # Realistic Harvesting - Changelog
 
 Changelog 1.6.4.1:
-- FIXED: Harvester calibration hotkeys (Shift+K), HUD toggle (Shift+H), and Harvest Diary (Shift+J) response when attached implements (headers/cutters) are selected in the vehicle tool chain via native interaction and activation flags.
-- FIXED: Modular harvesters and system carriers (NEXAT / NEXCO) threshing system classification: the NEXCO combine module is now accurately recognized and displayed as Axial Rotor instead of falling back to straw walkers.
+- FIXED: Harvester calibration terminal (Shift+K) vehicle switching desynchronization, preventing previous machine profile and electronics tier from persisting when switching between combines and carriers.
+- FIXED: Header and cutter implement selection hotkey responsiveness on modular carrier harvesters, ensuring calibration terminal, HUD toggle, and harvest diary open reliably regardless of whether the carrier or attached implement is selected in the tool chain.
 - FIXED: Live harvest telemetry, speed regulation, and header lowering detection on modular multi-vehicle and gantry harvesting platforms where cutters are mounted to the motorized carrier rather than the threshing module directly.
-- FIXED: Combine classification persistence protecting detected axial rotor and hybrid configurations from legacy savegame fallback states.
-- IMPROVED: Expanded automatic combine classification for modded and serial grain harvesters, adding support for Torum, Gleaner, Tribine, New Holland CH Crossover, Case IH AF series, and classic conventional harvesters.
-- IMPROVED: Deep 3D model node inspection (i3dMappings) for custom modded combines that lack standard animation tags, ensuring machines with physical rotor or axial components are reliably identified.
+- IMPROVED: Unified conventional grain combine threshing classification into a robust, standardized grain processing model, eliminating XML animation node parsing warnings and standardizing power balance and separator drag.
 - IMPROVED: Yield Monitor HUD Cell 7 and compact Cell 4 expanded with 3-way click-to-cycle modes (`AREA` <-> `WORK RATE [LIVE]` <-> `WORK RATE [AVG]`), enabling seamless switching between instantaneous cutting throughput and cumulative session average field work rate.
 - ADDED: Cumulative session average work rate (`ha/h`, `ac/h`) display in Trip statistics and public API method `RHM_Api.getAverageHectaresPerHour(vehicle)` for cross-mod parity with in-cab field terminals.
 

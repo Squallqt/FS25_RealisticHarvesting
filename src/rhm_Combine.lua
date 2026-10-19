@@ -106,7 +106,7 @@ function rhm_Combine.registerXMLPaths(schema, basePath)
     schema:register(XMLValueType.INT,    cur .. "#rotor",           "Rotor", 50)
     schema:register(XMLValueType.INT,    cur .. "#feeder",          "Feeder", 50)
     schema:register(XMLValueType.INT,    cur .. "#concave",         "Concave clearance", 50)
-    schema:register(XMLValueType.STRING, cur .. "#threshingType",   "Threshing system type", "walker")
+    schema:register(XMLValueType.STRING, cur .. "#threshingType",   "Threshing system type", "grain")
     schema:register(XMLValueType.INT,    cur .. "#chopLength",      "Forage chop length", 50)
     schema:register(XMLValueType.INT,    cur .. "#kernelProcessor", "Kernel processor clearance", 50)
     schema:register(XMLValueType.INT,    cur .. "#blower",          "Discharge blower accelerator", 50)
@@ -197,22 +197,7 @@ end
 
 local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isActiveForInputIgnoreSelection)
     -- Skip if this is already a combine with our spec (handled by rhm_Combine:onRegisterActionEvents)
-    if not vehicle or vehicle.spec_rhm_Combine then
-        return
-    end
-    
-    -- Only register if the player is actively in this vehicle (even if an automated driver is active)
-    local canRegister = isActiveForInputIgnoreSelection
-        or vehicle.isActiveForInputIgnoreSelectionIgnoreAI
-        or (vehicle.getIsEntered and vehicle:getIsEntered())
-        or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
-
-    if not canRegister then
-        return
-    end
-    
-    -- Only on client
-    if not vehicle.isClient then
+    if not vehicle or vehicle.spec_rhm_Combine or not vehicle.isClient then
         return
     end
 
@@ -221,14 +206,36 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
         return
     end
     vehicle._rhmActionEventsFrame = currentFrame
+
+    -- Clear existing action events table for non-combine vehicle first
+    if vehicle._rhmActionEvents then
+        vehicle:clearActionEventsTable(vehicle._rhmActionEvents)
+    end
+    
+    local root = (vehicle.getRootVehicle and vehicle:getRootVehicle()) or vehicle.rootVehicle or vehicle
+    local isEntered = (vehicle.getIsEntered and vehicle:getIsEntered())
+        or (vehicle.spec_enterable and vehicle.spec_enterable.isEntered)
+        or (root and root.getIsEntered and root:getIsEntered())
+        or (root and root.spec_enterable and root.spec_enterable.isEntered)
+
+    -- Only register if the player is actively in this vehicle (even if an automated driver is active)
+    local canRegister = isActiveForInputIgnoreSelection
+        or vehicle.isActiveForInputIgnoreSelectionIgnoreAI
+        or isEntered
+
+    if not canRegister then
+        return
+    end
     
     -- Check if there's a combine with our spec in the hierarchy
     local function hasCombineInHierarchy(v, visited)
         if not v or visited[v] then return false end
         visited[v] = true
         if v.spec_rhm_Combine and v.spec_rhm_Combine.isRhmCombine == true then return true end
-        if v.rootVehicle and hasCombineInHierarchy(v.rootVehicle, visited) then return true end
-        if v.attacherVehicle and hasCombineInHierarchy(v.attacherVehicle, visited) then return true end
+        local r = (v.getRootVehicle and v:getRootVehicle()) or v.rootVehicle
+        if r and hasCombineInHierarchy(r, visited) then return true end
+        local a = (v.getAttacherVehicle and v:getAttacherVehicle()) or v.attacherVehicle
+        if a and hasCombineInHierarchy(a, visited) then return true end
         if v.getAttachedImplements then
             for _, impl in ipairs(v:getAttachedImplements() or {}) do
                 if impl.object and hasCombineInHierarchy(impl.object, visited) then return true end
@@ -237,14 +244,13 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
         return false
     end
     
-    local searchRoot = vehicle.rootVehicle or vehicle
+    local searchRoot = (vehicle.getRootVehicle and vehicle:getRootVehicle()) or vehicle.rootVehicle or vehicle
     local hasCombine = hasCombineInHierarchy(searchRoot, {})
     
     -- Register action events for this non-combine vehicle
     if not vehicle._rhmActionEvents then
         vehicle._rhmActionEvents = {}
     end
-    vehicle:clearActionEventsTable(vehicle._rhmActionEvents)
     
     if hasCombine then
         if InputAction.RHM_OPEN_MENU then
@@ -335,6 +341,24 @@ function rhm_Combine.applyGlobalVehicleHooks()
         rhm_log("RHM [Combine]: Global Enterable.onRegisterActionEvents hook applied.")
         hookedAny = true
     end
+    if enterableSpec and enterableSpec.onLeaveVehicle then
+        enterableSpec.onLeaveVehicle = Utils.appendedFunction(
+            enterableSpec.onLeaveVehicle,
+            function(vehicle, wasEntered)
+                if not vehicle or not vehicle.isClient then return end
+                if vehicle._rhmActionEvents then
+                    vehicle:clearActionEventsTable(vehicle._rhmActionEvents)
+                end
+                if g_realisticHarvestManager then
+                    if g_realisticHarvestManager.calibrationGUI and g_realisticHarvestManager.calibrationGUI.isOpen then
+                        g_realisticHarvestManager.calibrationGUI:close()
+                    end
+                end
+            end
+        )
+        rhm_log("RHM [Combine]: Global Enterable.onLeaveVehicle hook applied.")
+        hookedAny = true
+    end
 
     -- 2. Hook Drivable specialization object from g_specializationManager as reinforcement
     local drivableSpec = (g_specializationManager and g_specializationManager:getSpecializationObjectByName("drivable"))
@@ -398,7 +422,7 @@ function rhm_Combine.getOrInitCombineMemory(vehicle)
     end
     return spec.combineMemory
 end
--- EN: Detects threshing system type (walker, rotor, hybrid, forage, root, specialty)
+-- EN: Detects threshing system type (grain, forage, root, specialty)
 -- UA: Визначає тип молотильно-сепаруючої системи комбайна
 function rhm_Combine.detectThreshingType(vehicle, machineType)
     if machineType == "forage" then
@@ -409,94 +433,8 @@ function rhm_Combine.detectThreshingType(vehicle, machineType)
         return machineType
     end
 
-    -- Grain Combine Harvester: Distinguish Walker vs Rotor vs Hybrid
-    local fullName = string.lower((vehicle.getFullName and vehicle:getFullName()) or (vehicle.getName and vehicle:getName()) or "")
-    local configName = string.lower(vehicle.configFileName or "")
-    local typeName = string.lower(vehicle.typeName or (vehicle.type and vehicle.type.name) or "")
-
-    -- EN: Resolve carrier vehicle if combine is a modular implement (e.g. NEXAT carrier + NEXCO harvester module)
-    -- UA: Визначаємо тягач-носій, якщо комбайн є навісним модулем (напр. носій NEXAT + модуль обмолоту NEXCO)
-    local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle))
-    local carrierFullName = ""
-    local carrierConfigName = ""
-    if carrier and carrier ~= vehicle then
-        carrierFullName = string.lower((carrier.getFullName and carrier:getFullName()) or (carrier.getName and carrier:getName()) or "")
-        carrierConfigName = string.lower(carrier.configFileName or "")
-    end
-
-    -- 1. Check for Hybrid (APS + Twin Rotor or Dual Helix Rotor)
-    -- e.g. Claas Lexion 7000/8000 (APS Synflow Hybrid), Fendt IDEAL 7/8/9/10, New Holland CH7.70 Crossover
-    if fullName:find("hybrid") or fullName:find("ideal") or fullName:find("lexion 7") or fullName:find("lexion 8") or fullName:find("lexion 9") or fullName:find("trion 7") or fullName:find("ch7") or fullName:find("ch 7") or fullName:find("crossover") then
-        return "hybrid"
-    end
-    if configName:find("lexion7") or configName:find("lexion8") or configName:find("lexion9") or configName:find("ideal") or configName:find("hybrid") or configName:find("ch7") or configName:find("crossover") then
-        return "hybrid"
-    end
-    if carrierFullName:find("hybrid") or carrierFullName:find("ideal") or carrierConfigName:find("hybrid") or carrierConfigName:find("ideal") then
-        return "hybrid"
-    end
-
-    -- 2. Check for Axial Rotor (Axial-Flow, Twin Rotor CR, JD S Series, NEXAT/NEXCO, Torum, Gleaner, Tribine, AF series)
-    if fullName:find("axial") or fullName:find("rotor") or fullName:find("rotary") or fullName:find("twin rotor") or fullName:find("dual rotor")
-       or fullName:find("cr 1") or fullName:find("cr 9") or fullName:find("cr 8") or fullName:find("cr 7") or fullName:find("cr10") or fullName:find("cr11") or fullName:find("cr90")
-       or fullName:find("s7") or fullName:find("s6") or fullName:find("s700") or fullName:find("s600")
-       or fullName:find("nexat") or fullName:find("nexco") or fullName:find("torum") or fullName:find("gleaner") or fullName:find("tribine")
-       or fullName:find("af11") or fullName:find("af 11") or fullName:find("af9") or fullName:find("af 9") or fullName:find("af7") or fullName:find("af 7") or fullName:find("af250") or fullName:find("af 250") then
-        return "rotor"
-    end
-    if configName:find("axial") or configName:find("cr9") or configName:find("cr10") or configName:find("cr11") or configName:find("series_s") or configName:find("s700") or configName:find("rotor")
-       or configName:find("nexat") or configName:find("nexco") or configName:find("torum") or configName:find("gleaner") or configName:find("tribine") or configName:find("af11") or configName:find("af9") or configName:find("af7") then
-        return "rotor"
-    end
-    if carrierFullName:find("nexat") or carrierFullName:find("nexco") or carrierConfigName:find("nexat") or carrierConfigName:find("nexco") then
-        return "rotor"
-    end
-
-    -- 3. Check for Straw Walkers (Walker / Schuettler / T-Series / Corus / TX / TC / Topliner / Nova / Acros / Don / Niva)
-    if fullName:find("walker") or fullName:find("trion 5") or fullName:find("trion 6") or fullName:find("lexion 5") or fullName:find("lexion 6") or fullName:find("tucano") or fullName:find("dominator") or fullName:find("corus") or fullName:find("topliner") or fullName:find("nova") or fullName:find("acros") or fullName:find("t5") or fullName:find("t6") or fullName:find("tx") or fullName:find("tc")
-       or fullName:find("don") or fullName:find("niva") or fullName:find("enisei") or fullName:find("yenisei") or fullName:find("sk-5") or fullName:find("sk5") or fullName:find("mega") or fullName:find("medion")
-       or fullName:find("c6205") or fullName:find("c7205") or fullName:find("c9206") or fullName:find("c9306") then
-        return "walker"
-    end
-
-    -- 4. Check vehicle XML animation nodes for rotors or walkers
-    local hasRotorNode = false
-    local hasWalkerNode = false
-    if vehicle.xmlFile ~= nil and type(vehicle.xmlFile.iterate) == "function" then
-        vehicle.xmlFile:iterate("vehicle.combine.animationNodes.animationNode", function(_, nodeKey)
-            local nodeName = vehicle.xmlFile:getValue(nodeKey .. "#node")
-            local nodeStr = tostring(nodeName or ""):lower()
-            if nodeStr:find("rotor") or nodeStr:find("axial") then
-                hasRotorNode = true
-            elseif nodeStr:find("walker") or nodeStr:find("schuettler") or nodeStr:find("shaker") or nodeStr:find("sacudidor") then
-                hasWalkerNode = true
-            end
-        end)
-    end
-
-    -- 5. Deep inspection of i3dMappings if animation nodes did not resolve (for custom modded combines)
-    if not hasRotorNode and not hasWalkerNode and type(vehicle.i3dMappings) == "table" then
-        for mappingId, _ in pairs(vehicle.i3dMappings) do
-            local idLower = tostring(mappingId):lower()
-            if (idLower:find("rotor") or idLower:find("axial"))
-               and not idLower:find("chopper") and not idLower:find("spreader") and not idLower:find("header") and not idLower:find("cutter") and not idLower:find("fan") then
-                hasRotorNode = true
-            elseif idLower:find("walker") or idLower:find("schuettler") or idLower:find("shaker") or idLower:find("sacudidor") then
-                hasWalkerNode = true
-            end
-        end
-    end
-
-    if hasRotorNode and hasWalkerNode then
-        return "hybrid"
-    elseif hasRotorNode then
-        return "rotor"
-    elseif hasWalkerNode then
-        return "walker"
-    end
-
-    -- Standard conventional grain combine baseline: Straw Walker
-    return "walker"
+    -- Grain Combine Harvester: Unified conventional grain threshing system
+    return "grain"
 end
 
 -- EN: Called when the combine vehicle is loaded. Creates and wires up all subsystems:
@@ -3380,7 +3318,7 @@ function rhm_Combine:saveToXMLFile(xmlFile, key, usedModNames)
     local concaveVal = settings.concave or settings.feeder or 50
     xmlFile:setValue(cur .. "#feeder",             concaveVal)
     xmlFile:setValue(cur .. "#concave",            concaveVal)
-    xmlFile:setValue(cur .. "#threshingType",      spec.threshingType or "walker")
+    xmlFile:setValue(cur .. "#threshingType",      spec.threshingType or "grain")
     if settings.chopLength ~= nil then xmlFile:setValue(cur .. "#chopLength", settings.chopLength) end
     if settings.kernelProcessor ~= nil then xmlFile:setValue(cur .. "#kernelProcessor", settings.kernelProcessor) end
     if settings.blower ~= nil then xmlFile:setValue(cur .. "#blower", settings.blower) end
@@ -3619,12 +3557,10 @@ function rhm_Combine:loadFromSavegame(savegame)
             
             local loadedThreshType = readString(cur .. "#threshingType", nil)
             if loadedThreshType and loadedThreshType ~= "" then
-                -- EN: Only restore saved type if detected was default "walker" or matches detected type.
-                --     Prevents legacy savegames from reverting newly identified rotor/hybrid models (e.g. NEXAT).
-                -- UA: Відновлюємо збережений тип тільки якщо детекція була дефолтним "walker" або типи збігаються.
-                --     Запобігає перезапису нових виправлень детекції старими збереженнями.
-                if spec.threshingType == "walker" or loadedThreshType == spec.threshingType then
+                if loadedThreshType == "forage" or loadedThreshType == "root" or loadedThreshType == "cotton" or loadedThreshType == "grape" or loadedThreshType == "olive" then
                     spec.threshingType = loadedThreshType
+                else
+                    spec.threshingType = "grain"
                 end
                 if spec.loadCalculator then spec.loadCalculator.threshingType = spec.threshingType end
                 if spec.combineMemory then spec.combineMemory.threshingType = spec.threshingType end
@@ -4209,9 +4145,11 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
         
         -- EN: Allow registration when player is inside the combine, even while an automated worker is operating it.
         -- UA: Дозволяємо реєстрацію коли гравець у комбайні, навіть якщо ним керує автоматичний водій.
+        local root = (self.getRootVehicle and self:getRootVehicle()) or self.rootVehicle
         local canRegister = isActiveForInputIgnoreSelection
             or self.isActiveForInputIgnoreSelectionIgnoreAI
             or (self.getIsEntered and self:getIsEntered())
+            or (root and root.getIsEntered and root:getIsEntered())
 
         if canRegister then
             -- Реєструємо дію Відкриття Меню (RShift+K)

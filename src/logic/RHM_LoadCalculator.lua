@@ -65,7 +65,7 @@ function RHM_LoadCalculator.new(modDirectory)
     
     -- Combine RHMSettings System
     self.combineMemory = nil  -- EN: Will be set by rhm_Combine / UA: Буде встановлено з rhm_Combine
-    self.threshingType = "walker" -- EN: Threshing system type (walker, rotor, hybrid, forage, root) / UA: Тип молотильної системи
+    self.threshingType = "grain" -- EN: Threshing system type (grain, forage, root, specialty) / UA: Тип молотильної системи
     self.currentCrop = nil    -- EN: Current crop for loss calc / UA: Поточна культура для розрахунку втрат
     self.lastHarvestingSpeed = nil -- EN: Remembered stable harvesting speed / UA: Запам'ятована швидкість збирання
     self.cropHarvestingSpeeds = {} -- EN: Per-crop remembered harvesting speeds / UA: Запам'ятовані швидкості по культурах
@@ -1002,15 +1002,7 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
         if machineType ~= "forage" and machineType ~= "root" then
             if currentMoisture > moistureLimit then
                 local diff = currentMoisture - moistureLimit
-                local penaltyPerPercent = 0.020 -- Default general penalty
-                local threshType = self.threshingType or ((rhmSpec and rhmSpec.threshingType) or "walker")
-                if threshType == "rotor" then
-                    penaltyPerPercent = 0.015 -- Rotor combines maintain continuous rubbing with lower relative surge
-                elseif threshType == "hybrid" then
-                    penaltyPerPercent = 0.017 -- APS tangential drum accelerates damp crop efficiently into rotors
-                elseif threshType == "walker" then
-                    penaltyPerPercent = 0.024 -- Straw walkers struggle with tough, damp, clumped straw mats
-                end
+                local penaltyPerPercent = 0.020 -- Standard crop moisture power penalty
                 if rhmSpec.packageLevel and rhmSpec.packageLevel >= 4 then
                     penaltyPerPercent = penaltyPerPercent * 0.50 -- Opti-Harvest reduces penalty by 50%
                 end
@@ -1091,19 +1083,10 @@ function RHM_LoadCalculator:calculateEngineLoad(vehicle)
         -- Hybrid combines (APS + rotors): ~9.5%
         -- Heavy hydrostatic root crop harvesters: ~10%
         -- High-inertia forage harvesters: ~9%
-        local threshType = self.threshingType or ((rhmSpec and rhmSpec.threshingType) or "walker")
         if machineType == "root" then
             pBase = effectiveEngineHp * 0.10
         elseif machineType == "forage" then
             pBase = effectiveEngineHp * 0.09
-        elseif machineType == "grain" then
-            if threshType == "rotor" then
-                pBase = effectiveEngineHp * 0.11
-            elseif threshType == "hybrid" then
-                pBase = effectiveEngineHp * 0.095
-            else
-                pBase = effectiveEngineHp * 0.08
-            end
         else
             pBase = effectiveEngineHp * 0.08
         end
@@ -2076,14 +2059,6 @@ function RHM_LoadCalculator:calculateTotalCropLoss(vehicle)
             -- Excess moisture above safe threshing limit
             local excessMoisture = currentMoisture - moistureLimit
             local moistureLossRate = 0.35
-            local threshType = self.threshingType or (vehicle and vehicle.spec_rhm_Combine and vehicle.spec_rhm_Combine.threshingType) or "walker"
-            if threshType == "rotor" then
-                moistureLossRate = 0.25 -- Centrifugal force separates damp crop effectively
-            elseif threshType == "hybrid" then
-                moistureLossRate = 0.28 -- Tangential pre-accelerator drum thins straw mat
-            elseif threshType == "walker" then
-                moistureLossRate = 0.45 -- Wet straw mats clump on walkers, carrying unseparated grain out the rear
-            end
             moistureLoss = math.min(8.0, excessMoisture * moistureLossRate)
         end
 
