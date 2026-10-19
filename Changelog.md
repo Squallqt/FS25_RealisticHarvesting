@@ -1,5 +1,15 @@
 # Realistic Harvesting - Changelog
 
+Changelog 1.6.4.1:
+- FIXED: Harvester calibration hotkeys (Shift+K), HUD toggle (Shift+H), and Harvest Diary (Shift+J) response when attached implements (headers/cutters) are selected in the vehicle tool chain via native interaction and activation flags.
+- FIXED: Modular harvesters and system carriers (NEXAT / NEXCO) threshing system classification: the NEXCO combine module is now accurately recognized and displayed as Axial Rotor instead of falling back to straw walkers.
+- FIXED: Live harvest telemetry, speed regulation, and header lowering detection on modular multi-vehicle and gantry harvesting platforms where cutters are mounted to the motorized carrier rather than the threshing module directly.
+- FIXED: Combine classification persistence protecting detected axial rotor and hybrid configurations from legacy savegame fallback states.
+- IMPROVED: Expanded automatic combine classification for modded and serial grain harvesters, adding support for Torum, Gleaner, Tribine, New Holland CH Crossover, Case IH AF series, and classic conventional harvesters.
+- IMPROVED: Deep 3D model node inspection (i3dMappings) for custom modded combines that lack standard animation tags, ensuring machines with physical rotor or axial components are reliably identified.
+- IMPROVED: Yield Monitor HUD Cell 7 and compact Cell 4 expanded with 3-way click-to-cycle modes (`AREA` <-> `WORK RATE [LIVE]` <-> `WORK RATE [AVG]`), enabling seamless switching between instantaneous cutting throughput and cumulative session average field work rate.
+- ADDED: Cumulative session average work rate (`ha/h`, `ac/h`) display in Trip statistics and public API method `RHM_Api.getAverageHectaresPerHour(vehicle)` for cross-mod parity with in-cab field terminals.
+
 Changelog 1.6.4.0:
 - ADDED: Authentic GIANTS Engine 10 combine classification engine detecting straw walker, axial rotor, hybrid APS, forage harvester, root harvester, and specialty harvesters.
 - ADDED: Real-time Threshing System Indicator badge in Combine Calibration terminal (Shift+K) displaying active threshing mechanism.
@@ -12,8 +22,6 @@ Changelog 1.6.4.0:
 - IMPROVED: Streamlined Yield Monitor HUD docking hooks with centralized idempotent guards, preventing duplicate render cycles and layout desyncs.
 - FIXED: Harvest History Analytics frame lifecycle refresh rate (250ms cadence) with automated reset handlers on frame open and close.
 - FIXED: Trip telemetry throughput indicator displaying simultaneous session average and instantaneous real-time tons per hour.
-- IMPROVED: Yield Monitor HUD Cell 7 and compact Cell 4 expanded with 3-way click-to-cycle modes (`AREA` <-> `WORK RATE [LIVE]` <-> `WORK RATE [AVG]`), enabling seamless switching between instantaneous cutting throughput and cumulative session average field work rate.
-- ADDED: Cumulative session average work rate (`ha/h`, `ac/h`) display in Trip statistics and public API method `RHM_Api.getAverageHectaresPerHour(vehicle)` for cross-mod parity with in-cab field terminals.
 - FIXED: Dedicated server admin permission detection verifying server admin rights.
 - FIXED: Prevented engine bitwise flag crash during vehicle dirty flag raising with numerical type validation.
 

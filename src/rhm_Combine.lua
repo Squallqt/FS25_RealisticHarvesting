@@ -253,7 +253,7 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
                     if g_realisticHarvestManager then
                         g_realisticHarvestManager:toggleMenu(self)
                     end
-                end, false, true, false, true, nil)
+                end, false, true, false, true, nil, nil, true, true)
             if eventId then
                 g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
                 if g_i18n:hasText("input_RHM_OPEN_MENU") then
@@ -269,7 +269,7 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
                     if g_realisticHarvestManager then
                         g_realisticHarvestManager:toggleHUD()
                     end
-                end, false, true, false, true, nil)
+                end, false, true, false, true, nil, nil, true, true)
             if eventId then
                 g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_HIGH)
                 if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
@@ -286,7 +286,7 @@ local function RHM_globalOnRegisterActionEvents(vehicle, isActiveForInput, isAct
                 if g_realisticHarvestManager then
                     g_realisticHarvestManager:showHarvestHistoryGUI(self)
                 end
-            end, false, true, false, true, nil)
+            end, false, true, false, true, nil, nil, true, true)
         if eventId then
             g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_NORMAL)
             if g_i18n:hasText("input_RHM_OPEN_HARVEST_MENU") then
@@ -414,48 +414,85 @@ function rhm_Combine.detectThreshingType(vehicle, machineType)
     local configName = string.lower(vehicle.configFileName or "")
     local typeName = string.lower(vehicle.typeName or (vehicle.type and vehicle.type.name) or "")
 
+    -- EN: Resolve carrier vehicle if combine is a modular implement (e.g. NEXAT carrier + NEXCO harvester module)
+    -- UA: Визначаємо тягач-носій, якщо комбайн є навісним модулем (напр. носій NEXAT + модуль обмолоту NEXCO)
+    local carrier = (rhm_Combine and rhm_Combine.getMotorizedCarrier and rhm_Combine.getMotorizedCarrier(vehicle))
+    local carrierFullName = ""
+    local carrierConfigName = ""
+    if carrier and carrier ~= vehicle then
+        carrierFullName = string.lower((carrier.getFullName and carrier:getFullName()) or (carrier.getName and carrier:getName()) or "")
+        carrierConfigName = string.lower(carrier.configFileName or "")
+    end
+
     -- 1. Check for Hybrid (APS + Twin Rotor or Dual Helix Rotor)
-    -- e.g. Claas Lexion 7000/8000 (APS Synflow Hybrid), Fendt IDEAL 7/8/9/10
-    if fullName:find("hybrid") or fullName:find("ideal") or fullName:find("lexion 7") or fullName:find("lexion 8") or fullName:find("lexion 9") or fullName:find("trion 7") then
+    -- e.g. Claas Lexion 7000/8000 (APS Synflow Hybrid), Fendt IDEAL 7/8/9/10, New Holland CH7.70 Crossover
+    if fullName:find("hybrid") or fullName:find("ideal") or fullName:find("lexion 7") or fullName:find("lexion 8") or fullName:find("lexion 9") or fullName:find("trion 7") or fullName:find("ch7") or fullName:find("ch 7") or fullName:find("crossover") then
         return "hybrid"
     end
-    if configName:find("lexion7") or configName:find("lexion8") or configName:find("lexion9") or configName:find("ideal") or configName:find("hybrid") then
+    if configName:find("lexion7") or configName:find("lexion8") or configName:find("lexion9") or configName:find("ideal") or configName:find("hybrid") or configName:find("ch7") or configName:find("crossover") then
+        return "hybrid"
+    end
+    if carrierFullName:find("hybrid") or carrierFullName:find("ideal") or carrierConfigName:find("hybrid") or carrierConfigName:find("ideal") then
         return "hybrid"
     end
 
-    -- 2. Check for Axial Rotor (Axial-Flow, Twin Rotor CR, JD S Series)
-    if fullName:find("axial") or fullName:find("rotor") or fullName:find("cr 1") or fullName:find("cr 9") or fullName:find("cr 8") or fullName:find("cr 7") or fullName:find("cr10") or fullName:find("cr11") or fullName:find("cr90") or fullName:find("s7") or fullName:find("s6") or fullName:find("s700") or fullName:find("s600") then
+    -- 2. Check for Axial Rotor (Axial-Flow, Twin Rotor CR, JD S Series, NEXAT/NEXCO, Torum, Gleaner, Tribine, AF series)
+    if fullName:find("axial") or fullName:find("rotor") or fullName:find("rotary") or fullName:find("twin rotor") or fullName:find("dual rotor")
+       or fullName:find("cr 1") or fullName:find("cr 9") or fullName:find("cr 8") or fullName:find("cr 7") or fullName:find("cr10") or fullName:find("cr11") or fullName:find("cr90")
+       or fullName:find("s7") or fullName:find("s6") or fullName:find("s700") or fullName:find("s600")
+       or fullName:find("nexat") or fullName:find("nexco") or fullName:find("torum") or fullName:find("gleaner") or fullName:find("tribine")
+       or fullName:find("af11") or fullName:find("af 11") or fullName:find("af9") or fullName:find("af 9") or fullName:find("af7") or fullName:find("af 7") or fullName:find("af250") or fullName:find("af 250") then
         return "rotor"
     end
-    if configName:find("axial") or configName:find("cr9") or configName:find("cr10") or configName:find("cr11") or configName:find("series_s") or configName:find("s700") or configName:find("rotor") then
+    if configName:find("axial") or configName:find("cr9") or configName:find("cr10") or configName:find("cr11") or configName:find("series_s") or configName:find("s700") or configName:find("rotor")
+       or configName:find("nexat") or configName:find("nexco") or configName:find("torum") or configName:find("gleaner") or configName:find("tribine") or configName:find("af11") or configName:find("af9") or configName:find("af7") then
+        return "rotor"
+    end
+    if carrierFullName:find("nexat") or carrierFullName:find("nexco") or carrierConfigName:find("nexat") or carrierConfigName:find("nexco") then
         return "rotor"
     end
 
-    -- 3. Check for Straw Walkers (Walker / Schuettler / T-Series / Corus / TX / TC)
-    if fullName:find("walker") or fullName:find("trion 5") or fullName:find("trion 6") or fullName:find("lexion 5") or fullName:find("lexion 6") or fullName:find("tucano") or fullName:find("dominator") or fullName:find("corus") or fullName:find("topliner") or fullName:find("nova") or fullName:find("acros") or fullName:find("t5") or fullName:find("t6") or fullName:find("tx") or fullName:find("tc") then
+    -- 3. Check for Straw Walkers (Walker / Schuettler / T-Series / Corus / TX / TC / Topliner / Nova / Acros / Don / Niva)
+    if fullName:find("walker") or fullName:find("trion 5") or fullName:find("trion 6") or fullName:find("lexion 5") or fullName:find("lexion 6") or fullName:find("tucano") or fullName:find("dominator") or fullName:find("corus") or fullName:find("topliner") or fullName:find("nova") or fullName:find("acros") or fullName:find("t5") or fullName:find("t6") or fullName:find("tx") or fullName:find("tc")
+       or fullName:find("don") or fullName:find("niva") or fullName:find("enisei") or fullName:find("yenisei") or fullName:find("sk-5") or fullName:find("sk5") or fullName:find("mega") or fullName:find("medion")
+       or fullName:find("c6205") or fullName:find("c7205") or fullName:find("c9206") or fullName:find("c9306") then
         return "walker"
     end
 
     -- 4. Check vehicle XML animation nodes for rotors or walkers
+    local hasRotorNode = false
+    local hasWalkerNode = false
     if vehicle.xmlFile ~= nil and type(vehicle.xmlFile.iterate) == "function" then
-        local hasRotorNode = false
-        local hasWalkerNode = false
         vehicle.xmlFile:iterate("vehicle.combine.animationNodes.animationNode", function(_, nodeKey)
             local nodeName = vehicle.xmlFile:getValue(nodeKey .. "#node")
             local nodeStr = tostring(nodeName or ""):lower()
             if nodeStr:find("rotor") or nodeStr:find("axial") then
                 hasRotorNode = true
-            elseif nodeStr:find("walker") or nodeStr:find("schuettler") or nodeStr:find("shaker") then
+            elseif nodeStr:find("walker") or nodeStr:find("schuettler") or nodeStr:find("shaker") or nodeStr:find("sacudidor") then
                 hasWalkerNode = true
             end
         end)
-        if hasRotorNode and hasWalkerNode then
-            return "hybrid"
-        elseif hasRotorNode then
-            return "rotor"
-        elseif hasWalkerNode then
-            return "walker"
+    end
+
+    -- 5. Deep inspection of i3dMappings if animation nodes did not resolve (for custom modded combines)
+    if not hasRotorNode and not hasWalkerNode and type(vehicle.i3dMappings) == "table" then
+        for mappingId, _ in pairs(vehicle.i3dMappings) do
+            local idLower = tostring(mappingId):lower()
+            if (idLower:find("rotor") or idLower:find("axial"))
+               and not idLower:find("chopper") and not idLower:find("spreader") and not idLower:find("header") and not idLower:find("cutter") and not idLower:find("fan") then
+                hasRotorNode = true
+            elseif idLower:find("walker") or idLower:find("schuettler") or idLower:find("shaker") or idLower:find("sacudidor") then
+                hasWalkerNode = true
+            end
         end
+    end
+
+    if hasRotorNode and hasWalkerNode then
+        return "hybrid"
+    elseif hasRotorNode then
+        return "rotor"
+    elseif hasWalkerNode then
+        return "walker"
     end
 
     -- Standard conventional grain combine baseline: Straw Walker
@@ -3582,8 +3619,15 @@ function rhm_Combine:loadFromSavegame(savegame)
             
             local loadedThreshType = readString(cur .. "#threshingType", nil)
             if loadedThreshType and loadedThreshType ~= "" then
-                spec.threshingType = loadedThreshType
-                if spec.loadCalculator then spec.loadCalculator.threshingType = loadedThreshType end
+                -- EN: Only restore saved type if detected was default "walker" or matches detected type.
+                --     Prevents legacy savegames from reverting newly identified rotor/hybrid models (e.g. NEXAT).
+                -- UA: Відновлюємо збережений тип тільки якщо детекція була дефолтним "walker" або типи збігаються.
+                --     Запобігає перезапису нових виправлень детекції старими збереженнями.
+                if spec.threshingType == "walker" or loadedThreshType == spec.threshingType then
+                    spec.threshingType = loadedThreshType
+                end
+                if spec.loadCalculator then spec.loadCalculator.threshingType = spec.threshingType end
+                if spec.combineMemory then spec.combineMemory.threshingType = spec.threshingType end
             end
         end
 
@@ -4172,7 +4216,7 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
         if canRegister then
             -- Реєструємо дію Відкриття Меню (RShift+K)
             if InputAction.RHM_OPEN_MENU then
-                local _, menuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_MENU, self, rhm_Combine.actionOpenMenu, false, true, false, true, nil)
+                local _, menuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_MENU, self, rhm_Combine.actionOpenMenu, false, true, false, true, nil, nil, true, true)
                 if menuEventId then
                     g_inputBinding:setActionEventTextPriority(menuEventId, GS_PRIO_HIGH)
                     if g_i18n:hasText("input_RHM_OPEN_MENU") then
@@ -4183,7 +4227,7 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
             end
             -- Реєструємо дію Перемикання HUD (RShift+H)
             if InputAction.RHM_TOGGLE_HUD then
-                local _, hudEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_HUD, self, rhm_Combine.actionToggleHUD, false, true, false, true, nil)
+                local _, hudEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_TOGGLE_HUD, self, rhm_Combine.actionToggleHUD, false, true, false, true, nil, nil, true, true)
                 if hudEventId then
                     g_inputBinding:setActionEventTextPriority(hudEventId, GS_PRIO_HIGH)
                     if g_i18n:hasText("input_RHM_TOGGLE_HUD") then
@@ -4194,7 +4238,7 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
             end
             -- Реєструємо дію Відкриття Журналу Врожаю (RShift+J)
             if InputAction.RHM_OPEN_HARVEST_MENU then
-                local _, hMenuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_HARVEST_MENU, self, rhm_Combine.actionOpenHarvestMenu, false, true, false, true, nil)
+                local _, hMenuEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_OPEN_HARVEST_MENU, self, rhm_Combine.actionOpenHarvestMenu, false, true, false, true, nil, nil, true, true)
                 if hMenuEventId then
                     g_inputBinding:setActionEventTextPriority(hMenuEventId, GS_PRIO_NORMAL)
                     if g_i18n:hasText("input_RHM_OPEN_HARVEST_MENU") then
@@ -4205,7 +4249,7 @@ function rhm_Combine:onRegisterActionEvents(isActiveForInput, isActiveForInputIg
             end
             -- Реєструємо дію Швидкого Скидання Одометра (Затискання RShift+R)
             if InputAction.RHM_QUICK_RESET_TRIP then
-                local _, resetEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_QUICK_RESET_TRIP, self, rhm_Combine.actionQuickResetTrip, true, true, false, true, nil)
+                local _, resetEventId = self:addActionEvent(spec.actionEvents, InputAction.RHM_QUICK_RESET_TRIP, self, rhm_Combine.actionQuickResetTrip, true, true, false, true, nil, nil, true, true)
                 if resetEventId then
                     g_inputBinding:setActionEventTextPriority(resetEventId, GS_PRIO_LOW)
                     if g_i18n:hasText("input_RHM_QUICK_RESET_TRIP") then
