@@ -1,5 +1,9 @@
 # Realistic Harvesting - Changelog
 
+Changelog 1.6.4.2:
+- FIXED: Resolved harvesting telemetry stall where engine load, crop throughput, and speed governing remained at zero during manual driving while functioning under automated helpers.
+- IMPROVED: Header lowering detection now prioritizes the cutting implement's native GIANTS Engine 10 lowering status (`cutter:getIsLowered(true)`) and safe joint descriptor validation (`allowsLowering` / `isDefaultLowered`), preventing false disengagement on headers with rigid mounts or custom attacher joint controllers.
+
 Changelog 1.6.4.1:
 - FIXED: Harvester calibration terminal (Shift+K) vehicle switching desynchronization, preventing previous machine profile and electronics tier from persisting when switching between combines and carriers.
 - FIXED: Header and cutter implement selection hotkey responsiveness on modular carrier harvesters, ensuring calibration terminal, HUD toggle, and harvest diary open reliably regardless of whether the carrier or attached implement is selected in the tool chain.

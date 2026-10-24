@@ -1500,9 +1500,9 @@ function rhm_Combine.getIsVehicleReversing(vehicle)
 end
 
 ---EN: Reliably checks if a cutter or cutting implement is in lowered working position.
----    Safely queries GIANTS Engine 10 AttacherJoints moveDown status and implement wrapper.
+---    Prioritizes cutter's native getIsLowered (standard GIANTS Engine 10 Attachable/Cutter API).
 ---UA: Надійно перевіряє чи опущена жатка в робоче положення.
----    Безпечно опитує стан moveDown вузла зчіпки GIANTS Engine 10 та обгортку знаряддя.
+---    Надає пріоритет нативному методу самої жатки getIsLowered (стандартний API GIANTS Engine 10).
 function rhm_Combine.getIsCutterLowered(combine, cutter)
     if not cutter then
         return false
@@ -1519,51 +1519,42 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
         return true
     end
 
-    -- 3. Query direct attacher vehicle for this cutter (e.g. combine or carrier)
-    local attacherVeh = (cutter.getAttacherVehicle and cutter:getAttacherVehicle()) or combine
-    if attacherVeh then
-        local idx = nil
-        if attacherVeh.getAttacherJointIndexFromObject then
-            idx = attacherVeh:getAttacherJointIndexFromObject(cutter)
+    -- 3. Primary check: Native cutter lowering status (official GIANTS Engine 10 Attachable/Cutter implementation)
+    --    This correctly respects Attachable:getIsLowered(true), jointDesc.allowsLowering, and external attacher controllers.
+    if cutter.getIsLowered then
+        local isLowered = cutter:getIsLowered(true)
+        if isLowered ~= nil then
+            return isLowered
         end
-        if idx ~= nil then
-            if attacherVeh.getJointMoveDown then
-                local isDown = attacherVeh:getJointMoveDown(idx)
-                if isDown ~= nil then
-                    return isDown
-                end
-            end
-            local jDesc = attacherVeh.spec_attacherJoints and attacherVeh.spec_attacherJoints.attacherJoints and attacherVeh.spec_attacherJoints.attacherJoints[idx]
-            if jDesc and jDesc.moveDown ~= nil then
-                return jDesc.moveDown
+    end
+
+    -- 4. Fallback: Query direct attacher vehicle joint descriptor if cutter lacks getIsLowered
+    local attacherVeh = (cutter.getAttacherVehicle and cutter:getAttacherVehicle()) or combine
+    if attacherVeh and attacherVeh.getAttacherJointDescFromObject then
+        local jDesc = attacherVeh:getAttacherJointDescFromObject(cutter)
+        if jDesc then
+            if jDesc.allowsLowering or jDesc.isDefaultLowered then
+                return jDesc.moveDown == true
+            else
+                return true -- If joint lowering is disabled/unsupported, default to lowered (matches GIANTS Attachable.lua)
             end
         end
     end
 
-    -- 4. Query combine's attachedImplements wrapper
+    -- 5. Fallback: Query combine's attachedImplements wrapper
     if combine and combine.getAttachedImplements then
         for _, impl in pairs(combine:getAttachedImplements()) do
             if impl.object == cutter and impl.jointDescIndex then
-                if combine.getJointMoveDown then
-                    local isDown = combine:getJointMoveDown(impl.jointDescIndex)
-                    if isDown ~= nil then
-                        return isDown
-                    end
-                end
                 local jDesc = combine.spec_attacherJoints and combine.spec_attacherJoints.attacherJoints and combine.spec_attacherJoints.attacherJoints[impl.jointDescIndex]
-                if jDesc and jDesc.moveDown ~= nil then
-                    return jDesc.moveDown
+                if jDesc then
+                    if jDesc.allowsLowering or jDesc.isDefaultLowered then
+                        return jDesc.moveDown == true
+                    else
+                        return true
+                    end
                 end
                 break
             end
-        end
-    end
-
-    -- 5. Query cutter's own getIsLowered with default = true (matching native Cutter.lua:585)
-    if cutter.getIsLowered then
-        local cutterLowered = cutter:getIsLowered(true)
-        if cutterLowered ~= nil then
-            return cutterLowered
         end
     end
 
