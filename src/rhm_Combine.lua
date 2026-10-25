@@ -771,10 +771,13 @@ function rhm_Combine:onLoad(savegame)
 
             delete(xmlSoundFile)
 
-            Logging.info("RHM [Sounds]: Initialized for %s (alarm=%s, group=%s)",
-                tostring(self:getFullName()),
-                tostring(spec.samples.overloadAlarm ~= nil),
-                tostring(audioGroup))
+            if spec.samples.overloadAlarm == nil then
+                Logging.warning("RHM [Sounds]: Failed to load overload alarm audio sample for %s from %s",
+                    tostring(self:getFullName()), tostring(soundXmlPath))
+            elseif RHM_Debug and RHM_Debug.enabled then
+                Logging.info("RHM [Sounds]: Initialized for %s (alarm=true, group=%s)",
+                    tostring(self:getFullName()), tostring(audioGroup))
+            end
         else
             Logging.warning("RHM [Sounds]: Could not open sound XML at: %s", tostring(soundXmlPath))
         end
@@ -1513,22 +1516,31 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
         return false
     end
 
-    -- 2. Fast-path: If crop is actively being cut/harvested by this combine or cutter, it is definitively lowered
+    -- 2. Foldable check: Folded cutters are strictly in transport configuration, NEVER lowered for harvesting
+    if cutter.spec_foldable ~= nil then
+        if cutter.getIsUnfolded and not cutter:getIsUnfolded() then
+            return false
+        elseif cutter.getIsFolded and cutter:getIsFolded() then
+            return false
+        end
+    end
+
+    -- 3. Fast-path: If crop is actively being cut/harvested by this combine or cutter, it is definitively lowered
     local spec = combine and combine.spec_rhm_Combine
     if spec and (((spec.lastRawArea or 0) > 0) or ((spec.lastLiters or 0) > 0) or ((spec._fallbackLiters or 0) > 0) or spec._isInsideAddCutterArea) then
         return true
     end
 
-    -- 3. Primary check: Native cutter lowering status (official GIANTS Engine 10 Attachable/Cutter implementation)
-    --    This correctly respects Attachable:getIsLowered(true), jointDesc.allowsLowering, and external attacher controllers.
+    -- 4. Primary check: Native cutter lowering status (official GIANTS Engine 10 Attachable/Cutter implementation)
+    --    This correctly respects Attachable:getIsLowered(false), jointDesc.allowsLowering, and external attacher controllers.
     if cutter.getIsLowered then
-        local isLowered = cutter:getIsLowered(true)
+        local isLowered = cutter:getIsLowered(false)
         if isLowered ~= nil then
             return isLowered
         end
     end
 
-    -- 4. Fallback: Query direct attacher vehicle joint descriptor if cutter lacks getIsLowered
+    -- 5. Fallback: Query direct attacher vehicle joint descriptor if cutter lacks getIsLowered
     local attacherVeh = (cutter.getAttacherVehicle and cutter:getAttacherVehicle()) or combine
     if attacherVeh and attacherVeh.getAttacherJointDescFromObject then
         local jDesc = attacherVeh:getAttacherJointDescFromObject(cutter)
@@ -1536,12 +1548,12 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
             if jDesc.allowsLowering or jDesc.isDefaultLowered then
                 return jDesc.moveDown == true
             else
-                return true -- If joint lowering is disabled/unsupported, default to lowered (matches GIANTS Attachable.lua)
+                return false -- Joint lowering disabled/locked (e.g. transport lock) means cutter is NOT lowered
             end
         end
     end
 
-    -- 5. Fallback: Query combine's attachedImplements wrapper
+    -- 6. Fallback: Query combine's attachedImplements wrapper
     if combine and combine.getAttachedImplements then
         for _, impl in pairs(combine:getAttachedImplements()) do
             if impl.object == cutter and impl.jointDescIndex then
@@ -1550,7 +1562,7 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
                     if jDesc.allowsLowering or jDesc.isDefaultLowered then
                         return jDesc.moveDown == true
                     else
-                        return true
+                        return false
                     end
                 end
                 break
@@ -1558,7 +1570,7 @@ function rhm_Combine.getIsCutterLowered(combine, cutter)
         end
     end
 
-    return true
+    return false
 end
 
 ---EN: Samples live weed density at the cutterbar.
@@ -2026,21 +2038,11 @@ function rhm_Combine:startThreshing(superFunc)
     if shouldStartCutters then
         -- EN: Start cutters — always for AI, for player only when Independent Launch is disabled.
         -- UA: Запускаємо жатки — завжди для AI, для гравця лише коли Незалежний Запуск вимкнений.
-        local isTurning = type(self.rootVehicle.getAIFieldWorkerIsTurning) == "function" and self.rootVehicle:getAIFieldWorkerIsTurning()
-        local allowLowering = not isAIActive or not isTurning
-        
         local cutters = rhm_Combine.getAllAttachedCutters(self, self.spec_rhm_Combine and self.spec_rhm_Combine._attachedCuttersBuffer)
         for cutter, _ in pairs(cutters) do
-            if type(cutter) == "table" then
-                if allowLowering and cutter ~= self then
-                    local attacherVeh = (cutter.getAttacherVehicle and cutter:getAttacherVehicle()) or self
-                    local jointDescIndex = attacherVeh:getAttacherJointIndexFromObject(cutter)
-                    if jointDescIndex and attacherVeh.setJointMoveDown then
-                        attacherVeh:setJointMoveDown(jointDescIndex, true, true)
-                    end
-                end
-                
-                if cutter.setIsTurnedOn then
+            if type(cutter) == "table" and cutter ~= self then
+                local isFolded = cutter.spec_foldable and ((cutter.getIsUnfolded and not cutter:getIsUnfolded()) or (cutter.getIsFolded and cutter:getIsFolded()))
+                if not isFolded and cutter.setIsTurnedOn then
                     cutter:setIsTurnedOn(true, true)
                 end
             end
@@ -2131,14 +2133,10 @@ end
 function rhm_Combine:verifyCombine(superFunc, fruitType, outputFillType)
     local isAIActive = rhm_Combine.isAiWorkerActive(self)
     
-    -- EN: Block harvesting if thresher is off. If an automated worker is active, auto-engage thresher.
-    -- UA: Блокуємо збирання якщо молотарка вимкнена. Якщо активний помічник — автоматично вмикаємо молотарку.
+    -- EN: Block harvesting if thresher is off.
+    -- UA: Блокуємо збирання якщо молотарка вимкнена.
     if self.spec_turnOnVehicle ~= nil and not self:getIsTurnedOn() then
-        if isAIActive then
-            if self.setIsTurnedOn then
-                self:setIsTurnedOn(true, true)
-            end
-        else
+        if not isAIActive then
             return nil  -- Блокуємо харвестинг для гравця при вимкненій молотарці
         end
     end
@@ -2371,14 +2369,17 @@ function rhm_Combine.getIsCutterWorking(self)
     local cutterIsTurnedOn = false
     local cutters = rhm_Combine.getAllAttachedCutters(self, spec and spec._attachedCuttersBuffer)
     for cutter, _ in pairs(cutters) do
-        local isLowered = rhm_Combine.getIsCutterLowered(self, cutter)
-        local isTurned = (cutter.getIsTurnedOn == nil or (cutter.getIsTurnedOn and cutter:getIsTurnedOn()))
-            or (spec_combine and spec_combine.isThreshing)
-            or (self.getIsTurnedOn and self:getIsTurnedOn())
+        local isFolded = cutter.spec_foldable and ((cutter.getIsUnfolded and not cutter:getIsUnfolded()) or (cutter.getIsFolded and cutter:getIsFolded()))
+        if not isFolded then
+            local isLowered = rhm_Combine.getIsCutterLowered(self, cutter)
+            local isTurned = (cutter.getIsTurnedOn and cutter:getIsTurnedOn() == true)
+                or (spec_combine and spec_combine.isThreshing)
+                or (self.getIsTurnedOn and self:getIsTurnedOn())
 
-        if isLowered and isTurned then
-            cutterIsTurnedOn = true
-            break
+            if isLowered and isTurned then
+                cutterIsTurnedOn = true
+                break
+            end
         end
     end
 
@@ -2577,19 +2578,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         or (carrier and carrier.getIsTurnedOn and carrier:getIsTurnedOn())
         or (spec and (((spec.lastRawArea or 0) > 0) or ((spec.lastLiters or 0) > 0) or spec._isInsideAddCutterArea))
 
-    local isAi = rhm_Combine.isAiWorkerActive(self)
-    if not isTurnedOn and isAi and not isReversing then
-        local cutterIsWorking = rhm_Combine.getIsCutterWorking(self)
-        if cutterIsWorking then
-            if self.setIsTurnedOn then
-                self:setIsTurnedOn(true, true)
-            end
-            if self.spec_combine then
-                self.spec_combine.isThreshing = true
-            end
-            isTurnedOn = true
-        end
-    end
+
 
     if not isTurnedOn or isReversing then
         spec._rhmCutterWasDisengaged = true
@@ -3231,10 +3220,12 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     if self.isServer then
         local now = g_currentMission.time
         local interval = spec.dataUpdateInterval or 200
+        local lastUpdate = spec.lastDataUpdateTime or 0
         
         -- Перевіряємо чи пройшло достатньо часу
-        if (now - spec.lastDataUpdateTime) >= interval then
-            local data = spec.data
+        if (now - lastUpdate) >= interval then
+            spec.lastSyncedData = spec.lastSyncedData or {}
+            local data = spec.data or {}
             local last = spec.lastSyncedData
             
             -- Перевіряємо чи є "суттєві" зміни
@@ -3254,7 +3245,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             end
             
             -- Також форсуємо оновлення раз на секунду
-            if hasSignificantChange or (now - spec.lastDataUpdateTime) >= 1000 then
+            if hasSignificantChange or (now - lastUpdate) >= 1000 then
                 spec.lastDataUpdateTime = now
                 spec.lastSyncedData.load = data.load
                 spec.lastSyncedData.cropLoss = data.cropLoss
@@ -3583,17 +3574,11 @@ function rhm_Combine:loadFromSavegame(savegame)
 
         self._rhmSettingsLoadedFromSavegame = true
 
-        Logging.info(string.format("RHM: [SAVEGAME LOAD SUCCESS] %s: crop=%s, mode=%s, autoSwitch=%s, fan=%s, upper=%s, lower=%s, rotor=%s, feeder=%s, load=%s", 
+        Logging.info(string.format("RHM: [SAVEGAME] Restored %s: crop=%s, mode=%s (calibrated=%s)", 
             tostring(self:getFullName()),
-            tostring(spec.combineMemory.currentCrop),
-            tostring(spec.combineMemory.mode),
-            tostring(spec.combineMemory.autoSwitchEnabled),
-            tostring(curSettings and curSettings.fan),
-            tostring(curSettings and curSettings.upperSieve),
-            tostring(curSettings and curSettings.lowerSieve),
-            tostring(curSettings and curSettings.rotor),
-            tostring(curSettings and curSettings.feeder),
-            tostring(curSettings and curSettings.targetEngineLoad)))
+            tostring(spec.combineMemory.currentCrop or "none"),
+            tostring(spec.combineMemory.mode or "MANUAL"),
+            tostring(spec.combineMemory.isCalibrated == true)))
     end
 
     if tripKey then

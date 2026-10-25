@@ -1,5 +1,11 @@
 # Realistic Harvesting - Changelog
 
+Changelog 1.6.4.3:
+- FIXED: Involuntary work mode activation (thresher engage, header lower and spin) during road transit and automated waypoint transport with folded cutting implements attached.
+- FIXED: Fatal runtime arithmetic error (`attempt to perform arithmetic on nil value`) during active cutting with lowered header on custom and edited harvester configurations.
+- IMPROVED: Streamlined logging telemetry by eliminating repetitive audio sample initialization notices during vehicle store customization previews and condensing savegame restoration messages into compact summaries.
+- IMPROVED: Header status verification now enforces strict foldable implement transport configuration checks and respects transport lock joints, preventing false active cutting states during non-field transit.
+
 Changelog 1.6.4.2:
 - FIXED: Resolved harvesting telemetry stall where engine load, crop throughput, and speed governing remained at zero during manual driving while functioning under automated helpers.
 - IMPROVED: Header lowering detection now prioritizes the cutting implement's native GIANTS Engine 10 lowering status (`cutter:getIsLowered(true)`) and safe joint descriptor validation (`allowsLowering` / `isDefaultLowered`), preventing false disengagement on headers with rigid mounts or custom attacher joint controllers.
