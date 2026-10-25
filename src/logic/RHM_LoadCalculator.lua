@@ -137,10 +137,12 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     local carrierConfigIndex = motorConfigIndex
 
     if vehicle._rhm_engineHp and vehicle._rhm_engineHpConfig == motorConfigIndex and vehicle._rhm_engineExtraConfig == extraConfigIndex and vehicle._rhm_engineMotor == motorInstance and vehicle._rhm_engineHp > 0 then
+        self.lastEffectiveHp = vehicle._rhm_engineHp
         return vehicle._rhm_engineHp
     end
 
     if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == motorConfigIndex and motorObj._rhm_engineExtraConfig == extraConfigIndex and motorObj._rhm_engineMotor == motorInstance and motorObj._rhm_engineHp > 0 then
+        self.lastEffectiveHp = motorObj._rhm_engineHp
         vehicle._rhm_engineHp = motorObj._rhm_engineHp
         vehicle._rhm_engineHpConfig = motorConfigIndex
         vehicle._rhm_engineExtraConfig = extraConfigIndex
@@ -326,6 +328,7 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     end
 
     resolvedHp = resolvedHp or 400
+    self.lastEffectiveHp = resolvedHp
     vehicle._rhm_engineHp = resolvedHp
     vehicle._rhm_engineHpConfig = motorConfigIndex
     vehicle._rhm_engineExtraConfig = extraConfigIndex
@@ -845,6 +848,12 @@ end
 ---EN: Sets base performance mass / UA: Встановлює базову продуктивність (маса)
 function RHM_LoadCalculator:setBasePerformance(basePerfMass)
     self.basePerfMass = basePerfMass
+    if not self.lastEffectiveHp and basePerfMass and basePerfMass > 0 then
+        self.lastEffectiveHp = math.max(100, basePerfMass * 3.6 * 5.2)
+    end
+    if self.lastEffectiveHp and self.lastEffectiveHp < 160 and (not self.speedLimit or self.speedLimit > 3.5) then
+        self.speedLimit = 3.5
+    end
     
     rhm_log(string.format("RHM [RHM_LoadCalculator]: RHM: Base performance set to %.2f kg/s (%.1f t/h)", 
         self.basePerfMass, self.basePerfMass * 3.6))
@@ -1376,9 +1385,11 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         maxAllowedSpeed = maxWorkingSpeed
     end
 
-    local minSpeed = 3.5
+    local effectiveHp = self.lastEffectiveHp or self:getEnginePowerHp(vehicle)
+    local isLowPower = (effectiveHp > 0 and effectiveHp < 160)
+    local minSpeed = 1.8
     if (self.combineMemory and self.combineMemory.machineType == "forage") or self.isForageCutter then
-        minSpeed = 2.5
+        minSpeed = 1.8
     end
 
     local dtSec = math.min(1.0, math.max(0.05, (self.lastUpdateInterval or 300) / 1000.0))
@@ -1401,12 +1412,13 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
             return
         end
 
-        if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
-            remembered = self.speedLimit
-        end
-        local defaultEntry = 5.5
+        local defaultEntry = isLowPower and 3.5 or 5.5
         if self.vanillaWorkingSpeed and self.vanillaWorkingSpeed < defaultEntry then
             defaultEntry = self.vanillaWorkingSpeed
+        end
+
+        if (not remembered or remembered < defaultEntry) and self.speedLimit and self.speedLimit > defaultEntry then
+            remembered = self.speedLimit
         end
         local target = remembered or defaultEntry
         target = math.max(minSpeed, math.min(maxAllowedSpeed, target))
@@ -1433,7 +1445,6 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
     currentSpeed = math.max(0.5, currentSpeed)
 
     -- Effective engine horsepower & target power capability
-    local effectiveHp = self.lastEffectiveHp or self:getEnginePowerHp(vehicle)
     local targetPowerHp = effectiveHp * targetLoad
 
     -- Fixed zero-speed power (transmission mechanical losses + subsurface soil friction + header baseline)
@@ -1513,6 +1524,13 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
 
     local currentLimit = self.speedLimit or maxAllowedSpeed
 
+    -- Proportional deadzone scaling:
+    -- At high speeds (~7-10 km/h), deadbands are -0.25 .. +0.30 km/h (~3-4%).
+    -- At low crawl speeds (~1.8-3.5 km/h), fixed 0.30 km/h is 10-15%, trapping low-power combines!
+    -- Scale deadband down proportionally to speed while maintaining minimum 0.08 km/h to prevent flutter.
+    local deadbandBrake = math.min(0.25, math.max(0.08, currentLimit * 0.035))
+    local deadbandAccel = math.min(0.30, math.max(0.08, currentLimit * 0.040))
+
     if isEntry then
         -- GENTLE ROW ENTRY:
         -- While entering standing crop, the feederhouse and drum are still filling up (~2.5s - 3.0s).
@@ -1520,7 +1538,7 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         -- NEVER accelerate above the approach speed during entry!
         -- ONLY allow smooth braking if the crop is unexpectedly dense/heavy and starts overloading.
         self.underloadTimer = 0
-        if vEquilibrium < (currentLimit - 0.25) and (self.engineLoad or 0) > 0.95 then
+        if vEquilibrium < (currentLimit - deadbandBrake) and (self.engineLoad or 0) > 0.95 then
             local blend = 1.0 - math.exp(-dtSec / 1.4)
             local delta = (vEquilibrium - currentLimit) * blend
             local maxStep = -0.70 * dtSec
@@ -1534,7 +1552,7 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
         -- Hold current cruise speed steady across tramlines and unseeded patches.
         -- Reset underload timer immediately so transient gaps never cause acceleration.
         self.underloadTimer = 0
-    elseif isSurge or vEquilibrium < (currentLimit - 0.25) then
+    elseif isSurge or vEquilibrium < (currentLimit - deadbandBrake) then
         -- BRAKING / OVERLOAD / SURGE:
         -- Reset underload confirmation timer immediately
         self.underloadTimer = 0
@@ -1553,7 +1571,7 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
             delta = maxStep
         end
         self.speedLimit = currentLimit + delta
-    elseif vEquilibrium > (currentLimit + 0.30) then
+    elseif vEquilibrium > (currentLimit + deadbandAccel) then
         -- ACCELERATION / UNDERLOAD:
         -- Accumulate confirmed underload time
         local dtMs = self.lastUpdateInterval or 300
@@ -1593,7 +1611,7 @@ function RHM_LoadCalculator:calculateSpeedLimit(vehicle)
             self.speedLimit = currentLimit + speedDelta
         end
     else
-        -- Stable deadzone within -0.25 .. +0.30 km/h: hold steady!
+        -- Stable deadzone within [-deadbandBrake .. +deadbandAccel]: hold steady!
         self.underloadTimer = 0
     end
 
@@ -1714,7 +1732,9 @@ function RHM_LoadCalculator:setGenuineSpeedLimit(limit, maxCap)
     self.genuineSpeedLimit = maxCap or limit
 
     local maxLimit = maxCap or limit
-    local defaultEntry = math.min(5.5, maxLimit)
+    local effHp = self.lastEffectiveHp or (self.basePerfMass and self.basePerfMass > 0 and (self.basePerfMass * 3.6 * 5.2)) or 0
+    local baseEntry = (effHp > 0 and effHp < 160) and 3.5 or 5.5
+    local defaultEntry = math.min(baseEntry, maxLimit)
 
     -- EN: Do NOT overwrite speedLimit if there is already a valid (lower) remembered or starting value.
     --     This lets the hydrostatic controller ramp up smoothly to the genuine limit via exp-curve,
@@ -1725,7 +1745,7 @@ function RHM_LoadCalculator:setGenuineSpeedLimit(limit, maxCap)
     local activeCrop = self.currentCrop or (self.combineMemory and self.combineMemory.currentCrop)
     local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
     local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
-    if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 then
+    if (not remembered or remembered < defaultEntry) and self.speedLimit and self.speedLimit > defaultEntry then
         remembered = self.speedLimit
     end
 
@@ -1755,9 +1775,11 @@ function RHM_LoadCalculator:reset()
     local canonical = activeCrop and RHM_CombineSettingsDatabase and RHM_CombineSettingsDatabase.getCanonicalCropName and RHM_CombineSettingsDatabase:getCanonicalCropName(activeCrop) or activeCrop
     local remembered = (activeCrop and self.cropHarvestingSpeeds and (self.cropHarvestingSpeeds[canonical] or self.cropHarvestingSpeeds[activeCrop])) or self.lastHarvestingSpeed
 
-    -- EN: If speedLimit was cruising at working speed, preserve it so header lifts don't collapse to 5.5
-    -- UA: Якщо speedLimit вже мав робочу швидкість, зберігаємо її щоб підйом жатки на розвороті не скидав до 5.5
-    if (not remembered or remembered < 5.5) and self.speedLimit and self.speedLimit > 5.5 and self.speedLimit <= 7.5 then
+    -- EN: If speedLimit was cruising at working speed, preserve it so header lifts don't collapse to defaultEntry
+    -- UA: Якщо speedLimit вже мав робочу швидкість, зберігаємо її щоб підйом жатки на розвороті не скидав до defaultEntry
+    local effHp = self.lastEffectiveHp or (self.basePerfMass and self.basePerfMass > 0 and (self.basePerfMass * 3.6 * 5.2)) or 0
+    local baseEntry = (effHp > 0 and effHp < 160) and 3.5 or 5.5
+    if (not remembered or remembered < baseEntry) and self.speedLimit and self.speedLimit > baseEntry and self.speedLimit <= 7.5 then
         remembered = self.speedLimit
         self.lastHarvestingSpeed = remembered
         if activeCrop then
@@ -1767,7 +1789,7 @@ function RHM_LoadCalculator:reset()
         end
     end
 
-    local defaultEntry = 5.5
+    local defaultEntry = baseEntry
     if self.vanillaWorkingSpeed and self.vanillaWorkingSpeed < defaultEntry then
         defaultEntry = self.vanillaWorkingSpeed
     end

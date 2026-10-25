@@ -7,6 +7,7 @@ Changelog 1.6.4.3:
 - IMPROVED: Header status verification now enforces strict foldable implement transport configuration checks and respects transport lock joints, preventing false active cutting states during non-field transit.
 - IMPROVED: Engine power evaluation dynamically queries active vehicle motor peak power, motor power multipliers, and powertrain configurations, ensuring engine load and speed governing automatically adapt to custom engine tuning and vehicle power upgrades.
 - IMPROVED: Physical crop losses (speed overload, calibration deviation, slope, moisture) are now scaled directly at the grain tank intake, eliminating post-harvest fill level deductions, preventing counter jitter, and ensuring harvesters fill cleanly to 100% capacity without false premature full-tank stops.
+- IMPROVED: Speed regulation governor minimum operating threshold lowered to 1.8 km/h with adaptive approach speeds (3.5 km/h for engines < 160 HP) and proportional deadzone scaling, allowing compact and vintage harvesters to maintain stable, overload-free operation and smooth acceleration to target engine load in dense high-yielding crops.
 
 Changelog 1.6.4.2:
 - FIXED: Resolved harvesting telemetry stall where engine load, crop throughput, and speed governing remained at zero during manual driving while functioning under automated helpers.
