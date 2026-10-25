@@ -5,6 +5,8 @@ Changelog 1.6.4.3:
 - FIXED: Fatal runtime arithmetic error (`attempt to perform arithmetic on nil value`) during active cutting with lowered header on custom and edited harvester configurations.
 - IMPROVED: Streamlined logging telemetry by eliminating repetitive audio sample initialization notices during vehicle store customization previews and condensing savegame restoration messages into compact summaries.
 - IMPROVED: Header status verification now enforces strict foldable implement transport configuration checks and respects transport lock joints, preventing false active cutting states during non-field transit.
+- IMPROVED: Engine power evaluation dynamically queries active vehicle motor peak power, motor power multipliers, and powertrain configurations, ensuring engine load and speed governing automatically adapt to custom engine tuning and vehicle power upgrades.
+- IMPROVED: Physical crop losses (speed overload, calibration deviation, slope, moisture) are now scaled directly at the grain tank intake, eliminating post-harvest fill level deductions, preventing counter jitter, and ensuring harvesters fill cleanly to 100% capacity without false premature full-tank stops.
 
 Changelog 1.6.4.2:
 - FIXED: Resolved harvesting telemetry stall where engine load, crop throughput, and speed governing remained at zero during manual driving while functioning under automated helpers.

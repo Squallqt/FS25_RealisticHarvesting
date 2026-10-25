@@ -117,11 +117,6 @@ end
 ---EN: Resolves engine horsepower (HP) from vehicle motorized spec, configuration, or carrier tractor (NEXAT/towed).
 ---UA: Визначає потужність двигуна (к.с.) зі специфікації, конфігурації техніки або тягового трактора (NEXAT/причіпні).
 function RHM_LoadCalculator:getEnginePowerHp(vehicle)
-    local motorConfigIndex = (vehicle.configurations and tonumber(vehicle.configurations.motor)) or 1
-    if vehicle._rhm_engineHp and vehicle._rhm_engineHpConfig == motorConfigIndex and vehicle._rhm_engineHp > 0 then
-        return vehicle._rhm_engineHp
-    end
-
     -- 1. Check motorized spec on vehicle or root/attacher carrier (for trailed harvesters, tractor setups, or NEXAT)
     local motorObj = vehicle
     if not (vehicle.spec_motorized and vehicle.spec_motorized.motor) then
@@ -136,18 +131,70 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
         end
     end
 
-    local carrierConfigIndex = (motorObj.configurations and tonumber(motorObj.configurations.motor)) or motorConfigIndex
-    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == carrierConfigIndex and motorObj._rhm_engineHp > 0 then
+    local motorInstance = motorObj and motorObj.spec_motorized and motorObj.spec_motorized.motor
+    local motorConfigIndex = (motorObj.configurations and tonumber(motorObj.configurations.motor)) or (vehicle.configurations and tonumber(vehicle.configurations.motor)) or 1
+    local extraConfigIndex = (motorObj.configurations and (tonumber(motorObj.configurations.enginePower) or tonumber(motorObj.configurations.powertrain) or 0)) or 0
+    local carrierConfigIndex = motorConfigIndex
+
+    if vehicle._rhm_engineHp and vehicle._rhm_engineHpConfig == motorConfigIndex and vehicle._rhm_engineExtraConfig == extraConfigIndex and vehicle._rhm_engineMotor == motorInstance and vehicle._rhm_engineHp > 0 then
+        return vehicle._rhm_engineHp
+    end
+
+    if motorObj._rhm_engineHp and motorObj._rhm_engineHpConfig == motorConfigIndex and motorObj._rhm_engineExtraConfig == extraConfigIndex and motorObj._rhm_engineMotor == motorInstance and motorObj._rhm_engineHp > 0 then
         vehicle._rhm_engineHp = motorObj._rhm_engineHp
         vehicle._rhm_engineHpConfig = motorConfigIndex
+        vehicle._rhm_engineExtraConfig = extraConfigIndex
+        vehicle._rhm_engineMotor = motorInstance
         return motorObj._rhm_engineHp
     end
 
     local resolvedHp = nil
 
-    -- 2. Check official GIANTS engine shop specification method (Motorized.getSpecValuePower)
+    -- 2. Primary check: Live runtime VehicleMotor instance (respects powertrain upgrade, chip tuning, and runtime motor scaling)
+    if motorInstance then
+        local kw = nil
+        if motorInstance.getPeakMotorPower then
+            local val = motorInstance:getPeakMotorPower()
+            if val and tonumber(val) and tonumber(val) > 0 then kw = tonumber(val) end
+        elseif motorInstance.getMaxMotorPower then
+            local val = motorInstance:getMaxMotorPower()
+            if val and tonumber(val) and tonumber(val) > 0 then kw = tonumber(val) end
+        end
+
+        if not kw then
+            if motorInstance.peakMotorPower and tonumber(motorInstance.peakMotorPower) and tonumber(motorInstance.peakMotorPower) > 0 then
+                kw = tonumber(motorInstance.peakMotorPower)
+            elseif motorInstance.maxMotorPower and tonumber(motorInstance.maxMotorPower) and tonumber(motorInstance.maxMotorPower) > 0 then
+                kw = tonumber(motorInstance.maxMotorPower)
+            elseif motorInstance.motorPeakPower and tonumber(motorInstance.motorPeakPower) and tonumber(motorInstance.motorPeakPower) > 0 then
+                kw = tonumber(motorInstance.motorPeakPower)
+            elseif motorInstance.motorPower and tonumber(motorInstance.motorPower) and tonumber(motorInstance.motorPower) > 0 then
+                kw = tonumber(motorInstance.motorPower)
+            elseif motorInstance.maxPower and tonumber(motorInstance.maxPower) and tonumber(motorInstance.maxPower) > 0 then
+                kw = tonumber(motorInstance.maxPower)
+            end
+        end
+
+        if kw then
+            resolvedHp = kw * 1.35962
+        elseif motorInstance.hp and tonumber(motorInstance.hp) and tonumber(motorInstance.hp) > 0 then
+            resolvedHp = tonumber(motorInstance.hp)
+        elseif motorInstance.getHp then
+            local val = motorInstance:getHp()
+            if val and tonumber(val) and tonumber(val) > 0 then resolvedHp = tonumber(val) end
+        end
+
+        -- Check for dynamic powerMultiplier / motorScale if defined on motor
+        if resolvedHp and resolvedHp > 0 then
+            if motorInstance.powerMultiplier and tonumber(motorInstance.powerMultiplier) and tonumber(motorInstance.powerMultiplier) > 0 then
+                resolvedHp = resolvedHp * tonumber(motorInstance.powerMultiplier)
+            end
+        end
+    end
+
+    -- 3. Fallback: Official GIANTS engine shop specification method (Motorized.getSpecValuePower)
     -- This correctly resolves encrypted DLC vehicles (e.g. NEXAT Pack) where XMLFile cannot inspect files.
-    if Motorized and Motorized.getSpecValuePower and motorObj.spec_motorized and motorObj.configFileName and g_storeManager then
+    if not resolvedHp and Motorized and Motorized.getSpecValuePower and motorObj.spec_motorized and motorObj.configFileName and g_storeManager then
         local storeItem = g_storeManager:getItemByXMLFilename(motorObj.configFileName)
         if storeItem then
             local configs = motorObj.configurations or {}
@@ -174,39 +221,6 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
                         end
                     end
                 end
-            end
-        end
-    end
-
-    -- 3. Check VehicleMotor runtime engine instance properties
-    if not resolvedHp and motorObj.spec_motorized and motorObj.spec_motorized.motor then
-        local motor = motorObj.spec_motorized.motor
-        -- In GIANTS Engine 10 (FS25) VehicleMotor:new assigns self.maxMotorPower (in kW)
-        if motor.maxMotorPower and tonumber(motor.maxMotorPower) and tonumber(motor.maxMotorPower) > 0 then
-            resolvedHp = tonumber(motor.maxMotorPower) * 1.35962
-        elseif motor.peakMotorPower and tonumber(motor.peakMotorPower) and tonumber(motor.peakMotorPower) > 0 then
-            resolvedHp = tonumber(motor.peakMotorPower) * 1.35962
-        elseif motor.motorPeakPower and tonumber(motor.motorPeakPower) and tonumber(motor.motorPeakPower) > 0 then
-            resolvedHp = tonumber(motor.motorPeakPower) * 1.35962
-        elseif motor.hp and tonumber(motor.hp) and tonumber(motor.hp) > 0 then
-            resolvedHp = tonumber(motor.hp)
-        elseif motor.motorPower and tonumber(motor.motorPower) and tonumber(motor.motorPower) > 0 then
-            resolvedHp = tonumber(motor.motorPower) * 1.35962
-        elseif motor.maxPower and tonumber(motor.maxPower) and tonumber(motor.maxPower) > 0 then
-            resolvedHp = tonumber(motor.maxPower) * 1.35962
-        end
-
-        -- Check methods if variables were private
-        if not resolvedHp then
-            if motor.getMaxMotorPower then
-                local kw = motor:getMaxMotorPower()
-                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
-            elseif motor.getPeakMotorPower then
-                local kw = motor:getPeakMotorPower()
-                if kw and tonumber(kw) and tonumber(kw) > 0 then resolvedHp = tonumber(kw) * 1.35962 end
-            elseif motor.getHp then
-                local hp = motor:getHp()
-                if hp and tonumber(hp) and tonumber(hp) > 0 then resolvedHp = tonumber(hp) end
             end
         end
     end
@@ -314,8 +328,13 @@ function RHM_LoadCalculator:getEnginePowerHp(vehicle)
     resolvedHp = resolvedHp or 400
     vehicle._rhm_engineHp = resolvedHp
     vehicle._rhm_engineHpConfig = motorConfigIndex
+    vehicle._rhm_engineExtraConfig = extraConfigIndex
+    vehicle._rhm_engineMotor = motorInstance
+
     motorObj._rhm_engineHp = resolvedHp
-    motorObj._rhm_engineHpConfig = carrierConfigIndex
+    motorObj._rhm_engineHpConfig = motorConfigIndex
+    motorObj._rhm_engineExtraConfig = extraConfigIndex
+    motorObj._rhm_engineMotor = motorInstance
 
     rhm_log(string.format("RHM [RHM_LoadCalculator]: Detected engine power for %s: %.0f HP (config #%d)", 
         motorObj.getFullName and motorObj:getFullName() or "Harvester", resolvedHp, motorConfigIndex))

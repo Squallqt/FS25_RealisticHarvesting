@@ -714,7 +714,10 @@ function rhm_Combine:onLoad(savegame)
     
     -- Лічильник для збереження площі з addCutterArea
     spec.lastArea = 0
-    spec.lastLiters = 0  -- Літри зібраного врожаю
+    spec.lastLiters = 0     -- Clean liters added to bunker / Чисті літри додані до бункера
+    spec.lastRawLiters = 0  -- Raw intake liters from crop field / Валові літри з поля
+    spec.currentLossRatio = 0.0 -- Active physical loss scaling ratio (0.00 - 0.50)
+    spec._pendingLostLiters = 0 -- Accumulated discarded grain liters for tracker
     
     -- Відстеження поточної жатки для визначення зміни
     spec.currentCutter = nil
@@ -826,34 +829,61 @@ function rhm_Combine:onPostLoad(savegame)
     end
 end
 
--- EN: Override for addFillUnitFillLevel — tracks actual liters added to the bunker (hopper).
---     Only counts when actively cutting (lastRawArea > 0) to avoid counting offloading.
---     The fill type is captured for yield density lookup.
--- UA: Перевизначення addFillUnitFillLevel — відстежує фактичні літри додані до бункера (бункеру).
---     Рахує лише при активному косінні (lastRawArea > 0) щоб не рахувати вивантаження.
---     Тип врожаю захоплюється для пошуку густини врожаю.
-function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
-    local r1, r2, r3, r4, r5, r6 = superFunc(self, ...)
-    local actualAdded = r1 -- Base game returns actual delta as first arg
-    
+---EN: Override for addFillUnitFillLevel — scales incoming yield directly at bunker entry and tracks harvested liters.
+---    Physical losses (speed overload, improper calibration, moisture, slope) are subtracted on intake,
+---    ensuring the grain tank fills cleanly to 100% capacity without post-tick negative deductions or packet jitter.
+---UA: Перевизначення addFillUnitFillLevel — масштабує надходження врожаю на вході в бункер та відстежує літри.
+---    Фізичні втрати (перевантаження, неточні налаштування, вологість, схил) віднімаються одразу при надходженні,
+---    гарантуючи чисте наповнення бункера рівно до 100% без віднімання часток літра постфактум та мережевого тремтіння.
+function rhm_Combine:addFillUnitFillLevel(superFunc, farmId, fillUnitIndex, fillLevelDelta, fillTypeIndex, toolType, fillPositionData, ...)
     local spec = self.spec_rhm_Combine
+    local rawDelta = fillLevelDelta
+    local lostDelta = 0
+
+    if spec and self.isServer and fillLevelDelta and type(fillLevelDelta) == "number" and fillLevelDelta > 0 then
+        local isGrapeOrOlive = (spec.machineType == "grape" or spec.machineType == "olive" 
+            or (spec.combineMemory and (spec.combineMemory.machineType == "grape" or spec.combineMemory.machineType == "olive")))
+        local isHarvestingActive = spec._isInsideAddCutterArea or (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
+
+        if isHarvestingActive then
+            local isMassiveTransfer = (fillLevelDelta > 500 and spec.combineMemory and spec.combineMemory.machineType == "cotton")
+            local isForage = (spec.combineMemory and spec.combineMemory.machineType == "forage")
+
+            local isLossEnabled = true
+            if isMassiveTransfer or isForage then
+                isLossEnabled = false
+            elseif g_realisticHarvestManager and g_realisticHarvestManager.settings then
+                if not g_realisticHarvestManager.settings.enableCropLoss or g_realisticHarvestManager.settings.difficultyLoss == 1 then
+                    isLossEnabled = false
+                end
+            end
+
+            if isLossEnabled then
+                local lossRatio = spec.currentLossRatio or 0.0
+                if lossRatio > 0.0001 then
+                    lossRatio = math.min(0.50, lossRatio)
+                    local cleanDelta = rawDelta * (1.0 - lossRatio)
+                    lostDelta = rawDelta - cleanDelta
+                    fillLevelDelta = cleanDelta
+                    spec._pendingLostLiters = (spec._pendingLostLiters or 0) + lostDelta
+                end
+            end
+        end
+    end
+
+    local r1, r2, r3, r4, r5, r6 = superFunc(self, farmId, fillUnitIndex, fillLevelDelta, fillTypeIndex, toolType, fillPositionData, ...)
+    local actualAdded = r1 -- Base game returns actual delta as first arg
+
     if spec and actualAdded and type(actualAdded) == "number" and actualAdded > 0 then
-        -- Рахуємо якщо ми активно косимо (всередині addCutterArea, або lastRawArea > 0, або виноградо/оливкозбиральний комбайн)
         local isGrapeOrOlive = (spec.machineType == "grape" or spec.machineType == "olive" 
             or (spec.combineMemory and (spec.combineMemory.machineType == "grape" or spec.combineMemory.machineType == "olive")))
         local isHarvestingActive = spec._isInsideAddCutterArea or (spec.lastRawArea and spec.lastRawArea > 0) or (isGrapeOrOlive and self:getIsTurnedOn())
         if isHarvestingActive then
-            -- EN: Cotton Harvester fix: Ignore massive instant internal transfers (e.g. spool unloading)
-            -- UA: Фікс бавовняних комбайнів: ігноруємо масивні миттєві внутрішні переміщення (напр. розвантаження котушки)
-            local isMassiveTransfer = false
-            if actualAdded > 500 and spec.combineMemory and spec.combineMemory.machineType == "cotton" then
-                isMassiveTransfer = true
-            end
-            
+            local isMassiveTransfer = (actualAdded > 500 and spec.combineMemory and spec.combineMemory.machineType == "cotton")
             if not isMassiveTransfer then
                 spec.lastLiters = (spec.lastLiters or 0) + actualAdded
-                
-                local farmId, fillUnitIndex, fillLevelDelta, fillTypeIndex, toolType, fillPositionData = ...
+                spec.lastRawLiters = (spec.lastRawLiters or 0) + (actualAdded + lostDelta)
+
                 if fillTypeIndex and fillTypeIndex ~= FillType.UNKNOWN then
                      spec.lastFillType = fillTypeIndex
                 end
@@ -863,7 +893,7 @@ function rhm_Combine:addFillUnitFillLevel(superFunc, ...)
             end
         end
     end
-    
+
     return r1, r2, r3, r4, r5, r6
 end
 
@@ -2755,6 +2785,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Розраховуємо зібрану масу з літрів + густини fillType. Форажні комбайни використовують запасні літри.
     local massKg = 0
     local liters = spec.lastLiters or 0
+    local rawLiters = spec.lastRawLiters or liters
     
     -- EN: Fall back to liters captured by addCutterArea for forage harvesters (no hopper).
     --     ALSO DO THIS FOR COTTON HARVESTERS to bypass massive internal chamber volume transfers!
@@ -2763,6 +2794,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     local machineType = (spec.combineMemory and spec.combineMemory.machineType) or "grain"
     if machineType == "forage" or machineType == "cotton" then
         liters = spec._fallbackLiters or 0
+        rawLiters = liters
     elseif liters <= 0 and (spec._fallbackLiters or 0) > 0 then
         -- EN: Grain/root harvesters with hoppers only use fallback if hopper is empty or accepts this crop.
         --     Never attribute foreign border crop that was rejected by the grain tank!
@@ -2774,15 +2806,19 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         end
         if not hopperFillType or hopperFillType == FillType.UNKNOWN or hopperFillType == spec.lastFillType then
             liters = spec._fallbackLiters
+            rawLiters = liters
         else
             liters = 0
+            rawLiters = 0
             spec._fallbackLiters = 0
         end
     end
     
-    if liters > 0 then
+    local cleanMassKg = 0
+    if liters > 0 or rawLiters > 0 then
         local densityKgPerL = (RHM_UnitConverter and RHM_UnitConverter.getCropDensityKgPerLiter and RHM_UnitConverter.getCropDensityKgPerLiter(spec.lastFillType)) or 0.75
-        massKg = liters * densityKgPerL
+        massKg = rawLiters * densityKgPerL
+        cleanMassKg = liters * densityKgPerL
     end
 
     
@@ -2861,7 +2897,9 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     -- UA: Блокуємо розрахунок потоку при зупинці (< 0.5 км/год) щоб опускання жатки на місці не давало хибних т/год
     if currentSpeed < 0.5 then
         massKg = 0
+        cleanMassKg = 0
         liters = 0
+        rawLiters = 0
         areaForYield = 0
     end
 
@@ -2873,12 +2911,10 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     --     so the t/h display smoothly fades to 0 between passes.
     -- UA: Оновлюємо ковзне середнє продуктивності та врожайності. Викликається навіть без косіння
     --     щоб показник т/год плавно падав до 0 між проходами.
-    spec.loadCalculator:updateProductivityAndYield(massKg, liters, areaForYield, dt) 
+    spec.loadCalculator:updateProductivityAndYield(cleanMassKg, liters, areaForYield, dt) 
     
-    -- EN: Apply physical crop loss: remove lost grain from the fill unit on the server.
-    --     This makes crop loss visible as a real reduction in tank fill level.
-    -- UA: Застосовуємо фізичні втрати врожаю: видаляємо втрачене зерно з fill unit на сервері.
-    --     Це робить втрати врожаю видимими як реальне зменшення рівня наповнення бункера.
+    -- EN: Calculate total crop loss percentage (speed overload, mechanical settings, slope, moisture).
+    -- UA: Розраховуємо загальний відсоток втрат врожаю (перевантаження, налаштування, схил, вологість).
     local totalCropLossThisTick = spec.loadCalculator:calculateTotalCropLoss(self)
 
     -- EN: Accumulate telemetry deltas across frames so pulsed cutter deliveries conserve all area, time and grain.
@@ -2888,7 +2924,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
         spec._trackerDtBuffer = (spec._trackerDtBuffer or 0) + dt
         spec._trackerAreaBuffer = (spec._trackerAreaBuffer or 0) + (areaForYield or 0)
         spec._trackerLitersBuffer = (spec._trackerLitersBuffer or 0) + (liters or 0)
-        spec._trackerMassBuffer = (spec._trackerMassBuffer or 0) + (massKg or 0)
+        spec._trackerMassBuffer = (spec._trackerMassBuffer or 0) + (cleanMassKg or 0)
     else
         -- If machine is stopped or disengaged, discard empty idle delta if no pending grain remains
         if (spec._trackerLitersBuffer or 0) <= 0 then
@@ -2896,39 +2932,28 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
             spec._trackerAreaBuffer = 0
             spec._trackerLitersBuffer = 0
             spec._trackerMassBuffer = 0
+            spec._pendingLostLiters = 0
         end
     end
 
     if liters > 0 and self.isServer then
-        -- EN: Calculate total crop loss including settings deviation penalty.
-        -- UA: Розраховуємо загальні втрати врожаю включаючи штраф за відхилення налаштувань.
+        -- EN: Update machine crop history and average loss statistics.
+        -- UA: Оновлюємо статистику культури та середній відсоток втрат техніки.
         local cropLoss = totalCropLossThisTick
         spec.combineMemory:updateStatistics(liters, cropLoss, spec.combineMemory.currentCrop)
-        
-        if cropLoss > 0 and g_realisticHarvestManager and g_realisticHarvestManager.settings then
-            if g_realisticHarvestManager.settings.enableCropLoss then
-                -- EN: Subtract only speed overload and settings loss physically from the tank.
-                --     Mechanical wear loss is already reduced natively by FS25 GIANTS yield logic.
-                -- UA: Віднімаємо з бункера лише фізичні втрати від перевантаження та налаштувань.
-                --     Втрати від зносу вже нативно зменшені логікою врожайності FS25 GIANTS.
-                local wearLossPct = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
-                local physicalLossPct = math.max(0, cropLoss - wearLossPct)
-                local lossRatio = physicalLossPct / 100
-                local lostLiters = liters * lossRatio
-                
-                local fillUnitIndex = spec.lastFillUnitIndex or (self.spec_combine and self.spec_combine.fillUnitIndex) or 1
-                local spec_fillUnit = self.spec_fillUnit
-                if lostLiters > 0.001 and spec_fillUnit and spec_fillUnit.fillUnits and spec_fillUnit.fillUnits[fillUnitIndex] then
-                    self:addFillUnitFillLevel(
-                        self:getOwnerFarmId(),
-                        fillUnitIndex,
-                        -lostLiters,
-                        spec.lastFillType,
-                        ToolType.UNDEFINED,
-                        nil
-                    )
-                end
-            end
+    end
+
+    -- EN: Update active physical loss ratio for incoming grain scaling in addFillUnitFillLevel.
+    --     Mechanical wear loss is already reduced natively by FS25 GIANTS yield logic.
+    -- UA: Оновлюємо активний коефіцієнт фізичних втрат для масштабування зерна на вході в addFillUnitFillLevel.
+    --     Втрати від зносу вже нативно зменшені логікою врожайності FS25 GIANTS.
+    if self.isServer then
+        if g_realisticHarvestManager and g_realisticHarvestManager.settings and g_realisticHarvestManager.settings.enableCropLoss and g_realisticHarvestManager.settings.difficultyLoss ~= 1 then
+            local wearLossPct = (spec.loadCalculator and spec.loadCalculator.totalWearLoss) or 0
+            local physicalLossPct = math.max(0, totalCropLossThisTick - wearLossPct)
+            spec.currentLossRatio = math.min(0.50, physicalLossPct / 100.0)
+        else
+            spec.currentLossRatio = 0.0
         end
     end
 
@@ -2994,7 +3019,8 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
 
         local wearLossPct = (lossReasons and lossReasons.wearPct) or 0
         local physicalLossPct = math.max(0, totalCropLossThisTick - wearLossPct)
-        local flushLostLiters = flushLiters * (physicalLossPct / 100.0)
+        local flushLostLiters = (spec._pendingLostLiters and spec._pendingLostLiters > 0) and spec._pendingLostLiters or (flushLiters * (physicalLossPct / 100.0))
+        spec._pendingLostLiters = 0
 
         -- Clear buffers once transferred to tracker
         spec._trackerLitersBuffer = 0
@@ -3012,6 +3038,7 @@ function rhm_Combine:onUpdateTick(dt, isActiveForInput, isActiveForInputIgnoreSe
     spec.lastArea = 0
     spec.lastRawArea = 0
     spec.lastLiters = 0
+    spec.lastRawLiters = 0
     spec._fallbackLiters = 0
     
     -- EN: Update HUD live data table from RHM_LoadCalculator outputs.
